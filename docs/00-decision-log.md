@@ -38,4 +38,4 @@ Recorded here for traceability, already promoted to their destination docs.
 | **O3** | Exact schema for the storage interface (Go interface signature, not just the conceptual boundary already decided in D4). | open | Blocks any implementation work on `05`. |
 | **O4** | Read-replica replication mechanism for scale mode: build directly on Litestream's approach, or depend on it as a library/sidecar? | open | See `05` for the trade-off as currently understood; not yet a final call. |
 | **O5** | Whether `rqlite` is ever brought in as a second scale-mode storage implementation (true multi-writer) or intentionally left out. | open | Deferred — not needed unless a concrete write-heavy scale scenario shows up. |
-| **O6** | Go module path and repository hosting (GitHub org/user, `github.com/rafaelvieiras/tinyfin` assumed but not yet created remotely). | open | Local repository only so far. |
+| **O6** | Go module path and repository hosting (GitHub org/user). | **resolved** | Repository created at `github.com/rafaelvieiras/tinyfin` (private). Module path confirmed as `github.com/rafaelvieiras/tinyfin` once code exists — see `AGENTS.md`. |

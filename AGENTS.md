@@ -84,3 +84,4 @@ convenience.
 | Scanner scope and the metadata provider boundary | [`docs/08-library-scanning-and-metadata.md`](docs/08-library-scanning-and-metadata.md) |
 | Concrete memory/performance targets and why | [`docs/09-memory-and-performance-goals.md`](docs/09-memory-and-performance-goals.md) |
 | Delivery order | [`docs/10-roadmap.md`](docs/10-roadmap.md) |
+| What's actually done so far | [`ROADMAP.md`](ROADMAP.md) |

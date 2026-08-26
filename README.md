@@ -101,6 +101,7 @@ implementations are in today.
 | [`docs/08-library-scanning-and-metadata.md`](docs/08-library-scanning-and-metadata.md) | Scanner scope, metadata provider interface |
 | [`docs/09-memory-and-performance-goals.md`](docs/09-memory-and-performance-goals.md) | Concrete targets and the reference-implementation failure modes they respond to |
 | [`docs/10-roadmap.md`](docs/10-roadmap.md) | Phased delivery plan |
+| [`ROADMAP.md`](ROADMAP.md) | Checklist of what's actually done, phase by phase |
 
 ## Acknowledgements
 
