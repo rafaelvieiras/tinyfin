@@ -55,10 +55,9 @@ implementations are in today.
   command construction, session lifecycle), not a codec implementation. See
   [`docs/07-transcoding-pipeline.md`](docs/07-transcoding-pipeline.md).
 - **Not a media organizer.** Cataloging, metadata editing, artwork curation, and multi-source
-  metadata resolution are a separate concern, deliberately left to
-  [MyMediaDB](https://github.com/rafaelvieiras/my-media-db) or an equivalent tool consumed as an
-  optional external metadata provider. Tinyfin's own library scanner stays minimal: enough to
-  serve a browsable catalog and hand off enrichment to a provider plugin, never a competing
+  metadata resolution are a separate concern, deliberately left to an external cataloging tool
+  consumed as an optional metadata provider. Tinyfin's own library scanner stays minimal: enough
+  to serve a browsable catalog and hand off enrichment to a provider plugin, never a competing
   cataloging system. See [`docs/08-library-scanning-and-metadata.md`](docs/08-library-scanning-and-metadata.md).
 - **Not aiming for 100% feature parity.** Live TV/DVR, a generic third-party plugin-loading
   system, DLNA, and offline mobile sync are explicitly out of scope for the initial target — see
@@ -99,7 +98,7 @@ implementations are in today.
 | [`docs/05-storage-drivers.md`](docs/05-storage-drivers.md) | SQLite mode vs. scale mode, and why |
 | [`docs/06-session-and-realtime-state.md`](docs/06-session-and-realtime-state.md) | Why storage and session state are two separate pluggable concerns |
 | [`docs/07-transcoding-pipeline.md`](docs/07-transcoding-pipeline.md) | Direct Play/Remux/Direct Stream/Transcode, device profiles, worker separation |
-| [`docs/08-library-scanning-and-metadata.md`](docs/08-library-scanning-and-metadata.md) | Scanner scope, metadata provider interface, relationship to MyMediaDB |
+| [`docs/08-library-scanning-and-metadata.md`](docs/08-library-scanning-and-metadata.md) | Scanner scope, metadata provider interface |
 | [`docs/09-memory-and-performance-goals.md`](docs/09-memory-and-performance-goals.md) | Concrete targets and the reference-implementation failure modes they respond to |
 | [`docs/10-roadmap.md`](docs/10-roadmap.md) | Phased delivery plan |
 

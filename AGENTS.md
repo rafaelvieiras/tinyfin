@@ -17,8 +17,8 @@ path to multi-node scale exists without being mandatory. Module:
 All six are in the [README](README.md) and [CONTRIBUTING.md](CONTRIBUTING.md):
 
 1. **Idle memory is a budget, not an afterthought.** No full-catalog in-memory cache, ever. Every
-   read is a query against a properly indexed embedded store (SQLite, FTS5 + generated columns —
-   same approach validated in MyMediaDB). This directly targets a documented, root-caused failure
+   read is a query against a properly indexed embedded store (SQLite, FTS5 + generated columns).
+   This directly targets a documented, root-caused failure
    mode in the reference implementation (`jellyfin/jellyfin` discussion #10444) — an
    aggressive non-critical in-memory cache is why a reference server grows from ~400MB to several
    GB over normal use. Do not reintroduce that pattern here for "performance."
@@ -45,9 +45,9 @@ All six are in the [README](README.md) and [CONTRIBUTING.md](CONTRIBUTING.md):
    vendored, never linked. Tinyfin owns exactly one thing here: the decision layer (Direct
    Play/Remux/Direct Stream/Transcode selection against a device profile) and the command/session
    lifecycle around it. See [`docs/07-transcoding-pipeline.md`](docs/07-transcoding-pipeline.md).
-6. **No cataloging logic here.** Scanning, metadata resolution, artwork curation belong to
-   [MyMediaDB](https://github.com/rafaelvieiras/my-media-db) or an equivalent, consumed through a
-   provider interface. Do not grow Tinyfin's own scanner into a competing cataloging system — see
+6. **No cataloging logic here.** Scanning, metadata resolution, artwork curation belong to an
+   external cataloging tool, consumed through a provider interface. Do not grow Tinyfin's own
+   scanner into a competing cataloging system — see
    [`docs/08-library-scanning-and-metadata.md`](docs/08-library-scanning-and-metadata.md) for the
    boundary.
 
@@ -81,6 +81,6 @@ convenience.
 | SQLite mode vs. scale mode — the actual interface | [`docs/05-storage-drivers.md`](docs/05-storage-drivers.md) |
 | Session/realtime state — why it's separate from storage | [`docs/06-session-and-realtime-state.md`](docs/06-session-and-realtime-state.md) |
 | Direct Play/Remux/Direct Stream/Transcode, device profiles, worker separation | [`docs/07-transcoding-pipeline.md`](docs/07-transcoding-pipeline.md) |
-| Scanner scope and the MyMediaDB provider boundary | [`docs/08-library-scanning-and-metadata.md`](docs/08-library-scanning-and-metadata.md) |
+| Scanner scope and the metadata provider boundary | [`docs/08-library-scanning-and-metadata.md`](docs/08-library-scanning-and-metadata.md) |
 | Concrete memory/performance targets and why | [`docs/09-memory-and-performance-goals.md`](docs/09-memory-and-performance-goals.md) |
 | Delivery order | [`docs/10-roadmap.md`](docs/10-roadmap.md) |

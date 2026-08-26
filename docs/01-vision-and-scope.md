@@ -5,7 +5,7 @@
 A self-hosted media server for a home/small-scale deployment where:
 
 - The library is video-first (movies, TV series), already organized and enriched by a separate
-  cataloging tool (MyMediaDB or equivalent) rather than by Tinyfin itself.
+  cataloging tool rather than by Tinyfin itself.
 - Access is primarily LAN plus a handful of remote/family users — not a public, unbounded-signup
   service.
 - The operator cares about the server's own resource footprint independently of transcoding load:
@@ -24,7 +24,8 @@ A self-hosted media server for a home/small-scale deployment where:
 - Playback negotiation and delivery: Direct Play, Remux, Direct Stream, full Transcode, HLS
   packaging, resume/watched state.
 - Multi-user accounts with basic parental controls (PIN, rating-based restriction).
-- Metadata via a pluggable provider interface, with MyMediaDB as the first real provider.
+- Metadata via a pluggable provider interface, with a direct TMDB/TVDB provider as the reference
+  implementation.
 - Two storage modes (embedded SQLite, networked scale mode) and two session-state modes
   (in-process, Redis/Valkey) — see `05` and `06`.
 - A transcode worker role that is architecturally separate from the API/metadata role from the

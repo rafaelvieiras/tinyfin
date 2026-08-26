@@ -29,8 +29,8 @@ at minimum) are resolved.
 
 ## Phase 3 — Metadata provider interface
 
-- Provider interface from `08`, MyMediaDB as the first real provider, direct-provider fallback
-  (TMDB/TVDB) as the no-second-project path.
+- Provider interface from `08`, with a direct TMDB/TVDB provider as the reference implementation
+  so Tinyfin is useful standalone, without a second project.
 - Goal: a freshly scanned library gets enriched metadata without Tinyfin implementing its own
   scraping.
 

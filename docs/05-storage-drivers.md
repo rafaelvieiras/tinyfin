@@ -17,9 +17,8 @@ covers the conceptual boundary and the reasoning behind the scale-mode design, n
 
 This is the default and the target for the primary use case in `01`: single machine, near-zero
 idle memory, zero operational overhead. SQLite embedded, WAL mode, with well-designed indexes
-(FTS5 for search, generated columns where useful — the same approach already validated in
-MyMediaDB) serves this directly. No separate database process to run, monitor, or account for in
-a memory budget.
+(FTS5 for search, generated columns where useful) serves this directly. No separate database
+process to run, monitor, or account for in a memory budget.
 
 ## Why scale mode isn't "just switch to Postgres"
 

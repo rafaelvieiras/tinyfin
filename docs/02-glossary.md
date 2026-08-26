@@ -25,8 +25,9 @@ possible only when the client's device profile already supports the file's conta
 separate database process. See `05`.
 
 **Provider** (metadata provider) — an external source of catalog metadata, consumed through a
-fixed interface. MyMediaDB is the first intended provider; TMDB/TVDB directly are a fallback path
-if no provider is configured. Not to be confused with a general-purpose plugin system — see `08`.
+fixed interface. A direct TMDB/TVDB implementation is the reference provider; other cataloging
+tools can be plugged in through the same interface. Not to be confused with a general-purpose
+plugin system — see `08`.
 
 **Remux** — only the container is changed (e.g. MKV → MP4); both audio and video streams are
 copied, not re-encoded.

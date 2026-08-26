@@ -1,13 +1,11 @@
 # 08 — Library scanning and metadata
 
-## The boundary with MyMediaDB
+## The boundary between scanning and cataloging
 
-Tinyfin does not compete with MyMediaDB, and does not grow a competing cataloging system.
-MyMediaDB's stated scope is organizing and enriching a personal media library — reading a local
-library, extracting technical metadata, pulling external metadata on demand, and letting the
-owner's manual edits always win over any external source. That scope is deliberately not widened
-to include streaming or transcoding (decision **D3**, `00-decision-log.md`); Tinyfin's own scope
-is deliberately not widened to include cataloging.
+Tinyfin does not grow a competing cataloging system. Organizing and enriching a media library —
+resolving titles, curating artwork, letting manual edits always win over an external source — is
+a separate concern from serving that library over an API, and is deliberately not widened into
+Tinyfin's own scope (decision **D3**, `00-decision-log.md`).
 
 Concretely: Tinyfin's own scanner is the minimum needed to serve a browsable catalog over the API
 surface in `04` — enough to know what files exist, extract technical media info (via `ffprobe`),
@@ -20,12 +18,11 @@ A fixed, small contract — not a general-purpose plugin-loading system (see the
 A provider is asked for metadata about an identified item and returns what it has; Tinyfin
 composes the result into the shape the API surface needs.
 
-- **MyMediaDB** is the first intended provider, consumed as an external metadata source over its
-  own API — the same relationship it already has with Jellyfin/Kodi/Plex today, just with Tinyfin
-  added to that list of consumers.
-- **Direct provider fallback** (TMDB/TVDB queried directly) remains available for a deployment
-  that doesn't run MyMediaDB, so Tinyfin is useful standalone — it should not hard-require a
-  second project to be minimally functional.
+- **Direct provider** (TMDB/TVDB queried directly) is the reference implementation of this
+  interface, so Tinyfin is useful standalone — it should not hard-require a second project to be
+  minimally functional.
+- The same interface allows any external cataloging tool to be plugged in as an alternative
+  provider, as long as it can answer the interface's metadata queries.
 
 ## Scan-time resource discipline
 
@@ -38,8 +35,7 @@ against a scan that can exhaust the memory budget this whole project exists to p
 ## What the scanner does not do
 
 - Does not maintain its own competing "source of truth" for titles, artwork, or user overrides —
-  that authority lives wherever the configured metadata provider says it lives (MyMediaDB, if
-  configured).
+  that authority lives wherever the configured metadata provider says it lives.
 - Does not implement its own scraper integrations beyond the direct-provider fallback above —
   provider-specific scraping logic belongs in the provider, not duplicated in Tinyfin.
 - Does not generate trickplay thumbnails as a separate subsystem from the rest of scan-time work
