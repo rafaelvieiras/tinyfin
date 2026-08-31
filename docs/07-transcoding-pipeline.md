@@ -32,13 +32,40 @@ produces a stream the client can't actually play (incorrect Direct Play).
 
 ## Device profiles
 
-A device profile describes what one real client is known to support. The reference
-implementation ships dozens of these, covering every client its maintainers have encountered,
-which is ongoing maintenance burden with a long tail of low-value entries. Tinyfin's default
-posture (open item **O2**, `00-decision-log.md`) is to start with only the clients actually used
-against the reference deployment and grow the set on demand, rather than trying to pre-populate
-broad coverage — an unknown client without a stored profile should degrade to a conservative
-default (safe transcode) rather than fail outright.
+A device profile describes what one real client is known to support — codecs, containers,
+resolutions, bitrates. This is a distinct concept from `DeviceStore` (`05`): that store holds
+durable *device records* (the `DeviceId`/token pairing a client authenticates with, `04`); a
+device profile is about playback *capability*, keyed by client identity, not by one paired
+device instance. Neither needs the other to exist.
+
+Per the negotiation contract (`04`), a client normally submits its own device profile inline as
+part of the `PlaybackInfo`-equivalent request — that inline profile is authoritative whenever
+it's present, since it reflects exactly what that client build actually supports. Tinyfin's own
+profile set exists only as a fallback for the client builds that don't send one, so it needs to
+be looked up by *client identity*, not by request content: the `Client=` field already parsed out
+of `X-Emby-Authorization` (`04`) is the natural key, since it's present on every authenticated
+request regardless of whether a profile was submitted.
+
+**Format (O2, resolved):** compiled into the binary as a Go value — `map[string]DeviceProfile`
+keyed on that `Client` string — not a row in `05`'s storage interface. A profile is static
+configuration data describing a piece of client software, not user data; it doesn't need to
+survive a restart differently than the binary itself does, doesn't need runtime CRUD for v1, and
+keeping it out of the storage interface avoids adding a migration path for something that changes
+on a release cadence, not a per-deployment one. The `DeviceProfile` shape itself is the same
+struct either way — built-in fallback entries and client-submitted profiles both decode into the
+one Go type matching the wire-level `DeviceProfile` object (`04`), so there's no separate internal
+format to keep in sync with the wire one. A `Client` string with no matching entry — and no inline
+profile on the request — falls through to a single built-in conservative default profile (Direct
+Play limited to a narrow baseline container/codec set, everything else forced through Transcode)
+rather than failing the request outright.
+
+**Initial coverage (O2, resolved):** the reference deployment's own clients — Jellyfin Web and the
+official Jellyfin Android/iOS apps — get a built-in profile at launch. The reference
+implementation ships dozens of these covering every client its maintainers have ever encountered,
+which is ongoing maintenance burden with a long tail of low-value entries; Tinyfin instead starts
+with only the clients actually in use and grows the set on demand as new clients get pointed at a
+real deployment, relying on the conservative-default fallback above to keep an unrecognized client
+working (just not optimally) in the meantime.
 
 ## Execution
 

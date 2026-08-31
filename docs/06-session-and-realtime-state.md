@@ -14,6 +14,11 @@ Tinyfin has the same category of in-process state a media server specifically ne
 - Which sessions are currently active, and what each is playing.
 - SyncPlay group membership and synchronized playback position.
 - Live progress pushed to clients over WebSocket.
+- QuickConnect pairing codes (`04`) and their pending-approval state — the code only exists for
+  the short window between a client requesting it and a user approving it from an already
+  authenticated session. Once approved, the result is an ordinary `AuthToken` minted through
+  `UserStore.IssueToken` (`05`) — durable, like any other token — so only the transient code
+  itself lives here, not its outcome.
 
 None of this is naturally at home in a durable SQL store — it's short-lived, high-churn, and read
 by the same process that writes it in the common case. But it *is* exactly the kind of state that

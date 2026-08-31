@@ -22,11 +22,11 @@ Legend: `[x]` done · `[ ]` not started · `[~]` in progress
 - [x] Memory and performance goals written (`docs/09`)
 - [x] Foundational decisions D1–D8 closed (`docs/00-decision-log.md`)
 - [x] Repository created and pushed (private, `github.com/rafaelvieiras/tinyfin`)
-- [ ] **O2** — initial device profile list written down (`docs/07`)
-- [ ] **O3** — storage driver Go interface signature written down (`docs/05`)
+- [x] **O2** — initial device profile list written down (`docs/07`)
+- [x] **O3** — storage driver Go interface signature written down (`docs/05`)
 
-Phase 0 isn't done until O2 and O3 are resolved — they're the two open items that block starting
-Phase 1 (see `docs/10-roadmap.md`).
+Phase 0's documentation goals are met — O2 and O3 are both resolved. See `docs/10-roadmap.md` for
+what starting Phase 1 actually requires next.
 
 ## Phase 1 — Compatibility core, single-node, embedded storage only
 
