@@ -30,11 +30,17 @@ what starting Phase 1 actually requires next.
 
 ## Phase 1 — Compatibility core, single-node, embedded storage only
 
-- [ ] Embedded SQLite storage driver implementing the interface from O3
-- [ ] API/metadata role: library browsing, users, sessions, images, subtitles
-- [ ] Direct Play only, against the small device-profile set from O2
+- [x] Embedded SQLite storage driver implementing the interface from O3 (`internal/storage/sqlite`)
+- [~] API/metadata role: users, devices, library browsing, and images landed
+      (`internal/api`); sessions (beyond auth) and subtitles are not built yet.
+- [x] Direct Play negotiation against the device-profile set from O2 (`internal/deviceprofile`,
+      `internal/playback`) — the two built-in `Client` strings (`"Jellyfin Android"`/`"Jellyfin
+      iOS"`) are still placeholders pending confirmation against real client traffic (`docs/04`'s
+      verification approach).
 - [ ] **Goal:** a real Jellyfin client browses a real library and plays a Direct-Play-compatible
-      file end to end.
+      file end to end. The server-side path exists and is covered by automated tests plus a manual
+      smoke test of the running binary, but has not yet been exercised against a real Jellyfin
+      client — that's the remaining step to actually close Phase 1.
 
 ## Phase 2 — Transcoding pipeline
 
