@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
@@ -54,18 +55,30 @@ type baseItemDto struct {
 	// CollectionType field convention.
 	CollectionType string `json:"CollectionType,omitempty"`
 
+	// MediaType is the OpenAPI schema's coarse Video/Audio/Photo/Book
+	// discriminator — distinct from Type (BaseItemKind: "Movie",
+	// "Episode", ...) above. Confirmed load-bearing, not cosmetic, by
+	// testing against a real jellyfin-web build: its playback-eligibility
+	// check (playbackManager.canPlay -> getPlayer ->
+	// htmlVideoPlayer.canPlayMediaType) matches player plugins against
+	// this field, not Type, so an item missing it can never show a Play
+	// button or be handed to a player at all, regardless of what
+	// PlaybackInfo would have said.
+	MediaType string `json:"MediaType,omitempty"`
+
 	MediaStreams []mediaStreamDto `json:"MediaStreams,omitempty"`
 
-	// ImageTags deliberately omitted: building it honestly would require
-	// an ImageStore.GetImageRefs call per item per kind on every list
-	// response, which turns a bounded QueryItems page into N+1 extra
-	// queries — against AGENTS.md principle 1's spirit even though each
-	// individual query is itself bounded. A client can still fetch a
-	// specific item's images directly via GET
-	// /Items/{itemId}/Images/{imageType} without needing a tag first (the
-	// tag is a caching hint, not required to fetch the image). Revisit if
-	// a real client turns out to depend on ImageTags being present to
-	// decide whether to even request an image.
+	// ImageTags: an N+1 GetImageRefs call per item per list response (the
+	// tradeoff this field's absence used to avoid — see git history)
+	// turned out not to be optional. Confirmed by testing against a real
+	// jellyfin-web build: without an ImageTags.Primary entry, the client
+	// never even issues a GET /Items/{id}/Images/Primary request — it
+	// treats the tag's absence as "no image exists", not merely "no
+	// cache hint available" as this file previously assumed, and falls
+	// back to a generic placeholder icon. Each page is still bounded
+	// (defaultItemsLimit/ItemFilter.Limit, AGENTS.md principle 1) so this
+	// is N+1 bounded queries, not an unbounded scan.
+	ImageTags map[string]string `json:"ImageTags,omitempty"`
 }
 
 // baseItemDtoQueryResult mirrors the OpenAPI schema's
@@ -134,7 +147,42 @@ func isFolderType(t storage.ItemType) bool {
 	}
 }
 
-func (s *Server) baseItemDto(item storage.Item) baseItemDto {
+// mediaTypeFor reports BaseItemDto.MediaType for t, another query-time
+// aggregate derived from ItemType rather than stored (same reasoning as
+// isFolderType above) — "" for folder-like/non-playable types (BoxSet,
+// Playlist, Genre, ...), which the OpenAPI schema's own "Unknown" default
+// covers via omitempty.
+func mediaTypeFor(t storage.ItemType) string {
+	switch t {
+	case storage.ItemTypeMovie, storage.ItemTypeSeries, storage.ItemTypeSeason,
+		storage.ItemTypeEpisode, storage.ItemTypeTrailer:
+		return "Video"
+	case storage.ItemTypeMusicArtist, storage.ItemTypeMusicAlbum, storage.ItemTypeAudio:
+		return "Audio"
+	default:
+		return ""
+	}
+}
+
+// imageTags builds BaseItemDto.ImageTags for id: currently just the
+// Primary kind, which is all the card/detail views this slice renders
+// actually need (see baseItemDto's ImageTags doc comment). ref.Tag is
+// used as the cache-busting value when the store has one; handleItemImage
+// doesn't validate the tag against anything, so any stable non-empty
+// value works when a scanner hasn't populated a real one yet.
+func (s *Server) imageTags(ctx context.Context, id storage.ItemID) map[string]string {
+	refs, err := s.store.GetImageRefs(ctx, id, storage.ImageKind("Primary"))
+	if err != nil || len(refs) == 0 {
+		return nil
+	}
+	tag := refs[0].Tag
+	if tag == "" {
+		tag = "1"
+	}
+	return map[string]string{"Primary": tag}
+}
+
+func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto {
 	dto := baseItemDto{
 		Name:              item.Name,
 		ServerID:          s.cfg.ServerID,
@@ -163,7 +211,9 @@ func (s *Server) baseItemDto(item storage.Item) baseItemDto {
 		Album:             item.Album,
 		AlbumArtist:       item.AlbumArtist,
 		CollectionType:    string(item.CollectionType),
+		MediaType:         mediaTypeFor(item.Type),
 		MediaStreams:      mediaStreamDtos(item.MediaStreams),
+		ImageTags:         s.imageTags(ctx, item.ID),
 	}
 	if item.ParentID != nil {
 		dto.ParentID = string(*item.ParentID)

@@ -1,0 +1,13 @@
+{
+  "name": "tinyfin-e2e",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "setup": "bash setup.sh",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
+  }
+}

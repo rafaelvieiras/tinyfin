@@ -179,7 +179,7 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 
 	items := make([]baseItemDto, 0, len(page.Items))
 	for _, it := range page.Items {
-		items = append(items, s.baseItemDto(it))
+		items = append(items, s.baseItemDto(r.Context(), it))
 	}
 
 	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{
@@ -197,7 +197,7 @@ func (s *Server) handleItemGet(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	writeJSON(w, http.StatusOK, s.baseItemDto(item))
+	writeJSON(w, http.StatusOK, s.baseItemDto(r.Context(), item))
 }
 
 // handleItemImage serves GET /Items/{itemId}/Images/{imageType} and
@@ -205,11 +205,13 @@ func (s *Server) handleItemGet(w http.ResponseWriter, r *http.Request) {
 // handler; imageIndex simply reads as empty via r.PathValue on the
 // no-index route (see server.go's routes registration).
 //
-// Auth simplification: the reference server allows some image requests
-// without a full auth token (so an <img> tag can hit it directly without
-// custom headers); this slice requires auth uniformly like every other
-// route here, for consistency, and documents that as a deliberate
-// simplification rather than silently diverging.
+// Unauthenticated, unlike every other route in this slice (see its
+// registration in server.go) — confirmed necessary, not just a
+// reference-server nicety, by testing against a real jellyfin-web build:
+// the <img> tags it renders for posters/backdrops carry neither a token
+// header (browsers don't attach custom headers to <img src>) nor an
+// api_key/token query param, so requiring auth here left every image
+// 401ing silently.
 func (s *Server) handleItemImage(w http.ResponseWriter, r *http.Request) {
 	itemID := storage.ItemID(r.PathValue("itemId"))
 	kind := storage.ImageKind(r.PathValue("imageType"))

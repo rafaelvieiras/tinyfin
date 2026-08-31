@@ -1,0 +1,4 @@
+node_modules/
+.jellyfin-web/
+playwright-report/
+test-results/

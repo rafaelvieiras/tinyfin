@@ -39,6 +39,24 @@ func (s *Server) withAuthContext(next http.Handler) http.Handler {
 				ac.Token = t
 			}
 		}
+		// Fallback: a query-string token. Confirmed necessary, not just a
+		// reference-server nicety, by testing against a real jellyfin-web
+		// build: a plain <video src=...>/<audio src=...> element can't
+		// attach any header at all (same root cause as handleItemImage's
+		// public-route fix in library.go), so jellyfin-web puts the token
+		// in the stream URL itself instead — as "ApiKey" (confirmed) and,
+		// per the wider Jellyfin ecosystem's convention for the same
+		// mechanism, its lowercase-with-underscore spelling "api_key".
+		// Lowest precedence: only checked once every header-based source
+		// above has come up empty.
+		if ac.Token == "" {
+			q := r.URL.Query()
+			if t := q.Get("ApiKey"); t != "" {
+				ac.Token = t
+			} else if t := q.Get("api_key"); t != "" {
+				ac.Token = t
+			}
+		}
 
 		if ac.Token != "" {
 			if at, err := s.store.LookupToken(r.Context(), ac.Token); err == nil {
