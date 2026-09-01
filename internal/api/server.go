@@ -16,7 +16,9 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
@@ -40,8 +42,21 @@ import (
 const Version = "10.10.0"
 
 // ProductName is the wire-visible product name (PublicSystemInfo.ProductName
-// / SystemInfo.ProductName).
-const ProductName = "Tinyfin"
+// / SystemInfo.ProductName). This is NOT Tinyfin's own identity — it's a
+// literal string real Jellyfin clients check against. Confirmed by testing
+// against a real jellyfin-android build: jellyfin-sdk-kotlin's
+// RecommendedServerDiscovery scores any candidate whose ProductName isn't
+// exactly "Jellyfin Server" as BAD (see its PRODUCT_NAME constant), which
+// silently sinks an otherwise-perfectly-good connection with no visible
+// error beyond a generic "couldn't connect" — jellyfin-web and curl never
+// hit this because they don't do this scoring pass at all. Tinyfin's own
+// identity is reported instead via ServerName below.
+const ProductName = "Jellyfin Server"
+
+// DefaultServerName is Config.ServerName's default when left unset —
+// Tinyfin's actual human-facing identity, independent of the wire-protocol
+// ProductName constant above.
+const DefaultServerName = "Tinyfin"
 
 // Config carries the small set of server-identity knobs main assembles
 // before constructing a Server. Everything here has a sensible default so
@@ -49,7 +64,7 @@ const ProductName = "Tinyfin"
 type Config struct {
 	// ServerName is the human-facing name reported to clients
 	// (PublicSystemInfo.ServerName / SystemInfo.ServerName). Defaults to
-	// ProductName.
+	// DefaultServerName.
 	ServerName string
 
 	// ServerID is the stable identifier reported as PublicSystemInfo.Id,
@@ -75,7 +90,7 @@ type Server struct {
 // http.ListenAndServe (or http.Server.Handler).
 func NewServer(store storage.Store, cfg Config) *Server {
 	if cfg.ServerName == "" {
-		cfg.ServerName = ProductName
+		cfg.ServerName = DefaultServerName
 	}
 	if cfg.ServerID == "" {
 		cfg.ServerID = randomID()
@@ -91,9 +106,40 @@ func NewServer(store storage.Store, cfg Config) *Server {
 // auth-parsing middleware (see auth.go for why this is a single
 // always-applied wrapper rather than N per-route wrappers), all wrapped in
 // CORS handling (cors.go) so a browser-hosted client on another origin can
-// reach any route, auth-preflight included.
+// reach any route, auth-preflight included, with access logging outermost
+// so it sees the request exactly as the client sent it and the real final
+// status code.
 func (s *Server) Handler() http.Handler {
-	return withCORS(s.withAuthContext(withCaseInsensitivePaths(s.mux)))
+	return withAccessLog(withCORS(s.withAuthContext(withCaseInsensitivePaths(s.mux))))
+}
+
+// statusRecorder captures the status code a handler wrote, since
+// http.ResponseWriter has no getter for it — withAccessLog needs the real
+// value, not an assumption of 200, to be useful for diagnosing exactly
+// which request a client-side "404"/"source error" corresponds to.
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (r *statusRecorder) WriteHeader(status int) {
+	r.status = status
+	r.ResponseWriter.WriteHeader(status)
+}
+
+// withAccessLog logs method, path+query, status, and duration for every
+// request. Added while debugging a real jellyfin-android client's video
+// playback failing with "Source error" / HTTP 404: nothing in this
+// project logged incoming requests at all, so there was no way to see
+// what URL the native ExoPlayer data source actually requested (its own
+// logcat trace doesn't include it) without this.
+func withAccessLog(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(rec, r)
+		log.Printf("tinyfin: %s %s %d %s", r.Method, r.URL.RequestURI(), rec.status, time.Since(start))
+	})
 }
 
 // withCaseInsensitivePaths rewrites r.URL.Path to a registered route's exact
@@ -111,6 +157,12 @@ func (s *Server) routes() {
 	// itself or because the reference server exposes it unauthenticated.
 	s.mux.HandleFunc("GET /System/Info/Public", s.handleSystemInfoPublic)
 	s.mux.HandleFunc("POST /Users/AuthenticateByName", s.handleAuthenticateByName)
+	// Registered as a literal path, not caught by GET /Users/{userId} below
+	// — http.ServeMux (Go 1.22+) resolves the literal segment as more
+	// specific than the wildcard regardless of registration order.
+	s.mux.HandleFunc("GET /Users/Public", s.handleUsersPublic)
+	s.mux.HandleFunc("GET /QuickConnect/Enabled", s.handleQuickConnectEnabled)
+	s.mux.HandleFunc("GET /Branding/Configuration", s.handleBrandingConfiguration)
 
 	// Everything else in this slice's scope requires a valid token.
 	s.mux.HandleFunc("GET /System/Info", requireAuth(s.handleSystemInfo))
@@ -130,7 +182,19 @@ func (s *Server) routes() {
 	// group.
 	s.mux.HandleFunc("GET /UserViews", requireAuth(s.handleUserViews))
 	s.mux.HandleFunc("GET /Items", requireAuth(s.handleItemsList))
+	// Must precede GET /Items/{itemId} in registration only for the sake of
+	// routing.go's routePaths (case-insensitive normalization needs the
+	// literal checked before the wildcard would swallow it, same as
+	// "/Users/Public" above) — http.ServeMux itself always resolves a
+	// literal segment ahead of a wildcard regardless of order.
+	s.mux.HandleFunc("GET /Items/Latest", requireAuth(s.handleItemsLatest))
+	s.mux.HandleFunc("GET /Items/Filters", requireAuth(s.handleItemsFilters))
+	s.mux.HandleFunc("GET /Items/Filters2", requireAuth(s.handleItemsFilters2))
 	s.mux.HandleFunc("GET /Items/{itemId}", requireAuth(s.handleItemGet))
+	s.mux.HandleFunc("GET /Items/{itemId}/Ancestors", requireAuth(s.handleItemAncestors))
+	s.mux.HandleFunc("GET /Items/{itemId}/Similar", requireAuth(s.handleItemSimilar))
+	s.mux.HandleFunc("GET /UserItems/Resume", requireAuth(s.handleUserItemsResume))
+	s.mux.HandleFunc("GET /Studios", requireAuth(s.handleStudios))
 	// Not in the current OpenAPI spec (docs/04's verification source), but
 	// still sent by a real client: jellyfin-web's item-details page uses
 	// the legacy jellyfin-apiclient package (same one behind the
@@ -170,6 +234,22 @@ func (s *Server) routes() {
 	// entirely (found by testing against a real jellyfin-web build).
 	s.mux.HandleFunc("GET /DisplayPreferences/{displayPreferencesId}", requireAuth(s.handleDisplayPreferencesGet))
 	s.mux.HandleFunc("POST /DisplayPreferences/{displayPreferencesId}", requireAuth(s.handleDisplayPreferencesUpdate))
+
+	// Session capability registration (system.go's handleSessionsCapabilitiesFull
+	// doc comment) — called unconditionally by every official client right
+	// after sign-in.
+	s.mux.HandleFunc("POST /Sessions/Capabilities/Full", requireAuth(s.handleSessionsCapabilitiesFull))
+
+	// Playstate reporting and media segments (sessions_playback.go) — found
+	// missing while mapping the whole native playback flow for coverage,
+	// not by an individual crash report: the native player calls all four
+	// of these around every playback, and their absence silently breaks
+	// resume position/watched-state rather than visibly failing.
+	s.mux.HandleFunc("POST /Sessions/Playing", requireAuth(s.handleSessionsPlaying))
+	s.mux.HandleFunc("POST /Sessions/Playing/Progress", requireAuth(s.handleSessionsPlayingProgress))
+	s.mux.HandleFunc("POST /Sessions/Playing/Stopped", requireAuth(s.handleSessionsPlayingStopped))
+	s.mux.HandleFunc("POST /UserPlayedItems/{itemId}", requireAuth(s.handleUserPlayedItemsMark))
+	s.mux.HandleFunc("GET /MediaSegments/{itemId}", requireAuth(s.handleMediaSegments))
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -181,14 +261,25 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
-// randomID mints an opaque hex identifier. Stdlib-only (crypto/rand), same
-// approach as internal/storage/sqlite's newID/newToken, kept as a separate
-// copy here rather than an import since this package must not depend on
-// sqlite specifically (it depends only on the storage interface).
+// randomID mints an opaque identifier formatted as a canonical UUID
+// (formatUUID — see internal/storage/sqlite/id.go's copy of the same
+// helper for why the format itself matters, not just uniqueness).
+// Stdlib-only (crypto/rand), same approach as
+// internal/storage/sqlite's newID/newToken, kept as a separate copy here
+// rather than an import since this package must not depend on sqlite
+// specifically (it depends only on the storage interface).
 func randomID() string {
 	var b [16]byte
 	if _, err := rand.Read(b[:]); err != nil {
 		panic("api: reading random bytes for ID generation: " + err.Error())
 	}
-	return hex.EncodeToString(b[:])
+	return formatUUID(hex.EncodeToString(b[:]))
+}
+
+// formatUUID inserts hyphens into a 32-character hex string at the
+// canonical UUID positions (8-4-4-4-12) — see
+// internal/storage/sqlite/id.go's copy of this same helper for why real
+// Jellyfin clients require it.
+func formatUUID(hex32 string) string {
+	return hex32[0:8] + "-" + hex32[8:12] + "-" + hex32[12:16] + "-" + hex32[16:20] + "-" + hex32[20:32]
 }

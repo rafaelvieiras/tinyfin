@@ -1,13 +1,24 @@
 // library.go implements the "library and item navigation" group from
 // docs/04 (its highest-priority group): user views, item listing/query,
-// item detail, and image bytes. Playback negotiation and the actual
-// media-file stream live in playback.go.
+// item detail, image bytes, and the home-screen/detail-page widgets layered
+// on top (Latest, Resume, Ancestors, Similar, Filters, Studios). Playback
+// negotiation and the actual media-file stream live in playback.go.
 //
-// Explicitly out of scope for this slice (see the task that produced this
-// file, and docs/04's lower-priority groups): facet/filter listing
-// endpoints, suggestions/instant-mix, collections/playlists CRUD beyond
-// what QueryItems already exposes read-only. Left as a one-line gap here
-// rather than silently expanded into.
+// Found missing as a group, not one at a time, while investigating a
+// "several fields come back null / lots of 404s in the dashboard" report:
+// several of these (Latest, Resume, Ancestors) are real navigation gaps with
+// data already sitting in storage and nothing serving it; others
+// (Similar, Filters/Filters2, Studios) have no real data behind them yet
+// (no similarity algorithm, no genre/tag/studio scanning — that's
+// metadata-provider-adjacent, 08) but are registered anyway as honest-empty
+// responses rather than left 404ing, because several client call sites for
+// them render their section unconditionally before the request resolves
+// (see handleItemSimilar's doc comment) — a 404 there is a permanently
+// broken-looking section, not just a missing feature.
+//
+// Still a deliberate gap, not silently expanded into: suggestions/
+// instant-mix, and collections/playlists CRUD beyond what QueryItems
+// already exposes read-only.
 package api
 
 import (
@@ -40,14 +51,7 @@ func (s *Server) handleUserViews(w http.ResponseWriter, r *http.Request) {
 
 	items := make([]baseItemDto, 0, len(libs))
 	for _, lib := range libs {
-		items = append(items, baseItemDto{
-			Name:           lib.Name,
-			ServerID:       s.cfg.ServerID,
-			ID:             string(lib.ID),
-			IsFolder:       true,
-			Type:           string(storage.ItemTypeUserView),
-			CollectionType: string(lib.CollectionType),
-		})
+		items = append(items, s.libraryBaseItemDto(lib))
 	}
 
 	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{
@@ -190,14 +194,208 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleItemGet serves GET /Items/{itemId}.
+//
+// A library root isn't itself an Item row (storage.Library and storage.Item
+// are separate stores, storage/library.go's doc comment) — GET /UserViews
+// hands clients a Library's ID as a browsable item, same as handleItemsList's
+// parentId handling above, so a plain GetItem miss falls back to GetLibrary
+// before 404ing. Found by testing against a real jellyfin-android build:
+// its WebView item-detail flow calls this route with a library's own ID
+// (reached by tapping a UserView tile straight through to its "item" view)
+// and 404ing there is a dead end the client doesn't recover from.
 func (s *Server) handleItemGet(w http.ResponseWriter, r *http.Request) {
+	id := storage.ItemID(r.PathValue("itemId"))
+	item, err := s.store.GetItem(r.Context(), id)
+	if err != nil {
+		if lib, libErr := s.store.GetLibrary(r.Context(), storage.LibraryID(id)); libErr == nil {
+			writeJSON(w, http.StatusOK, s.libraryBaseItemDto(lib))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	writeJSON(w, http.StatusOK, s.baseItemDto(r.Context(), item))
+}
+
+// defaultLatestLimit is GET /Items/Latest's own default page size when the
+// client doesn't specify limit — distinct from defaultItemsLimit (GET
+// /Items), matching the reference server's own smaller default for this
+// specific "recently added" widget.
+const defaultLatestLimit = 20
+
+// handleItemsLatest serves GET /Items/Latest — the home screen's "Recently
+// Added" row. Unlike GET /Items, the reference server returns a bare
+// BaseItemDto array here, not a BaseItemDtoQueryResult envelope (confirmed
+// against the OpenAPI schema, not guessed — UserLibraryController's
+// GetLatestMedia return type).
+func (s *Server) handleItemsLatest(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+
+	filter := storage.ItemFilter{
+		Recursive: true,
+		Limit:     defaultLatestLimit,
+		SortBy:    []storage.SortField{{By: storage.SortByDateCreated, Descending: true}},
+	}
+	s.applyParentID(r, &filter)
+
+	if v := q.Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			filter.Limit = n
+		}
+	}
+
+	page, err := s.store.QueryItems(r.Context(), filter)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	items := make([]baseItemDto, 0, len(page.Items))
+	for _, it := range page.Items {
+		items = append(items, s.baseItemDto(r.Context(), it))
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
+// handleUserItemsResume serves GET /UserItems/Resume — the home screen's
+// "Continue Watching" row, and the same query jellyfin-web's item-detail
+// resume check ultimately depends on being non-empty. Requires the caller's
+// own playstate (storage.ItemFilter.Resume, sqlite/item.go), so unlike
+// handleItemsList this always sets UserID from the authenticated caller
+// rather than accepting one as a query param — resume state is never
+// meaningful for anyone but the requester.
+func (s *Server) handleUserItemsResume(w http.ResponseWriter, r *http.Request) {
+	ac, ok := AuthFromContext(r.Context())
+	if !ok || ac == nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	q := r.URL.Query()
+	userID := ac.User.ID
+	filter := storage.ItemFilter{
+		UserID:    &userID,
+		Resume:    true,
+		Recursive: true,
+		Limit:     defaultItemsLimit,
+	}
+	s.applyParentID(r, &filter)
+
+	if v := q.Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			filter.Limit = n
+		}
+	}
+
+	page, err := s.store.QueryItems(r.Context(), filter)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	items := make([]baseItemDto, 0, len(page.Items))
+	for _, it := range page.Items {
+		items = append(items, s.baseItemDto(r.Context(), it))
+	}
+	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{
+		Items:            items,
+		TotalRecordCount: page.TotalCount,
+		StartIndex:       page.Offset,
+	})
+}
+
+// applyParentID resolves a request's parentId query param the same way
+// handleItemsList does (a library root ID vs. an ordinary item ID) — pulled
+// out since handleItemsLatest and handleUserItemsResume both need the exact
+// same resolution.
+func (s *Server) applyParentID(r *http.Request, filter *storage.ItemFilter) {
+	v := r.URL.Query().Get("parentId")
+	if v == "" {
+		return
+	}
+	if _, err := s.store.GetLibrary(r.Context(), storage.LibraryID(v)); err == nil {
+		libID := storage.LibraryID(v)
+		filter.LibraryID = &libID
+	} else {
+		id := storage.ItemID(v)
+		filter.ParentID = &id
+	}
+}
+
+// handleItemAncestors serves GET /Items/{itemId}/Ancestors — the breadcrumb
+// chain from an item up to its library root, as a bare BaseItemDto array
+// (same envelope-less shape as handleItemsLatest, confirmed against the
+// OpenAPI schema's GetAncestors). item_ancestors (storage/sqlite's schema)
+// exists but is never populated by anything today, so this walks Item.ParentID
+// directly rather than reading that table — cheap given how shallow the
+// chains this project's item types ever form actually are (season -> series
+// at most), then appends the library root itself (not an Item, so built via
+// libraryBaseItemDto rather than one more GetItem hop).
+func (s *Server) handleItemAncestors(w http.ResponseWriter, r *http.Request) {
 	id := storage.ItemID(r.PathValue("itemId"))
 	item, err := s.store.GetItem(r.Context(), id)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	writeJSON(w, http.StatusOK, s.baseItemDto(r.Context(), item))
+
+	ancestors := []baseItemDto{}
+	for item.ParentID != nil {
+		parent, err := s.store.GetItem(r.Context(), *item.ParentID)
+		if err != nil {
+			break
+		}
+		ancestors = append(ancestors, s.baseItemDto(r.Context(), parent))
+		item = parent
+	}
+	if lib, err := s.store.GetLibrary(r.Context(), item.LibraryID); err == nil {
+		ancestors = append(ancestors, s.libraryBaseItemDto(lib))
+	}
+
+	writeJSON(w, http.StatusOK, ancestors)
+}
+
+// handleItemSimilar serves GET /Items/{itemId}/Similar. Always empty —
+// there's no similarity/recommendation algorithm in this slice (that's
+// metadata-provider-adjacent, 08, same boundary as Studios/Filters below) —
+// but registered rather than left 404ing: found by testing against a real
+// jellyfin-web build that its item-detail page shows the "More Like This"
+// section unconditionally before the request resolves (no .catch), so a 404
+// leaves a permanently-empty visible section instead of a cleanly-hidden
+// one. An honest empty QueryResult lets the client hide it itself.
+func (s *Server) handleItemSimilar(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{Items: []baseItemDto{}})
+}
+
+// filterOptions mirrors the reference server's QueryFilters/QueryFiltersLegacy
+// response shape (GET /Items/Filters2 and the older /Items/Filters), trimmed
+// to always-empty: this project has no genre/tag/studio scanning yet (08),
+// so an honest empty set of facets is accurate today, not a stand-in for
+// real aggregation. Registered instead of left 404ing purely to stop
+// FilterButton (jellyfin-web, called unconditionally on every library-view
+// mount, not lazily on popover open) from failing every visit — see
+// handleItemSimilar's doc comment for the same reasoning.
+type filterOptions struct {
+	Genres          []string `json:"Genres"`
+	Tags            []string `json:"Tags"`
+	OfficialRatings []string `json:"OfficialRatings"`
+	Years           []int    `json:"Years"`
+}
+
+func (s *Server) handleItemsFilters(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, filterOptions{Genres: []string{}, Tags: []string{}, OfficialRatings: []string{}, Years: []int{}})
+}
+
+func (s *Server) handleItemsFilters2(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, filterOptions{Genres: []string{}, Tags: []string{}, OfficialRatings: []string{}, Years: []int{}})
+}
+
+// handleStudios serves GET /Studios. Same "no such metadata yet, honest
+// empty over 404" reasoning as handleItemSimilar/handleItemsFilters — there
+// is no Studios field on storage.Item at all today (dto.go's baseItemDto
+// doc comment).
+func (s *Server) handleStudios(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{Items: []baseItemDto{}})
 }
 
 // handleItemImage serves GET /Items/{itemId}/Images/{imageType} and

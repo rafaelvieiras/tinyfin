@@ -76,6 +76,50 @@ func (s *Server) handleSystemInfo(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handleQuickConnectEnabled is GET /QuickConnect/Enabled — unauthenticated,
+// called unconditionally by jellyfin-web's login screen on mount. Tinyfin
+// has no Quick Connect implementation, so this always answers false rather
+// than 404ing: found missing by testing against a real jellyfin-web build
+// (Android WebView shell) — an unhandled 404 here throws an uncaught
+// promise rejection that leaves the login screen stuck on its loading
+// spinner instead of rendering.
+func (s *Server) handleQuickConnectEnabled(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, false)
+}
+
+// brandingOptions mirrors the OpenAPI schema's BrandingOptions. Tinyfin has
+// no branding/customization system (out of scope per docs/01), but
+// jellyfin-web's login screen fetches this unconditionally — left
+// unregistered it fails the same way handleQuickConnectEnabled's doc
+// comment describes, found the same way (real jellyfin-web build).
+type brandingOptions struct {
+	LoginDisclaimer     string `json:"LoginDisclaimer"`
+	CustomCss           string `json:"CustomCss"`
+	SplashscreenEnabled bool   `json:"SplashscreenEnabled"`
+}
+
+func (s *Server) handleBrandingConfiguration(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, brandingOptions{})
+}
+
+// handleSessionsCapabilitiesFull is POST /Sessions/Capabilities/Full —
+// every official client (web and the Android/iOS apps' shared WebView
+// shell) calls this unconditionally right after sign-in, to register its
+// playback capabilities (supported codecs/containers, device profile) for
+// the session. Tinyfin has no session/capability store yet (docs/00's O2
+// device-profile decision relies on either an inline profile per request
+// or the compiled-in fallback keyed by the request's Client header — see
+// deviceprofile — not stored per-session state), so the body is accepted
+// and discarded: a 204 is enough to satisfy the client, which treats this
+// as a fire-and-forget registration call. Left unregistered, this 404s
+// and throws an uncaught promise rejection right on landing on the home
+// screen — found by testing against a real jellyfin-web build (Android
+// WebView shell), where it manifested as the client's own
+// "can't connect to server" error rather than a visibly scoped failure.
+func (s *Server) handleSessionsCapabilitiesFull(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // localAddress reports the address the client used to reach this server,
 // derived from the request itself (Host header) — the only "local
 // address" Tinyfin can honestly know without operator-supplied

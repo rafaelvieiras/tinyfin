@@ -10,20 +10,45 @@ import "strings"
 var routePaths = []string{
 	"/System/Info/Public",
 	"/Users/AuthenticateByName",
+	"/QuickConnect/Enabled",
+	"/Branding/Configuration",
 	"/System/Info",
 	"/Users/Me",
 	"/Users",
 	"/Users/New",
+	// Must precede /Users/{userId} below: normalizePathCase returns on the
+	// first same-length match, so the literal has to be checked before the
+	// wildcard would swallow it — otherwise a lowercase "/users/public"
+	// request normalizes to "/Users/public" (preserving the wildcard
+	// segment's original casing) instead of the registered "/Users/Public",
+	// and 401s against requireAuth instead of reaching handleUsersPublic.
+	"/Users/Public",
 	"/Users/{userId}",
 	"/UserViews",
 	"/Items",
+	// Must precede /Items/{itemId} below: same reasoning as /Users/Public
+	// above — normalizePathCase stops at the first same-length match, and
+	// these are the same length (2 segments) as /Items/{itemId}.
+	"/Items/Latest",
+	"/Items/Filters",
+	"/Items/Filters2",
 	"/Items/{itemId}",
+	"/Items/{itemId}/Ancestors",
+	"/Items/{itemId}/Similar",
+	"/UserItems/Resume",
+	"/Studios",
 	"/Users/{userId}/Items/{itemId}",
 	"/Items/{itemId}/Images/{imageType}",
 	"/Items/{itemId}/Images/{imageType}/{imageIndex}",
 	"/Items/{itemId}/PlaybackInfo",
 	"/Videos/{itemId}/{file}",
 	"/DisplayPreferences/{displayPreferencesId}",
+	"/Sessions/Capabilities/Full",
+	"/Sessions/Playing",
+	"/Sessions/Playing/Progress",
+	"/Sessions/Playing/Stopped",
+	"/UserPlayedItems/{itemId}",
+	"/MediaSegments/{itemId}",
 }
 
 // normalizePathCase rewrites path to the registered route's exact casing if

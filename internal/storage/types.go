@@ -58,9 +58,14 @@ type ItemFilter struct {
 	UserID     *UserID
 	Played     *bool
 	Favorite   *bool
-	SortBy     []SortField
-	Limit      int
-	Offset     int
+	// Resume selects items with a saved, unfinished playback position for
+	// UserID (PlaybackPositionTicks > 0 and not Played) — backs GET
+	// /UserItems/Resume ("Continue Watching"). Requires UserID; ignored
+	// otherwise, same as Played/Favorite above.
+	Resume bool
+	SortBy []SortField
+	Limit  int
+	Offset int
 }
 
 // ItemPage is the result of a bounded QueryItems call. TotalCount is the

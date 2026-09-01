@@ -21,3 +21,6 @@
 .DS_Store
 .idea/
 .vscode/
+
+# Personal machine-specific staging environment (real host media path, local data)
+/staging/

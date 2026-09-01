@@ -79,6 +79,25 @@ type baseItemDto struct {
 	// (defaultItemsLimit/ItemFilter.Limit, AGENTS.md principle 1) so this
 	// is N+1 bounded queries, not an unbounded scan.
 	ImageTags map[string]string `json:"ImageTags,omitempty"`
+
+	// UserData carries the requesting user's playstate for this item
+	// (resume position, played/favorite status) — populated from
+	// PlaystateStore, not Item itself, since it's per-user (storage/item.go's
+	// doc comment on why Item doesn't carry it). nil for an unauthenticated
+	// caller (there's no user to key the lookup off) or for the
+	// per-user-blind call sites that build a baseItemDto without going
+	// through baseItemDto() below (e.g. handleUserViews' library roots).
+	//
+	// Found missing, not just unpolished, by testing against a real
+	// jellyfin-web build: Sessions/Playing/Progress and UserPlayedItems
+	// (sessions_playback.go) were already writing resume position and
+	// watched status correctly into PlaystateStore, but nothing ever read it
+	// back onto an item response, so jellyfin-web's
+	// `item.UserData.PlaybackPositionTicks > 0` resume check was always
+	// false — "Continue Watching" never appeared no matter how much of a
+	// file had actually been watched, even though the server had the exact
+	// position on file.
+	UserData *userItemDataDto `json:"UserData,omitempty"`
 }
 
 // baseItemDtoQueryResult mirrors the OpenAPI schema's
@@ -94,18 +113,36 @@ type baseItemDtoQueryResult struct {
 // fields storage.MediaStreamRef carries (docs/05's item.go doc comment:
 // "not every MediaStream field, most of which ... is transcode-decision
 // detail out of this slice's scope").
+//
+// IsInterlaced through SupportsExternalStream are NOT omitempty and carry
+// no corresponding storage.MediaStreamRef field — found required by
+// reading jellyfin-sdk-kotlin's MediaStream.kt directly: this DTO is
+// nested inside both MediaSourceInfo (PlaybackInfo response) and
+// BaseItemDto (GetItem response), so it hits kotlinx.serialization's
+// strict MissingFieldException on every item that has any audio/video
+// track at all, i.e. effectively every playable item, the moment the
+// native player parses either response. false is an accurate value for
+// every one of these given what this project tracks today (no interlace
+// detection, no forced/external-subtitle distinction beyond IsForced
+// itself, no "original language" flag).
 type mediaStreamDto struct {
-	Codec     string `json:"Codec,omitempty"`
-	Language  string `json:"Language,omitempty"`
-	Title     string `json:"Title,omitempty"`
-	Type      string `json:"Type"`
-	Index     int    `json:"Index"`
-	IsDefault bool   `json:"IsDefault"`
-	IsForced  bool   `json:"IsForced"`
-	Channels  *int   `json:"Channels,omitempty"`
-	Width     *int   `json:"Width,omitempty"`
-	Height    *int   `json:"Height,omitempty"`
-	BitRate   *int64 `json:"BitRate,omitempty"`
+	Codec                  string `json:"Codec,omitempty"`
+	Language               string `json:"Language,omitempty"`
+	Title                  string `json:"Title,omitempty"`
+	Type                   string `json:"Type"`
+	Index                  int    `json:"Index"`
+	IsDefault              bool   `json:"IsDefault"`
+	IsForced               bool   `json:"IsForced"`
+	IsInterlaced           bool   `json:"IsInterlaced"`
+	IsHearingImpaired      bool   `json:"IsHearingImpaired"`
+	IsOriginal             bool   `json:"IsOriginal"`
+	IsExternal             bool   `json:"IsExternal"`
+	IsTextSubtitleStream   bool   `json:"IsTextSubtitleStream"`
+	SupportsExternalStream bool   `json:"SupportsExternalStream"`
+	Channels               *int   `json:"Channels,omitempty"`
+	Width                  *int   `json:"Width,omitempty"`
+	Height                 *int   `json:"Height,omitempty"`
+	BitRate                *int64 `json:"BitRate,omitempty"`
 }
 
 func mediaStreamDtos(streams []storage.MediaStreamRef) []mediaStreamDto {
@@ -182,6 +219,44 @@ func (s *Server) imageTags(ctx context.Context, id storage.ItemID) map[string]st
 	return map[string]string{"Primary": tag}
 }
 
+// libraryBaseItemDto builds the BaseItemDto for a library root itself
+// (Type=UserView/CollectionFolder) — a storage.Library, not a storage.Item
+// (they're separate stores, storage/library.go's doc comment), so it can't
+// go through baseItemDto() below. Shared by handleUserViews (library.go),
+// handleItemGet's library-root fallback, and handleItemAncestors' final
+// entry — previously duplicated ad hoc in the first of those.
+func (s *Server) libraryBaseItemDto(lib storage.Library) baseItemDto {
+	return baseItemDto{
+		Name:           lib.Name,
+		ServerID:       s.cfg.ServerID,
+		ID:             string(lib.ID),
+		IsFolder:       true,
+		Type:           string(storage.ItemTypeUserView),
+		CollectionType: string(lib.CollectionType),
+	}
+}
+
+// userDataFor builds BaseItemDto.UserData for (userID, itemID) from
+// PlaystateStore — see baseItemDto's UserData field doc comment. A lookup
+// error (no row yet — the common case for an item the user has never
+// touched) is treated as the storage.Playstate zero value, same convention
+// sessions_playback.go's reportPlaybackPosition/handleUserPlayedItemsMark
+// already use.
+func (s *Server) userDataFor(ctx context.Context, userID storage.UserID, itemID storage.ItemID) *userItemDataDto {
+	state, err := s.store.GetPlaystate(ctx, userID, itemID)
+	if err != nil {
+		state = storage.Playstate{}
+	}
+	return &userItemDataDto{
+		PlaybackPositionTicks: state.PlaybackPositionTicks,
+		PlayCount:             state.PlayCount,
+		IsFavorite:            state.IsFavorite,
+		Played:                state.Played,
+		Key:                   string(itemID),
+		ItemID:                string(itemID),
+	}
+}
+
 func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto {
 	dto := baseItemDto{
 		Name:              item.Name,
@@ -223,6 +298,9 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 	}
 	if item.SeasonID != nil {
 		dto.SeasonID = string(*item.SeasonID)
+	}
+	if ac, ok := AuthFromContext(ctx); ok && ac.Authenticated {
+		dto.UserData = s.userDataFor(ctx, ac.User.ID, item.ID)
 	}
 	return dto
 }

@@ -478,6 +478,9 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 			wheres = append(wheres, "COALESCE(ps.is_favorite, 0) = ?")
 			whereArgs = append(whereArgs, boolToInt(*filter.Favorite))
 		}
+		if filter.Resume {
+			wheres = append(wheres, "ps.playback_position_ticks > 0 AND COALESCE(ps.played, 0) = 0")
+		}
 	}
 
 	joinSQL := strings.Join(joins, " ")

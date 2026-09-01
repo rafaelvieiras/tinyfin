@@ -12,6 +12,30 @@ import (
 // arbitrary caller-chosen id here, jellyfin-web always sends "usersettings"
 // for its own settings), Client is carried on the DTO too even though it's
 // also a query param on the request.
+//
+// ScrollDirection and SortOrder are NOT omitempty, unlike the other string
+// fields here: found by testing against a real jellyfin-android build —
+// its jellyfin-sdk-kotlin client deserializes this response with
+// kotlinx.serialization into a DisplayPreferencesDto that declares those
+// two fields required (no default), so a fresh user with no preferences
+// ever set (both are "" here) throws MissingFieldException the moment the
+// key is absent from the JSON entirely, right when the app's native player
+// fetches display preferences before starting playback — jellyfin-web
+// never noticed because its JS reads them as simply undefined.
+//
+// That first fix was incomplete, found while mapping the whole native
+// playback flow for coverage: an empty string isn't just "missing", it's
+// also not a valid member of either field's enum (ScrollDirection.kt only
+// has "Horizontal"/"Vertical", SortOrder.kt only "Ascending"/"Descending",
+// neither declares a fallback), so kotlinx.serialization still throws —
+// a different SerializationException (invalid enum value, not a missing
+// key) but the same caught-and-degrade outcome in PlayerViewModel. This
+// hits any (userId, client) pair that has never had preferences saved
+// under it before, which includes the native player's own
+// client="emby"/id="usersettings" pair the first time a device plays
+// anything, even for a user who has already used jellyfin-web (a
+// different client value). defaultScrollDirection/defaultSortOrder below
+// are applied wherever the stored or zero value would otherwise be empty.
 type displayPreferencesDto struct {
 	ID                 string            `json:"Id"`
 	ViewType           string            `json:"ViewType,omitempty"`
@@ -21,12 +45,31 @@ type displayPreferencesDto struct {
 	PrimaryImageWidth  int               `json:"PrimaryImageWidth"`
 	PrimaryImageHeight int               `json:"PrimaryImageHeight"`
 	CustomPrefs        map[string]string `json:"CustomPrefs"`
-	ScrollDirection    string            `json:"ScrollDirection,omitempty"`
+	ScrollDirection    string            `json:"ScrollDirection"`
 	ShowBackdrop       bool              `json:"ShowBackdrop"`
 	RememberSorting    bool              `json:"RememberSorting"`
-	SortOrder          string            `json:"SortOrder,omitempty"`
+	SortOrder          string            `json:"SortOrder"`
 	ShowSidebar        bool              `json:"ShowSidebar"`
 	Client             string            `json:"Client,omitempty"`
+}
+
+// defaultScrollDirection/defaultSortOrder return v unchanged unless it's
+// empty, in which case they substitute the reference server's own default
+// enum member — see the doc comment above displayPreferencesDto for why an
+// empty string can't just pass through here the way the other string
+// fields on this DTO do.
+func defaultScrollDirection(v string) string {
+	if v == "" {
+		return "Vertical"
+	}
+	return v
+}
+
+func defaultSortOrder(v string) string {
+	if v == "" {
+		return "Ascending"
+	}
+	return v
 }
 
 // handleDisplayPreferencesGet is GET /DisplayPreferences/{displayPreferencesId}
@@ -45,7 +88,13 @@ func (s *Server) handleDisplayPreferencesGet(w http.ResponseWriter, r *http.Requ
 
 	prefs, err := s.store.GetDisplayPreferences(r.Context(), userID, client)
 	if err != nil {
-		writeJSON(w, http.StatusOK, displayPreferencesDto{ID: r.PathValue("displayPreferencesId"), Client: client, CustomPrefs: map[string]string{}})
+		writeJSON(w, http.StatusOK, displayPreferencesDto{
+			ID:              r.PathValue("displayPreferencesId"),
+			Client:          client,
+			CustomPrefs:     map[string]string{},
+			ScrollDirection: defaultScrollDirection(""),
+			SortOrder:       defaultSortOrder(""),
+		})
 		return
 	}
 	if prefs.CustomPrefs == nil {
@@ -60,10 +109,10 @@ func (s *Server) handleDisplayPreferencesGet(w http.ResponseWriter, r *http.Requ
 		PrimaryImageWidth:  prefs.PrimaryImageWidth,
 		PrimaryImageHeight: prefs.PrimaryImageHeight,
 		CustomPrefs:        prefs.CustomPrefs,
-		ScrollDirection:    prefs.ScrollDirection,
+		ScrollDirection:    defaultScrollDirection(prefs.ScrollDirection),
 		ShowBackdrop:       prefs.ShowBackdrop,
 		RememberSorting:    prefs.RememberSorting,
-		SortOrder:          prefs.SortOrder,
+		SortOrder:          defaultSortOrder(prefs.SortOrder),
 		ShowSidebar:        prefs.ShowSidebar,
 		Client:             client,
 	})

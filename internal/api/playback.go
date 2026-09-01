@@ -1,9 +1,12 @@
 // playback.go implements the Direct-Play-only slice of docs/04's
 // "playback/streaming" group: PlaybackInfo negotiation (docs/07's
 // decision, narrowed to Direct Play per ROADMAP.md Phase 1) and the actual
-// media-file byte stream. Remux/Direct Stream/Transcode, HLS, media
-// segments, trickplay, and playstate reporting are explicitly out of scope
-// here — later increments, not silently expanded into.
+// media-file byte stream. Remux/Direct Stream/Transcode, HLS, and
+// trickplay are still explicitly out of scope here — later increments,
+// not silently expanded into. Media segments and playstate reporting
+// (resume position, watched status) used to be listed here too, but
+// turned out to be load-bearing for the native player rather than
+// deferrable — see sessions_playback.go.
 package api
 
 import (
@@ -23,23 +26,44 @@ import (
 // /Videos/{itemId}/stream(.{container}) itself from Id + Container, it
 // isn't handed a ready-made URL. That's why /Videos/{itemId}/stream exists
 // as its own route (below) rather than being referenced by a field here.
+//
+// ReadAtNativeFramerate through HasSegments are NOT omitempty: found
+// missing by reading jellyfin-sdk-kotlin's MediaSourceInfo.kt directly
+// (not just testing) after the native Android player's PlaybackInfo call
+// kept silently failing to resolve a media source with no crash and no
+// server-visible error — kotlinx.serialization requires these keys
+// present (they have no default), same failure class as
+// DisplayPreferencesDto's ScrollDirection/SortOrder below, but this one is
+// on the very first call the native player makes, so it blocks Direct
+// Play for every item unconditionally. TranscodingSubProtocol is a
+// required enum with no "none" member even though Tinyfin never
+// transcodes — "http" is the value the reference server itself reports
+// for a Direct Play source.
 type mediaSourceInfoDto struct {
-	ID                   string           `json:"Id"`
-	Protocol             string           `json:"Protocol"`
-	Path                 string           `json:"Path,omitempty"`
-	Type                 string           `json:"Type"`
-	Container            string           `json:"Container,omitempty"`
-	Size                 int64            `json:"Size,omitempty"`
-	Name                 string           `json:"Name,omitempty"`
-	IsRemote             bool             `json:"IsRemote"`
-	RunTimeTicks         *int64           `json:"RunTimeTicks,omitempty"`
-	SupportsTranscoding  bool             `json:"SupportsTranscoding"`
-	SupportsDirectStream bool             `json:"SupportsDirectStream"`
-	SupportsDirectPlay   bool             `json:"SupportsDirectPlay"`
-	RequiresOpening      bool             `json:"RequiresOpening"`
-	RequiresClosing      bool             `json:"RequiresClosing"`
-	SupportsProbing      bool             `json:"SupportsProbing"`
-	MediaStreams         []mediaStreamDto `json:"MediaStreams,omitempty"`
+	ID                     string           `json:"Id"`
+	Protocol               string           `json:"Protocol"`
+	Path                   string           `json:"Path,omitempty"`
+	Type                   string           `json:"Type"`
+	Container              string           `json:"Container,omitempty"`
+	Size                   int64            `json:"Size,omitempty"`
+	Name                   string           `json:"Name,omitempty"`
+	IsRemote               bool             `json:"IsRemote"`
+	RunTimeTicks           *int64           `json:"RunTimeTicks,omitempty"`
+	ReadAtNativeFramerate  bool             `json:"ReadAtNativeFramerate"`
+	IgnoreDts              bool             `json:"IgnoreDts"`
+	IgnoreIndex            bool             `json:"IgnoreIndex"`
+	GenPtsInput            bool             `json:"GenPtsInput"`
+	SupportsTranscoding    bool             `json:"SupportsTranscoding"`
+	SupportsDirectStream   bool             `json:"SupportsDirectStream"`
+	SupportsDirectPlay     bool             `json:"SupportsDirectPlay"`
+	IsInfiniteStream       bool             `json:"IsInfiniteStream"`
+	RequiresOpening        bool             `json:"RequiresOpening"`
+	RequiresClosing        bool             `json:"RequiresClosing"`
+	RequiresLooping        bool             `json:"RequiresLooping"`
+	SupportsProbing        bool             `json:"SupportsProbing"`
+	TranscodingSubProtocol string           `json:"TranscodingSubProtocol"`
+	HasSegments            bool             `json:"HasSegments"`
+	MediaStreams           []mediaStreamDto `json:"MediaStreams,omitempty"`
 }
 
 // playbackInfoResponse mirrors the OpenAPI schema's PlaybackInfoResponse.
@@ -102,22 +126,30 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 	resp := playbackInfoResponse{PlaySessionID: randomID()}
 	if decision.DirectPlaySupported {
 		resp.MediaSources = []mediaSourceInfoDto{{
-			ID:                   string(item.ID),
-			Protocol:             "File",
-			Path:                 item.Path,
-			Type:                 "Default",
-			Container:            decision.Container,
-			Size:                 item.Size,
-			Name:                 item.Name,
-			IsRemote:             false,
-			RunTimeTicks:         item.RunTimeTicks,
-			SupportsDirectPlay:   true,
-			SupportsDirectStream: false,
-			SupportsTranscoding:  false,
-			RequiresOpening:      false,
-			RequiresClosing:      false,
-			SupportsProbing:      true,
-			MediaStreams:         mediaStreamDtos(item.MediaStreams),
+			ID:                     string(item.ID),
+			Protocol:               "File",
+			Path:                   item.Path,
+			Type:                   "Default",
+			Container:              decision.Container,
+			Size:                   item.Size,
+			Name:                   item.Name,
+			IsRemote:               false,
+			RunTimeTicks:           item.RunTimeTicks,
+			ReadAtNativeFramerate:  false,
+			IgnoreDts:              false,
+			IgnoreIndex:            false,
+			GenPtsInput:            false,
+			SupportsDirectPlay:     true,
+			SupportsDirectStream:   false,
+			SupportsTranscoding:    false,
+			IsInfiniteStream:       false,
+			RequiresOpening:        false,
+			RequiresClosing:        false,
+			RequiresLooping:        false,
+			SupportsProbing:        true,
+			TranscodingSubProtocol: "http",
+			HasSegments:            false,
+			MediaStreams:           mediaStreamDtos(item.MediaStreams),
 		}}
 	} else {
 		// No transcode worker exists yet (out of scope — see the package

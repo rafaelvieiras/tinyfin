@@ -24,16 +24,52 @@ import (
 // are schema-required strings with no Tinyfin concept behind them yet;
 // given placeholder values identifying this project, not copied from
 // anywhere.
+//
+// IsHidden through SyncPlayAccess are a second batch found the same way as
+// the fields above but later: reading jellyfin-sdk-kotlin's UserPolicy.kt
+// directly (not just testing) while mapping the whole native playback
+// flow for coverage, after GET /Users/Me kept failing inside
+// PlayerViewModel.init with no visible error — caught internally by the
+// SDK's ApiClientException handling (RawResponse.kt), so it never
+// crashed, it just silently left autoPlayNextEpisodeEnabled at its
+// default. Live-TV/channels/sync/media-conversion/transcoding-permission
+// flags are honestly false (none of those features exist in Tinyfin, same
+// "not built yet" reasoning as SupportsLibraryMonitor in system.go), not
+// an invented restriction. Lockout/session-limit counters are 0 (no
+// lockout/session-limit tracking exists) — 0 is also Jellyfin's own
+// "unlimited" convention for MaxActiveSessions/RemoteClientBitrateLimit.
+// SyncPlayAccess has no "not built" value other than its own "None" enum
+// member, so that's what's reported.
 type userPolicyDto struct {
-	IsAdministrator          bool   `json:"IsAdministrator"`
-	IsDisabled               bool   `json:"IsDisabled"`
-	EnableMediaPlayback      bool   `json:"EnableMediaPlayback"`
-	EnableAllFolders         bool   `json:"EnableAllFolders"`
-	EnableAllDevices         bool   `json:"EnableAllDevices"`
-	EnableRemoteAccess       bool   `json:"EnableRemoteAccess"`
-	EnableContentDownloading bool   `json:"EnableContentDownloading"`
-	AuthenticationProviderId string `json:"AuthenticationProviderId"`
-	PasswordResetProviderId  string `json:"PasswordResetProviderId"`
+	IsAdministrator                 bool   `json:"IsAdministrator"`
+	IsHidden                        bool   `json:"IsHidden"`
+	IsDisabled                      bool   `json:"IsDisabled"`
+	EnableUserPreferenceAccess      bool   `json:"EnableUserPreferenceAccess"`
+	EnableRemoteControlOfOtherUsers bool   `json:"EnableRemoteControlOfOtherUsers"`
+	EnableSharedDeviceControl       bool   `json:"EnableSharedDeviceControl"`
+	EnableMediaPlayback             bool   `json:"EnableMediaPlayback"`
+	EnableAllFolders                bool   `json:"EnableAllFolders"`
+	EnableAllDevices                bool   `json:"EnableAllDevices"`
+	EnableRemoteAccess              bool   `json:"EnableRemoteAccess"`
+	EnableContentDownloading        bool   `json:"EnableContentDownloading"`
+	EnableContentDeletion           bool   `json:"EnableContentDeletion"`
+	EnablePublicSharing             bool   `json:"EnablePublicSharing"`
+	EnableLiveTvManagement          bool   `json:"EnableLiveTvManagement"`
+	EnableLiveTvAccess              bool   `json:"EnableLiveTvAccess"`
+	EnableAllChannels               bool   `json:"EnableAllChannels"`
+	EnableAudioPlaybackTranscoding  bool   `json:"EnableAudioPlaybackTranscoding"`
+	EnableVideoPlaybackTranscoding  bool   `json:"EnableVideoPlaybackTranscoding"`
+	EnablePlaybackRemuxing          bool   `json:"EnablePlaybackRemuxing"`
+	ForceRemoteSourceTranscoding    bool   `json:"ForceRemoteSourceTranscoding"`
+	EnableSyncTranscoding           bool   `json:"EnableSyncTranscoding"`
+	EnableMediaConversion           bool   `json:"EnableMediaConversion"`
+	InvalidLoginAttemptCount        int    `json:"InvalidLoginAttemptCount"`
+	LoginAttemptsBeforeLockout      int    `json:"LoginAttemptsBeforeLockout"`
+	MaxActiveSessions               int    `json:"MaxActiveSessions"`
+	RemoteClientBitrateLimit        int    `json:"RemoteClientBitrateLimit"`
+	SyncPlayAccess                  string `json:"SyncPlayAccess"`
+	AuthenticationProviderId        string `json:"AuthenticationProviderId"`
+	PasswordResetProviderId         string `json:"PasswordResetProviderId"`
 }
 
 // userConfigurationDto mirrors the OpenAPI schema's UserConfiguration.
@@ -51,7 +87,19 @@ type userPolicyDto struct {
 // Tinyfin has no per-user configuration store (docs/05 has no such
 // store), so RememberAudioSelections/RememberSubtitleSelections are
 // simply always true (no other project behavior depends on them) and
-// every other field is left at its natural zero value.
+// every other field is left at its natural zero value — except the four
+// []string fields, which userDto's constructor below must initialize to
+// non-nil empty slices, not leave nil: Go's encoding/json marshals a nil
+// slice as JSON null even without omitempty, but jellyfin-sdk-kotlin
+// declares GroupedFolders (and, by the same schema pattern, the other
+// three) as a non-nullable List<String> with no default, so a null
+// throws a JsonDecodingException ("Expected start of the array '['").
+// Found by reading a real jellyfin-android build's logcat: it surfaced as
+// "Failed to load auto play preference" inside PlayerViewModel, caught
+// (not crashing) but silently breaking that one preference, right
+// alongside the actual "Source error" 404 the user was reproducing to
+// diagnose — a second, unrelated bug that just happened to log at the
+// same moment, found by reading the trace rather than assumed.
 type userConfigurationDto struct {
 	AudioLanguagePreference    string   `json:"AudioLanguagePreference,omitempty"`
 	PlayDefaultAudioTrack      bool     `json:"PlayDefaultAudioTrack"`
@@ -109,17 +157,23 @@ func (s *Server) userDto(u storage.User) userDto {
 			RememberAudioSelections:    true,
 			RememberSubtitleSelections: true,
 			SubtitleMode:               "Default",
+			GroupedFolders:             []string{},
+			OrderedViews:               []string{},
+			LatestItemsExcludes:        []string{},
+			MyMediaExcludes:            []string{},
 		},
 		Policy: userPolicyDto{
-			IsAdministrator:          u.IsAdministrator,
-			IsDisabled:               u.IsDisabled,
-			EnableMediaPlayback:      true,
-			EnableAllFolders:         true,
-			EnableAllDevices:         true,
-			EnableRemoteAccess:       true,
-			EnableContentDownloading: true,
-			AuthenticationProviderId: "Tinyfin.Auth.Default",
-			PasswordResetProviderId:  "Tinyfin.Auth.Default",
+			IsAdministrator:            u.IsAdministrator,
+			IsDisabled:                 u.IsDisabled,
+			EnableUserPreferenceAccess: true,
+			EnableMediaPlayback:        true,
+			EnableAllFolders:           true,
+			EnableAllDevices:           true,
+			EnableRemoteAccess:         true,
+			EnableContentDownloading:   true,
+			SyncPlayAccess:             "None",
+			AuthenticationProviderId:   "Tinyfin.Auth.Default",
+			PasswordResetProviderId:    "Tinyfin.Auth.Default",
 		},
 	}
 }
@@ -127,6 +181,29 @@ func (s *Server) userDto(u storage.User) userDto {
 func (s *Server) handleUsersMe(w http.ResponseWriter, r *http.Request) {
 	ac, _ := AuthFromContext(r.Context())
 	writeJSON(w, http.StatusOK, s.userDto(ac.User))
+}
+
+// handleUsersPublic is GET /Users/Public — unauthenticated, unlike every
+// other /Users route: jellyfin-web's login screen calls it before any
+// token exists, to render the "select user" list. Tinyfin has no
+// IsHidden/user-visibility concept yet, so every user is public — same
+// documented simplification as handleUsersList's admin-only note above.
+// Must be registered as its own literal route in server.go: without it,
+// GET /Users/{userId} swallows this path as userId="Public" and
+// requireAuth rejects it with 401 instead of the 200 the login screen
+// expects, found by testing against a real jellyfin-web build.
+func (s *Server) handleUsersPublic(w http.ResponseWriter, r *http.Request) {
+	users, err := s.store.QueryUsers(r.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	dtos := make([]userDto, 0, len(users))
+	for _, u := range users {
+		dtos = append(dtos, s.userDto(u))
+	}
+	writeJSON(w, http.StatusOK, dtos)
 }
 
 func (s *Server) handleUsersList(w http.ResponseWriter, r *http.Request) {
