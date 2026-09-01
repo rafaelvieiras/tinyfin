@@ -1,17 +1,20 @@
-// playback.go implements the Direct-Play-only slice of docs/04's
-// "playback/streaming" group: PlaybackInfo negotiation (docs/07's
-// decision, narrowed to Direct Play per ROADMAP.md Phase 1) and the actual
-// media-file byte stream. Remux/Direct Stream/Transcode, HLS, and
-// trickplay are still explicitly out of scope here — later increments,
-// not silently expanded into. Media segments and playstate reporting
-// (resume position, watched status) used to be listed here too, but
-// turned out to be load-bearing for the native player rather than
-// deferrable — see sessions_playback.go.
+// playback.go implements docs/04's "playback/streaming" group: PlaybackInfo
+// negotiation across the full Direct Play/Remux/Direct Stream/Transcode
+// ladder (docs/07's decision — internal/playback.Decide) and the two data
+// paths that follow from it: the raw Direct Play byte stream (this file)
+// and the HLS routes the other three modes hand off to (hls.go). Trickplay
+// is still explicitly out of scope — a later increment, not silently
+// expanded into. Media segments and playstate reporting (resume position,
+// watched status) used to be listed here too, but turned out to be
+// load-bearing for the native player rather than deferrable — see
+// sessions_playback.go.
 package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/rafaelvieiras/tinyfin/internal/deviceprofile"
@@ -19,13 +22,13 @@ import (
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
 
-// mediaSourceInfoDto mirrors the OpenAPI schema's MediaSourceInfo, trimmed
-// to what a Direct-Play-only response needs. There is no "stream URL"
-// field on the real schema at all (checked against the OpenAPI
-// MediaSourceInfo properties) — a real client builds GET
-// /Videos/{itemId}/stream(.{container}) itself from Id + Container, it
-// isn't handed a ready-made URL. That's why /Videos/{itemId}/stream exists
-// as its own route (below) rather than being referenced by a field here.
+// mediaSourceInfoDto mirrors the OpenAPI schema's MediaSourceInfo. There is
+// no "stream URL" field for Direct Play on the real schema at all (checked
+// against the OpenAPI MediaSourceInfo properties) — a real client builds
+// GET /Videos/{itemId}/stream(.{container}) itself from Id + Container, it
+// isn't handed a ready-made URL. TranscodingUrl is exactly that "ready-made
+// URL" for the other three modes, though (docs/07's Remux/Direct
+// Stream/Transcode) — see handlePlaybackInfo.
 //
 // ReadAtNativeFramerate through HasSegments are NOT omitempty: found
 // missing by reading jellyfin-sdk-kotlin's MediaSourceInfo.kt directly
@@ -35,32 +38,40 @@ import (
 // present (they have no default), same failure class as
 // DisplayPreferencesDto's ScrollDirection/SortOrder below, but this one is
 // on the very first call the native player makes, so it blocks Direct
-// Play for every item unconditionally. TranscodingSubProtocol is a
-// required enum with no "none" member even though Tinyfin never
-// transcodes — "http" is the value the reference server itself reports
-// for a Direct Play source.
+// Play for every item unconditionally.
 type mediaSourceInfoDto struct {
-	ID                     string           `json:"Id"`
-	Protocol               string           `json:"Protocol"`
-	Path                   string           `json:"Path,omitempty"`
-	Type                   string           `json:"Type"`
-	Container              string           `json:"Container,omitempty"`
-	Size                   int64            `json:"Size,omitempty"`
-	Name                   string           `json:"Name,omitempty"`
-	IsRemote               bool             `json:"IsRemote"`
-	RunTimeTicks           *int64           `json:"RunTimeTicks,omitempty"`
-	ReadAtNativeFramerate  bool             `json:"ReadAtNativeFramerate"`
-	IgnoreDts              bool             `json:"IgnoreDts"`
-	IgnoreIndex            bool             `json:"IgnoreIndex"`
-	GenPtsInput            bool             `json:"GenPtsInput"`
-	SupportsTranscoding    bool             `json:"SupportsTranscoding"`
-	SupportsDirectStream   bool             `json:"SupportsDirectStream"`
-	SupportsDirectPlay     bool             `json:"SupportsDirectPlay"`
-	IsInfiniteStream       bool             `json:"IsInfiniteStream"`
-	RequiresOpening        bool             `json:"RequiresOpening"`
-	RequiresClosing        bool             `json:"RequiresClosing"`
-	RequiresLooping        bool             `json:"RequiresLooping"`
-	SupportsProbing        bool             `json:"SupportsProbing"`
+	ID                    string `json:"Id"`
+	Protocol              string `json:"Protocol"`
+	Path                  string `json:"Path,omitempty"`
+	Type                  string `json:"Type"`
+	Container             string `json:"Container,omitempty"`
+	Size                  int64  `json:"Size,omitempty"`
+	Name                  string `json:"Name,omitempty"`
+	IsRemote              bool   `json:"IsRemote"`
+	RunTimeTicks          *int64 `json:"RunTimeTicks,omitempty"`
+	ReadAtNativeFramerate bool   `json:"ReadAtNativeFramerate"`
+	IgnoreDts             bool   `json:"IgnoreDts"`
+	IgnoreIndex           bool   `json:"IgnoreIndex"`
+	GenPtsInput           bool   `json:"GenPtsInput"`
+	SupportsTranscoding   bool   `json:"SupportsTranscoding"`
+	SupportsDirectStream  bool   `json:"SupportsDirectStream"`
+	SupportsDirectPlay    bool   `json:"SupportsDirectPlay"`
+	IsInfiniteStream      bool   `json:"IsInfiniteStream"`
+	RequiresOpening       bool   `json:"RequiresOpening"`
+	RequiresClosing       bool   `json:"RequiresClosing"`
+	RequiresLooping       bool   `json:"RequiresLooping"`
+	SupportsProbing       bool   `json:"SupportsProbing"`
+	// TranscodingUrl/TranscodingContainer are set only for Remux/Direct
+	// Stream/Transcode (docs/07) — empty (omitted) for Direct Play, which
+	// needs no transcode-worker involvement at all.
+	TranscodingUrl       string `json:"TranscodingUrl,omitempty"`
+	TranscodingContainer string `json:"TranscodingContainer,omitempty"`
+	// TranscodingSubProtocol is a required enum with no "none" member even
+	// for Direct Play, where nothing is actually transcoding — "http" is
+	// the value the reference server itself reports for a Direct Play
+	// source; "hls" is reported for the other three modes, matching
+	// TranscodingUrl's own protocol (hls.go serves HLS exclusively — no
+	// progressive-remux "http" transcoding path exists in this project).
 	TranscodingSubProtocol string           `json:"TranscodingSubProtocol"`
 	HasSegments            bool             `json:"HasSegments"`
 	MediaStreams           []mediaStreamDto `json:"MediaStreams,omitempty"`
@@ -121,61 +132,97 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	profile := s.resolveDeviceProfile(r)
-	decision := playback.DecideDirectPlay(item, profile)
-
+	decision := playback.Decide(item, profile)
 	resp := playbackInfoResponse{PlaySessionID: randomID()}
-	if decision.DirectPlaySupported {
-		resp.MediaSources = []mediaSourceInfoDto{{
-			ID:                     string(item.ID),
-			Protocol:               "File",
-			Path:                   item.Path,
-			Type:                   "Default",
-			Container:              decision.Container,
-			Size:                   item.Size,
-			Name:                   item.Name,
-			IsRemote:               false,
-			RunTimeTicks:           item.RunTimeTicks,
-			ReadAtNativeFramerate:  false,
-			IgnoreDts:              false,
-			IgnoreIndex:            false,
-			GenPtsInput:            false,
-			SupportsDirectPlay:     true,
-			SupportsDirectStream:   false,
-			SupportsTranscoding:    false,
-			IsInfiniteStream:       false,
-			RequiresOpening:        false,
-			RequiresClosing:        false,
-			RequiresLooping:        false,
-			SupportsProbing:        true,
-			TranscodingSubProtocol: "http",
-			HasSegments:            false,
-			MediaStreams:           mediaStreamDtos(item.MediaStreams),
-		}}
-	} else {
-		// No transcode worker exists yet (out of scope — see the package
-		// doc comment), so an incompatible source can't be offered any
-		// playable MediaSource at all. ErrorCode: NoCompatibleStream
-		// matches the reference server's own PlaybackErrorCode for this
-		// situation rather than inventing a new one, and MediaSources
-		// stays empty rather than pointing the client at a stream URL
-		// that wouldn't actually work.
+
+	source := mediaSourceInfoDto{
+		ID:              string(item.ID),
+		Protocol:        "File",
+		Path:            item.Path,
+		Type:            "Default",
+		Container:       decision.Container,
+		Size:            item.Size,
+		Name:            item.Name,
+		RunTimeTicks:    item.RunTimeTicks,
+		SupportsProbing: true,
+		MediaStreams:    mediaStreamDtos(item.MediaStreams),
+	}
+
+	switch decision.Mode {
+	case playback.ModeDirectPlay:
+		source.SupportsDirectPlay = true
+		source.TranscodingSubProtocol = "http"
+		resp.MediaSources = []mediaSourceInfoDto{source}
+
+	case playback.ModeRemux, playback.ModeDirectStream, playback.ModeTranscode:
+		// All three hand off to the transcode worker over HLS (docs/07's
+		// "Execution" section, hls.go) — Tinyfin has no separate
+		// progressive-remux byte-stream path, only the HLS one
+		// internal/transcode already produces, so Remux/Direct Stream
+		// reuse it too instead of needing their own serving mechanism.
+		source.SupportsDirectStream = decision.Mode != playback.ModeTranscode
+		source.SupportsTranscoding = true
+		var token string
+		if ac, ok := AuthFromContext(r.Context()); ok && ac != nil {
+			token = ac.Token
+		}
+		source.TranscodingUrl = hlsMasterURL(item.ID, resp.PlaySessionID, token)
+		source.TranscodingContainer = decision.Container
+		source.TranscodingSubProtocol = "hls"
+		resp.MediaSources = []mediaSourceInfoDto{source}
+
+	default: // playback.ModeNone
+		// Neither Direct Play nor any transcode fallback applies (the
+		// resolved profile has no usable TranscodingProfiles entry — see
+		// deviceprofile.DeviceProfile's doc comment). ErrorCode:
+		// NoCompatibleStream matches the reference server's own
+		// PlaybackErrorCode for this situation rather than inventing a new
+		// one, and MediaSources stays empty rather than pointing the
+		// client at a stream URL that wouldn't actually work.
 		resp.ErrorCode = "NoCompatibleStream"
 	}
 
 	writeJSON(w, http.StatusOK, resp)
 }
 
-// handleVideoStream serves GET /Videos/{itemId}/stream and
-// /Videos/{itemId}/stream.{container} — the Direct Play data path. Both
-// forms are registered as a single "GET /Videos/{itemId}/{file}" mux
-// pattern (server.go): http.ServeMux wildcards must occupy a whole path
-// segment, so "stream.{container}" can't be its own pattern — this handler
-// validates the {file} segment itself instead of relying on the router to
-// split "stream" from ".{container}".
+// hlsMasterURL builds the TranscodingUrl a client should fetch to begin
+// consuming the HLS stream for itemID (handleHLSMaster, hls.go), mirroring
+// the reference server's own master-playlist route shape (confirmed
+// against the published @jellyfin/sdk client per docs/04's
+// secondary-verification allowance — the OpenAPI schema itself omits the
+// DynamicHls routes).
 //
-// No re-encoding, no ffmpeg subprocess (that's the transcode worker's job,
-// docs/07, out of scope here): just the file bytes, via http.ServeFile so
-// Range/conditional requests and HEAD are handled correctly for seeking.
+// apiKey is embedded as a query param for the same reason
+// withAuthContext's query-string fallback exists (auth.go): a browser's
+// hls.js resolves this URL directly (no ApiClient, no custom headers), so
+// without a token in the URL itself every follow-up request — main.m3u8,
+// then each segment — 401s. Confirmed by testing an actual transcode
+// through jellyfin-web in a real browser: the very first master.m3u8
+// fetch came back 401 until this was added. handleHLSMaster forwards its
+// own RawQuery into the main.m3u8 link it emits, and handleHLSPlaylist
+// rewrites each segment line with that same query — so one token embedded
+// here propagates through the whole chain.
+func hlsMasterURL(itemID storage.ItemID, playSessionID, apiKey string) string {
+	v := url.Values{"PlaySessionId": {playSessionID}}
+	if apiKey != "" {
+		v.Set("api_key", apiKey)
+	}
+	return fmt.Sprintf("/Videos/%s/master.m3u8?%s", url.PathEscape(string(itemID)), v.Encode())
+}
+
+// handleVideoStream serves GET /Videos/{itemId}/stream and
+// /Videos/{itemId}/stream.{container} — the Direct Play data path — and, as
+// of hls.go, the HLS segment files the other three modes produce. All are
+// registered as a single "GET /Videos/{itemId}/{file}" mux pattern
+// (server.go): http.ServeMux wildcards must occupy a whole path segment, so
+// neither "stream.{container}" nor a segment's own extension can be its own
+// pattern — this handler dispatches on the {file} segment's shape itself
+// instead of relying on the router to split it further.
+//
+// Direct Play: no re-encoding, no ffmpeg subprocess (that's the transcode
+// worker's job, docs/07, only reached for the other three modes) — just the
+// file bytes, via http.ServeFile so Range/conditional requests and HEAD are
+// handled correctly for seeking.
 //
 // Path-traversal trust boundary: item.Path comes from storage.Item, set by
 // whatever wrote that row (the future scanner, docs/08) — never built by
@@ -184,15 +231,24 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 // ever compared against a literal prefix, never joined into a filesystem
 // path). This is the same trust boundary the rest of this codebase already
 // relies on for Item.Path/ImageRef.Path; it does not need its own new
-// sandboxing layer to stay consistent with that.
+// sandboxing layer to stay consistent with that. The HLS-segment branch
+// below is the one place {file} genuinely is joined into a filesystem path
+// (handleHLSSegment, hls.go) — segmentFilePattern validates it strictly
+// before that happens, since unlike item.Path this value comes directly
+// off the wire.
 func (s *Server) handleVideoStream(w http.ResponseWriter, r *http.Request) {
 	file := r.PathValue("file")
+	itemID := storage.ItemID(r.PathValue("itemId"))
+
+	if segmentFilePattern.MatchString(file) {
+		s.handleHLSSegment(w, r, itemID, file)
+		return
+	}
 	if file != "stream" && !strings.HasPrefix(file, "stream.") {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	itemID := storage.ItemID(r.PathValue("itemId"))
 	item, err := s.store.GetItem(r.Context(), itemID)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)

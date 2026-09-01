@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/rafaelvieiras/tinyfin/internal/deviceprofile"
@@ -85,7 +86,17 @@ func TestPlaybackInfoDirectPlaySupported(t *testing.T) {
 	}
 }
 
-func TestPlaybackInfoDirectPlayUnsupported(t *testing.T) {
+// TestPlaybackInfoDirectPlayUnsupportedFallsBackToTranscode covers what
+// used to be Phase 1's "unsupported" case: an item incompatible with the
+// resolved profile's DirectPlayProfiles. Phase 1 had no transcode ladder at
+// all, so this used to report ErrorCode: NoCompatibleStream with zero
+// MediaSources — now that every built-in profile (including
+// deviceprofile.Default(), used here) carries a TranscodingProfiles
+// fallback (internal/playback.Decide, docs/07's ladder), the same item
+// correctly reaches Transcode mode instead. See
+// TestPlaybackInfoNoCompatibleStreamWhenProfileHasNoTranscodingFallback
+// below for the case that still produces NoCompatibleStream.
+func TestPlaybackInfoDirectPlayUnsupportedFallsBackToTranscode(t *testing.T) {
 	ts, st := newTestServer(t)
 	user := createTestUser(t, st, "hank", "hankpass")
 	token := loginToken(t, ts.URL, user.Name, "hankpass")
@@ -106,10 +117,93 @@ func TestPlaybackInfoDirectPlayUnsupported(t *testing.T) {
 	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/Items/"+string(item.ID)+"/PlaybackInfo", nil)
 	req.Header.Set("X-Emby-Token", token)
 	// No Client header this time -> falls through to deviceprofile.Default(),
-	// which is conservative (mp4/h264/aac only).
+	// which is conservative (mp4/h264/aac only) for Direct Play but still
+	// carries a TranscodingProfiles fallback.
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("GET PlaybackInfo: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+
+	var got playbackInfoResponse
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatalf("decoding PlaybackInfoResponse: %v", err)
+	}
+	if len(got.MediaSources) != 1 {
+		t.Fatalf("len(MediaSources) = %d, want 1", len(got.MediaSources))
+	}
+	source := got.MediaSources[0]
+	if source.SupportsDirectPlay {
+		t.Error("SupportsDirectPlay = true, want false")
+	}
+	if !source.SupportsTranscoding {
+		t.Error("SupportsTranscoding = false, want true")
+	}
+	if source.TranscodingUrl == "" {
+		t.Error("TranscodingUrl is empty, want a master.m3u8 URL")
+	}
+	// The token must be embedded in the URL itself, not just implied by
+	// the request that fetched PlaybackInfo: a browser's hls.js resolves
+	// TranscodingUrl directly and can't attach the X-Emby-Token header a
+	// normal API call would — confirmed by testing an actual transcode
+	// through jellyfin-web in a real browser, where the master.m3u8 fetch
+	// 401'd until this was added (ROADMAP.md's Phase 2 HLS serving entry).
+	if !strings.Contains(source.TranscodingUrl, "api_key="+token) {
+		t.Errorf("TranscodingUrl = %q, want it to contain api_key=%s", source.TranscodingUrl, token)
+	}
+	if source.TranscodingSubProtocol != "hls" {
+		t.Errorf("TranscodingSubProtocol = %q, want %q", source.TranscodingSubProtocol, "hls")
+	}
+	if got.ErrorCode != "" {
+		t.Errorf("ErrorCode = %q, want empty", got.ErrorCode)
+	}
+}
+
+// TestPlaybackInfoNoCompatibleStreamWhenProfileHasNoTranscodingFallback
+// covers the genuine ModeNone case: a profile with no TranscodingProfiles
+// entry at all leaves Decide nothing to fall back to, so PlaybackInfo must
+// still report ErrorCode: NoCompatibleStream with zero MediaSources.
+func TestPlaybackInfoNoCompatibleStreamWhenProfileHasNoTranscodingFallback(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "iris", "irispass")
+	token := loginToken(t, ts.URL, user.Name, "irispass")
+	libID := createTestLibrary(t, st, "IrisLib", storage.CollectionTypeMovies)
+
+	item := createTestItem(t, st, storage.Item{
+		Type:      storage.ItemTypeMovie,
+		LibraryID: libID,
+		Name:      "No Fallback Movie",
+		Container: "mkv",
+		Path:      "/media/no-fallback.mkv",
+		MediaStreams: []storage.MediaStreamRef{
+			{Type: storage.StreamTypeVideo, Codec: "hevc", IsDefault: true},
+			{Type: storage.StreamTypeAudio, Codec: "dts", IsDefault: true},
+		},
+	})
+
+	body, err := json.Marshal(struct {
+		DeviceProfile deviceprofile.DeviceProfile `json:"DeviceProfile"`
+	}{
+		DeviceProfile: deviceprofile.DeviceProfile{
+			Name: "No Transcode Fallback",
+			DirectPlayProfiles: []deviceprofile.DirectPlayProfile{
+				{Type: "Video", Container: "mp4", VideoCodec: "h264"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal request body: %v", err)
+	}
+
+	req, _ := http.NewRequest(http.MethodPost, ts.URL+"/Items/"+string(item.ID)+"/PlaybackInfo", bytes.NewReader(body))
+	req.Header.Set("X-Emby-Token", token)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("POST PlaybackInfo: %v", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {

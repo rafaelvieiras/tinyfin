@@ -10,16 +10,39 @@
 // internal/api.
 package deviceprofile
 
-// DeviceProfile mirrors the OpenAPI DeviceProfile schema, trimmed to what a
-// Direct-Play-only decision needs (this project's Phase 1 — see
-// ROADMAP.md). TranscodingProfiles, ContainerProfiles, CodecProfiles, and
-// SubtitleProfiles are deferred to Phase 2 (the Remux/Direct
-// Stream/Transcode ladder in docs/07) and intentionally not modeled here,
-// matching docs/05's "fields TBD" precedent for out-of-scope struct
-// members rather than fabricating a shape nothing consumes yet.
+// DeviceProfile mirrors the OpenAPI DeviceProfile schema. Phase 1 modeled
+// only Name/DirectPlayProfiles (Direct-Play-only decisions); this is the
+// Phase 2 follow-up (see ROADMAP.md) that adds the fields the Remux/Direct
+// Stream/Transcode ladder (docs/07) needs.
+//
+// TranscodingProfiles is the field that actually drives the new decision
+// logic (internal/playback/decision.go, being extended separately): a
+// client is only transcode-capable at all if this slice has at least one
+// entry, since it's what tells the decision layer which
+// container/codec/protocol combination to fall back to once Direct Play,
+// Remux, and Direct Stream have all been ruled out.
+//
+// ContainerProfiles, CodecProfiles (and the ProfileCondition rules they
+// carry), and SubtitleProfiles are modeled here for wire completeness only
+// — a client's submitted profile may legitimately include them, and Go's
+// JSON decoder needs a field to decode into rather than silently dropping
+// them — but their *conditional* semantics are deliberately not evaluated
+// by the decision logic yet. In the reference server these narrow Direct
+// Play on a per-condition basis (e.g. "h264 is direct-playable only up to
+// VideoLevel 4.1"); Tinyfin's decision logic does not yet apply that
+// narrowing. This is a scoped-out simplification, not an oversight —
+// matching this file's existing "fields TBD"/deferred precedent (see
+// docs/05) — and it means Tinyfin's Direct Play decisions are currently
+// coarser (container/codec-list only) than what a full CodecProfile
+// evaluation would produce. A future engineer implementing that narrowing
+// should start here.
 type DeviceProfile struct {
-	Name               string              `json:"Name,omitempty"`
-	DirectPlayProfiles []DirectPlayProfile `json:"DirectPlayProfiles"`
+	Name                string               `json:"Name,omitempty"`
+	DirectPlayProfiles  []DirectPlayProfile  `json:"DirectPlayProfiles"`
+	TranscodingProfiles []TranscodingProfile `json:"TranscodingProfiles"`
+	ContainerProfiles   []ContainerProfile   `json:"ContainerProfiles,omitempty"`
+	CodecProfiles       []CodecProfile       `json:"CodecProfiles,omitempty"`
+	SubtitleProfiles    []SubtitleProfile    `json:"SubtitleProfiles,omitempty"`
 }
 
 // DirectPlayProfile mirrors the OpenAPI DirectPlayProfile schema exactly:
@@ -45,6 +68,81 @@ type DirectPlayProfile struct {
 	// (a client's submitted profile may legitimately carry them) but
 	// simply never match a video item's decision.
 	Type string `json:"Type"`
+}
+
+// TranscodingProfile mirrors the OpenAPI TranscodingProfile schema: the
+// target container/codec/protocol Tinyfin's transcode worker (docs/07)
+// falls back to once Direct Play, Remux, and Direct Stream have all been
+// ruled out for a given item. See the DeviceProfile doc comment above for
+// why this is the one Phase 2 field the new decision logic actually
+// consumes.
+type TranscodingProfile struct {
+	Container string `json:"Container"`
+	// Type is the DlnaProfileType this entry applies to ("Audio", "Video",
+	// "Photo", "Subtitle", "Lyric"), same convention as DirectPlayProfile.Type.
+	Type                      string             `json:"Type"`
+	VideoCodec                string             `json:"VideoCodec,omitempty"`
+	AudioCodec                string             `json:"AudioCodec,omitempty"`
+	Protocol                  string             `json:"Protocol,omitempty"` // "http" | "hls"
+	EstimateContentLength     bool               `json:"EstimateContentLength"`
+	EnableMpegtsM2TsMode      bool               `json:"EnableMpegtsM2TsMode"`
+	TranscodeSeekInfo         string             `json:"TranscodeSeekInfo,omitempty"` // "Auto" | "Bytes"
+	CopyTimestamps            bool               `json:"CopyTimestamps"`
+	Context                   string             `json:"Context,omitempty"` // EncodingContext: "Streaming" | "Static"
+	EnableSubtitlesInManifest bool               `json:"EnableSubtitlesInManifest"`
+	MaxAudioChannels          string             `json:"MaxAudioChannels,omitempty"`
+	MinSegments               int                `json:"MinSegments,omitempty"`
+	SegmentLength             int                `json:"SegmentLength,omitempty"`
+	BreakOnNonKeyFrames       bool               `json:"BreakOnNonKeyFrames"`
+	Conditions                []ProfileCondition `json:"Conditions,omitempty"`
+	EnableAudioVbrEncoding    bool               `json:"EnableAudioVbrEncoding"`
+}
+
+// ContainerProfile mirrors the OpenAPI ContainerProfile schema. Not yet
+// evaluated by the decision logic — see the DeviceProfile doc comment.
+type ContainerProfile struct {
+	Type         string             `json:"Type"`
+	Conditions   []ProfileCondition `json:"Conditions,omitempty"`
+	Container    string             `json:"Container,omitempty"`
+	SubContainer string             `json:"SubContainer,omitempty"`
+}
+
+// CodecProfile mirrors the OpenAPI CodecProfile schema. Not yet evaluated
+// by the decision logic — see the DeviceProfile doc comment.
+type CodecProfile struct {
+	Type            string             `json:"Type"` // CodecType: "Video"/"VideoAudio"/"Audio"
+	Conditions      []ProfileCondition `json:"Conditions,omitempty"`
+	ApplyConditions []ProfileCondition `json:"ApplyConditions,omitempty"`
+	Codec           string             `json:"Codec,omitempty"`
+	Container       string             `json:"Container,omitempty"`
+	SubContainer    string             `json:"SubContainer,omitempty"`
+}
+
+// ProfileCondition mirrors the OpenAPI ProfileCondition schema — a single
+// (property, comparison, value) rule, e.g. "VideoBitrate LessThanEqual
+// 8000000" or "Width LessThanEqual 1920". Property is kept as a plain
+// string rather than a closed Go enum, matching this file's existing
+// pattern for wire vocabularies (see DirectPlayProfile.Type): known values
+// include "AudioChannels", "Width", "Height", "VideoBitrate",
+// "VideoLevel", "VideoProfile", "VideoBitDepth", "AudioBitrate",
+// "AudioSampleRate", "RefFrames", "VideoFramerate", "IsAnamorphic",
+// "IsInterlaced", "IsAvc", "NumAudioStreams", "NumVideoStreams",
+// "VideoRangeType", among others.
+type ProfileCondition struct {
+	Condition  string `json:"Condition"` // "Equals"|"NotEquals"|"LessThanEqual"|"GreaterThanEqual"|"EqualsAny"
+	Property   string `json:"Property"`
+	Value      string `json:"Value,omitempty"`
+	IsRequired bool   `json:"IsRequired"`
+}
+
+// SubtitleProfile mirrors the OpenAPI SubtitleProfile schema. Not yet
+// evaluated by the decision logic — see the DeviceProfile doc comment.
+type SubtitleProfile struct {
+	Format    string `json:"Format,omitempty"`
+	Method    string `json:"Method,omitempty"` // "Encode"|"Embed"|"External"|"Hls"|"Drop"
+	DidlMode  string `json:"DidlMode,omitempty"`
+	Language  string `json:"Language,omitempty"`
+	Container string `json:"Container,omitempty"`
 }
 
 // builtins is the O2 table: static configuration data compiled into the
@@ -82,6 +180,16 @@ var builtins = map[string]DeviceProfile{
 	"Jellyfin iOS":     mobileProfile,
 }
 
+// All three built-in profiles below share the same TranscodingProfiles
+// entry: H.264 baseline + AAC packaged as HLS/MPEG-TS, the one combination
+// every client capable of HLS at all is expected to decode. This is the
+// same "conservative starting point, grows on demand" reasoning this file
+// already applies to DirectPlayProfiles (docs/07 O2) — without at least
+// one TranscodingProfile entry a client falling back to one of these
+// built-ins could never reach Transcode mode when Direct Play doesn't
+// apply, which would silently regress Phase 2's goal for exactly the
+// clients that don't submit an inline profile of their own.
+
 // webProfile is the baseline for Jellyfin Web: containers/codecs a
 // browser's native <video> element can decode without a plugin, kept
 // conservative rather than maximal (docs/07 O2: "grows on demand"). No mkv
@@ -96,6 +204,18 @@ var webProfile = DeviceProfile{
 			Container:  "mp4,webm",
 			VideoCodec: "h264,vp9",
 			AudioCodec: "aac,mp3,flac,opus",
+		},
+	},
+	TranscodingProfiles: []TranscodingProfile{
+		{
+			Container:     "ts",
+			Type:          "Video",
+			VideoCodec:    "h264",
+			AudioCodec:    "aac",
+			Protocol:      "hls",
+			Context:       "Streaming",
+			MinSegments:   1,
+			SegmentLength: 6,
 		},
 	},
 }
@@ -115,18 +235,45 @@ var mobileProfile = DeviceProfile{
 			AudioCodec: "aac,ac3,flac,mp3",
 		},
 	},
+	// Two entries rather than webProfile/defaultProfile's one: mobileProfile's
+	// own DirectPlayProfiles already lists hevc as natively decodable by the
+	// platform media framework (ExoPlayer/AVFoundation), so it's reasonable to
+	// also offer hevc as a transcode target, not just the universally-safe
+	// h264 baseline — a lower-bitrate hevc encode is cheaper to produce and
+	// stream when the client can actually play it back.
+	TranscodingProfiles: []TranscodingProfile{
+		{
+			Container:     "ts",
+			Type:          "Video",
+			VideoCodec:    "h264",
+			AudioCodec:    "aac",
+			Protocol:      "hls",
+			Context:       "Streaming",
+			MinSegments:   1,
+			SegmentLength: 6,
+		},
+		{
+			Container:     "ts",
+			Type:          "Video",
+			VideoCodec:    "hevc",
+			AudioCodec:    "aac",
+			Protocol:      "hls",
+			Context:       "Streaming",
+			MinSegments:   1,
+			SegmentLength: 6,
+		},
+	},
 }
 
 // defaultProfile is the O2 fallback for a Client string with no builtins
 // entry and no inline profile on the request: Direct Play limited to a
-// narrow, safe baseline rather than failing the request outright (docs/07:
-// "a single built-in conservative default profile ... rather than failing
-// the request outright"). Since this slice has no transcode worker yet
-// (out of scope, see ROADMAP.md Phase 1), an item outside this baseline
-// simply reports no compatible playback method (see internal/playback and
-// internal/api's PlaybackInfo handler) instead of the reference server's
-// "everything else forced through Transcode" — there is nothing to
-// transcode with yet.
+// narrow, safe baseline (docs/07: "a single built-in conservative default
+// profile ... rather than failing the request outright"), with the same
+// H.264+AAC/HLS TranscodingProfile as webProfile/mobileProfile as the
+// fallback's own fallback — an item outside the Direct Play baseline now
+// reaches the decision logic's Transcode mode (docs/07's
+// Remux/Direct-Stream/Transcode ladder) instead of reporting no compatible
+// playback method.
 var defaultProfile = DeviceProfile{
 	Name: "Tinyfin Default",
 	DirectPlayProfiles: []DirectPlayProfile{
@@ -135,6 +282,18 @@ var defaultProfile = DeviceProfile{
 			Container:  "mp4",
 			VideoCodec: "h264",
 			AudioCodec: "aac",
+		},
+	},
+	TranscodingProfiles: []TranscodingProfile{
+		{
+			Container:     "ts",
+			Type:          "Video",
+			VideoCodec:    "h264",
+			AudioCodec:    "aac",
+			Protocol:      "hls",
+			Context:       "Streaming",
+			MinSegments:   1,
+			SegmentLength: 6,
 		},
 	},
 }

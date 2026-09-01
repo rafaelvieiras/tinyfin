@@ -22,18 +22,21 @@ func TestDecideDirectPlaySupported(t *testing.T) {
 		t.Fatal("Jellyfin Web profile not found")
 	}
 
-	got := DecideDirectPlay(item, profile)
-	if !got.DirectPlaySupported {
-		t.Fatal("DirectPlaySupported = false, want true")
+	got := Decide(item, profile)
+	if got.Mode != ModeDirectPlay {
+		t.Fatalf("Mode = %v, want ModeDirectPlay", got.Mode)
 	}
 	if got.Container != "mp4" {
 		t.Errorf("Container = %q, want %q", got.Container, "mp4")
 	}
 }
 
-func TestDecideDirectPlayIncompatibleContainer(t *testing.T) {
+func TestDecideRemuxWhenOnlyContainerMismatches(t *testing.T) {
+	// h264/aac are both in webProfile's DirectPlayProfiles, but mkv isn't —
+	// nothing needs re-encoding, just repackaging into a container the
+	// client accepts.
 	item := storage.Item{
-		Container: "mkv", // webProfile does not include mkv
+		Container: "mkv",
 		MediaStreams: []storage.MediaStreamRef{
 			{Type: storage.StreamTypeVideo, Codec: "h264", IsDefault: true},
 			{Type: storage.StreamTypeAudio, Codec: "aac", IsDefault: true},
@@ -41,16 +44,43 @@ func TestDecideDirectPlayIncompatibleContainer(t *testing.T) {
 	}
 	profile, _ := deviceprofile.Lookup("Jellyfin Web")
 
-	got := DecideDirectPlay(item, profile)
-	if got.DirectPlaySupported {
-		t.Fatal("DirectPlaySupported = true, want false (mkv not in Jellyfin Web's container list)")
+	got := Decide(item, profile)
+	if got.Mode != ModeRemux {
+		t.Fatalf("Mode = %v, want ModeRemux", got.Mode)
 	}
-	if got.Container != "" {
-		t.Errorf("Container = %q, want empty on unsupported decision", got.Container)
+	if got.VideoCodec != "copy" || got.AudioCodec != "copy" {
+		t.Errorf("VideoCodec/AudioCodec = %q/%q, want copy/copy", got.VideoCodec, got.AudioCodec)
+	}
+	if got.Container == "" {
+		t.Error("Container is empty, want one of webProfile's accepted containers")
 	}
 }
 
-func TestDecideDirectPlayIncompatibleVideoCodec(t *testing.T) {
+func TestDecideDirectStreamWhenOnlyAudioCodecMismatches(t *testing.T) {
+	// h264 is in webProfile's DirectPlayProfiles, but dts isn't — video can
+	// be copied, only the audio needs re-encoding.
+	item := storage.Item{
+		Container: "mp4",
+		MediaStreams: []storage.MediaStreamRef{
+			{Type: storage.StreamTypeVideo, Codec: "h264", IsDefault: true},
+			{Type: storage.StreamTypeAudio, Codec: "dts", IsDefault: true},
+		},
+	}
+	profile, _ := deviceprofile.Lookup("Jellyfin Web")
+
+	got := Decide(item, profile)
+	if got.Mode != ModeDirectStream {
+		t.Fatalf("Mode = %v, want ModeDirectStream", got.Mode)
+	}
+	if got.VideoCodec != "copy" {
+		t.Errorf("VideoCodec = %q, want copy", got.VideoCodec)
+	}
+	if got.AudioCodec == "" || got.AudioCodec == "copy" {
+		t.Errorf("AudioCodec = %q, want a concrete re-encode target", got.AudioCodec)
+	}
+}
+
+func TestDecideTranscodeWhenVideoCodecUnsupported(t *testing.T) {
 	item := storage.Item{
 		Container: "mp4",
 		MediaStreams: []storage.MediaStreamRef{
@@ -60,9 +90,35 @@ func TestDecideDirectPlayIncompatibleVideoCodec(t *testing.T) {
 	}
 	profile, _ := deviceprofile.Lookup("Jellyfin Web")
 
-	got := DecideDirectPlay(item, profile)
-	if got.DirectPlaySupported {
-		t.Fatal("DirectPlaySupported = true, want false (hevc not in Jellyfin Web's video codec list)")
+	got := Decide(item, profile)
+	if got.Mode != ModeTranscode {
+		t.Fatalf("Mode = %v, want ModeTranscode", got.Mode)
+	}
+	if got.Container == "" || got.VideoCodec == "" || got.AudioCodec == "" {
+		t.Errorf("Transcode decision missing target fields: %+v", got)
+	}
+}
+
+func TestDecideNoneWhenProfileHasNoTranscodingFallback(t *testing.T) {
+	item := storage.Item{
+		Container: "mkv",
+		MediaStreams: []storage.MediaStreamRef{
+			{Type: storage.StreamTypeVideo, Codec: "hevc", IsDefault: true},
+		},
+	}
+	profile := deviceprofile.DeviceProfile{
+		Name: "No Transcode Fallback",
+		DirectPlayProfiles: []deviceprofile.DirectPlayProfile{
+			{Type: "Video", Container: "mp4", VideoCodec: "h264"},
+		},
+	}
+
+	got := Decide(item, profile)
+	if got.Mode != ModeNone {
+		t.Fatalf("Mode = %v, want ModeNone", got.Mode)
+	}
+	if got.Container != "" || got.VideoCodec != "" || got.AudioCodec != "" {
+		t.Errorf("expected a zero Decision beyond Mode, got %+v", got)
 	}
 }
 
@@ -76,26 +132,30 @@ func TestDecideDirectPlayMobileSupportsHEVC(t *testing.T) {
 	}
 	profile, _ := deviceprofile.Lookup("Jellyfin Android")
 
-	got := DecideDirectPlay(item, profile)
-	if !got.DirectPlaySupported {
-		t.Fatal("DirectPlaySupported = false, want true (mobile profile supports mkv/hevc/ac3)")
+	got := Decide(item, profile)
+	if got.Mode != ModeDirectPlay {
+		t.Fatalf("Mode = %v, want ModeDirectPlay (mobile profile supports mkv/hevc/ac3)", got.Mode)
 	}
 }
 
-func TestDecideDirectPlayDefaultFallbackConservative(t *testing.T) {
+func TestDecideDefaultFallbackReachesTranscode(t *testing.T) {
+	// Phase 1's defaultProfile had no transcoding fallback at all, so this
+	// case used to land on "unsupported"; Phase 2 gave defaultProfile a
+	// TranscodingProfiles entry specifically so this now reaches Transcode
+	// instead (see deviceprofile.defaultProfile's doc comment).
 	item := storage.Item{
 		Container: "mkv",
 		MediaStreams: []storage.MediaStreamRef{
 			{Type: storage.StreamTypeVideo, Codec: "hevc", IsDefault: true},
 		},
 	}
-	got := DecideDirectPlay(item, deviceprofile.Default())
-	if got.DirectPlaySupported {
-		t.Fatal("DirectPlaySupported = true, want false against the conservative default profile")
+	got := Decide(item, deviceprofile.Default())
+	if got.Mode != ModeTranscode {
+		t.Fatalf("Mode = %v, want ModeTranscode against the conservative default profile", got.Mode)
 	}
 }
 
-func TestDecideDirectPlayNonDefaultExtraAudioTrackDoesNotBlock(t *testing.T) {
+func TestDecideNonDefaultExtraAudioTrackDoesNotBlockDirectPlay(t *testing.T) {
 	// A commentary track in an unsupported codec must not block Direct
 	// Play of the default audio track a client would actually select.
 	item := storage.Item{
@@ -108,17 +168,20 @@ func TestDecideDirectPlayNonDefaultExtraAudioTrackDoesNotBlock(t *testing.T) {
 	}
 	profile, _ := deviceprofile.Lookup("Jellyfin Web")
 
-	got := DecideDirectPlay(item, profile)
-	if !got.DirectPlaySupported {
-		t.Fatal("DirectPlaySupported = false, want true (non-default incompatible track shouldn't block)")
+	got := Decide(item, profile)
+	if got.Mode != ModeDirectPlay {
+		t.Fatalf("Mode = %v, want ModeDirectPlay (non-default incompatible track shouldn't block)", got.Mode)
 	}
 }
 
-func TestDecideDirectPlayEmptyContainer(t *testing.T) {
+func TestDecideEmptyContainerSkipsToTranscode(t *testing.T) {
+	// No known container (a scanner-less item, docs/08) can't be Direct
+	// Played/Remuxed/Direct-Streamed — Decide falls straight to whatever
+	// TranscodingProfiles offers.
 	item := storage.Item{Container: ""}
 	profile, _ := deviceprofile.Lookup("Jellyfin Web")
-	got := DecideDirectPlay(item, profile)
-	if got.DirectPlaySupported {
-		t.Fatal("DirectPlaySupported = true, want false for an item with no known container")
+	got := Decide(item, profile)
+	if got.Mode != ModeTranscode {
+		t.Fatalf("Mode = %v, want ModeTranscode for an item with no known container", got.Mode)
 	}
 }

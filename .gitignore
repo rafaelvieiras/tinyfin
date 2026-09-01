@@ -24,3 +24,6 @@
 
 # Personal machine-specific staging environment (real host media path, local data)
 /staging/
+
+# Playwright MCP session artifacts (screenshots/console logs from manual E2E checks)
+/.playwright-mcp/

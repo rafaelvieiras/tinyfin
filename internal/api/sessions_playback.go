@@ -61,27 +61,42 @@ func (s *Server) handleSessionsPlayingProgress(w http.ResponseWriter, r *http.Re
 // completion-threshold config exists) — the native client itself calls
 // POST /UserPlayedItems/{itemId} separately when it reaches the end of
 // the item, which is what actually marks it played.
+//
+// Also the primary teardown path for a Phase 2 transcode job (hls.go's
+// ensureTranscodeJob doc comment): a job's context is intentionally
+// long-lived (context.Background()), not tied to any single HLS request,
+// so nothing else in this project stops the ffmpeg subprocess and removes
+// its output directory once a client is actually done with an item. A
+// Direct Play item has no such job (s.transcode.Stop is a documented
+// no-op for an unknown session ID), so this runs unconditionally rather
+// than needing to know in advance which mode was in play.
 func (s *Server) handleSessionsPlayingStopped(w http.ResponseWriter, r *http.Request) {
-	s.reportPlaybackPosition(r)
+	itemID := s.reportPlaybackPosition(r)
+	if itemID != "" {
+		s.transcode.Stop(string(itemID))
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
 // reportPlaybackPosition decodes a playbackReportBody and, given a valid
 // ItemId and an authenticated user, updates just the PlaybackPositionTicks
-// field of that (user, item) pair's Playstate. Errors are swallowed
+// field of that (user, item) pair's Playstate, returning the decoded
+// ItemId (or "" on any failure) so callers that need it — currently only
+// handleSessionsPlayingStopped, to key its transcode-job teardown — don't
+// have to decode the body a second time. Errors are otherwise swallowed
 // throughout (decode failure, missing auth, store failure) — these are
 // fire-and-forget reporting calls from the client's point of view on the
 // reference server too; failing the HTTP response for a malformed or
 // racing report would be a worse experience than silently skipping the
 // position update.
-func (s *Server) reportPlaybackPosition(r *http.Request) {
+func (s *Server) reportPlaybackPosition(r *http.Request) storage.ItemID {
 	var body playbackReportBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.ItemID == "" || body.PositionTicks == nil {
-		return
+		return ""
 	}
 	ac, ok := AuthFromContext(r.Context())
 	if !ok || ac == nil {
-		return
+		return ""
 	}
 
 	itemID := storage.ItemID(body.ItemID)
@@ -91,6 +106,7 @@ func (s *Server) reportPlaybackPosition(r *http.Request) {
 	}
 	state.PlaybackPositionTicks = *body.PositionTicks
 	_ = s.store.SetPlaystate(r.Context(), ac.User.ID, itemID, state)
+	return itemID
 }
 
 // userItemDataDto mirrors the OpenAPI schema's UserItemDataDto, trimmed to

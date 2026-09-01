@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
+	"github.com/rafaelvieiras/tinyfin/internal/transcode"
 )
 
 // Version is the wire-visible server version reported in PublicSystemInfo
@@ -75,14 +76,21 @@ type Config struct {
 	// process. Known simplification: this value is not stable across
 	// restarts unless a caller supplies one explicitly.
 	ServerID string
+
+	// TranscodeFFmpegPath is the jellyfin-ffmpeg binary path passed through
+	// to internal/transcode.Config (docs/07's transcode worker role,
+	// Phase 2). Empty means that package's own fallback: look up "ffmpeg"
+	// on $PATH.
+	TranscodeFFmpegPath string
 }
 
 // Server is the API/metadata role's HTTP surface (docs/03). The zero value
 // is not usable — construct with NewServer.
 type Server struct {
-	store storage.Store
-	cfg   Config
-	mux   *http.ServeMux
+	store     storage.Store
+	cfg       Config
+	mux       *http.ServeMux
+	transcode *transcode.Manager
 }
 
 // NewServer builds a Server backed by store, applying cfg defaults where
@@ -96,7 +104,12 @@ func NewServer(store storage.Store, cfg Config) *Server {
 		cfg.ServerID = randomID()
 	}
 
-	s := &Server{store: store, cfg: cfg, mux: http.NewServeMux()}
+	s := &Server{
+		store:     store,
+		cfg:       cfg,
+		mux:       http.NewServeMux(),
+		transcode: transcode.New(transcode.Config{FFmpegPath: cfg.TranscodeFFmpegPath}),
+	}
 	s.routes()
 	return s
 }
@@ -221,11 +234,22 @@ func (s *Server) routes() {
 	// stream routes don't need a separate HEAD registration.
 	s.mux.HandleFunc("GET /Items/{itemId}/PlaybackInfo", requireAuth(s.handlePlaybackInfo))
 	s.mux.HandleFunc("POST /Items/{itemId}/PlaybackInfo", requireAuth(s.handlePlaybackInfo))
+	// Must precede GET /Videos/{itemId}/{file} below in registration only
+	// for the sake of routing.go's routePaths (case-insensitive
+	// normalization needs the literal checked before the wildcard would
+	// swallow it, same reasoning as "/Items/Latest" above) — http.ServeMux
+	// itself always resolves a literal segment ahead of a wildcard
+	// regardless of order. Remux/Direct Stream/Transcode (hls.go, docs/07's
+	// ladder past Direct Play) — the transcode worker role, wired
+	// in-process via internal/transcode.
+	s.mux.HandleFunc("GET /Videos/{itemId}/master.m3u8", requireAuth(s.handleHLSMaster))
+	s.mux.HandleFunc("GET /Videos/{itemId}/main.m3u8", requireAuth(s.handleHLSPlaylist))
 	// http.ServeMux wildcards must occupy a whole path segment — "stream.
 	// {container}" mixes a literal suffix with a wildcard in one segment,
 	// which ServeMux rejects at registration time. A single {file}
-	// wildcard covers both /stream and /stream.{container}; handleVideoStream
-	// itself validates the segment starts with "stream" (see playback.go).
+	// wildcard covers both /stream and /stream.{container}, and — since
+	// hls.go — HLS segment files (seg_00000.ts) too; handleVideoStream
+	// itself dispatches on the segment shape (see playback.go).
 	s.mux.HandleFunc("GET /Videos/{itemId}/{file}", requireAuth(s.handleVideoStream))
 
 	// Per-user, per-client UI settings (users.go's UserStore doc comment) —

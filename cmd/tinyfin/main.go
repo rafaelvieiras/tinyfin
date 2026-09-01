@@ -38,6 +38,14 @@ func main() {
 	webDir := flag.String("web-dir", envOrDefault("TINYFIN_WEB_DIR", "/web"),
 		"directory containing a built jellyfin-web (dist/) to serve at /web/; "+
 			"skipped if the directory doesn't exist. Overridable via TINYFIN_WEB_DIR.")
+	// Default matches the Dockerfile's COPY destination for the bundled
+	// jellyfin-ffmpeg portable build (docs/00-decision-log.md's D10) — if
+	// that path doesn't actually exist (a non-Docker/local dev run), main
+	// falls back to internal/transcode.Config's own "ffmpeg on $PATH"
+	// behavior below rather than pointing it at a file that isn't there.
+	ffmpegPath := flag.String("ffmpeg-path", envOrDefault("TINYFIN_FFMPEG_PATH", "/usr/lib/jellyfin-ffmpeg/ffmpeg"),
+		"path to the jellyfin-ffmpeg binary (docs/07's transcode worker role); "+
+			"falls back to \"ffmpeg\" on $PATH if this path doesn't exist. Overridable via TINYFIN_FFMPEG_PATH.")
 	flag.Parse()
 
 	store, err := sqlite.New(*dataPath)
@@ -55,7 +63,14 @@ func main() {
 		log.Fatalf("tinyfin: loading server ID: %v", err)
 	}
 
-	server := api.NewServer(store, api.Config{ServerID: serverID})
+	resolvedFFmpegPath := ""
+	if info, err := os.Stat(*ffmpegPath); err == nil && !info.IsDir() {
+		resolvedFFmpegPath = *ffmpegPath
+	} else {
+		log.Printf("tinyfin: %s not found, falling back to \"ffmpeg\" on $PATH", *ffmpegPath)
+	}
+
+	server := api.NewServer(store, api.Config{ServerID: serverID, TranscodeFFmpegPath: resolvedFFmpegPath})
 
 	handler := server.Handler()
 	if info, err := os.Stat(*webDir); err == nil && info.IsDir() {

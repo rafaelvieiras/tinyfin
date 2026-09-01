@@ -41,6 +41,12 @@ var routePaths = []string{
 	"/Items/{itemId}/Images/{imageType}",
 	"/Items/{itemId}/Images/{imageType}/{imageIndex}",
 	"/Items/{itemId}/PlaybackInfo",
+	// Must precede /Videos/{itemId}/{file} below: same reasoning as
+	// /Items/Latest above — these are the same segment count (3) as
+	// /Videos/{itemId}/{file}, and normalizePathCase stops at the first
+	// same-length match.
+	"/Videos/{itemId}/master.m3u8",
+	"/Videos/{itemId}/main.m3u8",
 	"/Videos/{itemId}/{file}",
 	"/DisplayPreferences/{displayPreferencesId}",
 	"/Sessions/Capabilities/Full",
