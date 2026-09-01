@@ -55,6 +55,8 @@ var routePaths = []string{
 	"/Sessions/Playing/Stopped",
 	"/UserPlayedItems/{itemId}",
 	"/MediaSegments/{itemId}",
+	"/Library/VirtualFolders",
+	"/Library/Refresh",
 }
 
 // normalizePathCase rewrites path to the registered route's exact casing if

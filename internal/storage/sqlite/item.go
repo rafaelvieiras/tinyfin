@@ -254,35 +254,37 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 		search_text=excluded.search_text,
 		date_created=excluded.date_created`
 
-	_, err = s.ex.ExecContext(ctx, query,
-		string(item.ID), string(item.Type), string(item.LibraryID), idPtrToAny(item.ParentID), item.Name, item.OriginalTitle, item.SortName, item.Overview,
-		taglinesJSON, genresJSON, tagsJSON,
-		ptrToAny(item.ProductionYear), ptrToAny(item.PremiereDate), ptrToAny(item.EndDate), item.OfficialRating, ptrToAny(item.CommunityRating), ptrToAny(item.CriticRating), ptrToAny(item.RunTimeTicks),
-		ptrToAny(item.IndexNumber), ptrToAny(item.ParentIndexNumber),
-		idPtrToAny(item.SeriesID), idPtrToAny(item.SeasonID),
-		item.Album, item.AlbumArtist, artistsJSON,
-		providerIDsJSON,
-		item.Path, item.Container, item.Size,
-		string(item.CollectionType),
-		mediaStreamsJSON,
-		itemSearchText(item),
-		item.DateCreated,
-	)
-	if err != nil {
-		return fmt.Errorf("sqlite: upserting item %q: %w", item.ID, err)
-	}
+	err = s.withTx(ctx, func(ex dbtx) error {
+		if _, err := ex.ExecContext(ctx, query,
+			string(item.ID), string(item.Type), string(item.LibraryID), idPtrToAny(item.ParentID), item.Name, item.OriginalTitle, item.SortName, item.Overview,
+			taglinesJSON, genresJSON, tagsJSON,
+			ptrToAny(item.ProductionYear), ptrToAny(item.PremiereDate), ptrToAny(item.EndDate), item.OfficialRating, ptrToAny(item.CommunityRating), ptrToAny(item.CriticRating), ptrToAny(item.RunTimeTicks),
+			ptrToAny(item.IndexNumber), ptrToAny(item.ParentIndexNumber),
+			idPtrToAny(item.SeriesID), idPtrToAny(item.SeasonID),
+			item.Album, item.AlbumArtist, artistsJSON,
+			providerIDsJSON,
+			item.Path, item.Container, item.Size,
+			string(item.CollectionType),
+			mediaStreamsJSON,
+			itemSearchText(item),
+			item.DateCreated,
+		); err != nil {
+			return fmt.Errorf("sqlite: upserting item %q: %w", item.ID, err)
+		}
 
-	if err := recomputeAncestors(ctx, s.ex, item.ID); err != nil {
-		return fmt.Errorf("sqlite: recomputing ancestors for item %q: %w", item.ID, err)
-	}
-	return nil
+		if err := recomputeAncestors(ctx, ex, item.ID); err != nil {
+			return fmt.Errorf("sqlite: recomputing ancestors for item %q: %w", item.ID, err)
+		}
+		return nil
+	})
+	return err
 }
 
 func (s *Store) DeleteItem(ctx context.Context, id storage.ItemID) error {
 	// Descendants, item_ancestors rows, playstates, image/subtitle/lyric
 	// refs, and item_relations all reference items.id with ON DELETE
 	// CASCADE, so a single delete here cleans up the whole subtree.
-	if _, err := s.ex.ExecContext(ctx, `DELETE FROM items WHERE id = ?`, string(id)); err != nil {
+	if _, err := s.exec(ctx, `DELETE FROM items WHERE id = ?`, string(id)); err != nil {
 		return fmt.Errorf("sqlite: deleting item %q: %w", id, err)
 	}
 	return nil
@@ -570,14 +572,14 @@ func (s *Store) UpsertRelation(ctx context.Context, rel storage.ItemRelation) er
 	const query = `INSERT INTO item_relations (id, parent_id, child_id, kind, sort_index) VALUES (?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET parent_id=excluded.parent_id, child_id=excluded.child_id, kind=excluded.kind, sort_index=excluded.sort_index`
 
-	if _, err := s.ex.ExecContext(ctx, query, string(rel.ID), string(rel.ParentID), string(rel.ChildID), rel.Kind, rel.SortIndex); err != nil {
+	if _, err := s.exec(ctx, query, string(rel.ID), string(rel.ParentID), string(rel.ChildID), rel.Kind, rel.SortIndex); err != nil {
 		return fmt.Errorf("sqlite: upserting relation %q: %w", rel.ID, err)
 	}
 	return nil
 }
 
 func (s *Store) DeleteRelation(ctx context.Context, id storage.ItemRelationID) error {
-	if _, err := s.ex.ExecContext(ctx, `DELETE FROM item_relations WHERE id = ?`, string(id)); err != nil {
+	if _, err := s.exec(ctx, `DELETE FROM item_relations WHERE id = ?`, string(id)); err != nil {
 		return fmt.Errorf("sqlite: deleting relation %q: %w", id, err)
 	}
 	return nil

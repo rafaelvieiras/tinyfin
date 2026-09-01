@@ -13,6 +13,7 @@
 package api
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -20,6 +21,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/rafaelvieiras/tinyfin/internal/metadata"
+	"github.com/rafaelvieiras/tinyfin/internal/scan"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 	"github.com/rafaelvieiras/tinyfin/internal/transcode"
 )
@@ -82,6 +85,25 @@ type Config struct {
 	// Phase 2). Empty means that package's own fallback: look up "ffmpeg"
 	// on $PATH.
 	TranscodeFFmpegPath string
+
+	// TMDBAPIKey configures internal/scan's metadata.Provider (Phase 3,
+	// docs/08 and docs/00-decision-log.md's D3) as a metadata.TMDBProvider.
+	// Empty means metadata.NoopProvider{}: the scanner still catalogs
+	// every item from filename-derived data alone (see that package's doc
+	// comment), just without remote enrichment.
+	TMDBAPIKey string
+
+	// ScanFFprobePath is the ffprobe binary internal/scan uses to extract
+	// technical media info while cataloging. Empty means "ffprobe" on
+	// $PATH, matching TranscodeFFmpegPath's analogous fallback.
+	ScanFFprobePath string
+
+	// ScanImageDir is where internal/scan downloads and caches
+	// metadata.Provider-returned artwork. Empty disables provider image
+	// download (see scan.Config.ImageDir's doc comment) — items are still
+	// fully cataloged, just without downloaded artwork beyond whatever a
+	// library folder's own poster.jpg/fanart.jpg already provides.
+	ScanImageDir string
 }
 
 // Server is the API/metadata role's HTTP surface (docs/03). The zero value
@@ -91,6 +113,7 @@ type Server struct {
 	cfg       Config
 	mux       *http.ServeMux
 	transcode *transcode.Manager
+	scanner   *scan.Scanner
 }
 
 // NewServer builds a Server backed by store, applying cfg defaults where
@@ -104,14 +127,41 @@ func NewServer(store storage.Store, cfg Config) *Server {
 		cfg.ServerID = randomID()
 	}
 
+	var provider metadata.Provider = metadata.NoopProvider{}
+	if cfg.TMDBAPIKey != "" {
+		provider = metadata.NewTMDBProvider(cfg.TMDBAPIKey)
+	}
+
 	s := &Server{
 		store:     store,
 		cfg:       cfg,
 		mux:       http.NewServeMux(),
 		transcode: transcode.New(transcode.Config{FFmpegPath: cfg.TranscodeFFmpegPath}),
+		scanner: scan.New(store, provider, scan.Config{
+			FFprobePath: cfg.ScanFFprobePath,
+			ImageDir:    cfg.ScanImageDir,
+		}),
 	}
 	s.routes()
 	return s
+}
+
+// runScan runs a full Scanner pass over lib in the background, logging its
+// outcome — the same "outlives the triggering request" pattern
+// hls.go/ensureTranscodeJob's doc comment documents for transcode jobs:
+// library_admin.go's handlers return as soon as the scan is *queued*, not
+// once it *completes*, matching how a real client's dashboard expects
+// Library/Refresh and a refreshLibrary=true VirtualFolders call to behave
+// (a background operation it can poll/observe progress on, once this
+// project has a task-progress endpoint — not yet, a known gap).
+func (s *Server) runScan(lib storage.Library) {
+	stats, err := s.scanner.ScanLibrary(context.Background(), lib)
+	if err != nil {
+		log.Printf("api: scanning library %q: %v", lib.Name, err)
+		return
+	}
+	log.Printf("api: scanned library %q: %d items cataloged, %d enriched, %d warnings",
+		lib.Name, stats.ItemsScanned, stats.ItemsEnriched, len(stats.Errors))
 }
 
 // Handler returns the complete http.Handler for the server: case-insensitive
@@ -274,6 +324,14 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /Sessions/Playing/Stopped", requireAuth(s.handleSessionsPlayingStopped))
 	s.mux.HandleFunc("POST /UserPlayedItems/{itemId}", requireAuth(s.handleUserPlayedItemsMark))
 	s.mux.HandleFunc("GET /MediaSegments/{itemId}", requireAuth(s.handleMediaSegments))
+
+	// Library management (library_admin.go, Phase 3) — admin-only, unlike
+	// every other route above: these create/remove libraries and trigger
+	// scans, not just read the catalog.
+	s.mux.HandleFunc("GET /Library/VirtualFolders", requireAdmin(s.handleGetVirtualFolders))
+	s.mux.HandleFunc("POST /Library/VirtualFolders", requireAdmin(s.handleAddVirtualFolder))
+	s.mux.HandleFunc("DELETE /Library/VirtualFolders", requireAdmin(s.handleRemoveVirtualFolder))
+	s.mux.HandleFunc("POST /Library/Refresh", requireAdmin(s.handleLibraryRefresh))
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

@@ -127,3 +127,22 @@ func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 		next(w, r)
 	}
 }
+
+// requireAdmin wraps a handler that must not run unless the request
+// resolved to a valid, administrator-privileged token — library management
+// (library_admin.go's VirtualFolders/Refresh endpoints, matching the
+// reference server's own admin-only scoping for library structure changes)
+// is the first thing in this project that needs a stricter check than
+// requireAuth's "any authenticated user." A non-admin authenticated user
+// gets 403, not 401 — the credential itself is valid, it just isn't
+// sufficient.
+func requireAdmin(next http.HandlerFunc) http.HandlerFunc {
+	return requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		ac, _ := AuthFromContext(r.Context())
+		if !ac.User.IsAdministrator {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		next(w, r)
+	})
+}

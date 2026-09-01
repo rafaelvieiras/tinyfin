@@ -43,7 +43,7 @@ func (s *Store) UpsertSubtitle(ctx context.Context, ref storage.SubtitleRef) err
 			item_id=excluded.item_id, path=excluded.path, language=excluded.language, format=excluded.format,
 			is_forced=excluded.is_forced, is_hearing_impaired=excluded.is_hearing_impaired, source=excluded.source`
 
-	_, err := s.ex.ExecContext(ctx, query, string(ref.ID), string(ref.ItemID), ref.Path, ref.Language, ref.Format, ref.IsForced, ref.IsHearingImpaired, ref.Source)
+	_, err := s.exec(ctx, query, string(ref.ID), string(ref.ItemID), ref.Path, ref.Language, ref.Format, ref.IsForced, ref.IsHearingImpaired, ref.Source)
 	if err != nil {
 		return fmt.Errorf("sqlite: upserting subtitle ref %q: %w", ref.ID, err)
 	}
@@ -51,7 +51,7 @@ func (s *Store) UpsertSubtitle(ctx context.Context, ref storage.SubtitleRef) err
 }
 
 func (s *Store) DeleteSubtitle(ctx context.Context, id storage.SubtitleID) error {
-	if _, err := s.ex.ExecContext(ctx, `DELETE FROM subtitle_refs WHERE id = ?`, string(id)); err != nil {
+	if _, err := s.exec(ctx, `DELETE FROM subtitle_refs WHERE id = ?`, string(id)); err != nil {
 		return fmt.Errorf("sqlite: deleting subtitle ref %q: %w", id, err)
 	}
 	return nil

@@ -2,7 +2,9 @@ package sqlite
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -360,5 +362,56 @@ func TestUserDeviceAndPlaystate(t *testing.T) {
 	}
 	if _, err := st.LookupToken(ctx, token.Token); err == nil {
 		t.Error("expected LookupToken to fail after RevokeToken")
+	}
+}
+
+// TestConcurrentUpsertItem guards against a real bug internal/scan's
+// bounded concurrent scanner found: two goroutines calling UpsertItem for
+// a parent item and one of its children at the same time raced
+// recomputeAncestors' DELETE+INSERT sequence for the shared child row,
+// tripping item_ancestors' UNIQUE constraint (and, separately, plain
+// concurrent single-statement writes elsewhere could return "database is
+// locked" even within the configured busy_timeout). Store.exec/withTx now
+// serialize every top-level write via writeMu (store.go) — this test
+// hammers exactly the parent+child pattern that exposed the bug.
+func TestConcurrentUpsertItem(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+	libraryID, seriesID, seasonID, _, _ := seedTree(t, st)
+
+	const n = 20
+	var wg sync.WaitGroup
+	errs := make(chan error, n*2)
+	for i := 0; i < n; i++ {
+		i := i
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			series := storage.Item{
+				ID: seriesID, Type: storage.ItemTypeSeries, LibraryID: libraryID,
+				Name: "Example Series", SortName: "example series", DateCreated: time.Now().UTC(),
+			}
+			if err := st.UpsertItem(ctx, series); err != nil {
+				errs <- err
+			}
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ep := storage.ItemID(newID())
+			episode := storage.Item{
+				ID: ep, Type: storage.ItemTypeEpisode, LibraryID: libraryID,
+				ParentID: &seasonID, SeriesID: &seriesID, SeasonID: &seasonID,
+				Name: fmt.Sprintf("Episode %d", i), SortName: fmt.Sprintf("episode %d", i), DateCreated: time.Now().UTC(),
+			}
+			if err := st.UpsertItem(ctx, episode); err != nil {
+				errs <- err
+			}
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		t.Errorf("concurrent UpsertItem: %v", err)
 	}
 }

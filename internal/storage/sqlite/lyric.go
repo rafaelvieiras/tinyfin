@@ -43,7 +43,7 @@ func (s *Store) UpsertLyric(ctx context.Context, ref storage.LyricRef) error {
 			item_id=excluded.item_id, path=excluded.path, format=excluded.format, author=excluded.author,
 			is_synced=excluded.is_synced, source=excluded.source`
 
-	_, err := s.ex.ExecContext(ctx, query, string(ref.ID), string(ref.ItemID), ref.Path, ref.Format, ref.Author, ref.IsSynced, ref.Source)
+	_, err := s.exec(ctx, query, string(ref.ID), string(ref.ItemID), ref.Path, ref.Format, ref.Author, ref.IsSynced, ref.Source)
 	if err != nil {
 		return fmt.Errorf("sqlite: upserting lyric ref %q: %w", ref.ID, err)
 	}
@@ -51,7 +51,7 @@ func (s *Store) UpsertLyric(ctx context.Context, ref storage.LyricRef) error {
 }
 
 func (s *Store) DeleteLyric(ctx context.Context, id storage.LyricID) error {
-	if _, err := s.ex.ExecContext(ctx, `DELETE FROM lyric_refs WHERE id = ?`, string(id)); err != nil {
+	if _, err := s.exec(ctx, `DELETE FROM lyric_refs WHERE id = ?`, string(id)); err != nil {
 		return fmt.Errorf("sqlite: deleting lyric ref %q: %w", id, err)
 	}
 	return nil

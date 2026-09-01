@@ -23,6 +23,11 @@ composes the result into the shape the API surface needs.
   minimally functional.
 - The same interface allows any external cataloging tool to be plugged in as an alternative
   provider, as long as it can answer the interface's metadata queries.
+- The interface (`internal/metadata`) is deliberately shaped to survive a later move from an
+  in-process Go call to a subprocess-isolated plugin (the `go-plugin` gRPC pattern: any language,
+  crash-isolated) without a redesign, ahead of opening the project to outside users — see **D11**
+  in `00-decision-log.md` for the specific constraints this imposes and the estimated migration
+  cost if they hold.
 
 ## Scan-time resource discipline
 

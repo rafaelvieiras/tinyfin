@@ -95,7 +95,7 @@ func (s *Store) CreateUser(ctx context.Context, user storage.User) (storage.User
 	const query = `INSERT INTO users (id, name, password_hash, is_administrator, is_disabled, enable_auto_login, last_login_date, last_activity_date)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 
-	_, err := s.ex.ExecContext(ctx, query,
+	_, err := s.exec(ctx, query,
 		string(id), user.Name, user.PasswordHash, user.IsAdministrator, user.IsDisabled, user.EnableAutoLogin,
 		ptrToAny(user.LastLoginDate), ptrToAny(user.LastActivityDate),
 	)
@@ -109,7 +109,7 @@ func (s *Store) UpdateUser(ctx context.Context, user storage.User) error {
 	const query = `UPDATE users SET name = ?, password_hash = ?, is_administrator = ?, is_disabled = ?, enable_auto_login = ?, last_login_date = ?, last_activity_date = ?
 		WHERE id = ?`
 
-	res, err := s.ex.ExecContext(ctx, query,
+	res, err := s.exec(ctx, query,
 		user.Name, user.PasswordHash, user.IsAdministrator, user.IsDisabled, user.EnableAutoLogin,
 		ptrToAny(user.LastLoginDate), ptrToAny(user.LastActivityDate),
 		string(user.ID),
@@ -128,7 +128,7 @@ func (s *Store) UpdateUser(ctx context.Context, user storage.User) error {
 }
 
 func (s *Store) DeleteUser(ctx context.Context, id storage.UserID) error {
-	if _, err := s.ex.ExecContext(ctx, `DELETE FROM users WHERE id = ?`, string(id)); err != nil {
+	if _, err := s.exec(ctx, `DELETE FROM users WHERE id = ?`, string(id)); err != nil {
 		return fmt.Errorf("sqlite: deleting user %q: %w", id, err)
 	}
 	return nil
@@ -143,7 +143,7 @@ func (s *Store) IssueToken(ctx context.Context, userID storage.UserID, deviceID 
 	}
 
 	const query = `INSERT INTO auth_tokens (token, user_id, device_id, issued_at) VALUES (?, ?, ?, ?)`
-	if _, err := s.ex.ExecContext(ctx, query, token.Token, string(token.UserID), string(token.DeviceID), token.IssuedAt); err != nil {
+	if _, err := s.exec(ctx, query, token.Token, string(token.UserID), string(token.DeviceID), token.IssuedAt); err != nil {
 		return storage.AuthToken{}, fmt.Errorf("sqlite: issuing token for user %q: %w", userID, err)
 	}
 	return token, nil
@@ -167,7 +167,7 @@ func (s *Store) LookupToken(ctx context.Context, token string) (storage.AuthToke
 }
 
 func (s *Store) RevokeToken(ctx context.Context, token string) error {
-	if _, err := s.ex.ExecContext(ctx, `DELETE FROM auth_tokens WHERE token = ?`, token); err != nil {
+	if _, err := s.exec(ctx, `DELETE FROM auth_tokens WHERE token = ?`, token); err != nil {
 		return fmt.Errorf("sqlite: revoking token: %w", err)
 	}
 	return nil
@@ -211,7 +211,7 @@ func (s *Store) SetDisplayPreferences(ctx context.Context, userID storage.UserID
 			primary_image_width=excluded.primary_image_width, primary_image_height=excluded.primary_image_height,
 			custom_prefs=excluded.custom_prefs`
 
-	_, err = s.ex.ExecContext(ctx, query,
+	_, err = s.exec(ctx, query,
 		string(userID), client, prefs.ViewType, prefs.IndexBy, prefs.SortBy, prefs.SortOrder,
 		prefs.RememberIndexing, prefs.RememberSorting, prefs.ScrollDirection, prefs.ShowBackdrop, prefs.ShowSidebar,
 		prefs.PrimaryImageWidth, prefs.PrimaryImageHeight, customPrefsJSON,

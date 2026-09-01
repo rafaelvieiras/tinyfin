@@ -198,10 +198,69 @@ what starting Phase 1 actually requires next.
 
 ## Phase 3 — Metadata provider interface
 
-- [ ] Provider interface implementation
-- [ ] Direct TMDB/TVDB provider (reference implementation)
-- [ ] **Goal:** a freshly scanned library gets enriched metadata without Tinyfin implementing its
-      own scraping.
+- [x] Provider interface implementation (`internal/metadata`): a fixed, small `Provider` interface
+      (`Lookup(ctx, Query) (Result, error)`) matching D3/`08`'s "not a general-purpose plugin
+      system" framing — deliberately shaped to survive a future move from an in-process Go call to
+      a subprocess-isolated plugin (the `go-plugin` gRPC pattern) without a redesign, per **D11**
+      (`docs/00-decision-log.md`): every method takes/returns only plain exported-field structs,
+      `context.Context` carries only its deadline, errors are a sentinel or a structured
+      `*ProviderError`, and the package never imports `internal/storage`/`internal/api`. Backed by
+      `NoopProvider` (always `ErrNotFound`, the zero-config default) and `TMDBProvider` (the direct
+      reference implementation).
+- [x] Direct TMDB provider (`internal/metadata/tmdb.go`): queries TMDB's public v3 REST API
+      (`/search/movie`, `/movie/{id}`, `/search/tv`, `/tv/{id}`, `/tv/{id}/season/{s}/episode/{e}`)
+      directly over HTTP — ordinary third-party API integration, unrelated to the Jellyfin
+      clean-room boundary. Configured via `TINYFIN_TMDB_API_KEY`/`-tmdb-api-key`; empty disables it
+      (falls back to `NoopProvider`). Tested against a local `httptest.Server`, no real API key
+      required for the test suite. TVDB is not implemented (TMDB alone satisfies D3's "a direct
+      provider so Tinyfin is useful standalone" goal; add TVDB only if a real gap motivates it).
+- [x] Library scanner (`internal/scan`, docs/08's "minimum needed to serve a browsable catalog" —
+      previously only covered ad hoc by the throwaway, uncommitted `cmd/devseed`): walks a
+      library's configured paths, identifies each item via the Kodi/Jellyfin filename convention
+      (`nameparse.go` — "Title (Year)" folders, "Season NN" folders, "SxxEyy"/"NxNN" episode
+      markers) *before* ever calling a Provider, extracts technical media info via `ffprobe`, and
+      only then overlays a configured Provider's enrichment on top. This ordering is the direct
+      answer to "items should already be enriched based on the Kodi/Jellyfin filename/metadata
+      pattern" — every item is fully cataloged and browsable from filename-derived data alone, with
+      or without a TMDB key configured (`TestScanLibraryNoProviderStillCatalogs`). `ffprobe`
+      subprocess and Provider HTTP calls run through a bounded worker pool (default concurrency 4,
+      docs/08's "Scan-time resource discipline"), not unbounded per-file spawning. Re-scanning is
+      idempotent: item/image IDs are deterministic hashes of their file path, so a repeat scan
+      upserts existing rows instead of duplicating them.
+- [x] Library management API (`internal/api/library_admin.go`): `GET/POST/DELETE
+      /Library/VirtualFolders` and `POST /Library/Refresh`, matching a real dashboard's "Add Media
+      Library"/"Scan All Libraries" actions — route shapes and query params (`name`,
+      `collectionType`, `paths`, `refreshLibrary`) confirmed against the published `@jellyfin/sdk`
+      client's generated modules (docs/04's sanctioned secondary-verification source), after an
+      initial, corrected misstep: a first lookup fetched `LibraryStructureController.cs` straight
+      from the `jellyfin/jellyfin` reference-server repository, which is exactly what AGENTS.md's
+      clean-room requirement prohibits — caught before any code was written from it, discarded, and
+      redone against the sanctioned SDK client instead. Admin-only (new `requireAdmin` middleware,
+      `auth.go` — the first route group in this project needing more than "any authenticated
+      user"). A scan triggered by these endpoints runs in the background (`Server.runScan`), the
+      same "outlives the triggering request" pattern Phase 2's transcode jobs already established.
+- [x] Found and fixed a real concurrency bug in `internal/storage/sqlite`, exposed by
+      `internal/scan` being this project's first caller to issue writes from more than one
+      goroutine at once: two concurrent `UpsertItem` calls for a parent item and one of its
+      children could each half-complete `recomputeAncestors`' DELETE+INSERT sequence for the same
+      child row, tripping `item_ancestors`' UNIQUE constraint — and, separately, plain concurrent
+      single-statement writes could return `SQLITE_BUSY "database is locked"` even within the
+      configured 5s `busy_timeout`, meaning that pragma alone wasn't a reliable arbiter of
+      cross-connection write contention under `modernc.org/sqlite`. Fixed by adding a `sync.Mutex`
+      (`Store.writeMu`) that every top-level write (`UpsertItem`'s multi-statement transaction via
+      `withTx`, `Store.Tx`, and every other single-statement write via a new `Store.exec` helper)
+      serializes on — SQLite only ever supports one writer at a time regardless, so this removes
+      the ambiguity structurally rather than tuning retry timeouts. Concurrent *reads* are
+      untouched (WAL mode's actual concurrency benefit, why the connection pool itself stays
+      uncapped). Regression-guarded by `TestConcurrentUpsertItem`
+      (`internal/storage/sqlite/store_test.go`), which reliably reproduced the bug before the fix.
+- [ ] TVDB provider — not implemented (see above).
+- [x] **Goal:** a freshly scanned library gets enriched metadata without Tinyfin implementing its
+      own scraping. Verified via `internal/scan`'s test suite (movies and TV shows, with and
+      without a configured provider, including re-scan idempotency) and against the real staging
+      deployment: a `Series Infantis` library was added via `POST /Library/VirtualFolders`
+      (`collectionType=tvshows`, `refreshLibrary=true`) pointing at a real read-only-mounted host
+      folder, scanned, and its Series/Season/Episode hierarchy confirmed browsable through the API.
 
 ## Phase 4 — Scale mode
 

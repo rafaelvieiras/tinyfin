@@ -66,7 +66,7 @@ func (s *Store) UpsertDevice(ctx context.Context, device storage.Device) error {
 			name=excluded.name, custom_name=excluded.custom_name, app_name=excluded.app_name, app_version=excluded.app_version,
 			last_user_id=excluded.last_user_id, last_user_name=excluded.last_user_name, date_last_activity=excluded.date_last_activity`
 
-	_, err := s.ex.ExecContext(ctx, query,
+	_, err := s.exec(ctx, query,
 		string(device.ID), device.Name, device.CustomName, device.AppName, device.AppVersion,
 		string(device.LastUserID), device.LastUserName, device.DateLastActivity,
 	)
@@ -77,7 +77,7 @@ func (s *Store) UpsertDevice(ctx context.Context, device storage.Device) error {
 }
 
 func (s *Store) DeleteDevice(ctx context.Context, id storage.DeviceID) error {
-	if _, err := s.ex.ExecContext(ctx, `DELETE FROM devices WHERE id = ?`, string(id)); err != nil {
+	if _, err := s.exec(ctx, `DELETE FROM devices WHERE id = ?`, string(id)); err != nil {
 		return fmt.Errorf("sqlite: deleting device %q: %w", id, err)
 	}
 	return nil

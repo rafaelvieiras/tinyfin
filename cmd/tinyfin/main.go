@@ -46,6 +46,17 @@ func main() {
 	ffmpegPath := flag.String("ffmpeg-path", envOrDefault("TINYFIN_FFMPEG_PATH", "/usr/lib/jellyfin-ffmpeg/ffmpeg"),
 		"path to the jellyfin-ffmpeg binary (docs/07's transcode worker role); "+
 			"falls back to \"ffmpeg\" on $PATH if this path doesn't exist. Overridable via TINYFIN_FFMPEG_PATH.")
+	// jellyfin-ffmpeg's portable build (D10, same bundle as ffmpegPath
+	// above) ships ffprobe alongside ffmpeg in the same directory — reuse
+	// that install rather than requiring a second explicit flag/env var
+	// pointing at what is, in practice, always the same directory.
+	ffprobePath := flag.String("ffprobe-path", envOrDefault("TINYFIN_FFPROBE_PATH", "/usr/lib/jellyfin-ffmpeg/ffprobe"),
+		"path to the ffprobe binary internal/scan uses to catalog media info (docs/08's scanner); "+
+			"falls back to \"ffprobe\" on $PATH if this path doesn't exist. Overridable via TINYFIN_FFPROBE_PATH.")
+	tmdbAPIKey := flag.String("tmdb-api-key", envOrDefault("TINYFIN_TMDB_API_KEY", ""),
+		"TMDB API key for the direct metadata provider (docs/08's D3 reference provider); "+
+			"empty disables remote enrichment — the scanner still catalogs every item from "+
+			"filename-derived data alone (internal/scan's package doc comment). Overridable via TINYFIN_TMDB_API_KEY.")
 	flag.Parse()
 
 	store, err := sqlite.New(*dataPath)
@@ -70,7 +81,26 @@ func main() {
 		log.Printf("tinyfin: %s not found, falling back to \"ffmpeg\" on $PATH", *ffmpegPath)
 	}
 
-	server := api.NewServer(store, api.Config{ServerID: serverID, TranscodeFFmpegPath: resolvedFFmpegPath})
+	resolvedFFprobePath := ""
+	if info, err := os.Stat(*ffprobePath); err == nil && !info.IsDir() {
+		resolvedFFprobePath = *ffprobePath
+	} else {
+		log.Printf("tinyfin: %s not found, falling back to \"ffprobe\" on $PATH", *ffprobePath)
+	}
+
+	// Cached scan-time artwork lives next to the database, not inside the
+	// data directory (which the sqlite package treats as one file, not a
+	// directory of its own) — same relationship loadOrCreateServerID's
+	// sidecar file already has to *dataPath.
+	scanImageDir := *dataPath + ".images"
+
+	server := api.NewServer(store, api.Config{
+		ServerID:            serverID,
+		TranscodeFFmpegPath: resolvedFFmpegPath,
+		ScanFFprobePath:     resolvedFFprobePath,
+		ScanImageDir:        scanImageDir,
+		TMDBAPIKey:          *tmdbAPIKey,
+	})
 
 	handler := server.Handler()
 	if info, err := os.Stat(*webDir); err == nil && info.IsDir() {

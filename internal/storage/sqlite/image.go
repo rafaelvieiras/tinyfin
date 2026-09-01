@@ -44,7 +44,7 @@ func (s *Store) UpsertImageRef(ctx context.Context, ref storage.ImageRef) error 
 			item_id=excluded.item_id, kind=excluded.kind, idx=excluded.idx, path=excluded.path, tag=excluded.tag,
 			blur_hash=excluded.blur_hash, width=excluded.width, height=excluded.height, size=excluded.size`
 
-	_, err := s.ex.ExecContext(ctx, query, string(ref.ID), string(ref.ItemID), string(ref.Kind), ref.Index, ref.Path, ref.Tag, ref.BlurHash, ref.Width, ref.Height, ref.Size)
+	_, err := s.exec(ctx, query, string(ref.ID), string(ref.ItemID), string(ref.Kind), ref.Index, ref.Path, ref.Tag, ref.BlurHash, ref.Width, ref.Height, ref.Size)
 	if err != nil {
 		return fmt.Errorf("sqlite: upserting image ref %q: %w", ref.ID, err)
 	}
@@ -52,7 +52,7 @@ func (s *Store) UpsertImageRef(ctx context.Context, ref storage.ImageRef) error 
 }
 
 func (s *Store) DeleteImageRef(ctx context.Context, id storage.ImageRefID) error {
-	if _, err := s.ex.ExecContext(ctx, `DELETE FROM image_refs WHERE id = ?`, string(id)); err != nil {
+	if _, err := s.exec(ctx, `DELETE FROM image_refs WHERE id = ?`, string(id)); err != nil {
 		return fmt.Errorf("sqlite: deleting image ref %q: %w", id, err)
 	}
 	return nil
@@ -87,7 +87,7 @@ func (s *Store) UpsertTrickplayInfo(ctx context.Context, itemID storage.ItemID, 
 			height=excluded.height, tile_width=excluded.tile_width, tile_height=excluded.tile_height,
 			thumbnail_count=excluded.thumbnail_count, interval_ms=excluded.interval_ms, bandwidth=excluded.bandwidth`
 
-	_, err := s.ex.ExecContext(ctx, query, string(itemID), info.Width, info.Height, info.TileWidth, info.TileHeight, info.ThumbnailCount, info.Interval, info.Bandwidth)
+	_, err := s.exec(ctx, query, string(itemID), info.Width, info.Height, info.TileWidth, info.TileHeight, info.ThumbnailCount, info.Interval, info.Bandwidth)
 	if err != nil {
 		return fmt.Errorf("sqlite: upserting trickplay info for item %q width %d: %w", itemID, info.Width, err)
 	}
@@ -95,7 +95,7 @@ func (s *Store) UpsertTrickplayInfo(ctx context.Context, itemID storage.ItemID, 
 }
 
 func (s *Store) DeleteTrickplayInfo(ctx context.Context, itemID storage.ItemID, width int) error {
-	if _, err := s.ex.ExecContext(ctx, `DELETE FROM trickplay_info WHERE item_id = ? AND width = ?`, string(itemID), width); err != nil {
+	if _, err := s.exec(ctx, `DELETE FROM trickplay_info WHERE item_id = ? AND width = ?`, string(itemID), width); err != nil {
 		return fmt.Errorf("sqlite: deleting trickplay info for item %q width %d: %w", itemID, width, err)
 	}
 	return nil

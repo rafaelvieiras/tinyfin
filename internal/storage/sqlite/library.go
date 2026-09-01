@@ -80,7 +80,7 @@ func (s *Store) UpsertLibrary(ctx context.Context, lib storage.Library) error {
 	const query = `INSERT INTO libraries (id, name, collection_type, paths, last_scanned_at) VALUES (?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET name=excluded.name, collection_type=excluded.collection_type, paths=excluded.paths, last_scanned_at=excluded.last_scanned_at`
 
-	_, err = s.ex.ExecContext(ctx, query, string(lib.ID), lib.Name, string(lib.CollectionType), pathsJSON, ptrToAny(lib.LastScannedAt))
+	_, err = s.exec(ctx, query, string(lib.ID), lib.Name, string(lib.CollectionType), pathsJSON, ptrToAny(lib.LastScannedAt))
 	if err != nil {
 		return fmt.Errorf("sqlite: upserting library %q: %w", lib.ID, err)
 	}
@@ -88,7 +88,7 @@ func (s *Store) UpsertLibrary(ctx context.Context, lib storage.Library) error {
 }
 
 func (s *Store) DeleteLibrary(ctx context.Context, id storage.LibraryID) error {
-	if _, err := s.ex.ExecContext(ctx, `DELETE FROM libraries WHERE id = ?`, string(id)); err != nil {
+	if _, err := s.exec(ctx, `DELETE FROM libraries WHERE id = ?`, string(id)); err != nil {
 		return fmt.Errorf("sqlite: deleting library %q: %w", id, err)
 	}
 	return nil

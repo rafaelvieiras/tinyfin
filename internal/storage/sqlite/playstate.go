@@ -40,7 +40,7 @@ func (s *Store) SetPlaystate(ctx context.Context, userID storage.UserID, itemID 
 			played=excluded.played, playback_position_ticks=excluded.playback_position_ticks, play_count=excluded.play_count,
 			is_favorite=excluded.is_favorite, last_played_date=excluded.last_played_date`
 
-	_, err := s.ex.ExecContext(ctx, query, string(userID), string(itemID), state.Played, state.PlaybackPositionTicks, state.PlayCount, state.IsFavorite, ptrToAny(state.LastPlayedDate))
+	_, err := s.exec(ctx, query, string(userID), string(itemID), state.Played, state.PlaybackPositionTicks, state.PlayCount, state.IsFavorite, ptrToAny(state.LastPlayedDate))
 	if err != nil {
 		return fmt.Errorf("sqlite: setting playstate for user %q item %q: %w", userID, itemID, err)
 	}

@@ -22,6 +22,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	_ "modernc.org/sqlite"
 
@@ -42,6 +43,24 @@ type dbtx interface {
 type Store struct {
 	db *sql.DB
 	ex dbtx // db itself at the top level; a *sql.Tx when bound by Tx
+
+	// writeMu serializes every top-level write transaction (withTx, Tx)
+	// across goroutines. SQLite only ever allows one writer at a time
+	// regardless — WAL mode's real concurrency benefit is concurrent
+	// *readers* (why New doesn't cap the connection pool to 1, unlike the
+	// usual blanket advice for Go+SQLite), never concurrent writers — but
+	// relying on the DSN's busy_timeout pragma to arbitrate that across
+	// multiple pooled connections turned out not to be reliable in
+	// practice: internal/scan's bounded concurrent scanner (its first
+	// caller to issue writes from more than one goroutine at once)
+	// reproduced "database is locked (SQLITE_BUSY)" on a plain
+	// single-statement write racing another goroutine's still-open
+	// transaction, well within the 5s busy_timeout window, under
+	// modernc.org/sqlite. An explicit Go-level mutex removes the
+	// ambiguity entirely: a second writer's BeginTx simply blocks until
+	// the first commits, so SQLite itself never sees two connections
+	// contend for the write lock.
+	writeMu sync.Mutex
 }
 
 var _ storage.Store = (*Store)(nil)
@@ -68,8 +87,70 @@ func New(path string) (*Store, error) {
 	return &Store{db: db, ex: db}, nil
 }
 
+// withTx runs fn against a single transaction, reusing s.ex's existing
+// *sql.Tx if the Store is already bound to one (nested inside a caller's
+// Tx call) rather than nesting a second transaction, or opening a fresh
+// one against s.db otherwise. A caller (UpsertItem) that touches more than
+// one table across more than one ExecContext call needs this: two
+// unrelated statements issued straight against s.db (the top-level case,
+// a pooled *sql.DB) can each land on a different pooled connection and
+// interleave with a concurrent caller's own statements — exactly what let
+// two goroutines' concurrent UpsertItem calls for a parent item and one of
+// its children each half-complete recomputeAncestors for the same child
+// row, tripping item_ancestors' UNIQUE constraint (found via
+// internal/scan's bounded concurrent scanner, the first caller to upsert
+// unrelated items from more than one goroutine at once). Wrapping the
+// whole multi-statement sequence in one transaction, plus writeMu
+// (Store's doc comment) serializing that transaction against every other
+// top-level writer, fixes it structurally: two concurrent callers now
+// fully serialize instead of interleaving or racing SQLite's own
+// busy-timeout retry loop.
+func (s *Store) withTx(ctx context.Context, fn func(dbtx) error) error {
+	if tx, ok := s.ex.(*sql.Tx); ok {
+		return fn(tx)
+	}
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("sqlite: beginning transaction: %w", err)
+	}
+	if err := fn(tx); err != nil {
+		if rbErr := tx.Rollback(); rbErr != nil {
+			return fmt.Errorf("sqlite: tx failed (%w) and rollback failed: %v", err, rbErr)
+		}
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("sqlite: committing transaction: %w", err)
+	}
+	return nil
+}
+
+// exec runs a single write statement, serialized via writeMu against every
+// other top-level writer (same reasoning as withTx) — the single-statement
+// counterpart to withTx for every write method that doesn't need a
+// multi-statement transaction. Every entity file's Upsert*/Delete*/Create*/
+// Update*/Issue*/Revoke*/Set* method routes its write through this instead
+// of calling s.ex.ExecContext directly.
+func (s *Store) exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	if tx, ok := s.ex.(*sql.Tx); ok {
+		return tx.ExecContext(ctx, query, args...)
+	}
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
+	return s.ex.ExecContext(ctx, query, args...)
+}
+
 // Tx runs fn against a Store bound to a single transaction (storage.Store).
+// Locks writeMu for the same reason withTx does — Tx is a second,
+// independent top-level entry point into a write transaction, not routed
+// through withTx itself (fn needs a storage.Store, not a bare dbtx).
 func (s *Store) Tx(ctx context.Context, fn func(storage.Store) error) error {
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("sqlite: beginning transaction: %w", err)
