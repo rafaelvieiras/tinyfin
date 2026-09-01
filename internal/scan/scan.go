@@ -17,11 +17,18 @@
 package scan
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -258,8 +265,9 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 		return fmt.Errorf("upserting movie %q: %w", folder, err)
 	}
 
-	s.seedFolderImages(ctx, itemID, hostFolder)
+	s.seedFolderImages(ctx, itemID, hostFolder, videoFile)
 	s.enrich(ctx, pool, &item, metadata.Query{Kind: metadata.KindMovie, Title: title, Year: year})
+	s.applyMovieNFO(pool, &item, hostFolder, videoFile)
 	if err := s.store.UpsertItem(ctx, item); err != nil {
 		return fmt.Errorf("upserting enriched movie %q: %w", folder, err)
 	}
@@ -298,11 +306,12 @@ func (s *Scanner) walkSeries(ctx context.Context, pool *jobPool, lib storage.Lib
 			log.Printf("scan: upserting series %q: %v", seriesFolder, err)
 			continue
 		}
-		s.seedFolderImages(ctx, seriesID, seriesPath)
+		s.seedFolderImages(ctx, seriesID, seriesPath, "")
 
 		pool.enqueue(func() error {
 			enriched := seriesItem
 			s.enrich(ctx, pool, &enriched, metadata.Query{Kind: metadata.KindSeries, Title: seriesTitle, Year: seriesYear})
+			s.applySeriesNFO(pool, &enriched, seriesPath)
 			if err := s.store.UpsertItem(ctx, enriched); err != nil {
 				return fmt.Errorf("upserting enriched series %q: %w", seriesFolder, err)
 			}
@@ -403,6 +412,7 @@ func (s *Scanner) processEpisode(ctx context.Context, pool *jobPool, lib storage
 		Kind: metadata.KindEpisode, SeriesTitle: seriesTitle,
 		SeasonNumber: seasonNum, EpisodeNumber: episodeNum,
 	})
+	s.applyEpisodeNFO(pool, &item, episodePath)
 	if err := s.store.UpsertItem(ctx, item); err != nil {
 		return fmt.Errorf("upserting enriched episode %q: %w", episodePath, err)
 	}
@@ -487,41 +497,94 @@ func (s *Scanner) storeProviderImage(ctx context.Context, itemID storage.ItemID,
 		log.Printf("scan: writing %s image for %s: %v", img.Kind, itemID, err)
 		return
 	}
+	width, height := imageDimensions(bytes.NewReader(data))
 	ref := storage.ImageRef{
 		ID:     storage.ImageRefID(deterministicID("image-" + string(itemID) + "-" + img.Kind)),
 		ItemID: itemID, Kind: storage.ImageKind(img.Kind),
-		Path: path, Size: int64(len(data)),
+		Path: path, Size: int64(len(data)), Width: width, Height: height,
 	}
 	if err := s.store.UpsertImageRef(ctx, ref); err != nil {
 		log.Printf("scan: storing %s image ref for %s: %v", img.Kind, itemID, err)
 	}
 }
 
-// seedFolderImages picks up a movie/series folder's own poster.jpg/
-// fanart.jpg, if present — the same convention devseed's throwaway
-// seedImage used, kept as a fallback that runs before provider enrichment
-// so a locally-provided image always exists even with no Provider
-// configured; storeProviderImage overwrites it (same deterministic
-// ImageRef ID) if the provider later returns a match.
-func (s *Scanner) seedFolderImages(ctx context.Context, itemID storage.ItemID, folder string) {
-	s.seedFolderImage(ctx, itemID, folder, "poster.jpg", "Primary")
-	s.seedFolderImage(ctx, itemID, folder, "fanart.jpg", "Backdrop")
+// seedFolderImages picks up a movie/series folder's own local artwork, if
+// present — the Kodi/Jellyfin filename conventions documented at
+// kodi.wiki's "Artwork" guide: poster.jpg, poster.png, folder.jpg,
+// folder.png, and "<video-basename>-poster.jpg" for the Primary image;
+// fanart.jpg, fanart.png, backdrop.jpg, and "<video-basename>-fanart.jpg"
+// for Backdrop. Each list is tried in that priority order and the scan
+// stops at the first match, per file's own kind. This is a fallback that
+// runs before provider enrichment so a locally-provided image always
+// exists even with no Provider configured; storeProviderImage overwrites
+// it (same deterministic ImageRef ID) if the provider later returns a
+// match. videoFile is the item's video filename (with extension) so the
+// "<video-basename>-*" candidates can be built; pass "" when there's no
+// single associated video file (e.g. a series root folder) to skip those
+// candidates.
+func (s *Scanner) seedFolderImages(ctx context.Context, itemID storage.ItemID, folder, videoFile string) {
+	primary := []string{"poster.jpg", "poster.png", "folder.jpg", "folder.png"}
+	backdrop := []string{"fanart.jpg", "fanart.png", "backdrop.jpg"}
+	if videoFile != "" {
+		base := strings.TrimSuffix(videoFile, filepath.Ext(videoFile))
+		primary = append(primary, base+"-poster.jpg")
+		backdrop = append(backdrop, base+"-fanart.jpg")
+	}
+	s.seedFolderImage(ctx, itemID, folder, "Primary", primary)
+	s.seedFolderImage(ctx, itemID, folder, "Backdrop", backdrop)
 }
 
-func (s *Scanner) seedFolderImage(ctx context.Context, itemID storage.ItemID, folder, filename, kind string) {
-	path := filepath.Join(folder, filename)
-	fi, err := os.Stat(path)
-	if err != nil {
+// seedFolderImage stores the first of candidates (filenames relative to
+// folder) that actually exists as itemID's image of the given kind.
+func (s *Scanner) seedFolderImage(ctx context.Context, itemID storage.ItemID, folder, kind string, candidates []string) {
+	for _, filename := range candidates {
+		path := filepath.Join(folder, filename)
+		fi, err := os.Stat(path)
+		if err != nil {
+			continue
+		}
+		width, height := imageFileDimensions(path)
+		ref := storage.ImageRef{
+			ID:     storage.ImageRefID(deterministicID("image-" + string(itemID) + "-" + kind)),
+			ItemID: itemID, Kind: storage.ImageKind(kind),
+			Path: path, Size: fi.Size(), Width: width, Height: height,
+		}
+		if err := s.store.UpsertImageRef(ctx, ref); err != nil {
+			log.Printf("scan: storing folder image %s for %s: %v", filename, itemID, err)
+		}
 		return
 	}
-	ref := storage.ImageRef{
-		ID:     storage.ImageRefID(deterministicID("image-" + string(itemID) + "-" + kind)),
-		ItemID: itemID, Kind: storage.ImageKind(kind),
-		Path: path, Size: fi.Size(),
+}
+
+// imageDimensions decodes just r's header to get an image's pixel
+// dimensions — image.DecodeConfig reads only as much as each registered
+// format needs to parse width/height, not the full image, so this is
+// cheap even for a large poster. Used to populate ImageRef.Width/Height,
+// which BaseItemDto.PrimaryImageAspectRatio (api/dto.go) is derived from:
+// confirmed load-bearing, not cosmetic, by reading jellyfin-web's
+// cardBuilder image-loader module — its "auto" card shape takes the
+// median PrimaryImageAspectRatio across a list to choose portrait (~2:3)
+// vs square (~1:1) vs banner, and falls back to square when every item's
+// ratio is absent. 0,0 (silently treated as "unknown", not an error) on
+// any decode failure — same "missing artwork isn't fatal" convention
+// storeProviderImage/seedFolderImage already use for the image itself.
+func imageDimensions(r io.Reader) (width, height int) {
+	cfg, _, err := image.DecodeConfig(r)
+	if err != nil {
+		return 0, 0
 	}
-	if err := s.store.UpsertImageRef(ctx, ref); err != nil {
-		log.Printf("scan: storing folder image %s for %s: %v", filename, itemID, err)
+	return cfg.Width, cfg.Height
+}
+
+// imageFileDimensions is imageDimensions for a file already on disk
+// (seedFolderImage's case, where the bytes were never read into memory).
+func imageFileDimensions(path string) (width, height int) {
+	f, err := os.Open(path)
+	if err != nil {
+		return 0, 0
 	}
+	defer f.Close()
+	return imageDimensions(f)
 }
 
 func videoExt(filename string) string {

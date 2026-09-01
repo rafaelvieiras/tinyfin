@@ -1,7 +1,11 @@
 package scan
 
 import (
+	"bytes"
 	"context"
+	"image"
+	"image/color"
+	"image/png"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -230,6 +234,91 @@ func TestScanLibraryTVShows(t *testing.T) {
 	}
 }
 
+func TestScanLibraryNFOOverridesProvider(t *testing.T) {
+	root := t.TempDir()
+	movieDir := filepath.Join(root, "The Matrix (1999)")
+	writeFile(t, filepath.Join(movieDir, "movie.mkv"), "not a real video, just enough to exist")
+	writeFile(t, filepath.Join(movieDir, "movie.nfo"), `<movie>
+  <title>The Matrix</title>
+  <plot>Overview from the local .nfo, must win over the provider.</plot>
+  <genre>Cyberpunk</genre>
+  <uniqueid type="tmdb">999</uniqueid>
+</movie>`)
+
+	st := newTestStore(t)
+	provider := &fakeProvider{} // fakeProvider's KindMovie result has a different Overview/Genres/Tmdb ID
+	s := New(st, provider, Config{})
+
+	lib := storage.Library{
+		ID: "lib-nfo", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
+	}
+	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("UpsertLibrary: %v", err)
+	}
+
+	if _, err := s.ScanLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("ScanLibrary: %v", err)
+	}
+
+	page, err := st.QueryItems(context.Background(), storage.ItemFilter{
+		LibraryID: &lib.ID, ItemTypes: []storage.ItemType{storage.ItemTypeMovie}, Limit: 10,
+	})
+	if err != nil || len(page.Items) != 1 {
+		t.Fatalf("QueryItems: err=%v, len=%d, want 1", err, len(page.Items))
+	}
+	item := page.Items[0]
+
+	wantOverview := "Overview from the local .nfo, must win over the provider."
+	if item.Overview != wantOverview {
+		t.Errorf("Overview = %q, want %q (local .nfo must win over provider)", item.Overview, wantOverview)
+	}
+	if len(item.Genres) != 1 || item.Genres[0] != "Cyberpunk" {
+		t.Errorf("Genres = %v, want [Cyberpunk] (local .nfo must win over provider's [Action Science Fiction])", item.Genres)
+	}
+	if item.ProviderIDs["Tmdb"] != "999" {
+		t.Errorf("ProviderIDs[Tmdb] = %q, want %q (local .nfo must win over provider's 603)", item.ProviderIDs["Tmdb"], "999")
+	}
+}
+
+// TestScanLibraryFolderJPGDetected proves seedFolderImages recognizes
+// folder.jpg (a valid Kodi/Jellyfin Primary-image filename), not just
+// poster.jpg.
+func TestScanLibraryFolderJPGDetected(t *testing.T) {
+	root := t.TempDir()
+	movieDir := filepath.Join(root, "Some Movie (2020)")
+	writeFile(t, filepath.Join(movieDir, "movie.mkv"), "content")
+	writeFile(t, filepath.Join(movieDir, "folder.jpg"), "fake-jpeg-bytes")
+
+	st := newTestStore(t)
+	s := New(st, metadata.NoopProvider{}, Config{})
+
+	lib := storage.Library{ID: "lib-folderjpg", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root}}
+	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("UpsertLibrary: %v", err)
+	}
+
+	if _, err := s.ScanLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("ScanLibrary: %v", err)
+	}
+
+	page, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &lib.ID, Limit: 10})
+	if err != nil || len(page.Items) != 1 {
+		t.Fatalf("QueryItems: err=%v, len=%d, want 1", err, len(page.Items))
+	}
+	item := page.Items[0]
+
+	refs, err := st.GetImageRefs(context.Background(), item.ID, "Primary")
+	if err != nil {
+		t.Fatalf("GetImageRefs: %v", err)
+	}
+	if len(refs) != 1 {
+		t.Fatalf("len(Primary image refs) = %d, want 1 (folder.jpg should be detected)", len(refs))
+	}
+	if filepath.Base(refs[0].Path) != "folder.jpg" {
+		t.Errorf("image ref path = %q, want basename %q", refs[0].Path, "folder.jpg")
+	}
+}
+
 func TestScanLibraryNoProviderStillCatalogs(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "Some Movie (2020)", "movie.mkv"), "content")
@@ -257,5 +346,75 @@ func TestScanLibraryNoProviderStillCatalogs(t *testing.T) {
 	}
 	if len(page.Items) != 1 || page.Items[0].Name != "Some Movie" {
 		t.Fatalf("Items = %+v, want one item named %q", page.Items, "Some Movie")
+	}
+}
+
+// TestScanLibraryRecordsPosterDimensions guards against the movie-grid
+// square-card regression: jellyfin-web's cardBuilder picks portrait vs
+// square vs banner from BaseItemDto.PrimaryImageAspectRatio (api/dto.go),
+// which the API derives from ImageRef.Width/Height. A provider image that
+// scan stores without those dimensions makes every card fall back to
+// jellyfin-web's square default regardless of the poster's real shape —
+// this test catches that regression at the scanner (population), leaving
+// api/dto_test.go's TestBaseItemDtoPrimaryImageAspectRatio to catch it at
+// the API (consumption).
+func TestScanLibraryRecordsPosterDimensions(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "The Matrix (1999)", "movie.mkv"), "not a real video, just enough to exist")
+
+	// A real 400x600 (2:3 poster) PNG, not the other tests' opaque
+	// "fake-jpeg-bytes" placeholder — image.DecodeConfig needs an
+	// actually-decodable image to report dimensions from.
+	img := image.NewRGBA(image.Rect(0, 0, 400, 600))
+	draw(img, color.RGBA{R: 255, A: 255})
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatalf("png.Encode: %v", err)
+	}
+	posterBytes := buf.Bytes()
+
+	imgSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write(posterBytes)
+	}))
+	defer imgSrv.Close()
+
+	st := newTestStore(t)
+	provider := &fakeProvider{imageURL: imgSrv.URL + "/poster.jpg"}
+	s := New(st, provider, Config{ImageDir: t.TempDir()})
+
+	lib := storage.Library{
+		ID: "lib-movies", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
+	}
+	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("UpsertLibrary: %v", err)
+	}
+	if _, err := s.ScanLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("ScanLibrary: %v", err)
+	}
+
+	page, err := st.QueryItems(context.Background(), storage.ItemFilter{
+		LibraryID: &lib.ID, ItemTypes: []storage.ItemType{storage.ItemTypeMovie}, Limit: 10,
+	})
+	if err != nil || len(page.Items) != 1 {
+		t.Fatalf("QueryItems: %v page=%v", err, page)
+	}
+
+	refs, err := st.GetImageRefs(context.Background(), page.Items[0].ID, "Primary")
+	if err != nil || len(refs) != 1 {
+		t.Fatalf("GetImageRefs: %v refs=%v", err, refs)
+	}
+	if refs[0].Width != 400 || refs[0].Height != 600 {
+		t.Errorf("ImageRef.Width/Height = %d/%d, want 400/600", refs[0].Width, refs[0].Height)
+	}
+}
+
+// draw fills every pixel of img with c — image/draw would pull in another
+// import for one call this test only needs once.
+func draw(img *image.RGBA, c color.RGBA) {
+	b := img.Bounds()
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			img.Set(x, y, c)
+		}
 	}
 }

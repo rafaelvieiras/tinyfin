@@ -461,3 +461,86 @@ func TestItemImageServesBytes(t *testing.T) {
 		t.Errorf("image body = %q, want %q", body, imgBytes)
 	}
 }
+
+// TestItemsIncludesPrimaryImageAspectRatio guards against the movie-grid
+// square-card regression found via jellyfin-web testing: its cardBuilder
+// picks portrait (~2:3) vs square (~1:1) vs banner card shape from the
+// *median* BaseItemDto.PrimaryImageAspectRatio across a list, and falls
+// back to a square default when that's null for every item — which it
+// always was, this field never having been serialized at all. Covers all
+// three cases the field's doc comment (dto.go) calls out: a Primary image
+// with recorded dimensions, one without them (a ref predating
+// scan/scan.go's imageDimensions), and no Primary image at all.
+func TestItemsIncludesPrimaryImageAspectRatio(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "grace", "gracepass")
+	token := loginToken(t, ts.URL, user.Name, "gracepass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "AspectRatioLib", storage.CollectionTypeMovies)
+
+	items := []storage.Item{
+		{Type: storage.ItemTypeMovie, LibraryID: libID, Name: "Poster Movie"},
+		{Type: storage.ItemTypeMovie, LibraryID: libID, Name: "Undimensioned Movie"},
+		{Type: storage.ItemTypeMovie, LibraryID: libID, Name: "No Image Movie"},
+	}
+	for _, item := range items {
+		if err := st.UpsertItem(context.Background(), item); err != nil {
+			t.Fatalf("UpsertItem(%q): %v", item.Name, err)
+		}
+	}
+	posterID := mustFindItemByName(t, st, libID, "Poster Movie")
+	undimensionedID := mustFindItemByName(t, st, libID, "Undimensioned Movie")
+
+	if err := st.UpsertImageRef(context.Background(), storage.ImageRef{
+		ItemID: posterID, Kind: "Primary", Path: "poster.jpg", Width: 400, Height: 600,
+	}); err != nil {
+		t.Fatalf("UpsertImageRef(posterID): %v", err)
+	}
+	if err := st.UpsertImageRef(context.Background(), storage.ImageRef{
+		ItemID: undimensionedID, Kind: "Primary", Path: "poster.jpg",
+	}); err != nil {
+		t.Fatalf("UpsertImageRef(undimensionedID): %v", err)
+	}
+
+	resp := get(http.MethodGet, "/Items?parentId="+string(libID)+"&Limit=10")
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /Items status = %d, want 200", resp.StatusCode)
+	}
+	var result baseItemDtoQueryResult
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatalf("decoding /Items: %v", err)
+	}
+	byName := make(map[string]baseItemDto, len(result.Items))
+	for _, dto := range result.Items {
+		byName[dto.Name] = dto
+	}
+
+	poster, ok := byName["Poster Movie"]
+	if !ok {
+		t.Fatal("Poster Movie missing from /Items response")
+	}
+	const wantRatio = 400.0 / 600.0
+	if poster.PrimaryImageAspectRatio == nil {
+		t.Error("Poster Movie: PrimaryImageAspectRatio = nil, want ~0.667 (400x600 poster)")
+	} else if diff := *poster.PrimaryImageAspectRatio - wantRatio; diff > 1e-9 || diff < -1e-9 {
+		t.Errorf("Poster Movie: PrimaryImageAspectRatio = %v, want %v", *poster.PrimaryImageAspectRatio, wantRatio)
+	}
+
+	undimensioned, ok := byName["Undimensioned Movie"]
+	if !ok {
+		t.Fatal("Undimensioned Movie missing from /Items response")
+	}
+	if undimensioned.PrimaryImageAspectRatio != nil {
+		t.Errorf("Undimensioned Movie: PrimaryImageAspectRatio = %v, want nil (no recorded Width/Height)", *undimensioned.PrimaryImageAspectRatio)
+	}
+
+	noImage, ok := byName["No Image Movie"]
+	if !ok {
+		t.Fatal("No Image Movie missing from /Items response")
+	}
+	if noImage.PrimaryImageAspectRatio != nil {
+		t.Errorf("No Image Movie: PrimaryImageAspectRatio = %v, want nil (no Primary image at all)", *noImage.PrimaryImageAspectRatio)
+	}
+}

@@ -26,6 +26,7 @@ type baseItemDto struct {
 	Path         string     `json:"Path,omitempty"`
 
 	OfficialRating  string   `json:"OfficialRating,omitempty"`
+	OriginalTitle   string   `json:"OriginalTitle,omitempty"`
 	Overview        string   `json:"Overview,omitempty"`
 	Taglines        []string `json:"Taglines,omitempty"`
 	Genres          []string `json:"Genres,omitempty"`
@@ -88,6 +89,20 @@ type baseItemDto struct {
 	// (defaultItemsLimit/ItemFilter.Limit, AGENTS.md principle 1) so this
 	// is N+1 bounded queries, not an unbounded scan.
 	ImageTags map[string]string `json:"ImageTags,omitempty"`
+
+	// PrimaryImageAspectRatio is the Primary image's width/height ratio.
+	// Found missing, not just unpolished, by reading jellyfin-web's
+	// cardBuilder image-loader module (the chunk exporting
+	// getPrimaryImageAspectRatio) after visually confirming movie-grid
+	// cards rendered as square album-art-style tiles instead of portrait
+	// posters: an "auto"-shaped card list takes the *median*
+	// PrimaryImageAspectRatio across all items to pick portraitCard
+	// (~2:3) vs squareCard (~1:1) vs a banner shape, and falls back to
+	// square when every item's ratio is null — which every item's was,
+	// this field never having existed. nil when the item has no Primary
+	// image, or its ImageRef predates Width/Height being recorded
+	// (scan/scan.go's imageDimensions).
+	PrimaryImageAspectRatio *float64 `json:"PrimaryImageAspectRatio,omitempty"`
 
 	// UserData carries the requesting user's playstate for this item
 	// (resume position, played/favorite status) — populated from
@@ -210,22 +225,33 @@ func mediaTypeFor(t storage.ItemType) string {
 	}
 }
 
-// imageTags builds BaseItemDto.ImageTags for id: currently just the
-// Primary kind, which is all the card/detail views this slice renders
-// actually need (see baseItemDto's ImageTags doc comment). ref.Tag is
-// used as the cache-busting value when the store has one; handleItemImage
-// doesn't validate the tag against anything, so any stable non-empty
-// value works when a scanner hasn't populated a real one yet.
-func (s *Server) imageTags(ctx context.Context, id storage.ItemID) map[string]string {
+// primaryImage builds BaseItemDto.ImageTags and PrimaryImageAspectRatio
+// for id from a single GetImageRefs(Primary) call — the two fields are
+// always derived from the same ImageRef, so one query covers both.
+// Currently just the Primary kind, which is all the card/detail views
+// this slice renders actually need (see ImageTags's doc comment on
+// baseItemDto). ref.Tag is used as the cache-busting value when
+// the store has one; handleItemImage doesn't validate the tag against
+// anything, so any stable non-empty value works when a scanner hasn't
+// populated a real one yet. The aspect ratio is nil, not 0, when
+// Width/Height weren't recorded (an ImageRef predating scan/scan.go's
+// imageDimensions) — 0 would read to jellyfin-web as a real "square"
+// ratio (see PrimaryImageAspectRatio's doc comment) instead of "unknown".
+func (s *Server) primaryImage(ctx context.Context, id storage.ItemID) (tags map[string]string, aspectRatio *float64) {
 	refs, err := s.store.GetImageRefs(ctx, id, storage.ImageKind("Primary"))
 	if err != nil || len(refs) == 0 {
-		return nil
+		return nil, nil
 	}
 	tag := refs[0].Tag
 	if tag == "" {
 		tag = "1"
 	}
-	return map[string]string{"Primary": tag}
+	tags = map[string]string{"Primary": tag}
+	if refs[0].Width > 0 && refs[0].Height > 0 {
+		ratio := float64(refs[0].Width) / float64(refs[0].Height)
+		aspectRatio = &ratio
+	}
+	return tags, aspectRatio
 }
 
 // libraryBaseItemDto builds the BaseItemDto for a library root itself
@@ -267,37 +293,40 @@ func (s *Server) userDataFor(ctx context.Context, userID storage.UserID, itemID 
 }
 
 func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto {
+	imageTags, primaryImageAspectRatio := s.primaryImage(ctx, item.ID)
 	dto := baseItemDto{
-		Name:              item.Name,
-		ServerID:          s.cfg.ServerID,
-		ID:                string(item.ID),
-		DateCreated:       item.DateCreated,
-		Container:         item.Container,
-		SortName:          item.SortName,
-		PremiereDate:      item.PremiereDate,
-		EndDate:           item.EndDate,
-		Path:              item.Path,
-		OfficialRating:    item.OfficialRating,
-		Overview:          item.Overview,
-		Taglines:          item.Taglines,
-		Genres:            item.Genres,
-		CommunityRating:   item.CommunityRating,
-		CriticRating:      item.CriticRating,
-		RunTimeTicks:      item.RunTimeTicks,
-		ProductionYear:    item.ProductionYear,
-		IndexNumber:       item.IndexNumber,
-		ParentIndexNumber: item.ParentIndexNumber,
-		ProviderIDs:       item.ProviderIDs,
-		IsFolder:          isFolderType(item.Type),
-		Type:              string(item.Type),
-		Tags:              item.Tags,
-		Artists:           item.Artists,
-		Album:             item.Album,
-		AlbumArtist:       item.AlbumArtist,
-		CollectionType:    string(item.CollectionType),
-		MediaType:         mediaTypeFor(item.Type),
-		MediaStreams:      mediaStreamDtos(item.MediaStreams),
-		ImageTags:         s.imageTags(ctx, item.ID),
+		Name:                    item.Name,
+		ServerID:                s.cfg.ServerID,
+		ID:                      string(item.ID),
+		DateCreated:             item.DateCreated,
+		Container:               item.Container,
+		SortName:                item.SortName,
+		PremiereDate:            item.PremiereDate,
+		EndDate:                 item.EndDate,
+		Path:                    item.Path,
+		OfficialRating:          item.OfficialRating,
+		OriginalTitle:           item.OriginalTitle,
+		Overview:                item.Overview,
+		Taglines:                item.Taglines,
+		Genres:                  item.Genres,
+		CommunityRating:         item.CommunityRating,
+		CriticRating:            item.CriticRating,
+		RunTimeTicks:            item.RunTimeTicks,
+		ProductionYear:          item.ProductionYear,
+		IndexNumber:             item.IndexNumber,
+		ParentIndexNumber:       item.ParentIndexNumber,
+		ProviderIDs:             item.ProviderIDs,
+		IsFolder:                isFolderType(item.Type),
+		Type:                    string(item.Type),
+		Tags:                    item.Tags,
+		Artists:                 item.Artists,
+		Album:                   item.Album,
+		AlbumArtist:             item.AlbumArtist,
+		CollectionType:          string(item.CollectionType),
+		MediaType:               mediaTypeFor(item.Type),
+		MediaStreams:            mediaStreamDtos(item.MediaStreams),
+		ImageTags:               imageTags,
+		PrimaryImageAspectRatio: primaryImageAspectRatio,
 	}
 	if item.ParentID != nil {
 		dto.ParentID = string(*item.ParentID)
