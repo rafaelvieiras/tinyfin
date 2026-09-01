@@ -45,6 +45,15 @@ type baseItemDto struct {
 	SeriesID string `json:"SeriesId,omitempty"`
 	SeasonID string `json:"SeasonId,omitempty"`
 
+	// SeriesName/SeasonName: found missing, not just unpolished, by testing
+	// an episode detail page against a real jellyfin-web build — its header
+	// renders episode.SeriesName directly (as literal "undefined" text when
+	// absent, not a graceful fallback), so an episode DTO carrying SeriesId
+	// without the resolved name still breaks the page a real server's
+	// wouldn't.
+	SeriesName string `json:"SeriesName,omitempty"`
+	SeasonName string `json:"SeasonName,omitempty"`
+
 	Tags        []string `json:"Tags,omitempty"`
 	Artists     []string `json:"Artists,omitempty"`
 	Album       string   `json:"Album,omitempty"`
@@ -295,9 +304,15 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 	}
 	if item.SeriesID != nil {
 		dto.SeriesID = string(*item.SeriesID)
+		if series, err := s.store.GetItem(ctx, *item.SeriesID); err == nil {
+			dto.SeriesName = series.Name
+		}
 	}
 	if item.SeasonID != nil {
 		dto.SeasonID = string(*item.SeasonID)
+		if season, err := s.store.GetItem(ctx, *item.SeasonID); err == nil {
+			dto.SeasonName = season.Name
+		}
 	}
 	if ac, ok := AuthFromContext(ctx); ok && ac.Authenticated {
 		dto.UserData = s.userDataFor(ctx, ac.User.ID, item.ID)

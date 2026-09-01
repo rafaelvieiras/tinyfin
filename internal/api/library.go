@@ -257,6 +257,50 @@ func (s *Server) handleItemsLatest(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, items)
 }
 
+// mediaTypeItemTypes maps a wire MediaType value (mediaTypeFor's output,
+// dto.go) back to the storage.ItemType values that produce it — the
+// inverse of that lookup, needed because MediaType is a derived, query-time
+// field rather than a stored column, so filtering by it means filtering by
+// the ItemTypes behind it. A MediaType with no entry here (e.g. "Book" —
+// this project has no ItemType that ever maps to it) intentionally matches
+// nothing rather than being silently ignored, see mediaTypesFilter below.
+var mediaTypeItemTypes = map[string][]storage.ItemType{
+	"Video": {
+		storage.ItemTypeMovie, storage.ItemTypeSeries, storage.ItemTypeSeason,
+		storage.ItemTypeEpisode, storage.ItemTypeTrailer,
+	},
+	"Audio": {storage.ItemTypeMusicArtist, storage.ItemTypeMusicAlbum, storage.ItemTypeAudio},
+}
+
+// mediaTypesNoMatch is appended to an ItemFilter.ItemTypes result when the
+// caller asked for a MediaType this project has no backing ItemType for
+// (mediaTypeItemTypes above). storage.ItemFilter.ItemTypes only filters
+// when non-empty (sqlite/item.go), so an unmapped MediaType needs an
+// explicit type value that can never match a real item.type column instead
+// of an empty slice, which would disable the filter and return everything.
+const mediaTypesNoMatch storage.ItemType = "__no_media_type_match__"
+
+// mediaTypesFilter translates a request's repeated mediaTypes query param
+// (jellyfin-web issues one GET /UserItems/Resume call per home-screen
+// "Continue Watching/Listening/Reading" row, each with its own single
+// mediaTypes value) into the []storage.ItemType to filter by. Absent
+// entirely, it returns nil (no filtering — every ItemType matches).
+func mediaTypesFilter(q []string) []storage.ItemType {
+	if len(q) == 0 {
+		return nil
+	}
+	var types []storage.ItemType
+	for _, mt := range q {
+		if ts, ok := mediaTypeItemTypes[strings.TrimSpace(mt)]; ok {
+			types = append(types, ts...)
+		}
+	}
+	if types == nil {
+		types = []storage.ItemType{mediaTypesNoMatch}
+	}
+	return types
+}
+
 // handleUserItemsResume serves GET /UserItems/Resume — the home screen's
 // "Continue Watching" row, and the same query jellyfin-web's item-detail
 // resume check ultimately depends on being non-empty. Requires the caller's
@@ -278,6 +322,7 @@ func (s *Server) handleUserItemsResume(w http.ResponseWriter, r *http.Request) {
 		Resume:    true,
 		Recursive: true,
 		Limit:     defaultItemsLimit,
+		ItemTypes: mediaTypesFilter(q["mediaTypes"]),
 	}
 	s.applyParentID(r, &filter)
 

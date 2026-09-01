@@ -161,6 +161,144 @@ func TestUserViewsAndItems(t *testing.T) {
 	}
 }
 
+// TestUserItemsResumeFiltersByMediaType regression-guards a real bug found
+// via a live jellyfin-web session: the home screen issues three separate
+// GET /UserItems/Resume calls, one per mediaTypes value (Video/Audio/Book),
+// to build its "Continue Watching"/"Continue Listening"/"Continue Reading"
+// rows. handleUserItemsResume ignored mediaTypes entirely, so a resumable
+// movie came back — and rendered — in all three rows at once.
+func TestUserItemsResumeFiltersByMediaType(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "dave", "davepass")
+	token := loginToken(t, ts.URL, user.Name, "davepass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "Movies", storage.CollectionTypeMovies)
+	item := storage.Item{
+		Type:      storage.ItemTypeMovie,
+		LibraryID: libID,
+		Name:      "Test Movie",
+		Container: "mp4",
+		Path:      "/media/movies/test.mp4",
+	}
+	if err := st.UpsertItem(context.Background(), item); err != nil {
+		t.Fatalf("UpsertItem: %v", err)
+	}
+	page, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &libID, Limit: 10})
+	if err != nil || len(page.Items) != 1 {
+		t.Fatalf("QueryItems: %v page=%v", err, page)
+	}
+	itemID := page.Items[0].ID
+
+	if err := st.SetPlaystate(context.Background(), user.ID, itemID, storage.Playstate{PlaybackPositionTicks: 12345}); err != nil {
+		t.Fatalf("SetPlaystate: %v", err)
+	}
+
+	for _, tc := range []struct {
+		mediaType string
+		wantCount int
+	}{
+		{"Video", 1}, // the movie's real MediaType — must come back
+		{"Audio", 0}, // this project has no audio items — must NOT come back
+		{"Book", 0},  // this project has no book items — must NOT come back
+	} {
+		resp := get(http.MethodGet, "/UserItems/Resume?mediaTypes="+tc.mediaType)
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("GET /UserItems/Resume?mediaTypes=%s status = %d, want 200", tc.mediaType, resp.StatusCode)
+		}
+		var result baseItemDtoQueryResult
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			t.Fatalf("decoding /UserItems/Resume?mediaTypes=%s: %v", tc.mediaType, err)
+		}
+		if len(result.Items) != tc.wantCount {
+			t.Errorf("mediaTypes=%s: got %d items, want %d (items=%+v)", tc.mediaType, len(result.Items), tc.wantCount, result.Items)
+		}
+	}
+
+	// No mediaTypes at all — unfiltered, matches the pre-existing behavior.
+	resp := get(http.MethodGet, "/UserItems/Resume")
+	defer resp.Body.Close()
+	var result baseItemDtoQueryResult
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatalf("decoding /UserItems/Resume: %v", err)
+	}
+	if len(result.Items) != 1 {
+		t.Errorf("no mediaTypes filter: got %d items, want 1", len(result.Items))
+	}
+}
+
+// TestItemGetEpisodeIncludesSeriesAndSeasonName regression-guards a real bug
+// found via a live jellyfin-web session: an episode's detail page renders
+// episode.SeriesName directly in its header (as the literal text
+// "undefined" when the field is absent, not a graceful fallback), so a
+// BaseItemDto carrying SeriesId/SeasonId without the resolved names still
+// visibly breaks the page a real server's response wouldn't.
+func TestItemGetEpisodeIncludesSeriesAndSeasonName(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "dave", "davepass")
+	token := loginToken(t, ts.URL, user.Name, "davepass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "Séries Infantis", storage.CollectionTypeTVShows)
+
+	series := storage.Item{Type: storage.ItemTypeSeries, LibraryID: libID, Name: "Test Series", Path: "/media/series/Test Series"}
+	if err := st.UpsertItem(context.Background(), series); err != nil {
+		t.Fatalf("UpsertItem series: %v", err)
+	}
+	seriesID := mustFindItemByName(t, st, libID, "Test Series")
+
+	season := storage.Item{Type: storage.ItemTypeSeason, LibraryID: libID, ParentID: &seriesID, SeriesID: &seriesID, Name: "Season 1", Path: "/media/series/Test Series/Season 01"}
+	if err := st.UpsertItem(context.Background(), season); err != nil {
+		t.Fatalf("UpsertItem season: %v", err)
+	}
+	seasonID := mustFindItemByName(t, st, libID, "Season 1")
+
+	episode := storage.Item{
+		Type: storage.ItemTypeEpisode, LibraryID: libID, ParentID: &seasonID, SeriesID: &seriesID, SeasonID: &seasonID,
+		Name: "Episode 1", Path: "/media/series/Test Series/Season 01/S01E01.mkv",
+	}
+	if err := st.UpsertItem(context.Background(), episode); err != nil {
+		t.Fatalf("UpsertItem episode: %v", err)
+	}
+	episodeID := mustFindItemByName(t, st, libID, "Episode 1")
+
+	resp := get(http.MethodGet, "/Items/"+string(episodeID))
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /Items/{itemId} status = %d, want 200", resp.StatusCode)
+	}
+	var detail baseItemDto
+	if err := json.NewDecoder(resp.Body).Decode(&detail); err != nil {
+		t.Fatalf("decoding episode detail: %v", err)
+	}
+	if detail.SeriesName != "Test Series" {
+		t.Errorf("SeriesName = %q, want %q", detail.SeriesName, "Test Series")
+	}
+	if detail.SeasonName != "Season 1" {
+		t.Errorf("SeasonName = %q, want %q", detail.SeasonName, "Season 1")
+	}
+}
+
+// mustFindItemByName looks up an item's ID by name within libID — the
+// storage layer mints IDs on UpsertItem rather than accepting one, so tests
+// that need to chain a parent's ID into a child's ParentID/SeriesID/SeasonID
+// have to look it back up.
+func mustFindItemByName(t *testing.T, st storage.ItemStore, libID storage.LibraryID, name string) storage.ItemID {
+	t.Helper()
+	page, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &libID, Recursive: true, Limit: 100})
+	if err != nil {
+		t.Fatalf("QueryItems: %v", err)
+	}
+	for _, it := range page.Items {
+		if it.Name == name {
+			return it.ID
+		}
+	}
+	t.Fatalf("no item named %q found in library %q", name, libID)
+	return ""
+}
+
 func TestItemImageNotFound(t *testing.T) {
 	ts, st := newTestServer(t)
 	user := createTestUser(t, st, "erin", "erinpass")
