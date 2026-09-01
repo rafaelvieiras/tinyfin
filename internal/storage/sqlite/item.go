@@ -449,6 +449,11 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 		}
 	}
 
+	if filter.SeriesID != nil {
+		wheres = append(wheres, "items.series_id = ?")
+		whereArgs = append(whereArgs, string(*filter.SeriesID))
+	}
+
 	if len(filter.ItemTypes) > 0 {
 		ph := make([]string, len(filter.ItemTypes))
 		for i, t := range filter.ItemTypes {

@@ -257,6 +257,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /Items/{itemId}/Ancestors", requireAuth(s.handleItemAncestors))
 	s.mux.HandleFunc("GET /Items/{itemId}/Similar", requireAuth(s.handleItemSimilar))
 	s.mux.HandleFunc("GET /UserItems/Resume", requireAuth(s.handleUserItemsResume))
+	s.mux.HandleFunc("GET /Shows/{seriesId}/Seasons", requireAuth(s.handleShowSeasons))
+	s.mux.HandleFunc("GET /Shows/{seriesId}/Episodes", requireAuth(s.handleShowEpisodes))
 	s.mux.HandleFunc("GET /Studios", requireAuth(s.handleStudios))
 	// Not in the current OpenAPI spec (docs/04's verification source), but
 	// still sent by a real client: jellyfin-web's item-details page uses

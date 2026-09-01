@@ -299,6 +299,97 @@ func mustFindItemByName(t *testing.T, st storage.ItemStore, libID storage.Librar
 	return ""
 }
 
+// TestShowSeasonsAndEpisodes regression-guards a real bug found via a live
+// jellyfin-web session: GET /Shows/{seriesId}/Seasons and GET
+// /Shows/{seriesId}/Episodes didn't exist at all, so a series' detail page
+// rendered its header and nothing else — no season list, and (one level
+// deeper) no episode list either. A real server needs both: the series page
+// calls Seasons, then the season page calls Episodes?seasonId=....
+func TestShowSeasonsAndEpisodes(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "dave", "davepass")
+	token := loginToken(t, ts.URL, user.Name, "davepass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "Séries Infantis", storage.CollectionTypeTVShows)
+
+	series := storage.Item{Type: storage.ItemTypeSeries, LibraryID: libID, Name: "Test Series", Path: "/media/series/Test Series"}
+	if err := st.UpsertItem(context.Background(), series); err != nil {
+		t.Fatalf("UpsertItem series: %v", err)
+	}
+	seriesID := mustFindItemByName(t, st, libID, "Test Series")
+
+	one := 1
+	for _, s := range []struct {
+		name string
+		idx  int
+	}{{"Season 1", 1}, {"Season 2", 2}} {
+		idx := s.idx
+		season := storage.Item{Type: storage.ItemTypeSeason, LibraryID: libID, ParentID: &seriesID, SeriesID: &seriesID, Name: s.name, IndexNumber: &idx, Path: "/media/series/Test Series/" + s.name}
+		if err := st.UpsertItem(context.Background(), season); err != nil {
+			t.Fatalf("UpsertItem %s: %v", s.name, err)
+		}
+	}
+	season1ID := mustFindItemByName(t, st, libID, "Season 1")
+	season2ID := mustFindItemByName(t, st, libID, "Season 2")
+
+	for _, e := range []struct {
+		name     string
+		seasonID storage.ItemID
+	}{{"S1E1", season1ID}, {"S1E2", season1ID}, {"S2E1", season2ID}} {
+		seasonID := e.seasonID
+		episode := storage.Item{
+			Type: storage.ItemTypeEpisode, LibraryID: libID, ParentID: &seasonID, SeriesID: &seriesID, SeasonID: &seasonID,
+			Name: e.name, IndexNumber: &one, Path: "/media/series/Test Series/" + e.name + ".mkv",
+		}
+		if err := st.UpsertItem(context.Background(), episode); err != nil {
+			t.Fatalf("UpsertItem %s: %v", e.name, err)
+		}
+	}
+
+	// GET /Shows/{seriesId}/Seasons — both seasons, in order.
+	seasonsResp := get(http.MethodGet, "/Shows/"+string(seriesID)+"/Seasons")
+	defer seasonsResp.Body.Close()
+	if seasonsResp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /Shows/{seriesId}/Seasons status = %d, want 200", seasonsResp.StatusCode)
+	}
+	var seasons baseItemDtoQueryResult
+	if err := json.NewDecoder(seasonsResp.Body).Decode(&seasons); err != nil {
+		t.Fatalf("decoding Seasons: %v", err)
+	}
+	if len(seasons.Items) != 2 || seasons.Items[0].Name != "Season 1" || seasons.Items[1].Name != "Season 2" {
+		t.Fatalf("Seasons = %+v, want [Season 1, Season 2] in order", seasons.Items)
+	}
+
+	// GET /Shows/{seriesId}/Episodes?seasonId=<season1> — only that season's episodes.
+	ep1Resp := get(http.MethodGet, "/Shows/"+string(seriesID)+"/Episodes?seasonId="+string(season1ID))
+	defer ep1Resp.Body.Close()
+	if ep1Resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /Shows/{seriesId}/Episodes?seasonId=... status = %d, want 200", ep1Resp.StatusCode)
+	}
+	var ep1 baseItemDtoQueryResult
+	if err := json.NewDecoder(ep1Resp.Body).Decode(&ep1); err != nil {
+		t.Fatalf("decoding Episodes (season1): %v", err)
+	}
+	if len(ep1.Items) != 2 {
+		t.Fatalf("Episodes(season1) = %+v, want 2 items", ep1.Items)
+	}
+
+	// GET /Shows/{seriesId}/Episodes — no seasonId, every episode of the series.
+	allResp := get(http.MethodGet, "/Shows/"+string(seriesID)+"/Episodes")
+	defer allResp.Body.Close()
+	if allResp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /Shows/{seriesId}/Episodes status = %d, want 200", allResp.StatusCode)
+	}
+	var all baseItemDtoQueryResult
+	if err := json.NewDecoder(allResp.Body).Decode(&all); err != nil {
+		t.Fatalf("decoding Episodes (all): %v", err)
+	}
+	if len(all.Items) != 3 {
+		t.Fatalf("Episodes(all) = %+v, want 3 items", all.Items)
+	}
+}
+
 func TestItemImageNotFound(t *testing.T) {
 	ts, st := newTestServer(t)
 	user := createTestUser(t, st, "erin", "erinpass")

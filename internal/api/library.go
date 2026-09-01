@@ -367,6 +367,78 @@ func (s *Server) applyParentID(r *http.Request, filter *storage.ItemFilter) {
 	}
 }
 
+// handleShowSeasons serves GET /Shows/{seriesId}/Seasons — the series detail
+// page's season list. Found missing, not just unpolished, via a live
+// jellyfin-web session: without it, a series' detail page renders its
+// header and nothing else, since the client has no way to discover the
+// series' seasons at all. Seasons are a season's direct children of the
+// series (item.go's "episode -> season -> series" ParentID chain), so a
+// non-recursive ParentID filter is exactly "this series' seasons" — no
+// SeriesID filter needed here the way handleShowEpisodes needs one below.
+func (s *Server) handleShowSeasons(w http.ResponseWriter, r *http.Request) {
+	seriesID := storage.ItemID(r.PathValue("seriesId"))
+	filter := storage.ItemFilter{
+		ParentID:  &seriesID,
+		ItemTypes: []storage.ItemType{storage.ItemTypeSeason},
+		SortBy:    []storage.SortField{{By: storage.SortByIndexNumber}},
+		Limit:     defaultItemsLimit,
+	}
+	page, err := s.store.QueryItems(r.Context(), filter)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	items := make([]baseItemDto, 0, len(page.Items))
+	for _, it := range page.Items {
+		items = append(items, s.baseItemDto(r.Context(), it))
+	}
+	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{
+		Items:            items,
+		TotalRecordCount: page.TotalCount,
+		StartIndex:       page.Offset,
+	})
+}
+
+// handleShowEpisodes serves GET /Shows/{seriesId}/Episodes — the season
+// detail page's episode list (and, without a seasonId, "every episode of
+// this series" for callers that want the whole run flattened). Found
+// missing, not just unpolished, the same way as handleShowSeasons above: a
+// season's detail page rendered its header with no episode list below it at
+// all.
+//
+// With a seasonId query param, episodes are that season's direct children
+// (ParentID, same reasoning as handleShowSeasons); without one, ParentID
+// alone can't express "every episode across every season", so this is the
+// one caller that needs ItemFilter.SeriesID (types.go) instead.
+func (s *Server) handleShowEpisodes(w http.ResponseWriter, r *http.Request) {
+	seriesID := storage.ItemID(r.PathValue("seriesId"))
+	filter := storage.ItemFilter{
+		ItemTypes: []storage.ItemType{storage.ItemTypeEpisode},
+		SortBy:    []storage.SortField{{By: storage.SortByParentIndexNumber}, {By: storage.SortByIndexNumber}},
+		Limit:     defaultItemsLimit,
+	}
+	if v := r.URL.Query().Get("seasonId"); v != "" {
+		seasonID := storage.ItemID(v)
+		filter.ParentID = &seasonID
+	} else {
+		filter.SeriesID = &seriesID
+	}
+	page, err := s.store.QueryItems(r.Context(), filter)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	items := make([]baseItemDto, 0, len(page.Items))
+	for _, it := range page.Items {
+		items = append(items, s.baseItemDto(r.Context(), it))
+	}
+	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{
+		Items:            items,
+		TotalRecordCount: page.TotalCount,
+		StartIndex:       page.Offset,
+	})
+}
+
 // handleItemAncestors serves GET /Items/{itemId}/Ancestors — the breadcrumb
 // chain from an item up to its library root, as a bare BaseItemDto array
 // (same envelope-less shape as handleItemsLatest, confirmed against the

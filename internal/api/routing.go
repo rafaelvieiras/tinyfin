@@ -36,6 +36,8 @@ var routePaths = []string{
 	"/Items/{itemId}/Ancestors",
 	"/Items/{itemId}/Similar",
 	"/UserItems/Resume",
+	"/Shows/{seriesId}/Seasons",
+	"/Shows/{seriesId}/Episodes",
 	"/Studios",
 	"/Users/{userId}/Items/{itemId}",
 	"/Items/{itemId}/Images/{imageType}",

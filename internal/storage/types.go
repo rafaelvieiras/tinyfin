@@ -49,8 +49,15 @@ type ItemRelation struct {
 // internally to answer them; that join never crosses the Store boundary
 // back out to the caller.
 type ItemFilter struct {
-	LibraryID  *LibraryID
-	ParentID   *ItemID
+	LibraryID *LibraryID
+	ParentID  *ItemID
+	// SeriesID matches Item.SeriesID directly (set on both Season and
+	// Episode rows, item.go's doc comment) rather than walking ParentID —
+	// backs GET /Shows/{seriesId}/Episodes when called without a SeasonId
+	// (docs/04's Specialized media types group), which needs every episode
+	// across every season of a series in one query, not just one season's
+	// direct children the way ParentID alone would give.
+	SeriesID   *ItemID
 	ItemTypes  []ItemType
 	Genres     []string
 	SearchText string // backs FTS5 search, 09
