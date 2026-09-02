@@ -203,6 +203,126 @@ func TestCreditsToPeopleOrdersCrewByTypePriority(t *testing.T) {
 	}
 }
 
+// TestTMDBProviderLookupSeriesIncludesStudiosCreditsAndImdb proves
+// lookupSeries' append_to_response=credits,external_ids integration maps
+// TMDB's networks/credits/external_ids into Result.Studios/People/
+// ExternalIDs["Imdb"], and that EndDate is only set once Status is a
+// terminal value ("Ended").
+func TestTMDBProviderLookupSeriesIncludesStudiosCreditsAndImdb(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/search/tv", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(t, w, tmdbSearchResponse{Results: []tmdbSearchResult{{ID: 1396, Name: "Breaking Bad"}}})
+	})
+	mux.HandleFunc("/tv/1396", func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.Query().Get("append_to_response"); got != "credits,external_ids" {
+			t.Errorf("append_to_response = %q, want credits,external_ids", got)
+		}
+		writeJSON(t, w, tmdbDetailsResponse{
+			tmdbSearchResult: tmdbSearchResult{
+				ID: 1396, Name: "Breaking Bad", OriginalName: "Breaking Bad",
+				Overview: "A chemistry teacher turns to crime.", FirstAirDate: "2008-01-20",
+				PosterPath: "/poster.jpg",
+			},
+			Networks:    []tmdbNetwork{{Name: "AMC"}},
+			LastAirDate: "2013-09-29",
+			Status:      "Ended",
+			Credits: tmdbCredits{
+				Cast: []tmdbCastMember{{ID: 17419, Name: "Bryan Cranston", Character: "Walter White", Order: 0}},
+			},
+			ExternalIDs: struct {
+				ImdbID string `json:"imdb_id"`
+			}{ImdbID: "tt0903747"},
+		})
+	})
+
+	p := newTestTMDBProvider(t, mux)
+	res, err := p.Lookup(context.Background(), Query{Kind: KindSeries, SeriesTitle: "Breaking Bad"})
+	if err != nil {
+		t.Fatalf("Lookup: %v", err)
+	}
+
+	if len(res.Studios) != 1 || res.Studios[0] != "AMC" {
+		t.Errorf("Studios = %v, want [AMC]", res.Studios)
+	}
+	if len(res.People) != 1 || res.People[0].Name != "Bryan Cranston" || res.People[0].Type != "Actor" {
+		t.Errorf("People = %+v, want one Actor entry for Bryan Cranston", res.People)
+	}
+	if res.ExternalIDs["Tmdb"] != "1396" {
+		t.Errorf("ExternalIDs[Tmdb] = %q, want 1396", res.ExternalIDs["Tmdb"])
+	}
+	if res.ExternalIDs["Imdb"] != "tt0903747" {
+		t.Errorf("ExternalIDs[Imdb] = %q, want tt0903747", res.ExternalIDs["Imdb"])
+	}
+	if res.EndDate == 0 {
+		t.Error("EndDate is zero, want the parsed last_air_date (Status = Ended)")
+	}
+}
+
+// TestTMDBProviderLookupSeriesOmitsEndDateWhenOngoing proves lookupSeries
+// leaves Result.EndDate at zero for a non-terminal Status, even when TMDB
+// still returns a last_air_date (the date of the most recently aired
+// episode, not a series finale, for a still-running show).
+func TestTMDBProviderLookupSeriesOmitsEndDateWhenOngoing(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/search/tv", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(t, w, tmdbSearchResponse{Results: []tmdbSearchResult{{ID: 1399, Name: "Ongoing Show"}}})
+	})
+	mux.HandleFunc("/tv/1399", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(t, w, tmdbDetailsResponse{
+			tmdbSearchResult: tmdbSearchResult{ID: 1399, Name: "Ongoing Show"},
+			LastAirDate:      "2026-01-01",
+			Status:           "Returning Series",
+		})
+	})
+
+	p := newTestTMDBProvider(t, mux)
+	res, err := p.Lookup(context.Background(), Query{Kind: KindSeries, SeriesTitle: "Ongoing Show"})
+	if err != nil {
+		t.Fatalf("Lookup: %v", err)
+	}
+	if res.EndDate != 0 {
+		t.Errorf("EndDate = %d, want 0 (Status = Returning Series, still airing)", res.EndDate)
+	}
+}
+
+func TestTMDBProviderLookupSeason(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/tv/1396/season/1", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(t, w, tmdbSeasonResponse{Name: "Season 1", Overview: "The first season.", PosterPath: "/season1.jpg"})
+	})
+
+	p := newTestTMDBProvider(t, mux)
+	res, err := p.Lookup(context.Background(), Query{
+		Kind: KindSeason, SeriesTitle: "Breaking Bad", SeasonNumber: 1,
+		ExternalIDs: map[string]string{"Tmdb": "1396"},
+	})
+	if err != nil {
+		t.Fatalf("Lookup: %v", err)
+	}
+	if res.Title != "Season 1" {
+		t.Errorf("Title = %q, want %q", res.Title, "Season 1")
+	}
+	if len(res.Images) != 1 || res.Images[0].Kind != "Primary" || res.Images[0].URL != tmdbImageBase+"/season1.jpg" {
+		t.Errorf("Images = %+v, want one Primary image at %s", res.Images, tmdbImageBase+"/season1.jpg")
+	}
+}
+
+func TestTMDBProviderLookupSeasonNotFound(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/tv/1396/season/99", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(t, w, tmdbSeasonResponse{})
+	})
+
+	p := newTestTMDBProvider(t, mux)
+	_, err := p.Lookup(context.Background(), Query{
+		Kind: KindSeason, SeriesTitle: "Breaking Bad", SeasonNumber: 99,
+		ExternalIDs: map[string]string{"Tmdb": "1396"},
+	})
+	if err != ErrNotFound {
+		t.Fatalf("err = %v, want ErrNotFound", err)
+	}
+}
+
 func TestTMDBProviderLookupMovieNotFound(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/search/movie", func(w http.ResponseWriter, r *http.Request) {

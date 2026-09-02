@@ -377,6 +377,19 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 			continue
 		}
 
+		pool.enqueue(func() error {
+			enriched := seasonItem
+			s.enrich(ctx, pool, &enriched, metadata.Query{Kind: metadata.KindSeason, SeriesTitle: seriesTitle, SeasonNumber: seasonNum})
+			if err := s.store.UpsertItem(ctx, enriched); err != nil {
+				return fmt.Errorf("upserting enriched season %q: %w", e.Name(), err)
+			}
+			return nil
+		})
+
+		// walkEpisodes only needs seasonID (already set above), not the
+		// season's own enrichment, so it doesn't wait on the enqueue above
+		// — same "children don't block on their parent's enrich" ordering
+		// walkSeries already establishes for the series/season relationship.
 		s.walkEpisodes(ctx, pool, lib, seasonPath, seriesID, seasonID, seriesTitle, seasonNum)
 	}
 }
@@ -482,6 +495,9 @@ func (s *Scanner) enrich(ctx context.Context, pool *jobPool, item *storage.Item,
 	if len(res.Tags) > 0 {
 		item.Tags = res.Tags
 	}
+	if len(res.Studios) > 0 {
+		item.Studios = res.Studios
+	}
 	if res.ProductionYear > 0 {
 		y := res.ProductionYear
 		item.ProductionYear = &y
@@ -489,6 +505,10 @@ func (s *Scanner) enrich(ctx context.Context, pool *jobPool, item *storage.Item,
 	if res.PremiereDateUnix > 0 {
 		t := time.Unix(res.PremiereDateUnix, 0).UTC()
 		item.PremiereDate = &t
+	}
+	if res.EndDate > 0 {
+		t := time.Unix(res.EndDate, 0).UTC()
+		item.EndDate = &t
 	}
 	if res.OfficialRating != "" {
 		item.OfficialRating = res.OfficialRating

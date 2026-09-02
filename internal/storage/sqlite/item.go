@@ -12,7 +12,7 @@ import (
 )
 
 const itemColumns = `items.id, items.type, items.library_id, items.parent_id, items.name, items.original_title, items.sort_name, items.overview,
-	items.taglines, items.genres, items.tags,
+	items.taglines, items.genres, items.tags, items.studios,
 	items.production_year, items.premiere_date, items.end_date, items.official_rating, items.community_rating, items.critic_rating, items.run_time_ticks,
 	items.index_number, items.parent_index_number,
 	items.series_id, items.season_id,
@@ -36,6 +36,7 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 		parentID                                sql.NullString
 		name, originalTitle, sortName, overview string
 		taglinesJSON, genresJSON, tagsJSON      string
+		studiosJSON                             string
 		productionYear                          sql.NullInt64
 		premiereDate, endDate                   sql.NullTime
 		officialRating                          string
@@ -56,7 +57,7 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 
 	if err := rs.Scan(
 		&id, &typ, &libraryID, &parentID, &name, &originalTitle, &sortName, &overview,
-		&taglinesJSON, &genresJSON, &tagsJSON,
+		&taglinesJSON, &genresJSON, &tagsJSON, &studiosJSON,
 		&productionYear, &premiereDate, &endDate, &officialRating, &communityRating, &criticRating, &runTimeTicks,
 		&indexNumber, &parentIndexNumber,
 		&seriesID, &seasonID,
@@ -143,6 +144,9 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 	if err := unmarshalJSONInto(tagsJSON, &item.Tags); err != nil {
 		return storage.Item{}, err
 	}
+	if err := unmarshalJSONInto(studiosJSON, &item.Studios); err != nil {
+		return storage.Item{}, err
+	}
 	if err := unmarshalJSONInto(artistsJSON, &item.Artists); err != nil {
 		return storage.Item{}, err
 	}
@@ -217,6 +221,10 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 	if err != nil {
 		return err
 	}
+	studiosJSON, err := marshalJSON(item.Studios)
+	if err != nil {
+		return err
+	}
 	artistsJSON, err := marshalJSON(item.Artists)
 	if err != nil {
 		return err
@@ -236,7 +244,7 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 
 	const query = `INSERT INTO items (
 		id, type, library_id, parent_id, name, original_title, sort_name, overview,
-		taglines, genres, tags,
+		taglines, genres, tags, studios,
 		production_year, premiere_date, end_date, official_rating, community_rating, critic_rating, run_time_ticks,
 		index_number, parent_index_number,
 		series_id, season_id,
@@ -248,11 +256,11 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 		people,
 		search_text,
 		date_created
-	) VALUES (?,?,?,?,?,?,?,?, ?,?,?, ?,?,?,?,?,?,?, ?,?, ?,?, ?,?,?, ?, ?,?,?, ?, ?, ?, ?, ?)
+	) VALUES (?,?,?,?,?,?,?,?, ?,?,?,?, ?,?,?,?,?,?,?, ?,?, ?,?, ?,?,?, ?, ?,?,?, ?, ?, ?, ?, ?)
 	ON CONFLICT(id) DO UPDATE SET
 		type=excluded.type, library_id=excluded.library_id, parent_id=excluded.parent_id, name=excluded.name,
 		original_title=excluded.original_title, sort_name=excluded.sort_name, overview=excluded.overview,
-		taglines=excluded.taglines, genres=excluded.genres, tags=excluded.tags,
+		taglines=excluded.taglines, genres=excluded.genres, tags=excluded.tags, studios=excluded.studios,
 		production_year=excluded.production_year, premiere_date=excluded.premiere_date, end_date=excluded.end_date,
 		official_rating=excluded.official_rating, community_rating=excluded.community_rating, critic_rating=excluded.critic_rating,
 		run_time_ticks=excluded.run_time_ticks, index_number=excluded.index_number, parent_index_number=excluded.parent_index_number,
@@ -269,7 +277,7 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 	err = s.withTx(ctx, func(ex dbtx) error {
 		if _, err := ex.ExecContext(ctx, query,
 			string(item.ID), string(item.Type), string(item.LibraryID), idPtrToAny(item.ParentID), item.Name, item.OriginalTitle, item.SortName, item.Overview,
-			taglinesJSON, genresJSON, tagsJSON,
+			taglinesJSON, genresJSON, tagsJSON, studiosJSON,
 			ptrToAny(item.ProductionYear), ptrToAny(item.PremiereDate), ptrToAny(item.EndDate), item.OfficialRating, ptrToAny(item.CommunityRating), ptrToAny(item.CriticRating), ptrToAny(item.RunTimeTicks),
 			ptrToAny(item.IndexNumber), ptrToAny(item.ParentIndexNumber),
 			idPtrToAny(item.SeriesID), idPtrToAny(item.SeasonID),

@@ -68,7 +68,14 @@ func (f *fakeProvider) Lookup(ctx context.Context, q metadata.Query) (metadata.R
 			ExternalIDs: map[string]string{"Tmdb": "603"},
 		}, nil
 	case metadata.KindSeries:
-		return metadata.Result{Overview: "A long-running anime.", ExternalIDs: map[string]string{"Tmdb": "12"}}, nil
+		return metadata.Result{
+			Overview:    "A long-running anime.",
+			Studios:     []string{"Fuji TV"},
+			EndDate:     1234567890,
+			ExternalIDs: map[string]string{"Tmdb": "12"},
+		}, nil
+	case metadata.KindSeason:
+		return metadata.Result{Title: "Saiyan Saga", Studios: []string{"Fuji TV"}}, nil
 	case metadata.KindEpisode:
 		return metadata.Result{Overview: "An episode overview."}, nil
 	}
@@ -179,10 +186,12 @@ func TestScanLibraryTVShows(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ScanLibrary: %v", err)
 	}
-	// 1 series + 2 episodes go through the bounded job pool (season upserts
-	// happen synchronously during the walk, not as pool jobs — see scan.go).
-	if stats.ItemsScanned != 3 {
-		t.Fatalf("ItemsScanned = %d, want 3 (1 series + 2 episodes); errors: %v", stats.ItemsScanned, stats.Errors)
+	// 1 series + 1 season + 2 episodes go through the bounded job pool as
+	// enrich jobs (the season/series *upserts* themselves happen
+	// synchronously during the walk, not as pool jobs — see scan.go; only
+	// their enrich-and-reupsert step is enqueued).
+	if stats.ItemsScanned != 4 {
+		t.Fatalf("ItemsScanned = %d, want 4 (1 series + 1 season + 2 episodes); errors: %v", stats.ItemsScanned, stats.Errors)
 	}
 
 	seriesPage, err := st.QueryItems(context.Background(), storage.ItemFilter{
@@ -198,6 +207,12 @@ func TestScanLibraryTVShows(t *testing.T) {
 	if series.Overview == "" {
 		t.Error("series.Overview is empty, want provider enrichment applied")
 	}
+	if len(series.Studios) != 1 || series.Studios[0] != "Fuji TV" {
+		t.Errorf("series.Studios = %v, want [Fuji TV] (enrich() overlays Result.Studios)", series.Studios)
+	}
+	if series.EndDate == nil {
+		t.Error("series.EndDate is nil, want enrich() to overlay Result.EndDate")
+	}
 
 	seasonPage, err := st.QueryItems(context.Background(), storage.ItemFilter{
 		LibraryID: &lib.ID, ParentID: &series.ID, ItemTypes: []storage.ItemType{storage.ItemTypeSeason}, Limit: 10,
@@ -208,6 +223,12 @@ func TestScanLibraryTVShows(t *testing.T) {
 	season := seasonPage.Items[0]
 	if season.IndexNumber == nil || *season.IndexNumber != 1 {
 		t.Errorf("season.IndexNumber = %v, want 1", season.IndexNumber)
+	}
+	if season.Name != "Saiyan Saga" {
+		t.Errorf("season.Name = %q, want %q (provider enrichment applied, not the generic \"Season 1\" fallback)", season.Name, "Saiyan Saga")
+	}
+	if len(season.Studios) != 1 || season.Studios[0] != "Fuji TV" {
+		t.Errorf("season.Studios = %v, want [Fuji TV]", season.Studios)
 	}
 
 	epPage, err := st.QueryItems(context.Background(), storage.ItemFilter{

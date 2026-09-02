@@ -70,6 +70,7 @@ type Kind string
 const (
 	KindMovie   Kind = "Movie"
 	KindSeries  Kind = "Series"
+	KindSeason  Kind = "Season"
 	KindEpisode Kind = "Episode"
 )
 
@@ -86,7 +87,8 @@ type Query struct {
 	Year  int
 
 	// SeriesTitle/SeasonNumber/EpisodeNumber are set (Title/Year left
-	// zero) when Kind is KindEpisode.
+	// zero) when Kind is KindEpisode. KindSeason sets SeriesTitle and
+	// SeasonNumber the same way, leaving EpisodeNumber zero.
 	SeriesTitle   string
 	SeasonNumber  int
 	EpisodeNumber int
@@ -133,8 +135,10 @@ type Result struct {
 	Overview         string
 	Genres           []string
 	Tags             []string
+	Studios          []string // network/studio names, same "provider didn't have this" zero-value convention as Genres
 	ProductionYear   int
 	PremiereDateUnix int64 // 0 = unknown; Unix seconds, UTC (avoids importing time for a plain data-transfer struct, per the package doc comment's "plain structs" constraint)
+	EndDate          int64 // 0 = unknown/still running; Unix seconds, UTC, same convention as PremiereDateUnix
 	OfficialRating   string
 	CommunityRating  float64 // 0 = unknown
 

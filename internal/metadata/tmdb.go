@@ -49,6 +49,8 @@ func (p *TMDBProvider) Lookup(ctx context.Context, q Query) (Result, error) {
 		return p.lookupMovie(ctx, q)
 	case KindSeries:
 		return p.lookupSeries(ctx, q)
+	case KindSeason:
+		return p.lookupSeason(ctx, q)
 	case KindEpisode:
 		return p.lookupEpisode(ctx, q)
 	default:
@@ -78,15 +80,39 @@ type tmdbGenre struct {
 	Name string `json:"name"`
 }
 
+// tmdbNetwork mirrors the "networks" array GET /tv/{id} returns natively
+// (no append_to_response needed, unlike credits/external_ids) — TMDB's
+// closest equivalent to a movie's production companies for a TV series.
+type tmdbNetwork struct {
+	Name string `json:"name"`
+}
+
 type tmdbDetailsResponse struct {
 	tmdbSearchResult
-	Genres  []tmdbGenre `json:"genres"`
-	Tagline string      `json:"tagline"`
+	Genres   []tmdbGenre   `json:"genres"`
+	Tagline  string        `json:"tagline"`
+	Networks []tmdbNetwork `json:"networks"`
+
+	// LastAirDate/Status are TV-only fields GET /tv/{id} returns natively
+	// — Status feeds lookupSeries' "only set EndDate once the series has
+	// actually ended" check (seriesHasEnded below); a movie response
+	// simply omits both, leaving them zero.
+	LastAirDate string `json:"last_air_date"`
+	Status      string `json:"status"`
+
 	// Credits is populated by requesting append_to_response=credits on
-	// the details call (lookupMovie) — TMDB's documented way to fold a
-	// second endpoint's response into the first request instead of
-	// issuing /movie/{id}/credits separately.
+	// the details call (lookupMovie/lookupSeries) — TMDB's documented way
+	// to fold a second endpoint's response into the first request instead
+	// of issuing /movie/{id}/credits (or /tv/{id}/credits) separately.
 	Credits tmdbCredits `json:"credits"`
+
+	// ExternalIDs is populated the same way, via
+	// append_to_response=external_ids (lookupSeries only — lookupMovie
+	// has no use for it today, TMDB's own movie ID already being what
+	// ExternalIDs["Tmdb"] carries).
+	ExternalIDs struct {
+		ImdbID string `json:"imdb_id"`
+	} `json:"external_ids"`
 }
 
 // tmdbCredits mirrors the shape TMDB's /movie/{id}/credits endpoint (or
@@ -200,6 +226,18 @@ type tmdbEpisodeResponse struct {
 	StillPath   string  `json:"still_path"`
 }
 
+// tmdbSeasonResponse mirrors GET /tv/{id}/season/{season_number} — Name is
+// the localized season name (e.g. "Season 1", or "Temporada 1" were this
+// project's request to send language=pt-BR like q.SeriesTitle's request
+// resolveSeriesID makes; neither this call nor any other TMDBProvider call
+// sets a language parameter today, so TMDB's own default (en-US) applies
+// throughout — a possible later enhancement, not this task's scope).
+type tmdbSeasonResponse struct {
+	Name       string `json:"name"`
+	Overview   string `json:"overview"`
+	PosterPath string `json:"poster_path"`
+}
+
 func (p *TMDBProvider) lookupMovie(ctx context.Context, q Query) (Result, error) {
 	search, err := p.get(ctx, "/search/movie", url.Values{
 		"query": {q.Title},
@@ -247,7 +285,11 @@ func (p *TMDBProvider) lookupSeries(ctx context.Context, q Query) (Result, error
 		return Result{}, err
 	}
 
-	details, err := p.get(ctx, fmt.Sprintf("/tv/%d", id), nil)
+	// append_to_response=credits,external_ids folds both /tv/{id}/credits
+	// and /tv/{id}/external_ids into this same call, same technique
+	// lookupMovie uses for credits alone — TMDB accepts a comma-separated
+	// list of resources in one append_to_response parameter.
+	details, err := p.get(ctx, fmt.Sprintf("/tv/%d", id), url.Values{"append_to_response": {"credits,external_ids"}})
 	if err != nil {
 		return Result{}, err
 	}
@@ -260,8 +302,30 @@ func (p *TMDBProvider) lookupSeries(ctx context.Context, q Query) (Result, error
 	res.Title = d.Name
 	res.OriginalTitle = d.OriginalName
 	res.PremiereDateUnix = parseTMDBDate(d.FirstAirDate)
+	res.People = creditsToPeople(d.Credits)
 	res.ExternalIDs = map[string]string{"Tmdb": strconv.Itoa(id)}
+	if d.ExternalIDs.ImdbID != "" {
+		res.ExternalIDs["Imdb"] = d.ExternalIDs.ImdbID
+	}
+	if seriesHasEnded(d.Status) {
+		res.EndDate = parseTMDBDate(d.LastAirDate)
+	}
 	return res, nil
+}
+
+// seriesHasEnded reports whether status — TMDB's TV "status" field — means
+// the series has stopped producing new episodes, the only case
+// lookupSeries sets Result.EndDate for: "Ended"/"Canceled" are TMDB's
+// documented terminal values, while "Returning Series"/"In Production"/
+// "Planned"/"Pilot" all mean more episodes are still expected, so an
+// EndDate would be wrong (or at best a guess) for those.
+func seriesHasEnded(status string) bool {
+	switch status {
+	case "Ended", "Canceled":
+		return true
+	default:
+		return false
+	}
 }
 
 func (p *TMDBProvider) lookupEpisode(ctx context.Context, q Query) (Result, error) {
@@ -296,6 +360,40 @@ func (p *TMDBProvider) lookupEpisode(ctx context.Context, q Query) (Result, erro
 	}, nil
 }
 
+// lookupSeason resolves q's parent series the same way lookupEpisode does,
+// then fetches that one season's own details — TMDB has no
+// append_to_response=credits/external_ids for a season, so Result carries
+// only Title/Overview/Images here, same scope as lookupEpisode's Result.
+func (p *TMDBProvider) lookupSeason(ctx context.Context, q Query) (Result, error) {
+	seriesID, err := p.resolveSeriesID(ctx, q)
+	if err != nil {
+		return Result{}, err
+	}
+
+	body, err := p.get(ctx, fmt.Sprintf("/tv/%d/season/%d", seriesID, q.SeasonNumber), nil)
+	if err != nil {
+		return Result{}, err
+	}
+	var sn tmdbSeasonResponse
+	if err := json.Unmarshal(body, &sn); err != nil {
+		return Result{}, &ProviderError{Code: "bad_response", Message: err.Error()}
+	}
+	if sn.Name == "" && sn.Overview == "" {
+		return Result{}, ErrNotFound
+	}
+
+	var images []Image
+	if sn.PosterPath != "" {
+		images = append(images, Image{Kind: "Primary", URL: tmdbImageBase + sn.PosterPath})
+	}
+	return Result{
+		Title:       sn.Name,
+		Overview:    sn.Overview,
+		Images:      images,
+		ExternalIDs: map[string]string{"Tmdb": strconv.Itoa(seriesID)},
+	}, nil
+}
+
 // resolveSeriesID returns the TMDB series ID for q's parent series: reused
 // from q.ExternalIDs["Tmdb"] if the caller already resolved it (a prior
 // Series-kind Lookup in the same scan — see internal/scan), otherwise
@@ -327,6 +425,10 @@ func detailsToResult(d tmdbDetailsResponse) Result {
 	for _, g := range d.Genres {
 		genres = append(genres, g.Name)
 	}
+	studios := make([]string, 0, len(d.Networks))
+	for _, n := range d.Networks {
+		studios = append(studios, n.Name)
+	}
 	var images []Image
 	if d.PosterPath != "" {
 		images = append(images, Image{Kind: "Primary", URL: tmdbImageBase + d.PosterPath})
@@ -337,6 +439,7 @@ func detailsToResult(d tmdbDetailsResponse) Result {
 	return Result{
 		Overview:        d.Overview,
 		Genres:          genres,
+		Studios:         studios,
 		CommunityRating: d.VoteAverage,
 		Images:          images,
 	}

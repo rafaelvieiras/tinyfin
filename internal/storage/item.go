@@ -212,6 +212,13 @@ type Item struct {
 	Genres        []string
 	Tags          []string
 
+	// Studios is derived, not guessed: populated only by a Provider that
+	// returns them (internal/metadata's TMDBProvider maps TMDB's "networks"
+	// field for a series today), same "consume metadata, don't require it"
+	// convention as Genres above. nil for a filename-derived item with no
+	// provider enrichment.
+	Studios []string
+
 	ProductionYear  *int
 	PremiereDate    *time.Time
 	EndDate         *time.Time

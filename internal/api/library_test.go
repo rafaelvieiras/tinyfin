@@ -712,6 +712,7 @@ func TestItemGetIncludesGenreItemsExternalUrlsAndMediaSources(t *testing.T) {
 	if err := st.UpsertItem(context.Background(), storage.Item{
 		Type: storage.ItemTypeMovie, LibraryID: libID, Name: "Genre Movie",
 		Genres:      []string{"Action", "Sci-Fi"},
+		Studios:     []string{"Warner Bros."},
 		ProviderIDs: map[string]string{"Tmdb": "603", "Imdb": "tt0133093"},
 		Path:        "/media/GenreLib/Genre Movie.mkv",
 		Container:   "mkv",
@@ -738,6 +739,16 @@ func TestItemGetIncludesGenreItemsExternalUrlsAndMediaSources(t *testing.T) {
 	}
 	if dto.GenreItems[1].Name != "Sci-Fi" || dto.GenreItems[1].ID == "" {
 		t.Errorf("GenreItems[1] = %+v, want {Sci-Fi, <non-empty Id>}", dto.GenreItems[1])
+	}
+
+	if len(dto.Studios) != 1 {
+		t.Fatalf("Studios = %+v, want 1 entry", dto.Studios)
+	}
+	if dto.Studios[0].Name != "Warner Bros." || dto.Studios[0].ID == "" {
+		t.Errorf("Studios[0] = %+v, want {Warner Bros., <non-empty Id>}", dto.Studios[0])
+	}
+	if dto.Studios[0].ID == dto.GenreItems[0].ID {
+		t.Errorf("Studios[0].ID = %q collides with a GenreItems Id — studioID must not share genreID's namespace", dto.Studios[0].ID)
 	}
 
 	if len(dto.ExternalUrls) != 2 {

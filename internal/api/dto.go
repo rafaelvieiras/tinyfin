@@ -156,6 +156,14 @@ type baseItemDto struct {
 	// store" convention as isFolderType/mediaTypeFor.
 	GenreItems []nameIDPairDto `json:"GenreItems,omitempty"`
 
+	// Studios mirrors the reference server's BaseItemDto.Studios — same
+	// {Name, Id} NameIdPair shape GenreItems uses (confirmed against the
+	// live OpenAPI schema before adding this field, not guessed), derived
+	// from item.Studios (internal/metadata's TMDBProvider populates it
+	// from TMDB's "networks" for a series today) the same "derive, don't
+	// store" way GenreItems derives from item.Genres.
+	Studios []nameIDPairDto `json:"Studios,omitempty"`
+
 	// ExternalUrls links out to a provider's own page for this item (IMDb,
 	// TheMovieDb) — derived from ProviderIDs (already on this DTO) rather
 	// than stored, since it's a pure function of a provider id plus the
@@ -208,6 +216,28 @@ func genreItemsFor(genres []string) []nameIDPairDto {
 	items := make([]nameIDPairDto, 0, len(genres))
 	for _, g := range genres {
 		items = append(items, nameIDPairDto{Name: g, ID: genreID(g)})
+	}
+	return items
+}
+
+// studioID mints a stable, canonical-UUID-formatted Id for a studio name —
+// same sha256+formatUUID technique as genreID above, with its own "studio-"
+// prefix so a studio and a genre that happen to share a name don't collide
+// on the same Id.
+func studioID(name string) string {
+	sum := sha256.Sum256([]byte("studio-" + name))
+	return formatUUID(hex.EncodeToString(sum[:16]))
+}
+
+// studioItemsFor builds BaseItemDto.Studios from the same studio names
+// item.Studios already carries — mirrors genreItemsFor above.
+func studioItemsFor(studios []string) []nameIDPairDto {
+	if len(studios) == 0 {
+		return nil
+	}
+	items := make([]nameIDPairDto, 0, len(studios))
+	for _, st := range studios {
+		items = append(items, nameIDPairDto{Name: st, ID: studioID(st)})
 	}
 	return items
 }
@@ -613,6 +643,7 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		PrimaryImageAspectRatio: primaryImageAspectRatio,
 		People:                  peopleDtos(item.People),
 		GenreItems:              genreItemsFor(item.Genres),
+		Studios:                 studioItemsFor(item.Studios),
 		ExternalUrls:            externalURLsFor(item.Type, item.ProviderIDs),
 		MediaSources:            mediaSourcesFor(item),
 	}

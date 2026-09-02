@@ -674,3 +674,53 @@ section's own "Behavior, in prose" and "Scope note": the reference server locali
 labels into the client's locale (staging is pt-BR), Tinyfin has no localization system for this and
 emits the English label the spec's own wording uses throughout — not a bug, and not something this task
 asked to fix.
+
+---
+
+## TMDB enrichment — Series/Season, Studios, EndDate
+
+Not a clean-room section — TMDB is a third-party API `internal/metadata`'s `TMDBProvider` calls
+directly over its own published REST contract, unrelated to the reference server's own source (see
+`tmdb.go`'s package doc comment). Documented here only because this file is where enrichment
+behavior notes live, not because it needed spec extraction from anywhere.
+
+Extended `lookupSeries` to request `append_to_response=credits,external_ids` alongside the plain
+`GET /tv/{id}` call (same technique `lookupMovie` already used for `credits` alone — TMDB accepts a
+comma-separated resource list in one `append_to_response` parameter), so a Series `Result` now also
+carries `People` (via the existing `creditsToPeople`), `ExternalIDs["Imdb"]` (from
+`external_ids.imdb_id`), and `Studios` (from the `networks` array `GET /tv/{id}` already returns
+natively, no extra append needed — mapped generically in `detailsToResult` so `lookupMovie` picks up
+the same field for free, harmlessly empty since a movie response has no `networks`).
+
+`EndDate` is set from `last_air_date` only when TMDB's own `status` field is one of its two
+documented terminal values, `"Ended"` or `"Canceled"` (`seriesHasEnded`) — every other status
+(`"Returning Series"`, `"In Production"`, `"Planned"`, `"Pilot"`) means more episodes are still
+expected, so `last_air_date` (the most recently aired episode, not a finale) would be a misleading
+`EndDate` for those.
+
+Added a new `metadata.KindSeason` alongside `lookupSeason`: resolves the parent series via the
+existing `resolveSeriesID`, then calls `GET /tv/{id}/season/{season_number}`, mapping `name` →
+`Result.Title` and `poster_path` → a `Primary` image, same pattern `lookupEpisode` already uses for
+`still_path`. No `append_to_response` support exists for a season endpoint on TMDB's side, so a
+Season `Result` carries no `People`/`Studios`/`ExternalIDs` beyond the series' own `Tmdb` id.
+`internal/scan`'s `walkSeasons` now enriches each season the same async
+enqueue-enrich-then-reupsert pattern the series/movie/episode walks already use — previously a
+Season item was created once with the generic `"Season N"` name and never enriched at all.
+
+No language parameter is sent on any `TMDBProvider` call, this one included, so TMDB's own default
+(`en-US`) applies throughout; a season's real localized name (e.g. `"Temporada 1"` for a `pt-BR`
+request) is a possible later enhancement, out of this task's scope.
+
+Not live-validated against real TMDB data: `tinyfin-staging` has no TMDB API key configured (a
+known, previously-documented limitation — see this file's People/cast section above for the same
+caveat). Covered instead by unit tests with a fake HTTP server (`internal/metadata/tmdb_test.go`)
+and a fake `Provider` double (`internal/scan/scan_test.go`). The degraded (no-key) path was checked
+at the deploy level, not by re-curling endpoints or triggering a fresh scan — this session had no
+admin credentials for `tinyfin-staging` and the classifier declined both a direct write to its live
+sqlite file and running `cmd/devseed` against it, so a fresh authenticated `POST /Library/Refresh` +
+`GET /Items/{id}` pass wasn't done this time. What was confirmed instead: `tinyfin-staging` rebuilt
+with this change and restarted cleanly, its `0003_studios` migration applied automatically (schema
+version 2 → 3, confirmed via a read-only `sqlite3` query) with no error/panic in the server logs, and
+its pre-existing 338 items (21 Movie, 4 Series, 9 Season, 319 Episode) came through with a
+correctly-defaulted, empty `studios` column — the no-enrichment shape this change is supposed to
+degrade to.
