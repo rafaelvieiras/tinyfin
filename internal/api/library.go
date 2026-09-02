@@ -23,6 +23,7 @@ package api
 
 import (
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -112,23 +113,79 @@ func parseSortFields(sortBy, sortOrder string) []storage.SortField {
 	return fields
 }
 
-// handleItemsList serves GET /Items: maps the subset of query params this
-// slice covers (parentId, recursive, includeItemTypes, searchTerm,
-// limit/startIndex, sortBy/sortOrder) to a storage.ItemFilter and returns a
-// BaseItemDtoQueryResult. Filters beyond this set (isFavorite, isPlayed,
-// genres, years, ...) are a deliberate gap, not a silent guess — QueryItems
-// supports Played/Favorite via ItemFilter.UserID, but wiring those up is
-// left for a later increment.
+// caseInsensitiveQuery returns r.URL.Query() with every key lowercased, so a
+// caller can look values up with a single lowercase q.Get(...) regardless of
+// how the client capitalized the key. url.Values.Get is case-sensitive, but
+// real clients disagree on capitalization across call sites: most of this
+// project's params were derived from lowercase-first calls (parentId,
+// searchTerm, sortBy, ...), but jellyfin-web's Favorites screen
+// (#/home?tab=1) sends the same keys PascalCase (IncludeItemTypes,
+// Recursive, SortBy, Filters, ...) — confirmed via Playwright network
+// capture against a real jellyfin-web build, not assumed. Scoped to
+// handleItemsList only (the one handler this capitalization mismatch was
+// observed breaking) rather than applied project-wide, to keep this fix
+// local to what the Favorites screen actually needs — every other handler
+// in this file still reads params in the lowercase-first form real clients
+// have been observed sending them in for those specific routes.
+func caseInsensitiveQuery(r *http.Request) url.Values {
+	orig := r.URL.Query()
+	out := make(url.Values, len(orig))
+	for k, v := range orig {
+		out[strings.ToLower(k)] = v
+	}
+	return out
+}
+
+// handleItemsList serves both GET /Items and GET /Users/{userId}/Items (the
+// per-user listing form jellyfin-web's Favorites screen calls — {userId} is
+// accepted but ignored, same precedent as handleItemGet's per-user form
+// below; see server.go's registration comment). Maps the subset of query
+// params this slice covers (parentId, recursive, includeItemTypes,
+// searchTerm, limit/startIndex, sortBy/sortOrder, filters) to a
+// storage.ItemFilter and returns a BaseItemDtoQueryResult. Filters beyond
+// IsFavorite/IsPlayed (genres, years, ...) are a deliberate gap, not a
+// silent guess — left for a later increment, not something the Favorites
+// screen this was added for needs.
 func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
+	q := caseInsensitiveQuery(r)
 
 	filter := storage.ItemFilter{
 		Recursive:  q.Get("recursive") == "true",
-		SearchText: q.Get("searchTerm"),
+		SearchText: q.Get("searchterm"),
 		Limit:      defaultItemsLimit,
 	}
 
-	if v := q.Get("parentId"); v != "" {
+	if v := q.Get("filters"); v != "" {
+		var wantsPlaystate bool
+		for _, f := range strings.Split(v, ",") {
+			switch strings.TrimSpace(f) {
+			case "IsFavorite":
+				t := true
+				filter.Favorite = &t
+				wantsPlaystate = true
+			case "IsPlayed":
+				t := true
+				filter.Played = &t
+				wantsPlaystate = true
+			}
+			// Other Filters values the reference server defines (IsNotFavorite,
+			// IsUnplayed, ...) aren't observed being sent by the Favorites
+			// screen this was added for — deliberately not guessed at, see
+			// this function's doc comment.
+		}
+		// storage.ItemFilter.Played/Favorite only take effect when UserID is
+		// set (types.go's doc comment: they key off a LEFT JOIN against that
+		// user's playstate) — this route has no other reason to set UserID,
+		// so only do it when a playstate filter actually needs it.
+		if wantsPlaystate {
+			if ac, ok := AuthFromContext(r.Context()); ok && ac != nil {
+				userID := ac.User.ID
+				filter.UserID = &userID
+			}
+		}
+	}
+
+	if v := q.Get("parentid"); v != "" {
 		// A library root isn't itself an Item row in this storage model
 		// (storage.Library and storage.Item are separate, see
 		// storage/library.go) — GET /UserViews hands clients a Library's
@@ -149,7 +206,7 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if v := q.Get("includeItemTypes"); v != "" {
+	if v := q.Get("includeitemtypes"); v != "" {
 		for _, t := range strings.Split(v, ",") {
 			t = strings.TrimSpace(t)
 			if t != "" {
@@ -167,13 +224,13 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 		// value through to storage.
 	}
 
-	if v := q.Get("startIndex"); v != "" {
+	if v := q.Get("startindex"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
 			filter.Offset = n
 		}
 	}
 
-	filter.SortBy = parseSortFields(q.Get("sortBy"), q.Get("sortOrder"))
+	filter.SortBy = parseSortFields(q.Get("sortby"), q.Get("sortorder"))
 
 	page, err := s.store.QueryItems(r.Context(), filter)
 	if err != nil {

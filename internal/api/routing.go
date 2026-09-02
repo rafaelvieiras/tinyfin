@@ -26,6 +26,16 @@ var routePaths = []string{
 	"/Users/{userId}",
 	"/UserViews",
 	"/Items",
+	// No length collision with the several other 4-segment patterns below
+	// (/Items/{itemId}/Ancestors, /Shows/{seriesId}/Seasons, /Videos/{itemId}/
+	// {file}, /Sessions/Capabilities/Full, ...) despite matching segment count
+	// (4, including the leading empty split element): normalizePathCase
+	// checks every non-wildcard segment, and this pattern's second segment
+	// ("Users", a literal) differs from every one of theirs — no wildcard
+	// sits at that position on either side, so no pattern can swallow another
+	// regardless of list order here. Same reasoning as the
+	// FavoriteItems/PlayedItems comment below.
+	"/Users/{userId}/Items",
 	// Must precede /Items/{itemId} below: same reasoning as /Users/Public
 	// above — normalizePathCase stops at the first same-length match, and
 	// these are the same length (2 segments) as /Items/{itemId}.

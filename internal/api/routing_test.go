@@ -23,6 +23,10 @@ func TestNormalizePathCase(t *testing.T) {
 		// on both sides.
 		{"/users/abc-123/favoriteitems/item-xyz", "/Users/abc-123/FavoriteItems/item-xyz"},
 		{"/users/abc-123/playeditems/item-xyz", "/Users/abc-123/PlayedItems/item-xyz"},
+		// Regression: /Users/{userId}/Items (the per-user listing form the
+		// Favorites screen calls) must not be swallowed by any other
+		// 4-segment pattern (e.g. /Shows/{seriesId}/Seasons).
+		{"/users/abc-123/items", "/Users/abc-123/Items"},
 	}
 	for _, c := range cases {
 		if got := normalizePathCase(c.in); got != c.want {

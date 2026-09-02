@@ -245,6 +245,14 @@ func (s *Server) routes() {
 	// group.
 	s.mux.HandleFunc("GET /UserViews", requireAuth(s.handleUserViews))
 	s.mux.HandleFunc("GET /Items", requireAuth(s.handleItemsList))
+	// Same handler as GET /Items above, {userId} accepted but ignored —
+	// exactly the precedent GET /Users/{userId}/Items/{itemId} below already
+	// sets for the single-item form (both key off AuthFromContext(ctx).User.ID
+	// for anything per-user, never the path segment). Needed because
+	// jellyfin-web's Favorites screen (#/home?tab=1) calls this per-user
+	// LISTING form, not GET /Items — found missing (plain 404, not a bad
+	// response) by testing that screen against a real jellyfin-web build.
+	s.mux.HandleFunc("GET /Users/{userId}/Items", requireAuth(s.handleItemsList))
 	// Must precede GET /Items/{itemId} in registration only for the sake of
 	// routing.go's routePaths (case-insensitive normalization needs the
 	// literal checked before the wildcard would swallow it, same as

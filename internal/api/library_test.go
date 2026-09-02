@@ -544,3 +544,74 @@ func TestItemsIncludesPrimaryImageAspectRatio(t *testing.T) {
 		t.Errorf("No Image Movie: PrimaryImageAspectRatio = %v, want nil (no Primary image at all)", *noImage.PrimaryImageAspectRatio)
 	}
 }
+
+// TestUsersItemsFavoritesFilter regression-guards a real bug found via a
+// live jellyfin-web session: clicking "Favoritos" in the navbar
+// (#/home?tab=1) issues GET /Users/{userId}/Items?Filters=IsFavorite&
+// IncludeItemTypes=<Type>&... — capitalized exactly like that (confirmed via
+// Playwright network capture against this project's own staging server,
+// query keys included) — once per item type. Before this fix that 404'd
+// outright: GET /Users/{userId}/Items (the per-user listing form, distinct
+// from GET /Users/{userId}/Items/{itemId}) wasn't registered at all: and
+// even registered, handleItemsList read every query param lowercase-first
+// (q.Get("includeItemTypes"), ...), which url.Values.Get treats as a
+// different key than the PascalCase form this screen actually sends, and
+// never read a Filters param at all.
+func TestUsersItemsFavoritesFilter(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "holly", "hollypass")
+	token := loginToken(t, ts.URL, user.Name, "hollypass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "Movies", storage.CollectionTypeMovies)
+
+	items := []storage.Item{
+		{Type: storage.ItemTypeMovie, LibraryID: libID, Name: "Favorite Movie"},
+		{Type: storage.ItemTypeMovie, LibraryID: libID, Name: "Plain Movie"},
+		{Type: storage.ItemTypeSeries, LibraryID: libID, Name: "Favorite Series"},
+	}
+	for _, item := range items {
+		if err := st.UpsertItem(context.Background(), item); err != nil {
+			t.Fatalf("UpsertItem(%q): %v", item.Name, err)
+		}
+	}
+	favMovieID := mustFindItemByName(t, st, libID, "Favorite Movie")
+	favSeriesID := mustFindItemByName(t, st, libID, "Favorite Series")
+
+	if err := st.SetPlaystate(context.Background(), user.ID, favMovieID, storage.Playstate{IsFavorite: true}); err != nil {
+		t.Fatalf("SetPlaystate(favMovieID): %v", err)
+	}
+	if err := st.SetPlaystate(context.Background(), user.ID, favSeriesID, storage.Playstate{IsFavorite: true}); err != nil {
+		t.Fatalf("SetPlaystate(favSeriesID): %v", err)
+	}
+
+	// Exactly the request shape the Favorites screen issues for the Movie
+	// row: capitalized query keys, per-user path form.
+	resp := get(http.MethodGet, "/Users/"+string(user.ID)+"/Items?SortBy=SortName&SortOrder=Ascending&Filters=IsFavorite&Recursive=true&Fields=PrimaryImageAspectRatio&EnableTotalRecordCount=false&Limit=20&IncludeItemTypes=Movie")
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /Users/{userId}/Items?Filters=IsFavorite&IncludeItemTypes=Movie status = %d, want 200", resp.StatusCode)
+	}
+	var result baseItemDtoQueryResult
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatalf("decoding response: %v", err)
+	}
+	if len(result.Items) != 1 || result.Items[0].Name != "Favorite Movie" {
+		t.Fatalf("Items = %+v, want exactly [Favorite Movie]", result.Items)
+	}
+	if result.Items[0].UserData == nil || !result.Items[0].UserData.IsFavorite {
+		t.Errorf("Favorite Movie: UserData = %+v, want IsFavorite = true", result.Items[0].UserData)
+	}
+
+	// The Series row of the same screen — different IncludeItemTypes value,
+	// same everything else.
+	seriesResp := get(http.MethodGet, "/Users/"+string(user.ID)+"/Items?Filters=IsFavorite&Recursive=true&Limit=20&IncludeItemTypes=Series")
+	defer seriesResp.Body.Close()
+	var seriesResult baseItemDtoQueryResult
+	if err := json.NewDecoder(seriesResp.Body).Decode(&seriesResult); err != nil {
+		t.Fatalf("decoding series response: %v", err)
+	}
+	if len(seriesResult.Items) != 1 || seriesResult.Items[0].Name != "Favorite Series" {
+		t.Fatalf("Series Items = %+v, want exactly [Favorite Series]", seriesResult.Items)
+	}
+}
