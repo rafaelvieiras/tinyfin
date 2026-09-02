@@ -175,6 +175,34 @@ func TestCreditsToPeopleCapsCastAndOrdersByBilling(t *testing.T) {
 	}
 }
 
+// TestCreditsToPeopleOrdersCrewByTypePriority proves creditsToPeople
+// reorders crew into Director/Writer/Producer order regardless of the
+// order TMDB's own crew array lists them in — the reference server's own
+// People-assembly rule (confirmed by reading its source under D12's Phase
+// 1, not derivable from the OpenAPI schema alone, since it's a response
+// ordering rule rather than a wire shape). Crew is deliberately fed in
+// reverse (Producer, Writer, Director) so a passing test proves
+// creditsToPeople actually reorders, not just passes input through.
+func TestCreditsToPeopleOrdersCrewByTypePriority(t *testing.T) {
+	people := creditsToPeople(tmdbCredits{
+		Cast: []tmdbCastMember{{Name: "Lead Actor", Order: 0}},
+		Crew: []tmdbCrewMember{
+			{Name: "A Producer", Job: "Producer"},
+			{Name: "A Writer", Job: "Writer"},
+			{Name: "A Director", Job: "Director"},
+		},
+	})
+	wantOrder := []string{"Lead Actor", "A Director", "A Writer", "A Producer"}
+	if len(people) != len(wantOrder) {
+		t.Fatalf("len(people) = %d, want %d; got %+v", len(people), len(wantOrder), people)
+	}
+	for i, name := range wantOrder {
+		if people[i].Name != name {
+			t.Errorf("people[%d].Name = %q, want %q (Actor, then Director/Writer/Producer order)", i, people[i].Name, name)
+		}
+	}
+}
+
 func TestTMDBProviderLookupMovieNotFound(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/search/movie", func(w http.ResponseWriter, r *http.Request) {

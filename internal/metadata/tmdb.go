@@ -140,10 +140,34 @@ func crewTypeForJob(job string) (string, bool) {
 	}
 }
 
+// personTypePriority orders a People list the same way the reference
+// server does (confirmed by reading its DTO-assembly source under D12's
+// Phase 1 — a behavior no OpenAPI schema or public doc describes, since
+// it's a response-ordering rule, not a wire shape): actors first, then
+// directors, then writers, then producers, everything else last. The
+// reference server's own tie-break for two people at the same priority is
+// each one's own billing-order field (present for actors, absent — so tied
+// — for crew); this project has no such field for crew, so
+// sort.SliceStable's original-order tie-break (TMDB's own crew list order)
+// stands in for it, matching the reference server's own behavior for
+// crew members that are equally unordered on its side too.
+var personTypePriority = map[string]int{
+	"Actor": 0, "GuestStar": 1, "Director": 2, "Writer": 3, "Producer": 4, "Composer": 4,
+}
+
+func personPriority(personType string) int {
+	if p, ok := personTypePriority[personType]; ok {
+		return p
+	}
+	return 10
+}
+
 // creditsToPeople converts TMDB's cast/crew shape into this package's own
 // Result.People — cast ordered by TMDB's own "order" field (billing
 // order), capped at maxCastCredits; crew filtered down to only the jobs
-// crewTypeForJob recognizes.
+// crewTypeForJob recognizes, then the combined list is stable-sorted by
+// personTypePriority so crew comes out Director/Writer/Producer-ordered
+// regardless of the order TMDB's own crew array happened to list them in.
 func creditsToPeople(c tmdbCredits) []Person {
 	cast := append([]tmdbCastMember(nil), c.Cast...)
 	sort.Slice(cast, func(i, j int) bool { return cast[i].Order < cast[j].Order })
@@ -162,6 +186,9 @@ func creditsToPeople(c tmdbCredits) []Person {
 		}
 		people = append(people, Person{Name: m.Name, Type: t, TMDBID: m.ID})
 	}
+	sort.SliceStable(people, func(i, j int) bool {
+		return personPriority(people[i].Type) < personPriority(people[j].Type)
+	})
 	return people
 }
 

@@ -287,6 +287,26 @@ reference server's response for the same title also carries `ImageTags.Thumb` an
 (only `Primary`/`Backdrop`/`Logo`/`Banner`, the four kinds this task's Logo/Banner section covers).
 Worth a small follow-up pass, same shape as the Logo/Banner section below.
 
+### C# source cross-check (Phase 1, done after the fact per Rafael's explicit instruction — this
+### section was originally written from the OpenAPI schema and public docs alone; re-verified
+### against the reference server's own DTO-assembly source, not just its published contract)
+
+Confirmed correct, no changes needed: the map-vs-array split (`ImageTags` for single-instance kinds,
+a separate `BackdropImageTags` array) and the "absent tag = client never requests the image" behavior
+both match the reference server's own image-tag assembly code exactly.
+
+One real mechanism this section's earlier OpenAPI-only pass had no way to know about, since it's
+response-building logic, not a wire shape: when an item has **no image of its own** for `Logo`/`Art`/
+`Thumb`/`Backdrop`, the reference server walks up to the item's parent and, if the parent has one,
+surfaces it via a *different* field (`ParentLogoImageTag`+`ParentLogoItemId`,
+`ParentBackdropImageTags`+`ParentBackdropItemId`, etc. — already listed as out-of-scope structural
+fields in this doc's earlier OpenAPI-derived pass, but their *purpose* wasn't understood until now).
+This inheritance doesn't apply to a movie (a movie has no meaningful parent for this purpose) so it
+doesn't change anything implemented in this section — but it's very likely relevant for the
+Episode/Season/Series item types (an episode with no logo of its own inheriting its series' logo),
+which is outside this section's movie-detail-page scope. Flagged here for whichever gap covers
+episode/season detail pages next, rather than guessed at further.
+
 ---
 
 ## Movie detail page — local Logo/clearlogo artwork recognition
@@ -329,6 +349,25 @@ by a prior manual test-fixture setup, not something this task added) — before 
 recorded neither; after, `GET /Items/{itemId}/Images/Logo` and `.../Images/Banner` both returned 200
 with the real file bytes (`image/png` 78KB and `image/jpeg` 135KB respectively), and both `ImageTags`
 keys appeared as documented in the section above.
+
+### C# source cross-check (Phase 1, done after the fact per Rafael's explicit instruction — this
+### section was originally written from `jellyfin.org`'s public docs alone; re-verified against the
+### reference server's own local-image-recognition source)
+
+Confirmed correct: the local image resolver tries `"logo"` then falls back to `"clearlogo"` for the
+Logo kind, and `"banner"` for Banner — exactly what this section already documented and what's
+already implemented. No changes needed for Logo/Banner.
+
+One real gap the C# source surfaced that neither the public docs nor black-box testing had, since it
+only shows up for a title that happens to lack a `fanart.jpg`: the reference server's Backdrop
+resolution is richer than Tinyfin's `backdrop := []string{"fanart.jpg", "fanart.png", "backdrop.jpg"}`
+— it also recognizes `background.*` and `art.*` (same standalone/suffix pattern), a *numbered* series
+(`fanart2.jpg`, `fanart3.jpg`, ...) beyond just the first match, and an `extrafanart/` subfolder whose
+every image file counts as an additional backdrop. Tinyfin's `seedFolderImage` stops at the first
+match per kind and never looks for more than one Backdrop file at all — a real, live-confirmed gap
+this task didn't set out to close (the test title only has a single `fanart.jpg`, so the difference
+never showed up during this task's own live comparisons) and isn't fixed here. Worth its own future
+pass if a multi-backdrop movie ever surfaces the difference in practice.
 
 ---
 
@@ -418,3 +457,78 @@ Both shapes from the spec above are now live-confirmed, not just the empty one:
   formats every ID with the canonical dashed UUID form throughout the whole project (existing,
   pre-this-task convention — `formatUUID`). Not something this task's `ThemeMedia` work introduced or
   should special-case; noted only so a future byte-for-byte ID-format audit isn't surprised by it.
+
+### C# source cross-check (Phase 1, done after the fact per Rafael's explicit instruction — this
+### section was originally written from `jellyfin.org`'s public docs alone; re-verified against the
+### reference server's own extras-recognition source)
+
+Confirmed correct, no changes needed: the reference server's own filename-convention table lists
+exactly `"theme-music"` (directory) and `"backdrops"` (directory) mapped to theme-song/theme-video
+respectively, plus a standalone filename `"theme"` also mapped to theme-song — matching this
+section's public-docs-derived write-up exactly, so nothing here needed correcting.
+
+One architectural fact the C# source revealed that the public docs didn't (and that black-box testing
+alone couldn't have, since it's an implementation strategy invisible on the wire): the reference
+server does **not** resolve theme media live per request the way `theme_media.go` does — it
+catalogues theme songs/videos as ordinary library items at scan time (tagged as "extras" owned by the
+parent item) and `GetThemeSongs`/`GetThemeVideos` just queries that catalogue. This is a backend
+strategy difference, not a wire-visible one (the response shape is identical either way, confirmed by
+this task's own live populated-shape test above), and `theme_media.go`'s own doc comment already
+argued request-time resolution is equally defensible under `docs/08`'s scanner boundary — so this
+doesn't change what's implemented, just confirms the choice was a real design decision, not an
+accidental shortcut.
+
+Also found: the reference server recognizes a *far* broader set of audio container extensions for a
+theme song (roughly 80, including several niche tracker/module formats like `.it`/`.mod`/`.s3m` no
+real theme-song file is realistically encoded in) than `theme_media.go`'s
+`themeAudioExtensions` (7: mp3/flac/m4a/ogg/wav/aac/opus). Deliberately not matched — expanding to
+cover formats no one actually uses for this purpose would be scope creep with no real benefit, and
+every extension a real theme file would plausibly use is already covered. Noted here so this is a
+documented, considered gap rather than something that looks like an oversight.
+
+---
+
+## Movie detail page — People (cast & crew) response ordering
+
+### The gap this resolves
+
+`BaseItemDto.People` itself (which credits appear, with what `Name`/`Role`/`Type`) is this project's
+own TMDB integration, not a reference-server behavior to extract — TMDB's public API is unrelated to
+the clean-room requirement (see `internal/metadata/tmdb.go`'s own doc comment on `TMDBProvider`).
+But while re-reading the reference server's source for the three gaps above (Rafael's explicit
+instruction, after an earlier pass had substituted a different method without asking first — see
+this project's own process notes on why that was wrong), its DTO-assembly code turned out to also
+define a real, wire-visible **ordering** rule for the `People` array — independent of *where* the
+person data came from — that neither this project's TMDB integration nor its earlier
+OpenAPI-schema-only pass had any way to know about, since an array's element order isn't part of a
+JSON schema. This section documents that rule and folds it in.
+
+### Behavior, in prose
+
+The reference server orders a `People` array by two keys:
+
+1. **Primary: each person's own billing/sort-order number**, when one exists (present for cast —
+   TMDB's own "billing order" concept — absent, and so tied with every other tied entry, for crew).
+2. **Secondary (tie-break): a fixed type-priority table** — Actor first, then Guest Star, then
+   Director, then Writer, then Producer and Composer tied at the next slot, then everything else
+   last. Two people tied on both keys keep their original relative order (a stable sort).
+
+In practice, for a person set built the way this project's TMDB integration builds one (actors carry
+a real billing order, crew doesn't), this reduces to: actors first in billing order (already how
+`creditsToPeople` orders them), then crew ordered `Director` → `Writer` → `Producer`, regardless of
+whatever order the upstream data source happened to list crew members in.
+
+### Implementation findings
+
+Implemented as `internal/metadata/tmdb.go`'s `personTypePriority` map plus a `sort.SliceStable` pass
+over the combined cast+crew slice in `creditsToPeople`, added after the cross-check above (this
+project's crew list was previously left in whatever order TMDB's own `crew` array happened to list
+it, which is not guaranteed to be Director/Writer/Producer order — confirmed as a real, live-able bug
+by reasoning through the reference server's own ordering code, not by observing a live divergence,
+since no test title's crew data happened to be in reference-server-mismatching order during this
+task's own testing). Covered by a new unit test
+(`TestCreditsToPeopleOrdersCrewByTypePriority`) that deliberately feeds crew in reverse
+(Producer, Writer, Director) order and asserts the output comes back Director/Writer/Producer —
+proving the fix reorders rather than passes input through. Not independently live-verifiable against
+`jellyfin-real-staging` for this project's own People feature specifically, since staging has no TMDB
+key configured (same limitation noted in the People implementation this section corrects).
