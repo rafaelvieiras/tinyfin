@@ -111,8 +111,17 @@ func TestUserViewsAndItems(t *testing.T) {
 	if len(views.Items) != 1 || views.Items[0].Name != "Movies" {
 		t.Fatalf("UserViews = %+v, want one item named Movies", views.Items)
 	}
-	if views.Items[0].Type != "UserView" {
-		t.Errorf("UserViews[0].Type = %q, want UserView", views.Items[0].Type)
+	// CollectionFolder, not UserView — confirmed against a real Jellyfin
+	// server (staging, :8097): GET /UserViews for an ordinary library comes
+	// back with Type "CollectionFolder" (dto.go's libraryBaseItemDto doc
+	// comment).
+	if views.Items[0].Type != "CollectionFolder" {
+		t.Errorf("UserViews[0].Type = %q, want CollectionFolder", views.Items[0].Type)
+	}
+	// UserData is populated for a library root too, same as any other item
+	// — also confirmed against the real server rather than assumed.
+	if views.Items[0].UserData == nil {
+		t.Errorf("UserViews[0].UserData = nil, want a populated userItemDataDto")
 	}
 
 	// GET /Items
@@ -279,6 +288,10 @@ func TestItemGetEpisodeIncludesSeriesAndSeasonName(t *testing.T) {
 		t.Errorf("SeasonName = %q, want %q", detail.SeasonName, "Season 1")
 	}
 }
+
+// intPtr returns a pointer to n — a literal *int can't be taken inline in a
+// composite literal.
+func intPtr(n int) *int { return &n }
 
 // mustFindItemByName looks up an item's ID by name within libID — the
 // storage layer mints IDs on UpsertItem rather than accepting one, so tests
@@ -613,5 +626,156 @@ func TestUsersItemsFavoritesFilter(t *testing.T) {
 	}
 	if len(seriesResult.Items) != 1 || seriesResult.Items[0].Name != "Favorite Series" {
 		t.Fatalf("Series Items = %+v, want exactly [Favorite Series]", seriesResult.Items)
+	}
+}
+
+// TestUsersItemsEnableTotalRecordCountFalse regression-guards a real
+// divergence found via curl against a real Jellyfin server (staging,
+// :8097): with EnableTotalRecordCount=false — exactly what jellyfin-web's
+// Favorites screen (#/home?tab=1) and "Continue Watching" row send on every
+// call — TotalRecordCount comes back equal to how many items this response
+// actually carries, not the real total behind the filter. Confirmed on a
+// second page too (StartIndex past the first page), not just an
+// unpaginated single response: favoriting 8 movies with Limit=5 got
+// TotalRecordCount 5 on the first page and 3 on the second
+// (StartIndex=5) — always len(Items), never the true 8. Before this fix,
+// handleItemsList always returned the real total regardless of this param.
+func TestUsersItemsEnableTotalRecordCountFalse(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "ivan", "ivanpass")
+	token := loginToken(t, ts.URL, user.Name, "ivanpass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "Movies", storage.CollectionTypeMovies)
+
+	for i := 0; i < 8; i++ {
+		item := storage.Item{Type: storage.ItemTypeMovie, LibraryID: libID, Name: "Favorite " + string(rune('A'+i))}
+		if err := st.UpsertItem(context.Background(), item); err != nil {
+			t.Fatalf("UpsertItem(%d): %v", i, err)
+		}
+	}
+	page, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &libID, Recursive: true, Limit: 100})
+	if err != nil || len(page.Items) != 8 {
+		t.Fatalf("QueryItems: %v page=%v", err, page)
+	}
+	for _, it := range page.Items {
+		if err := st.SetPlaystate(context.Background(), user.ID, it.ID, storage.Playstate{IsFavorite: true}); err != nil {
+			t.Fatalf("SetPlaystate(%q): %v", it.ID, err)
+		}
+	}
+
+	firstPage := get(http.MethodGet, "/Users/"+string(user.ID)+"/Items?Filters=IsFavorite&Recursive=true&EnableTotalRecordCount=false&Limit=5&IncludeItemTypes=Movie")
+	defer firstPage.Body.Close()
+	var firstResult baseItemDtoQueryResult
+	if err := json.NewDecoder(firstPage.Body).Decode(&firstResult); err != nil {
+		t.Fatalf("decoding first-page response: %v", err)
+	}
+	if len(firstResult.Items) != 5 {
+		t.Fatalf("first page Items = %d, want 5", len(firstResult.Items))
+	}
+	if firstResult.TotalRecordCount != 5 {
+		t.Errorf("first page TotalRecordCount = %d, want 5 (len(Items), not the real total 8)", firstResult.TotalRecordCount)
+	}
+
+	secondPage := get(http.MethodGet, "/Users/"+string(user.ID)+"/Items?Filters=IsFavorite&Recursive=true&EnableTotalRecordCount=false&Limit=5&StartIndex=5&IncludeItemTypes=Movie")
+	defer secondPage.Body.Close()
+	var secondResult baseItemDtoQueryResult
+	if err := json.NewDecoder(secondPage.Body).Decode(&secondResult); err != nil {
+		t.Fatalf("decoding second-page response: %v", err)
+	}
+	if len(secondResult.Items) != 3 {
+		t.Fatalf("second page Items = %d, want 3", len(secondResult.Items))
+	}
+	if secondResult.TotalRecordCount != 3 {
+		t.Errorf("second page TotalRecordCount = %d, want 3 (len(Items), not the real total 8)", secondResult.TotalRecordCount)
+	}
+
+	// Left off (or "true"), the real total comes back — same request minus
+	// the param.
+	realTotalResp := get(http.MethodGet, "/Users/"+string(user.ID)+"/Items?Filters=IsFavorite&Recursive=true&Limit=5&IncludeItemTypes=Movie")
+	defer realTotalResp.Body.Close()
+	var realTotalResult baseItemDtoQueryResult
+	if err := json.NewDecoder(realTotalResp.Body).Decode(&realTotalResult); err != nil {
+		t.Fatalf("decoding default response: %v", err)
+	}
+	if realTotalResult.TotalRecordCount != 8 {
+		t.Errorf("default (no EnableTotalRecordCount) TotalRecordCount = %d, want the real total 8", realTotalResult.TotalRecordCount)
+	}
+}
+
+// TestUsersItemsFavoritesSeriesSortName regression-guards a real divergence
+// found via curl against a real Jellyfin server (staging, :8097):
+// SortBy=SeriesSortName,SortName — exactly what jellyfin-web's Favorites
+// screen sends on its Episode/Season rows — groups results by their owning
+// series' SortName first, only falling back to the item's own SortName to
+// break ties within a series. Confirmed live: favoriting one episode of
+// series "Homens de Negro" and two episodes of series "MORTAL KOMBAT..."
+// came back with the "Homens de Negro" episode first and both "MORTAL
+// KOMBAT" episodes grouped together afterward — never split apart by the
+// episodes' own titles the way sorting by SortName alone would. Before this
+// fix, SeriesSortName wasn't a recognized sortBy token at all
+// (parseSortFields silently dropped it), so this query effectively sorted
+// by SortName only and interleaved episodes from different series.
+func TestUsersItemsFavoritesSeriesSortName(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "julia", "juliapass")
+	token := loginToken(t, ts.URL, user.Name, "juliapass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "Kids Shows", storage.CollectionTypeTVShows)
+
+	// "Zeta Series" sorts after "Alpha Series" alphabetically, but each of
+	// its episodes' own titles ("Episode 1"/"Episode 2") sort well before
+	// "Alpha Series"' single episode ("Zulu Episode") — so grouping by
+	// series only shows up as correct if SeriesSortName is actually the
+	// primary sort key, not SortName alone.
+	zetaSeries := storage.Item{Type: storage.ItemTypeSeries, LibraryID: libID, Name: "Zeta Series", SortName: "Zeta Series"}
+	if err := st.UpsertItem(context.Background(), zetaSeries); err != nil {
+		t.Fatalf("UpsertItem(Zeta Series): %v", err)
+	}
+	zetaID := mustFindItemByName(t, st, libID, "Zeta Series")
+
+	alphaSeries := storage.Item{Type: storage.ItemTypeSeries, LibraryID: libID, Name: "Alpha Series", SortName: "Alpha Series"}
+	if err := st.UpsertItem(context.Background(), alphaSeries); err != nil {
+		t.Fatalf("UpsertItem(Alpha Series): %v", err)
+	}
+	alphaID := mustFindItemByName(t, st, libID, "Alpha Series")
+
+	episodes := []storage.Item{
+		{Type: storage.ItemTypeEpisode, LibraryID: libID, ParentID: &zetaID, SeriesID: &zetaID, Name: "Episode 1", SortName: "Episode 1", IndexNumber: intPtr(1)},
+		{Type: storage.ItemTypeEpisode, LibraryID: libID, ParentID: &zetaID, SeriesID: &zetaID, Name: "Episode 2", SortName: "Episode 2", IndexNumber: intPtr(2)},
+		{Type: storage.ItemTypeEpisode, LibraryID: libID, ParentID: &alphaID, SeriesID: &alphaID, Name: "Zulu Episode", SortName: "Zulu Episode", IndexNumber: intPtr(1)},
+	}
+	for _, ep := range episodes {
+		if err := st.UpsertItem(context.Background(), ep); err != nil {
+			t.Fatalf("UpsertItem(%q): %v", ep.Name, err)
+		}
+	}
+	zetaEp1 := mustFindItemByName(t, st, libID, "Episode 1")
+	zetaEp2 := mustFindItemByName(t, st, libID, "Episode 2")
+	alphaEp := mustFindItemByName(t, st, libID, "Zulu Episode")
+
+	for _, id := range []storage.ItemID{zetaEp1, zetaEp2, alphaEp} {
+		if err := st.SetPlaystate(context.Background(), user.ID, id, storage.Playstate{IsFavorite: true}); err != nil {
+			t.Fatalf("SetPlaystate(%q): %v", id, err)
+		}
+	}
+
+	resp := get(http.MethodGet, "/Users/"+string(user.ID)+"/Items?SortBy=SeriesSortName,SortName&SortOrder=Ascending&Filters=IsFavorite&Recursive=true&IncludeItemTypes=Episode")
+	defer resp.Body.Close()
+	var result baseItemDtoQueryResult
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatalf("decoding response: %v", err)
+	}
+	if len(result.Items) != 3 {
+		t.Fatalf("Items = %+v, want exactly 3 favorited episodes", result.Items)
+	}
+	got := []string{result.Items[0].Name, result.Items[1].Name, result.Items[2].Name}
+	want := []string{"Zulu Episode", "Episode 1", "Episode 2"}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("Items[%d].Name = %q, want %q (order = %v, want %v — grouped by series, not interleaved by episode title)", i, got[i], want[i], got, want)
+			break
+		}
 	}
 }

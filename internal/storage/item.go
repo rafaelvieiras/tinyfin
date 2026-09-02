@@ -53,6 +53,20 @@ const (
 	SortByRandom            SortBy = "Random"
 	SortByIndexNumber       SortBy = "IndexNumber"
 	SortByParentIndexNumber SortBy = "ParentIndexNumber"
+
+	// SortBySeriesName sorts an Episode/Season by its owning series' SortName
+	// (falling back to the item's own SortName for a type with no series,
+	// e.g. Movie/Series themselves) — jellyfin-web's Favorites screen
+	// (#/home?tab=1) sends "SortBy=SeriesSortName,SortName" on every
+	// IncludeItemTypes call it makes, confirmed via Playwright network
+	// capture against a real jellyfin-web build. Needed so favorited
+	// episodes from different series group by series instead of
+	// interleaving alphabetically by episode title (SortName alone) —
+	// confirmed as an actual divergence from the reference server (staging,
+	// :8097): favoriting two episodes of one series plus one of another
+	// came back with the two same-series episodes split apart by SortName
+	// alone, but grouped together by series when sorted this way.
+	SortBySeriesName SortBy = "SeriesSortName"
 )
 
 // SortField is one entry of ItemFilter.SortBy: a sort key plus direction.

@@ -184,3 +184,69 @@ func TestPlayedItemsToggle(t *testing.T) {
 		t.Errorf("GetPlaystate after DELETE PlayedItems: PlayCount = %d, want 0", state2.PlayCount)
 	}
 }
+
+// TestPlayedItemResetsResumePosition regression-guards a real bug found via
+// curl against a real Jellyfin server (staging, :8097): marking an
+// in-progress item watched resets PlaybackPositionTicks to 0, not just
+// Played/PlayCount. Before this fix, handlePlayedItemAdd left the position
+// untouched — invisible in the mark-played response itself (Resume already
+// excludes any Played item, position or not — storage.ItemFilter.Resume,
+// sqlite/item.go), but it resurfaced the moment the item was later
+// unmarked watched: DELETE PlayedItems flips Played back to false without
+// touching position (correctly — see TestPlayedItemsToggle above), so a
+// stale nonzero position left over from before the mark-played call put
+// the item right back in the "Continue Watching" row, mid-progress, via
+// exactly the "mark watched" then "mark unwatched" button sequence
+// jellyfin-web's item cards expose.
+func TestPlayedItemResetsResumePosition(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "frank", "frankpass")
+	token := loginToken(t, ts.URL, user.Name, "frankpass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "Movies", storage.CollectionTypeMovies)
+	item := storage.Item{Type: storage.ItemTypeMovie, LibraryID: libID, Name: "In Progress Movie", Path: "/media/movies/inprogress.mp4"}
+	if err := st.UpsertItem(context.Background(), item); err != nil {
+		t.Fatalf("UpsertItem: %v", err)
+	}
+	itemID := mustFindItemByName(t, st, libID, "In Progress Movie")
+
+	// Simulate a real in-progress watch, same as Sessions/Playing/Progress
+	// would persist.
+	if err := st.SetPlaystate(context.Background(), user.ID, itemID, storage.Playstate{PlaybackPositionTicks: 5_000_000_000}); err != nil {
+		t.Fatalf("SetPlaystate: %v", err)
+	}
+
+	addResp := get(http.MethodPost, "/Users/"+string(user.ID)+"/PlayedItems/"+string(itemID))
+	defer addResp.Body.Close()
+	var addResult userItemDataDto
+	if err := json.NewDecoder(addResp.Body).Decode(&addResult); err != nil {
+		t.Fatalf("decoding POST PlayedItems response: %v", err)
+	}
+	if addResult.PlaybackPositionTicks != 0 {
+		t.Errorf("POST PlayedItems response: PlaybackPositionTicks = %d, want 0", addResult.PlaybackPositionTicks)
+	}
+
+	delResp := get(http.MethodDelete, "/Users/"+string(user.ID)+"/PlayedItems/"+string(itemID))
+	defer delResp.Body.Close()
+	var delResult userItemDataDto
+	if err := json.NewDecoder(delResp.Body).Decode(&delResult); err != nil {
+		t.Fatalf("decoding DELETE PlayedItems response: %v", err)
+	}
+	if delResult.PlaybackPositionTicks != 0 {
+		t.Errorf("DELETE PlayedItems response: PlaybackPositionTicks = %d, want 0", delResult.PlaybackPositionTicks)
+	}
+
+	// The item must not resurface in Continue Watching after this cycle.
+	resumeResp := get(http.MethodGet, "/UserItems/Resume?mediaTypes=Video")
+	defer resumeResp.Body.Close()
+	var resumeResult baseItemDtoQueryResult
+	if err := json.NewDecoder(resumeResp.Body).Decode(&resumeResult); err != nil {
+		t.Fatalf("decoding Resume response: %v", err)
+	}
+	for _, it := range resumeResult.Items {
+		if it.ID == string(itemID) {
+			t.Errorf("UserItems/Resume includes %q after mark-played/unmark-played cycle, want excluded", it.Name)
+		}
+	}
+}

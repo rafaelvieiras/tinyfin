@@ -254,21 +254,39 @@ func (s *Server) primaryImage(ctx context.Context, id storage.ItemID) (tags map[
 	return tags, aspectRatio
 }
 
-// libraryBaseItemDto builds the BaseItemDto for a library root itself
-// (Type=UserView/CollectionFolder) — a storage.Library, not a storage.Item
-// (they're separate stores, storage/library.go's doc comment), so it can't
-// go through baseItemDto() below. Shared by handleUserViews (library.go),
-// handleItemGet's library-root fallback, and handleItemAncestors' final
-// entry — previously duplicated ad hoc in the first of those.
-func (s *Server) libraryBaseItemDto(lib storage.Library) baseItemDto {
-	return baseItemDto{
+// libraryBaseItemDto builds the BaseItemDto for a library root itself — a
+// storage.Library, not a storage.Item (they're separate stores,
+// storage/library.go's doc comment), so it can't go through baseItemDto()
+// below. Shared by handleUserViews (library.go), handleItemGet's
+// library-root fallback, and handleItemAncestors' final entry — previously
+// duplicated ad hoc in the first of those.
+//
+// Type is always "CollectionFolder", never storage.ItemTypeUserView —
+// confirmed against a real Jellyfin server (staging, :8097): GET /UserViews
+// for an ordinary library (not a synthetic aggregate view like Favorites)
+// comes back with Type "CollectionFolder". storage.ItemTypeUserView exists
+// for a genuinely different kind of view this project doesn't emit here.
+//
+// UserData is populated the same way baseItemDto's is (userDataFor) rather
+// than left nil — confirmed via the same real-server comparison: a library
+// root's UserData carries the caller's playstate for it (favorite/played on
+// the library itself) same as any other item, not omitted. ctx must carry
+// an authenticated caller (every registered call site requires auth, see
+// server.go) for this to populate; callers with no reliable caller in
+// context would need to pass one in some other way, but none of today's do.
+func (s *Server) libraryBaseItemDto(ctx context.Context, lib storage.Library) baseItemDto {
+	dto := baseItemDto{
 		Name:           lib.Name,
 		ServerID:       s.cfg.ServerID,
 		ID:             string(lib.ID),
 		IsFolder:       true,
-		Type:           string(storage.ItemTypeUserView),
+		Type:           string(storage.ItemTypeCollectionFolder),
 		CollectionType: string(lib.CollectionType),
 	}
+	if ac, ok := AuthFromContext(ctx); ok && ac != nil {
+		dto.UserData = s.userDataFor(ctx, ac.User.ID, storage.ItemID(lib.ID))
+	}
+	return dto
 }
 
 // userDataFor builds BaseItemDto.UserData for (userID, itemID) from

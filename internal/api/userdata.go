@@ -101,6 +101,20 @@ func (s *Server) handleFavoriteItemRemove(w http.ResponseWriter, r *http.Request
 // UI button a user can click repeatedly on an already-watched item, where
 // unconditional incrementing would be visibly wrong against the reference
 // server's behavior.
+//
+// PlaybackPositionTicks resets to 0 here too — also confirmed against the
+// real server, not assumed: reporting a nonzero position via
+// Sessions/Playing/Progress and then marking the item played through this
+// route comes back with position 0, not the stale reported value. Found to
+// matter beyond this route's own response by testing the home screen's
+// "Continue Watching" row end to end: since storage.ItemFilter.Resume
+// (sqlite/item.go) only excludes an item while Played stays true, an
+// item marked watched with its position left non-zero came back into the
+// Resume row, mid-progress, the moment a later DELETE
+// /Users/{userId}/PlayedItems/{itemId} flipped Played back to false — a
+// real, reachable regression via the exact "mark watched" then "mark
+// unwatched" button sequence jellyfin-web's item cards expose, not a
+// hypothetical.
 func (s *Server) handlePlayedItemAdd(w http.ResponseWriter, r *http.Request) {
 	itemID := storage.ItemID(r.PathValue("itemId"))
 	ac, _ := AuthFromContext(r.Context())
@@ -110,6 +124,7 @@ func (s *Server) handlePlayedItemAdd(w http.ResponseWriter, r *http.Request) {
 		state.PlayCount++
 	}
 	state.Played = true
+	state.PlaybackPositionTicks = 0
 	s.writePlaystateUserData(w, r, ac.User.ID, itemID, state)
 }
 

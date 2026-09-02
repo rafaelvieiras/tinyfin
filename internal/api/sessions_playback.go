@@ -128,6 +128,15 @@ type userItemDataDto struct {
 // watched. This is the actual "played" signal (see
 // handleSessionsPlayingStopped's doc comment above for why that route
 // doesn't try to infer it itself).
+//
+// PlaybackPositionTicks resets to 0 on the transition — confirmed against a
+// real Jellyfin server (staging, :8097): reporting a nonzero position via
+// Sessions/Playing/Progress and then marking the item played through this
+// route comes back with position 0. Same fix, same confirmation, as
+// userdata.go's handlePlayedItemAdd (the jellyfin-web-facing sibling of
+// this route) — left stale otherwise, a watched item could resurface
+// mid-progress in the "Continue Watching" row (storage.ItemFilter.Resume,
+// sqlite/item.go) the moment it's later unmarked watched.
 func (s *Server) handleUserPlayedItemsMark(w http.ResponseWriter, r *http.Request) {
 	itemID := storage.ItemID(r.PathValue("itemId"))
 	ac, _ := AuthFromContext(r.Context())
@@ -138,6 +147,7 @@ func (s *Server) handleUserPlayedItemsMark(w http.ResponseWriter, r *http.Reques
 	}
 	state.Played = true
 	state.PlayCount++
+	state.PlaybackPositionTicks = 0
 	if err := s.store.SetPlaystate(r.Context(), ac.User.ID, itemID, state); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

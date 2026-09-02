@@ -52,7 +52,7 @@ func (s *Server) handleUserViews(w http.ResponseWriter, r *http.Request) {
 
 	items := make([]baseItemDto, 0, len(libs))
 	for _, lib := range libs {
-		items = append(items, s.libraryBaseItemDto(lib))
+		items = append(items, s.libraryBaseItemDto(r.Context(), lib))
 	}
 
 	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{
@@ -77,6 +77,7 @@ var sortByValues = map[string]storage.SortBy{
 	"Random":            storage.SortByRandom,
 	"IndexNumber":       storage.SortByIndexNumber,
 	"ParentIndexNumber": storage.SortByParentIndexNumber,
+	"SeriesSortName":    storage.SortBySeriesName,
 }
 
 // parseSortFields maps the comma-separated sortBy/sortOrder query params
@@ -134,6 +135,27 @@ func caseInsensitiveQuery(r *http.Request) url.Values {
 		out[strings.ToLower(k)] = v
 	}
 	return out
+}
+
+// resolveTotalRecordCount picks what a QueryResult's TotalRecordCount field
+// should actually say: the real total behind the filter (enableParam absent,
+// or anything but exactly "false" — the default), or just how many items
+// this particular response carries. Confirmed against a real Jellyfin
+// server (staging, :8097), not assumed: favoriting 8 movies and requesting
+// Limit=5&EnableTotalRecordCount=false came back with TotalRecordCount 5,
+// not 8 — the real total the same request with the param left off (or set
+// to true) does return. A second page (StartIndex=5) of the same query
+// came back with TotalRecordCount 3, matching that page's own item count,
+// not len(Items) clamped some other way — confirming it's genuinely
+// "however many are in this response," the cheap count the flag exists to
+// let the server skip a separate COUNT(*) for, not real-total-minus-offset
+// or any other derived value. jellyfin-web's Favorites screen (#/home?tab=1)
+// and "Continue Watching" row both send this param as false on every call.
+func resolveTotalRecordCount(enableParam string, itemCount, realTotal int) int {
+	if strings.EqualFold(enableParam, "false") {
+		return itemCount
+	}
+	return realTotal
 }
 
 // handleItemsList serves both GET /Items and GET /Users/{userId}/Items (the
@@ -245,7 +267,7 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{
 		Items:            items,
-		TotalRecordCount: page.TotalCount,
+		TotalRecordCount: resolveTotalRecordCount(q.Get("enabletotalrecordcount"), len(items), page.TotalCount),
 		StartIndex:       page.Offset,
 	})
 }
@@ -265,7 +287,7 @@ func (s *Server) handleItemGet(w http.ResponseWriter, r *http.Request) {
 	item, err := s.store.GetItem(r.Context(), id)
 	if err != nil {
 		if lib, libErr := s.store.GetLibrary(r.Context(), storage.LibraryID(id)); libErr == nil {
-			writeJSON(w, http.StatusOK, s.libraryBaseItemDto(lib))
+			writeJSON(w, http.StatusOK, s.libraryBaseItemDto(r.Context(), lib))
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)
@@ -401,7 +423,7 @@ func (s *Server) handleUserItemsResume(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{
 		Items:            items,
-		TotalRecordCount: page.TotalCount,
+		TotalRecordCount: resolveTotalRecordCount(q.Get("enableTotalRecordCount"), len(items), page.TotalCount),
 		StartIndex:       page.Offset,
 	})
 }
@@ -523,7 +545,7 @@ func (s *Server) handleItemAncestors(w http.ResponseWriter, r *http.Request) {
 		item = parent
 	}
 	if lib, err := s.store.GetLibrary(r.Context(), item.LibraryID); err == nil {
-		ancestors = append(ancestors, s.libraryBaseItemDto(lib))
+		ancestors = append(ancestors, s.libraryBaseItemDto(r.Context(), lib))
 	}
 
 	writeJSON(w, http.StatusOK, ancestors)

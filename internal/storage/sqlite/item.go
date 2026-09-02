@@ -375,6 +375,25 @@ var sortColumns = map[storage.SortBy]string{
 	storage.SortByCommunityRating:   "items.community_rating",
 	storage.SortByIndexNumber:       "items.index_number",
 	storage.SortByParentIndexNumber: "items.parent_index_number",
+	// series_sort.sort_name is only non-NULL when the series self-join
+	// below was added (an item whose series_id doesn't resolve, or a
+	// Movie/Series with no series_id at all, leaves it NULL) — COALESCE
+	// falls back to the item's own sort_name so a type with no series
+	// context still sorts sensibly, matching the reference server's
+	// behavior for SortBy=SeriesSortName on non-episode types.
+	storage.SortBySeriesName: "COALESCE(series_sort.sort_name, items.sort_name)",
+}
+
+// needsSeriesSortJoin reports whether fields asks to sort by
+// storage.SortBySeriesName, the one sort key that isn't a plain items
+// column (buildSeriesSortJoin's doc comment).
+func needsSeriesSortJoin(fields []storage.SortField) bool {
+	for _, sf := range fields {
+		if sf.By == storage.SortBySeriesName {
+			return true
+		}
+	}
+	return false
 }
 
 func buildOrderBy(fields []storage.SortField) string {
@@ -477,6 +496,14 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 		joins = append(joins, "JOIN items_fts ON items_fts.rowid = items.rowid")
 		wheres = append(wheres, "items_fts MATCH ?")
 		whereArgs = append(whereArgs, ftsMatchQuery(filter.SearchText))
+	}
+
+	if needsSeriesSortJoin(filter.SortBy) {
+		// Self-join to the owning series' row so ORDER BY can read its
+		// sort_name (sortColumns' storage.SortBySeriesName entry above) —
+		// items.series_id is populated on both Episode and Season rows
+		// (scan.go), so this covers both without a type-specific case.
+		joins = append(joins, "LEFT JOIN items series_sort ON series_sort.id = items.series_id")
 	}
 
 	if filter.UserID != nil {

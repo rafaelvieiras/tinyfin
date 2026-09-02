@@ -67,13 +67,13 @@ bottom.
 
 | Route | Status | Note |
 |---|---|---|
-| `GET /UserViews` | ✅ | Home screen library list. Confirmed live. |
-| `GET /Items` | ✅ | Generic listing/search, query-param filtered. Confirmed live (movie library grid, search). |
-| `GET /Items/Latest` | ✅ | Home "recently added" rows. Confirmed live, exact query-param shape (`userId`+`parentId`) matches what Tinyfin's embedded bundle sends. |
+| `GET /UserViews` | ✅ | Home screen library list. Re-audited byte-for-byte against the reference server (staging, :8097): found and fixed two real divergences — `Type` was `"UserView"`, reference sends `"CollectionFolder"` for an ordinary library; `UserData` was omitted entirely, reference populates it same as any other item (`dto.go`'s `libraryBaseItemDto`). |
+| `GET /Items` | ✅ | Generic listing/search, query-param filtered. Confirmed live (movie library grid, search). Also serves the Favoritos tab's per-user form, `GET /Users/{userId}/Items?Filters=IsFavorite&...` — re-audited byte-for-byte against the reference server; found and fixed two real divergences: (1) `SortBy=SeriesSortName,SortName` (what the Favoritos tab actually sends for Episode/Season rows) silently dropped the `SeriesSortName` key entirely, so favorited episodes from different series interleaved alphabetically by episode title instead of grouping by series — now a real sort key (`storage.SortBySeriesName`, a self-join to the owning series' `sort_name`). (2) `TotalRecordCount` ignored `EnableTotalRecordCount=false` (sent on every Favoritos-tab call) and always returned the real total instead of just how many items that response carries, confirmed against the reference server on both a first and second page. See the note below and "Users, sessions, devices" for the toggle routes it depends on. |
+| `GET /Items/Latest` | ✅ | Home "recently added" rows. Confirmed live, exact query-param shape (`userId`+`parentId`) matches what Tinyfin's embedded bundle sends. Re-audit against the reference server found one real, **unresolved** divergence for the TV-shows library specifically: the reference server groups newly-added content by series (one card per series, showing either the `Series` itself or its single latest new `Episode`, by a rule not yet fully reverse-engineered black-box), while Tinyfin returns a flat, ungrouped list of every recently-scanned `Episode`/`Season` row — visibly cluttering the "Séries Infantis recentes" row with many tiles from one or two shows instead of one tile per show. Left unfixed pending a confident black-box derivation of the reference grouping rule (see the audit report for what was tried); the movies-library case (flat `Movie` list) has no such grouping in the reference server either and was not found to diverge. |
 | `GET /Items/{itemId}` | ✅ | Item detail. Confirmed live (`?userId=` query form). |
 | `GET /Items/{itemId}/Ancestors` | ✅ | Breadcrumb trail. Confirmed live. |
 | `GET /Users/{userId}/Items/{itemId}` | ✅ | Legacy per-item alias — still hit on *every* detail page load before the plain form, per `server.go`'s own comment (found via real client testing, not spec). Confirmed live. |
-| `GET /UserItems/Resume` | ✅ | Continue-watching row. Confirmed live, exact match against Tinyfin's own bundle. |
+| `GET /UserItems/Resume` | ✅ | Continue-watching row. Confirmed live, exact match against Tinyfin's own bundle. Re-audit found and fixed a related bug one level down, in the mark-watched routes: a stale in-progress position could resurrect an already-unmarked item here — see the `PlayedItems`/`UserPlayedItems` notes below. |
 | `GET /Shows/{seriesId}/Seasons` | ✅ | Confirmed live, real season data returned. |
 | `GET /Shows/{seriesId}/Episodes` | ✅ | Confirmed live, real episode data returned. |
 | `GET /Items/Filters` | ⚠️ | Registered, always returns empty facets (`library.go:502`) — "no such metadata yet, honest empty over 404" per its own doc comment. Confirmed live (200, empty). |
@@ -155,8 +155,8 @@ bottom.
 | `GET/POST /DisplayPreferences/{displayPreferencesId}` | ✅ | Confirmed live, fetched immediately post-login; left unhandled it blocks the post-login redirect entirely (per `server.go`'s own comment, found via real client testing). |
 | `POST /Sessions/Capabilities/Full` | ✅ | Confirmed live, fired right after sign-in by every official client. |
 | `GET /QuickConnect/Enabled` | ✅ | Confirmed live. Only this one QuickConnect route exists — see gap below. |
-| `POST /Users/{userId}/FavoriteItems/{itemId}` (+ `DELETE`) | ❌ | **Confirmed 404 live** — clicking "Adicionar aos favoritos" on any item detail page fails silently; the button UI updates optimistically but the server never persists it. |
-| `POST /Users/{userId}/PlayedItems/{itemId}` (+ `DELETE`) | ❌ | **Confirmed 404 live** — same story for "Marcar como reproduzido" (mark watched). Tinyfin *does* register `POST /UserPlayedItems/{itemId}` (the newer/SDK-shaped path), but the client build actually embedded in Tinyfin's own image never calls that path for this button — it calls the legacy `/Users/{userId}/PlayedItems/{itemId}` form instead, which isn't registered. Net effect: this Tinyfin-registered route is presently unreachable by its own bundled web client. |
+| `POST /Users/{userId}/FavoriteItems/{itemId}` (+ `DELETE`) | ✅ | Implemented (`internal/api/userdata.go`). Confirmed live and re-audited against the reference server (staging, :8097) byte-for-byte: response shape, `IsFavorite` persistence independent of `Played`/`PlayCount`, and the Favoritos tab (`#/home?tab=1`) reflecting the toggle. |
+| `POST /Users/{userId}/PlayedItems/{itemId}` (+ `DELETE`) | ✅ | Implemented (`internal/api/userdata.go`). Confirmed live and re-audited against the reference server: `PlayCount` only advances on the unplayed→played transition and resets to 0 on unmark (both matched already). Re-audit found one real divergence, now fixed: POST didn't reset `PlaybackPositionTicks` to 0 on marking played, unlike the reference server — a stale in-progress position survived a mark-watched call and resurfaced the item in the home screen's "Continuar assistindo" row the moment it was later unmarked watched. Same fix applied to `POST /UserPlayedItems/{itemId}` (`sessions_playback.go`'s `handleUserPlayedItemsMark`), which had the identical gap. |
 | `POST /UserItems/{itemId}/Rating` | ❌ | Catalog only — star rating. |
 | `POST/GET /UserItems/{itemId}/UserData` | ❌ | Catalog only — direct playstate/favorite edit, alternate to the two routes above. |
 | WebSocket `/socket` | ❌ | Confirmed live — repeated WebSocket handshake failures (404) on every page. This is the realtime session channel `docs/06-session-and-realtime-state.md` scopes as its own interface; it isn't wired into the HTTP server at all yet. Consequence: no live "now playing on other devices," no remote control/cast-to-device, no server-push of any kind. |
@@ -202,10 +202,10 @@ above isn't accused of silently missing them; they were seen and deliberately ex
 
 Ranked by how much they'd actually bite a normal user clicking around, not by API-surface size:
 
-1. **Favorites and "mark watched" are silently broken** (`POST /Users/{userId}/FavoriteItems/{itemId}`,
-   `POST /Users/{userId}/PlayedItems/{itemId}`, both 404 confirmed live). The buttons exist, respond to
-   clicks, and the UI even updates optimistically — there is no visible error. This is the single worst
-   gap found: it looks like it works and doesn't.
+1. ~~**Favorites and "mark watched" are silently broken**~~ — resolved. Both
+   `POST /Users/{userId}/FavoriteItems/{itemId}` and `POST /Users/{userId}/PlayedItems/{itemId}` (+
+   `DELETE`) are implemented and re-audited byte-for-byte against the reference server; see their rows
+   above.
 2. **`/Shows/NextUp` (404)** breaks "what to watch next" on every TV series — both the home screen's
    row and the series detail page call it. For a project whose primary media type in the test library
    is TV shows, this is a core navigation feature, not an edge case.
