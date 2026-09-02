@@ -53,11 +53,11 @@ Status legend:
 | | Count |
 |---|---|
 | Route entries catalogued below (excluding Live TV/Channels, out of scope per `docs/01`) — some entries group several closely-related paths on one row, so this counts table rows, not raw path-template strings | 85 |
-| ✅ Implemented | 30 |
+| ✅ Implemented | 33 |
 | ⚠️ Parcial (stub/honest-empty) | 4 |
-| ❌ Not implemented | 51 |
+| ❌ Not implemented | 48 |
 
-34 of 85 (40%) return real or honestly-empty data today. The gaps cluster heavily in a few places
+37 of 85 (44%) return real or honestly-empty data today. The gaps cluster heavily in a few places
 that matter for ordinary browsing, not just admin/edge-case features — see "Biggest real gaps" at the
 bottom.
 
@@ -79,7 +79,7 @@ bottom.
 | `GET /Items/Filters` | ⚠️ | Registered, always returns empty facets (`library.go:502`) — "no such metadata yet, honest empty over 404" per its own doc comment. Confirmed live (200, empty). |
 | `GET /Items/Filters2` | ⚠️ | Same stub as above (`library.go:506`). Confirmed live. |
 | `GET /Items/{itemId}/Similar` | ⚠️ | Always returns empty list (`library.go:483`). Confirmed live. |
-| `GET /Shows/NextUp` | ❌ | Confirmed 404 live — called on the home screen's continue-watching-shows row *and* on every series detail page. High-traffic route; its absence silently drops "next episode to watch" everywhere it would appear. |
+| `GET /Shows/NextUp` | ✅ | Implemented (`internal/api/nextup.go`). Rule reverse-engineered by black-box testing against the reference server (staging, :8097): per series, find the last episode (by season/episode order, not watch date) with `PlayCount > 0`; if it's not fully played, that same episode is the candidate (in-progress/"resume", included only when `enableResumable` isn't `false`); if fully played, the candidate is the next episode after it in order (crossing season boundaries correctly), or none if the series is finished (`enableRewatching` restart-at-episode-1 is a documented decision, not something the real server reproduced under test — see the handler's doc comment). Confirmed: a series with zero activity never appears (not "episode 1" as a naive reading of the endpoint name might suggest); marking an out-of-order episode played jumps straight to the one after it, not the first unwatched one; `nextUpDateCutoff` is a minimum-date bound; `EnableTotalRecordCount=false` reports `0`, diverging from `GET /Items`' own rule for that same param (`resolveTotalRecordCount`) — deliberately not reused unchanged. Also fixed a related pre-existing gap this depends on: `PlaystateStore.LastPlayedDate` was never actually written by any handler (`userdata.go`, `sessions_playback.go`) despite the storage field existing — now stamped/cleared to match confirmed reference-server behavior. Confirmed live end to end: `curl` against `tinyfin-staging` matches the reference server for every case above, and a Playwright session shows the home screen's "A seguir" row rendering a real next episode after marking a prior one watched, with no console/network errors. |
 | `GET /Items/{itemId}/Collections` | ❌ | Confirmed 404 live, called unconditionally on **every** item detail page (movie, series, season) to check "part of a collection" banner. |
 | `GET /Items/{itemId}/ThemeMedia` (and `/ThemeSongs`, `/ThemeVideos`) | ❌ | Confirmed 404 live, called on every single detail page load. Purely cosmetic (background theme music) but extremely high call frequency. |
 | `GET /Users/{userId}/Items/{itemId}/Intros` | ❌ | Confirmed 404 live (legacy per-user form) — pre-roll trailers/intros before playback starts. Non-blocking (player just skips), but a real, frequently-hit gap. |
@@ -121,7 +121,7 @@ bottom.
 | `POST /Sessions/Playing/Stopped` | ✅ | Confirmed live, fired on navigating away from the player. |
 | `GET /MediaSegments/{itemId}` | ✅ | Registered; not exercised live (no chapter/intro-skip segment data in the test library) but wired up. |
 | `GET /Videos/{itemId}/Subtitles`, `/Subtitles/{index}`, `.../Stream.{format}`, `/{mediaSourceId}/Subtitles/{index}/{startTicks}/Stream.{format}` | ❌ | No subtitle-delivery route registered at all. Confirmed as a real, actively-called route family via the reference-server capture (embedded-subtitle stream fetched mid-playback); not exercised against Tinyfin directly since the test movie had no subtitle tracks selected, but the route is simply absent from `routing.go`. |
-| `GET /Playback/BitrateTest` | ❌ | Confirmed 404 live — bandwidth probe fired before essentially every playback session, used to pick an initial bitrate/quality guess. Non-fatal (client falls back) but called constantly. |
+| `GET /Playback/BitrateTest` | ✅ | Implemented (`internal/api/playback.go`). Shape confirmed against the reference server (staging, :8097) via `curl`, not assumed: response is `Size` random bytes rounded UP to the next power of two (floor 16 — every `Size` from 1-16 comes back 16 bytes), `Content-Type: application/octet-stream`; `Size` omitted defaults to what a real server sends as its own default (100000, rounding to 131072); `Size` is validated `>= 1` and `<= 100000000` server-side (found by binary search against the real server's own 400 error, which spells the bounds out explicitly), mirrored here as the same bound. Confirmed live: `curl` against `tinyfin-staging` matches on default size, an explicit size (with rounding), the 400 boundary at both ends, and random (non-reproducible) content. |
 | Trickplay (seek thumbnails) | ❌ | No dedicated route found actively called by this particular jellyfin-web build (the SDK bundle only references `Trickplay` as a requestable `Fields` enum value on item queries, not as its own endpoint) — plausibly because the test library has no pre-generated trickplay data to trigger the image-tile fetch. Not implemented in Tinyfin regardless; low confidence on exact call shape without a trickplay-enabled library to test against. |
 | `SyncPlay/*` (List, Join, Leave, New, Ready, Seek, Pause, Unpause, Queue, ...) | ❌ | `GET /SyncPlay/List` confirmed 404 live, called unconditionally on nearly every screen transition (noisy but harmless — client treats 404 as "SyncPlay unavailable"). The rest of the ~18-route family (from the SDK catalog) is equally unimplemented; explicitly in-scope per `docs/04` (unlike Live TV/Channels) but a multi-client feature, lower priority for a single-user/idle-memory-focused v1. |
 | `POST /LiveStreams/Open`, `POST /LiveStreams/Close` | ❌ | Catalog only — external tuner live-stream lifecycle, effectively Live TV-adjacent. |
@@ -173,7 +173,7 @@ bottom.
 | `GET /System/Info/Public`, `GET /System/Info` | ✅ | Confirmed live. |
 | `GET/POST/DELETE /Library/VirtualFolders` | ✅ | Registered, admin-gated. Not exercised live in this pass (would require the admin dashboard flow) but present in `server.go`. |
 | `POST /Library/Refresh` | ✅ | Same as above. |
-| `GET /System/Endpoint` | ❌ | Confirmed 404 live — called at startup on every session; used by the client to detect LAN vs. remote address and affects initial speed/quality assumptions. |
+| `GET /System/Endpoint` | ✅ | Implemented (`internal/api/system.go`). Shape and requires-auth confirmed against the reference server (staging, :8097): `{"IsLocal":bool,"IsInNetwork":bool}`, 401 with no token. `IsLocal`/`IsInNetwork` derived from the request's actual TCP peer address (loopback / RFC 1918 private / link-local) — confirmed `X-Forwarded-For` is ignored entirely by the real server, so no reverse-proxy trust config was added to match that. Confirmed live: `curl` against `tinyfin-staging` matches from outside the container (private Docker bridge address → `IsLocal:false, IsInNetwork:true`) and a Playwright session shows this called once at startup with no 404. |
 | `GET /System/Configuration`, `/System/Configuration/{key}`, `/System/Configuration/Branding` | ❌ | Catalog only — admin dashboard settings pages. |
 | `GET /System/ActivityLog/Entries` | ❌ | Catalog only. |
 | `GET /System/Logs`, `/System/Logs/Log` | ❌ | Catalog only. |
@@ -206,9 +206,8 @@ Ranked by how much they'd actually bite a normal user clicking around, not by AP
    `POST /Users/{userId}/FavoriteItems/{itemId}` and `POST /Users/{userId}/PlayedItems/{itemId}` (+
    `DELETE`) are implemented and re-audited byte-for-byte against the reference server; see their rows
    above.
-2. **`/Shows/NextUp` (404)** breaks "what to watch next" on every TV series — both the home screen's
-   row and the series detail page call it. For a project whose primary media type in the test library
-   is TV shows, this is a core navigation feature, not an edge case.
+2. ~~**`/Shows/NextUp` (404)** breaks "what to watch next" on every TV series~~ — resolved.
+   Implemented and confirmed live (home screen row and series detail page); see its row above.
 3. **No subtitle-delivery routes at all.** Confirmed as a route family real clients actively use
    mid-playback (reference-server capture). Any title with subtitle tracks will fail to display them —
    a Direct Play/Remux correctness issue, not just a missing nicety.

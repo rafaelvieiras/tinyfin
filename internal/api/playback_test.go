@@ -356,3 +356,127 @@ func TestVideoStreamNotFoundForMissingItem(t *testing.T) {
 		t.Fatalf("status = %d, want 404", resp.StatusCode)
 	}
 }
+
+// TestBitrateTestRoundedSize unit-tests bitrateTestRoundedSize against every
+// value spread confirmed by binary search against a real Jellyfin server
+// (staging, :8097): every response length observed there was a power of
+// two, with a floor of 16 and Size itself passed through unchanged whenever
+// it was already an exact power of two.
+func TestBitrateTestRoundedSize(t *testing.T) {
+	for _, tc := range []struct {
+		size int
+		want int
+	}{
+		{1, 16}, {2, 16}, {15, 16}, {16, 16},
+		{17, 32}, {31, 32}, {32, 32},
+		{33, 64},
+		{100, 128},
+		{1000, 1024}, {1025, 2048},
+		{65536, 65536},
+		{100000, 131072}, {131072, 131072}, {131073, 262144},
+		{500000, 524288},
+		{100_000_000, 134217728},
+	} {
+		if got := bitrateTestRoundedSize(tc.size); got != tc.want {
+			t.Errorf("bitrateTestRoundedSize(%d) = %d, want %d", tc.size, got, tc.want)
+		}
+	}
+}
+
+// TestPlaybackBitrateTest regression-guards GET /Playback/BitrateTest end
+// to end: default size (Size omitted), an explicit Size, the rounding, the
+// Content-Type, and the min/max validation bounds — all confirmed against a
+// real Jellyfin server (staging, :8097) via handlePlaybackBitrateTest's doc
+// comment.
+func TestPlaybackBitrateTest(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "leo", "leopass")
+	token := loginToken(t, ts.URL, user.Name, "leopass")
+	get := authedClient(t, ts.URL, token)
+
+	// No Size param: same 131072 bytes a real server returns by default
+	// (bitrateTestDefaultSize's doc comment).
+	defaultResp := get(http.MethodGet, "/Playback/BitrateTest")
+	defer defaultResp.Body.Close()
+	if defaultResp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", defaultResp.StatusCode)
+	}
+	if ct := defaultResp.Header.Get("Content-Type"); ct != "application/octet-stream" {
+		t.Errorf("Content-Type = %q, want application/octet-stream", ct)
+	}
+	defaultBody, err := io.ReadAll(defaultResp.Body)
+	if err != nil {
+		t.Fatalf("reading body: %v", err)
+	}
+	if len(defaultBody) != 131072 {
+		t.Errorf("len(body) = %d, want 131072", len(defaultBody))
+	}
+
+	// Explicit Size, rounded up to the next power of two.
+	sizedResp := get(http.MethodGet, "/Playback/BitrateTest?Size=1000")
+	defer sizedResp.Body.Close()
+	sizedBody, err := io.ReadAll(sizedResp.Body)
+	if err != nil {
+		t.Fatalf("reading body: %v", err)
+	}
+	if len(sizedBody) != 1024 {
+		t.Errorf("len(body) = %d, want 1024", len(sizedBody))
+	}
+
+	// Two requests for the same Size come back with different bytes —
+	// confirmed against the real server, not assumed.
+	sizedResp2 := get(http.MethodGet, "/Playback/BitrateTest?Size=1000")
+	defer sizedResp2.Body.Close()
+	sizedBody2, err := io.ReadAll(sizedResp2.Body)
+	if err != nil {
+		t.Fatalf("reading body: %v", err)
+	}
+	if bytes.Equal(sizedBody, sizedBody2) {
+		t.Error("two BitrateTest responses for the same Size came back byte-identical, want random content each time")
+	}
+
+	// Below the minimum: 400.
+	tooSmall := get(http.MethodGet, "/Playback/BitrateTest?Size=0")
+	defer tooSmall.Body.Close()
+	if tooSmall.StatusCode != http.StatusBadRequest {
+		t.Errorf("Size=0 status = %d, want 400", tooSmall.StatusCode)
+	}
+
+	// Above the maximum: 400.
+	tooBig := get(http.MethodGet, "/Playback/BitrateTest?Size=100000001")
+	defer tooBig.Body.Close()
+	if tooBig.StatusCode != http.StatusBadRequest {
+		t.Errorf("Size=100000001 status = %d, want 400", tooBig.StatusCode)
+	}
+
+	// At the maximum: still 200.
+	atMax := get(http.MethodGet, "/Playback/BitrateTest?Size=100000000")
+	defer atMax.Body.Close()
+	if atMax.StatusCode != http.StatusOK {
+		t.Errorf("Size=100000000 status = %d, want 200", atMax.StatusCode)
+	}
+
+	// Non-integer Size: 400, not a 500 or a panic.
+	notAnInt := get(http.MethodGet, "/Playback/BitrateTest?Size=abc")
+	defer notAnInt.Body.Close()
+	if notAnInt.StatusCode != http.StatusBadRequest {
+		t.Errorf("Size=abc status = %d, want 400", notAnInt.StatusCode)
+	}
+}
+
+// TestPlaybackBitrateTestRequiresAuth regression-guards that GET
+// /Playback/BitrateTest needs a valid token — confirmed against a real
+// Jellyfin server (staging, :8097): a request with no token comes back
+// 401.
+func TestPlaybackBitrateTestRequiresAuth(t *testing.T) {
+	ts, _ := newTestServer(t)
+
+	resp, err := http.Get(ts.URL + "/Playback/BitrateTest?Size=16")
+	if err != nil {
+		t.Fatalf("GET /Playback/BitrateTest: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", resp.StatusCode)
+	}
+}

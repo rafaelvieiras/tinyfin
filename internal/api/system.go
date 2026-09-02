@@ -1,6 +1,7 @@
 package api
 
 import (
+	"net"
 	"net/http"
 	"runtime"
 )
@@ -118,6 +119,61 @@ func (s *Server) handleBrandingConfiguration(w http.ResponseWriter, r *http.Requ
 // "can't connect to server" error rather than a visibly scoped failure.
 func (s *Server) handleSessionsCapabilitiesFull(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// endpointInfo mirrors the OpenAPI schema's EndpointInfo — confirmed
+// against a real Jellyfin server (staging, :8097), not assumed: a plain
+// GET with no request body came back exactly
+// {"IsLocal":false,"IsInNetwork":true} when curled from outside the
+// container (through the Docker port mapping, so the peer address the
+// container actually sees is the Docker bridge gateway — a private-range
+// address, not loopback) and {"IsLocal":true,"IsInNetwork":true} when
+// curled from a shell inside that same container against 127.0.0.1.
+// Requires auth — confirmed the same way (401 with no token) — unlike
+// System/Info/Public.
+type endpointInfo struct {
+	IsLocal     bool `json:"IsLocal"`
+	IsInNetwork bool `json:"IsInNetwork"`
+}
+
+// handleSystemEndpoint serves GET /System/Endpoint, called once per session
+// right after sign-in by every official client — found 404ing, not just
+// unpolished, by testing a real jellyfin-web build via Playwright.
+//
+// IsLocal/IsInNetwork are derived from the request's actual TCP peer
+// address (net.Request.RemoteAddr), not any client-suppliable header:
+// confirmed against the real server that X-Forwarded-For is ignored
+// entirely — sending a public IP in that header while connecting from a
+// private address still came back IsInNetwork: true, so this project
+// doesn't need (and mustn't add) reverse-proxy trust configuration to
+// match that. IsInNetwork also covers link-local addresses
+// (net.IP.IsLinkLocalUnicast) in addition to RFC 1918 private ranges
+// (net.IP.IsPrivate) and loopback — not separately confirmed against the
+// real server (this project's staging setup has no way to originate a
+// request from a link-local source), but consistent with what "in
+// network" means everywhere else in networking, and strictly additive to
+// what was confirmed (it only ever makes this true in a case the real
+// server was never actually tested against, never contradicts a
+// confirmed true/false pair above).
+func (s *Server) handleSystemEndpoint(w http.ResponseWriter, r *http.Request) {
+	ip := remoteIP(r)
+	local := ip != nil && ip.IsLoopback()
+	inNetwork := local || (ip != nil && (ip.IsPrivate() || ip.IsLinkLocalUnicast()))
+	writeJSON(w, http.StatusOK, endpointInfo{IsLocal: local, IsInNetwork: inNetwork})
+}
+
+// remoteIP parses the TCP peer address off r.RemoteAddr (host:port, per
+// net/http's own doc comment on that field), returning nil if it isn't a
+// parseable IP — a defensive fallback for whatever a test harness's
+// httptest.Request might set RemoteAddr to, since production requests
+// always reach here through a real net.Listener that sets it to a genuine
+// address.
+func remoteIP(r *http.Request) net.IP {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	return net.ParseIP(host)
 }
 
 // localAddress reports the address the client used to reach this server,

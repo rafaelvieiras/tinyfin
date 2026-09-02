@@ -27,6 +27,7 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
@@ -125,13 +126,24 @@ func (s *Server) handlePlayedItemAdd(w http.ResponseWriter, r *http.Request) {
 	}
 	state.Played = true
 	state.PlaybackPositionTicks = 0
+	// LastPlayedDate stamped to now — confirmed against a real Jellyfin
+	// server (staging, :8097): the response to this exact route carries a
+	// fresh LastPlayedDate. Same fix as sessions_playback.go's
+	// handleUserPlayedItemsMark/reportPlaybackPosition (the native-player
+	// equivalents of this jellyfin-web-facing route) and load-bearing for
+	// the same reason: GET /Shows/NextUp (nextup.go) depends on it to
+	// order/filter series by recency.
+	now := time.Now()
+	state.LastPlayedDate = &now
 	s.writePlaystateUserData(w, r, ac.User.ID, itemID, state)
 }
 
 // handlePlayedItemRemove is DELETE /Users/{userId}/PlayedItems/{itemId} —
 // unmarks watched. PlayCount resets to 0, not left untouched — confirmed
 // against a real Jellyfin server (staging, :8097): DELETE PlayedItems
-// after a PlayCount of 1 came back with PlayCount 0, not 1.
+// after a PlayCount of 1 came back with PlayCount 0, not 1. LastPlayedDate
+// is cleared the same way — confirmed the same way: the response carries
+// no LastPlayedDate at all after this call, not the prior value.
 func (s *Server) handlePlayedItemRemove(w http.ResponseWriter, r *http.Request) {
 	itemID := storage.ItemID(r.PathValue("itemId"))
 	ac, _ := AuthFromContext(r.Context())
@@ -139,5 +151,6 @@ func (s *Server) handlePlayedItemRemove(w http.ResponseWriter, r *http.Request) 
 	state := s.getPlaystateOrZero(r, ac.User.ID, itemID)
 	state.Played = false
 	state.PlayCount = 0
+	state.LastPlayedDate = nil
 	s.writePlaystateUserData(w, r, ac.User.ID, itemID, state)
 }

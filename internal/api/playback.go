@@ -11,10 +11,12 @@
 package api
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/rafaelvieiras/tinyfin/internal/deviceprofile"
@@ -259,4 +261,125 @@ func (s *Server) handleVideoStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.ServeFile(w, r, item.Path)
+}
+
+// bitrateTestDefaultSize is the response size GET /Playback/BitrateTest
+// uses when the client omits Size — confirmed against a real Jellyfin
+// server (staging, :8097), not assumed: a request with no Size param at
+// all came back byte-for-byte the same Content-Length as an explicit
+// Size=100000, both landing on 131072 once bitrateTestRoundedSize's
+// rounding (below) is applied.
+const bitrateTestDefaultSize = 100000
+
+// bitrateTestMinSize/bitrateTestMaxSize are the Size bounds the real
+// server enforces — confirmed by binary search against it, not guessed: a
+// request carrying an out-of-range Size comes back 400 with a body whose
+// validation message spells the bounds out explicitly ("must be greater
+// than or equal to 1 and less than or equal to 100000000"), and every
+// value up to and including that upper bound succeeds (Size=100000000
+// itself returns 200), so the range is inclusive on both ends.
+const (
+	bitrateTestMinSize = 1
+	bitrateTestMaxSize = 100_000_000
+)
+
+// bitrateTestFloor is the smallest response bitrateTestRoundedSize will
+// ever produce. Confirmed against the real server: every Size from 1
+// through 16 inclusive came back with Content-Length 16, not a smaller
+// number and not literally echoing Size — this is a genuine floor, not
+// coincidental (rounding Size=1 up to the next power of two on its own
+// would give 1, not 16).
+const bitrateTestFloor = 16
+
+// bitrateTestRoundedSize maps a validated Size query value to the actual
+// response length the real server sends — confirmed by requesting a wide
+// spread of values against it (staging, :8097) and finding every one of
+// them landed exactly on a power of two: 1..16 -> 16, 17..32 -> 32,
+// 33..64 -> 64, ..., 100000 -> 131072, 100000000 -> 134217728. Bandwidth
+// estimation only needs *some* fixed number of bytes downloaded in a
+// measured time, so a real client is never expected to depend on getting
+// back exactly the Size it asked for — but this project mirrors the
+// rounding anyway (AGENTS.md principle 4: wire compatibility is the
+// product) rather than serving the literal requested byte count, in case
+// some client does compare Content-Length against what it asked for as a
+// sanity check.
+func bitrateTestRoundedSize(size int) int {
+	n := bitrateTestFloor
+	for n < size {
+		n <<= 1
+	}
+	return n
+}
+
+// bitrateTestValidationError mirrors the ASP.NET Core ProblemDetails shape
+// the real server's own model-binding validation returns for a Size
+// outside bitrateTestMinSize/bitrateTestMaxSize or not parseable as an
+// integer at all (confirmed against the real server for both cases) — a
+// generic ASP.NET Core framework default (RFC 9110 problem-details), not
+// anything specific to Jellyfin's own source, so mirroring its shape here
+// doesn't cross the clean-room boundary AGENTS.md describes. TraceId is
+// left out: it's a per-request diagnostic correlation id with no fixed
+// value to reproduce, and nothing in a real client is expected to parse
+// it.
+type bitrateTestValidationError struct {
+	Type   string              `json:"type"`
+	Title  string              `json:"title"`
+	Status int                 `json:"status"`
+	Errors map[string][]string `json:"errors"`
+}
+
+func writeBitrateTestValidationError(w http.ResponseWriter, message string) {
+	writeJSON(w, http.StatusBadRequest, bitrateTestValidationError{
+		Type:   "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+		Title:  "One or more validation errors occurred.",
+		Status: http.StatusBadRequest,
+		Errors: map[string][]string{"size": {message}},
+	})
+}
+
+// handlePlaybackBitrateTest serves GET /Playback/BitrateTest?Size={bytes} —
+// the bandwidth probe every official client fires before starting a
+// playback session, timing how long the download takes to estimate
+// throughput. Found 404ing, not just unpolished, by testing a real
+// jellyfin-web build via Playwright.
+//
+// Response bytes are random — confirmed not to matter to the real server
+// either: two back-to-back requests with the same Size came back with
+// different bytes. crypto/rand (same package server.go's randomID already
+// uses) rather than a non-cryptographic generator: simpler than adding a
+// second, separately-seeded RNG source to the project for a value nothing
+// about this endpoint's purpose actually needs to be unpredictable, and
+// the largest possible response (bitrateTestMaxSize, ~100MB before
+// rounding) is small enough that crypto/rand's cost here is negligible
+// next to actually writing that many bytes to the response over the
+// network. Content-Type is deliberately "application/octet-stream" — a
+// browser client parses this as an opaque byte count, not JSON, unlike
+// almost every other route in this file.
+func (s *Server) handlePlaybackBitrateTest(w http.ResponseWriter, r *http.Request) {
+	size := bitrateTestDefaultSize
+	if v := r.URL.Query().Get("Size"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			writeBitrateTestValidationError(w, fmt.Sprintf("The value '%s' is not valid.", v))
+			return
+		}
+		size = n
+	}
+	if size < bitrateTestMinSize || size > bitrateTestMaxSize {
+		writeBitrateTestValidationError(w, fmt.Sprintf(
+			"The requested size must be greater than or equal to %d and less than or equal to %d",
+			bitrateTestMinSize, bitrateTestMaxSize))
+		return
+	}
+
+	out := make([]byte, bitrateTestRoundedSize(size))
+	if _, err := rand.Read(out); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Length", strconv.Itoa(len(out)))
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(out)
 }

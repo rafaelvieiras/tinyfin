@@ -229,6 +229,10 @@ func (s *Server) routes() {
 
 	// Everything else in this slice's scope requires a valid token.
 	s.mux.HandleFunc("GET /System/Info", requireAuth(s.handleSystemInfo))
+	// Called once per session right after sign-in by every official client
+	// (system.go's handleSystemEndpoint doc comment) — found 404ing by
+	// testing a real jellyfin-web build via Playwright.
+	s.mux.HandleFunc("GET /System/Endpoint", requireAuth(s.handleSystemEndpoint))
 	s.mux.HandleFunc("GET /Users/Me", requireAuth(s.handleUsersMe))
 	// Admin-only in the reference server (UserController's [Authorize]
 	// policy requires elevation for the list/create/delete routes below).
@@ -267,6 +271,15 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /UserItems/Resume", requireAuth(s.handleUserItemsResume))
 	s.mux.HandleFunc("GET /Shows/{seriesId}/Seasons", requireAuth(s.handleShowSeasons))
 	s.mux.HandleFunc("GET /Shows/{seriesId}/Episodes", requireAuth(s.handleShowEpisodes))
+	// Home screen's "next episode" row and the series detail page's
+	// equivalent (nextup.go) — found 404ing by testing a real jellyfin-web
+	// build via Playwright. No registration-order requirement:
+	// "/Shows/NextUp" splits into 3 segments (counting the leading empty
+	// one, same convention routing.go's routePaths uses), while both
+	// routes above split into 4 — different segment counts mean
+	// http.ServeMux (and routing.go's own normalizePathCase) can't confuse
+	// this route with either regardless of registration order.
+	s.mux.HandleFunc("GET /Shows/NextUp", requireAuth(s.handleShowsNextUp))
 	s.mux.HandleFunc("GET /Studios", requireAuth(s.handleStudios))
 	// Not in the current OpenAPI spec (docs/04's verification source), but
 	// still sent by a real client: jellyfin-web's item-details page uses
@@ -311,6 +324,10 @@ func (s *Server) routes() {
 	// hls.go — HLS segment files (seg_00000.ts) too; handleVideoStream
 	// itself dispatches on the segment shape (see playback.go).
 	s.mux.HandleFunc("GET /Videos/{itemId}/{file}", requireAuth(s.handleVideoStream))
+	// Bandwidth probe fired before a playback session starts
+	// (playback.go's handlePlaybackBitrateTest doc comment) — found
+	// 404ing by testing a real jellyfin-web build via Playwright.
+	s.mux.HandleFunc("GET /Playback/BitrateTest", requireAuth(s.handlePlaybackBitrateTest))
 
 	// Per-user, per-client UI settings (users.go's UserStore doc comment) —
 	// requested by every jellyfin-web session immediately after login, and

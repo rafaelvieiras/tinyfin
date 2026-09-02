@@ -13,6 +13,13 @@ var routePaths = []string{
 	"/QuickConnect/Enabled",
 	"/Branding/Configuration",
 	"/System/Info",
+	// Same segment count (3, including the leading empty split element) as
+	// "/System/Info" above, but no collision risk: normalizePathCase checks
+	// every non-wildcard segment, and these two differ at the second
+	// segment ("Info" vs. "Endpoint", both literals, no wildcard on either
+	// side) — same reasoning as the FavoriteItems/PlayedItems comment
+	// further down this list.
+	"/System/Endpoint",
 	"/Users/Me",
 	"/Users",
 	"/Users/New",
@@ -48,6 +55,10 @@ var routePaths = []string{
 	"/UserItems/Resume",
 	"/Shows/{seriesId}/Seasons",
 	"/Shows/{seriesId}/Episodes",
+	// No length collision with the two entries above (3 segments here vs.
+	// 4 for those, including the leading empty split element) — see
+	// server.go's registration comment for this route.
+	"/Shows/NextUp",
 	"/Studios",
 	"/Users/{userId}/Items/{itemId}",
 	"/Items/{itemId}/Images/{imageType}",
@@ -60,6 +71,14 @@ var routePaths = []string{
 	"/Videos/{itemId}/master.m3u8",
 	"/Videos/{itemId}/main.m3u8",
 	"/Videos/{itemId}/{file}",
+	// 3 segments (including the leading empty split element), same count
+	// as several entries above ("/Items/Latest", "/UserItems/Resume",
+	// "/System/Endpoint", ...) — no collision risk with any of them:
+	// they all differ from this one at the second segment ("Playback", a
+	// literal, matched against another literal on every one of those — no
+	// wildcard sits at that position on either side), same reasoning as
+	// every other entry in this list keyed off segment count.
+	"/Playback/BitrateTest",
 	"/DisplayPreferences/{displayPreferencesId}",
 	"/Sessions/Capabilities/Full",
 	"/Sessions/Playing",

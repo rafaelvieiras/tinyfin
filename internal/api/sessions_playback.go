@@ -16,6 +16,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
@@ -49,6 +50,14 @@ func (s *Server) handleSessionsPlaying(w http.ResponseWriter, r *http.Request) {
 // Played/PlayCount/IsFavorite are read back first and preserved
 // unchanged — this route only ever reports position, never watched
 // status (that's UserPlayedItems, below).
+//
+// LastPlayedDate is stamped to now on every report — confirmed against a
+// real Jellyfin server (staging, :8097): a Sessions/Playing/Progress call
+// reporting a nonzero position came back (via the equivalent GetItem
+// UserData) with a fresh LastPlayedDate, before the item was ever marked
+// fully watched. GET /Shows/NextUp (nextup.go) depends on this being kept
+// current — it's the only signal that lets a series with an in-progress,
+// not-yet-finished episode be recognized as "touched" at all.
 func (s *Server) handleSessionsPlayingProgress(w http.ResponseWriter, r *http.Request) {
 	s.reportPlaybackPosition(r)
 	w.WriteHeader(http.StatusNoContent)
@@ -105,6 +114,8 @@ func (s *Server) reportPlaybackPosition(r *http.Request) storage.ItemID {
 		state = storage.Playstate{}
 	}
 	state.PlaybackPositionTicks = *body.PositionTicks
+	now := time.Now()
+	state.LastPlayedDate = &now
 	_ = s.store.SetPlaystate(r.Context(), ac.User.ID, itemID, state)
 	return itemID
 }
@@ -137,6 +148,12 @@ type userItemDataDto struct {
 // this route) — left stale otherwise, a watched item could resurface
 // mid-progress in the "Continue Watching" row (storage.ItemFilter.Resume,
 // sqlite/item.go) the moment it's later unmarked watched.
+//
+// LastPlayedDate is stamped to now too — same confirmation as
+// reportPlaybackPosition's doc comment above, and load-bearing for the
+// same reason: GET /Shows/NextUp (nextup.go) orders series by it and can
+// filter on nextUpDateCutoff, both of which depend on this being kept
+// current rather than left nil forever.
 func (s *Server) handleUserPlayedItemsMark(w http.ResponseWriter, r *http.Request) {
 	itemID := storage.ItemID(r.PathValue("itemId"))
 	ac, _ := AuthFromContext(r.Context())
@@ -148,6 +165,8 @@ func (s *Server) handleUserPlayedItemsMark(w http.ResponseWriter, r *http.Reques
 	state.Played = true
 	state.PlayCount++
 	state.PlaybackPositionTicks = 0
+	now := time.Now()
+	state.LastPlayedDate = &now
 	if err := s.store.SetPlaystate(r.Context(), ac.User.ID, itemID, state); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
