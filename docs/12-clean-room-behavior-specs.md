@@ -532,3 +532,145 @@ task's own testing). Covered by a new unit test
 proving the fix reorders rather than passes input through. Not independently live-verifiable against
 `jellyfin-real-staging` for this project's own People feature specifically, since staging has no TMDB
 key configured (same limitation noted in the People implementation this section corrects).
+
+---
+
+## Episode/movie detail page — MediaStream.DisplayTitle
+
+### The gap this resolves
+
+The episode detail page revalidation found the video/audio track-selector panel doesn't render at
+all on Tinyfin, because its `MediaStreams` entries carry only the raw probe fields (`Codec`, `Type`,
+`Index`, `Width`/`Height`, `Channels`, a few booleans) and are missing a formatted `DisplayTitle`
+string the client needs to label each track (real example captured live: `"Vídeo: 360p HEVC SDR"` /
+`"Áudio: Indefinido Estéreo - AAC - Stereo - Padrão"` — the `"Vídeo:"`/`"Áudio:"` prefix is the
+client's own label, everything after it is `DisplayTitle`). This isn't derivable from the OpenAPI
+schema (which only documents the field's type, not how its value is computed) or from a couple of
+black-box examples with confidence, so the reference source was read for this one specific
+algorithm.
+
+### Behavior, in prose
+
+`DisplayTitle` is a formatted label built per-stream from that stream's own already-known
+fields — not a separate lookup, and not something a provider or scanner needs to supply; it's pure
+string formatting over data Tinyfin's own prober already has or can easily add. The algorithm
+differs by stream type:
+
+**Video streams**: join, in order, whichever of these apply (space-separated), falling back to
+`""`/omitted if none apply:
+1. A resolution label derived from pixel width/height via fixed breakpoints, each bounded by both a
+   max width and a max height, matched in order (first-fit), with an interlaced (`i`) vs progressive
+   (`p`) suffix based on whether the stream is interlaced:
+
+   | max width | max height | label |
+   |---|---|---|
+   | 256 | 144 | 144 |
+   | 426 | 240 | 240 |
+   | 640 | 360 | 360 |
+   | 682 | 384 | 384 |
+   | 720 | 404 | 404 |
+   | 854 | 480 | 480 |
+   | 960 | 544 | 540 |
+   | 1024 | 576 | 576 |
+   | 1280 | 962 | 720 |
+   | 2560 | 1440 | 1080 |
+   | 4096 | 3072 | 4K |
+   | 8192 | 6144 | 8K |
+
+   Note the height bound is *not* simply the label's own resolution for the 540p/720p/1080p rows
+   (544/962/1440, not 540/720/1080) — this is exact, not an approximation, confirmed directly against
+   `GetResolutionText()` in the reference server's `MediaStream.cs`. A pair that doesn't fit any single
+   breakpoint's width **and** height together (past the last breakpoint, or an oddly-proportioned frame
+   that clears one bound but not the other) yields no resolution label at all rather than guessing.
+   4K/8K have no `i`/`p` suffix.
+2. The codec name, uppercased (e.g. `"hevc"` → `"HEVC"`).
+3. A dynamic-range label: `"HDR"` when the stream is HDR content, `"SDR"` when it's ordinary
+   dynamic range, omitted entirely when unknown. (A Dolby Vision stream gets a more specific label
+   than plain "HDR" — out of scope to fully specify here since Tinyfin has no Dolby Vision detection
+   today; treat as a future refinement, `"HDR"`/`"SDR"` covers the ordinary case this gap is about.)
+
+If the stream has its own explicit `Title` (a name embedded in the file's own stream metadata, e.g.
+a container's per-track title tag) instead of no title, the format changes: start from that `Title`
+verbatim, then append `" - "` + each of the attributes above **only if that attribute's text isn't
+already a substring of `Title`** (case-insensitive) — avoids a redundant `"1080p - 1080p"`-style
+label when the file's own metadata already says what an attribute would add.
+
+**Audio streams**: same two modes (has its own `Title` vs. not), attributes computed differently:
+1. The stream's language, if set and not a placeholder/unset marker — its localized display name
+   (Tinyfin has no localization system for this; the raw language code is an acceptable stand-in).
+2. Either the stream's codec *profile* (if set and not the generic value abbreviated `"lc"`), used
+   verbatim, **or**, only when there's no usable profile, a friendly codec name: `"ac3"` → `"Dolby
+   Digital"`, `"eac3"` → `"Dolby Digital+"`, `"dca"`/`"dts"` → `"DTS"`, anything else → the codec
+   code uppercased.
+3. The channel layout string if the prober reports one (e.g. `"5.1"`/`"stereo"`, capitalized), else
+   a plain `"<N> ch"` count when only a channel count is known.
+4. `"Default"` when the stream is flagged as the default track for its type.
+5. `"External"` when the stream comes from an external/sidecar file rather than being embedded.
+6. `"Original"` when the stream is flagged as the original-language track.
+
+Join whichever of these apply with `" - "`. With an explicit `Title`, same "append only if not
+already a substring" merge rule as video streams above.
+
+**Subtitle streams** (out of scope for the movie/episode gaps that motivated this section, recorded
+for completeness since it's the same field/mechanism): language (or an "Und"/undefined label when
+unset) first, then `"Hearing Impaired"`/`"Default"`/`"Forced"` flags as applicable, then the codec
+uppercased, then `"External"` when applicable — same `Title`-substring-merge rule.
+
+### Scope note
+
+This is a pure formatting function over fields a prober already extracts (or easily could) — no
+network calls, no provider involvement, no per-item storage needed beyond what a `MediaStreamRef`
+already carries or can be extended to carry (`Title`, `Profile`, `ChannelLayout`, `IsDefault`,
+`IsExternal`, `IsOriginal`, `IsInterlaced`, dynamic-range classification). Implement as a Go function
+computed at response-build time (same place `mediaStreamDto`/`mediaStreamDtos` already lives in
+`internal/api/dto.go`), not something to persist — recomputing it on every response keeps it correct
+if the underlying fields are ever corrected without needing a rescan.
+
+### Implementation findings
+
+Implemented in `internal/api/display_title.go` (`displayTitleFor` and its per-type
+`videoDisplayTitle`/`audioDisplayTitle`/`subtitleDisplayTitle` helpers), called from `dto.go`'s
+`mediaStreamDtos` once per stream. `storage.MediaStreamRef` (`internal/storage/item.go`) gained every
+field this algorithm needs — `Profile`, `ChannelLayout`, `IsExternal`, `IsOriginal`, `IsInterlaced`,
+plus the passthrough fields `TimeBase`/`AspectRatio`/`RefFrames`/`PixelFormat`/`Level`/`SampleRate`/
+`ColorTransfer` — no schema migration needed, `media_streams` is a single JSON `TEXT` column
+(`0001_init.sql`), so a new Go struct field just serializes into it. `internal/scan/probe.go`'s
+`mediaStreamsFromProbe` was extended to populate all of these from `ffprobe -show_streams`' own JSON
+output (`field_order` for `IsInterlaced`, `disposition.original` for `IsOriginal`, `color_transfer` for
+the dynamic-range classification, ...).
+
+**Resolution breakpoints** (`resolutionBreakpoints` in `display_title.go`): the exact width/height table
+above (including the non-obvious 544/962/1440 height caps on the 540p/720p/1080p rows) was read directly
+from `GetResolutionText()` in the reference server's `MediaStream.cs`, not approximated — an earlier pass
+had incorrectly implemented these three height caps as the label's own round number (540/720/1080) before
+this was caught by a direct re-comparison against that C# method; fixed to match exactly. A width/height
+pair that doesn't fit any single breakpoint's width **and** height together yields no label, per the
+spec's own "rather than guessing" instruction for the past-the-end case.
+
+**Dynamic range**: per this task's explicit instruction (not the prose above, which said "omitted
+entirely when unknown") — `color_transfer` values `smpte2084`/`arib-std-b67` classify `"HDR"`; every
+other recognized value, and the field being absent entirely, classifies `"SDR"` rather than being
+omitted. No Dolby Vision detection (documented future refinement, both here and in the prose above).
+
+**A real, pre-existing gap found via live comparison, not introduced by this change**: comparing
+`DisplayTitle` output byte-for-byte against the reference server (staging, :8097) for a real staging
+file (`MIB - Homens de Preto (1997) - S01E01`) surfaced that `mediaStreamsFromProbe` never extracted a
+stream's own embedded `tags.title`/`tags.language` into `MediaStreamRef.Title`/`.Language` at all —
+both fields already existed on the struct, nothing ever populated them. This file's audio track carries
+an embedded title (`"Indefinido Estéreo"`, confirmed via `ffprobe` directly), so DisplayTitle's
+"explicit Title" merge-rule branch had never actually fired for any real file before this fix. Now
+extracted (`probe.go`'s `ffprobeStream.Tags`); see the byte-for-byte comparison below.
+
+**Live byte-for-byte comparison** (same file, both servers, after a `POST /Library/Refresh` rescan on
+Tinyfin to pick up the extended prober):
+
+| Stream | Reference server (`:8097`) | Tinyfin (`:8096`) |
+|---|---|---|
+| Video | `"360p HEVC SDR"` | `"360p HEVC SDR"` — exact match |
+| Audio | `"Indefinido Estéreo - AAC - Stereo - Padrão"` | `"Indefinido Estéreo - AAC - Stereo - Default"` |
+
+The one remaining divergence (`"Padrão"` vs. `"Default"`) is the accepted, documented gap from this
+section's own "Behavior, in prose" and "Scope note": the reference server localizes some attribute
+labels into the client's locale (staging is pt-BR), Tinyfin has no localization system for this and
+emits the English label the spec's own wording uses throughout — not a bug, and not something this task
+asked to fix.

@@ -67,6 +67,12 @@ var routePaths = []string{
 	// server.go's registration comment for this route.
 	"/Shows/NextUp",
 	"/Studios",
+	// 3 segments (including the leading empty split element), same count as
+	// "/Playback/BitrateTest"/"/Items/Latest"/"/UserItems/Resume"/
+	// "/System/Endpoint" above — no collision risk: this pattern's second
+	// segment ("LiveTv", a literal) differs from all of theirs, same
+	// reasoning as every other entry in this list keyed off segment count.
+	"/LiveTv/Programs",
 	"/Users/{userId}/Items/{itemId}",
 	"/Items/{itemId}/Images/{imageType}",
 	"/Items/{itemId}/Images/{imageType}/{imageIndex}",

@@ -531,7 +531,13 @@ func (s *Server) handleShowEpisodes(w http.ResponseWriter, r *http.Request) {
 		SortBy:    []storage.SortField{{By: storage.SortByParentIndexNumber}, {By: storage.SortByIndexNumber}},
 		Limit:     defaultItemsLimit,
 	}
-	if v := r.URL.Query().Get("seasonId"); v != "" {
+	// caseInsensitiveQuery: jellyfin-web's season-detail-page call sends
+	// "SeasonId" (PascalCase) — confirmed live via Playwright against a real
+	// jellyfin-web build. Reading the raw, case-sensitive r.URL.Query() here
+	// meant the filter never matched, silently falling through to "every
+	// episode of the series" (the no-seasonId branch) instead of just that
+	// season's ~12 episodes, breaking the "More from Season X" carousel.
+	if v := caseInsensitiveQuery(r).Get("seasonid"); v != "" {
 		seasonID := storage.ItemID(v)
 		filter.ParentID = &seasonID
 	} else {
@@ -626,6 +632,23 @@ func (s *Server) handleItemsFilters2(w http.ResponseWriter, r *http.Request) {
 // is no Studios field on storage.Item at all today (dto.go's baseItemDto
 // doc comment).
 func (s *Server) handleStudios(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{Items: []baseItemDto{}})
+}
+
+// liveTvProgramsResult mirrors the reference server's QueryResult<BaseItemDto>
+// shape for GET /LiveTv/Programs — same envelope as baseItemDtoQueryResult
+// (dto.go), kept as its own alias only so this handler's intent (a LiveTV
+// program listing, always empty) reads clearly at the call site.
+//
+// handleLiveTvPrograms serves GET /LiveTv/Programs. Confirmed live against
+// the reference server (staging, :8097) with no LiveTV tuner configured:
+// {"Items":[],"TotalRecordCount":0,"StartIndex":0} (200), not a 404 — same
+// "honest empty over 404" precedent as handleItemSimilar/handleStudios
+// above (this file's package doc comment): jellyfin-web's series detail
+// page calls this unconditionally, so 404ing it broke that page's network
+// tab even though nothing in this project implements LiveTV. No LiveTV
+// logic exists or is added here — this is a stub, not a partial feature.
+func (s *Server) handleLiveTvPrograms(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{Items: []baseItemDto{}})
 }
 

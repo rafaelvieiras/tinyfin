@@ -121,6 +121,31 @@ func (s *Server) resolveDeviceProfile(r *http.Request) deviceprofile.DeviceProfi
 	return deviceprofile.Default()
 }
 
+// baseMediaSourceInfo builds the fields of a mediaSourceInfoDto that don't
+// depend on any device-profile transcode negotiation — the plain "what file
+// is this" description shared by handlePlaybackInfo (which layers its own
+// Mode-driven fields, e.g. SupportsDirectPlay/TranscodingUrl, on top per
+// decision.Mode below) and dto.go's mediaSourcesFor (baseItemDto.MediaSources
+// on GET /Items/{itemId}, which has no device profile to negotiate against
+// at all — see that function's doc comment). container is passed in rather
+// than read off item directly since handlePlaybackInfo's caller wants
+// decision.Container (a possibly profile-transcoded value) while
+// mediaSourcesFor wants the item's own on-disk container.
+func baseMediaSourceInfo(item storage.Item, container string) mediaSourceInfoDto {
+	return mediaSourceInfoDto{
+		ID:              string(item.ID),
+		Protocol:        "File",
+		Path:            item.Path,
+		Type:            "Default",
+		Container:       container,
+		Size:            item.Size,
+		Name:            item.Name,
+		RunTimeTicks:    item.RunTimeTicks,
+		SupportsProbing: true,
+		MediaStreams:    mediaStreamDtos(item.MediaStreams),
+	}
+}
+
 // handlePlaybackInfo serves both GET and POST /Items/{itemId}/PlaybackInfo.
 // The GET form has no request body to carry a profile, so it always falls
 // through to the registry/default lookup; the POST form is how a real
@@ -137,18 +162,7 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 	decision := playback.Decide(item, profile)
 	resp := playbackInfoResponse{PlaySessionID: randomID()}
 
-	source := mediaSourceInfoDto{
-		ID:              string(item.ID),
-		Protocol:        "File",
-		Path:            item.Path,
-		Type:            "Default",
-		Container:       decision.Container,
-		Size:            item.Size,
-		Name:            item.Name,
-		RunTimeTicks:    item.RunTimeTicks,
-		SupportsProbing: true,
-		MediaStreams:    mediaStreamDtos(item.MediaStreams),
-	}
+	source := baseMediaSourceInfo(item, decision.Container)
 
 	switch decision.Mode {
 	case playback.ModeDirectPlay:

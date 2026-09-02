@@ -147,6 +147,148 @@ type baseItemDto struct {
 	// metadata, don't require it"). nil for a filename-derived item with
 	// no provider enrichment, same convention as Genres/Overview above.
 	People []baseItemPersonDto `json:"People,omitempty"`
+
+	// GenreItems mirrors Genres above but with a stable Id per name — the
+	// real server's own BaseItemDto carries both: Genres for the plain
+	// string chip list, GenreItems for anywhere a client needs to link a
+	// genre chip to a browsable Genre item (its Id). Derived from the same
+	// item.Genres slice, not stored separately — same "derive, don't
+	// store" convention as isFolderType/mediaTypeFor.
+	GenreItems []nameIDPairDto `json:"GenreItems,omitempty"`
+
+	// ExternalUrls links out to a provider's own page for this item (IMDb,
+	// TheMovieDb) — derived from ProviderIDs (already on this DTO) rather
+	// than stored, since it's a pure function of a provider id plus the
+	// item's own Type. See externalURLsFor's doc comment for the exact
+	// URL patterns.
+	ExternalUrls []externalURLDto `json:"ExternalUrls,omitempty"`
+
+	// ChildCount is only meaningful for a folder-shaped item that groups
+	// other items (Series/Season/BoxSet) — how many direct children it has
+	// (storage.ItemFilter.ParentID, non-recursive — same relationship
+	// handleShowSeasons/handleShowEpisodes/itemTypeCount already use). nil
+	// for every other Type, matching the reference server's own "only
+	// present where it means something" convention for this field.
+	ChildCount *int `json:"ChildCount,omitempty"`
+
+	// MediaSources embeds the same per-source description
+	// GET /Items/{itemId}/PlaybackInfo returns (mediaSourceInfoDto,
+	// playback.go), minus that endpoint's device-profile transcode
+	// negotiation — see mediaSourcesFor's doc comment for why there's
+	// nothing to negotiate here. nil for a folder-shaped item with no
+	// playable file behind it (item.Path empty), same as PlaybackInfo
+	// itself would have nothing useful to say about one.
+	MediaSources []mediaSourceInfoDto `json:"MediaSources,omitempty"`
+}
+
+// nameIDPairDto mirrors the reference server's NameIdPair — a {Name, Id}
+// tuple, the shape GenreItems (and, on the real schema, TagItems/StudioItems
+// this project doesn't populate yet) uses.
+type nameIDPairDto struct {
+	Name string `json:"Name"`
+	ID   string `json:"Id"`
+}
+
+// genreID mints a stable, canonical-UUID-formatted Id for a genre name —
+// same sha256+formatUUID technique as personID/themeMediaItemID above, each
+// kept as its own small copy per those functions' doc comments on why: a
+// genre appearing on more than one item needs to resolve to the same Id
+// every time, not a fresh one per response.
+func genreID(name string) string {
+	sum := sha256.Sum256([]byte("genre-" + name))
+	return formatUUID(hex.EncodeToString(sum[:16]))
+}
+
+// genreItemsFor builds BaseItemDto.GenreItems from the same genre names
+// Genres already carries.
+func genreItemsFor(genres []string) []nameIDPairDto {
+	if len(genres) == 0 {
+		return nil
+	}
+	items := make([]nameIDPairDto, 0, len(genres))
+	for _, g := range genres {
+		items = append(items, nameIDPairDto{Name: g, ID: genreID(g)})
+	}
+	return items
+}
+
+// externalURLDto mirrors the reference server's ExternalUrl — {Name, Url}.
+type externalURLDto struct {
+	Name string `json:"Name"`
+	URL  string `json:"Url"`
+}
+
+// externalURLsFor builds BaseItemDto.ExternalUrls from item's ProviderIDs
+// (already-resolved provider ids this project stores, e.g. from TMDB
+// enrichment — internal/metadata) plus itemType, needed only to pick TMDB's
+// movie-vs-tv URL path segment. URL patterns are each provider's own public,
+// well-known page-URL convention (themoviedb.org/imdb.com), not anything
+// sourced from the reference server's C# — same "public, well-known
+// convention, not Jellyfin-specific" reasoning routing.go's
+// normalizePathCase doc comment already applies to ASP.NET Core's
+// case-insensitive routing.
+func externalURLsFor(itemType storage.ItemType, providerIDs map[string]string) []externalURLDto {
+	if len(providerIDs) == 0 {
+		return nil
+	}
+	var urls []externalURLDto
+	if id, ok := providerIDs["Tmdb"]; ok && id != "" {
+		kind := "movie"
+		if itemType == storage.ItemTypeSeries || itemType == storage.ItemTypeSeason || itemType == storage.ItemTypeEpisode {
+			kind = "tv"
+		}
+		urls = append(urls, externalURLDto{Name: "TheMovieDb", URL: "https://www.themoviedb.org/" + kind + "/" + id})
+	}
+	if id, ok := providerIDs["Imdb"]; ok && id != "" {
+		urls = append(urls, externalURLDto{Name: "IMDb", URL: "https://www.imdb.com/title/" + id})
+	}
+	return urls
+}
+
+// childCountItemTypes are the ItemTypes ChildCount is ever populated for —
+// see baseItemDto.ChildCount's doc comment.
+var childCountItemTypes = map[storage.ItemType]bool{
+	storage.ItemTypeSeries: true,
+	storage.ItemTypeSeason: true,
+	storage.ItemTypeBoxSet: true,
+}
+
+// childCountFor computes baseItemDto.ChildCount for id — how many items
+// have it as their direct (non-recursive) ParentID, the same relationship
+// itemTypeCount (latest_grouping.go) already reads, just without that
+// helper's own ItemTypes narrowing (a Series' direct children are Seasons,
+// but a BoxSet's direct children can be any collected type).
+func (s *Server) childCountFor(ctx context.Context, id storage.ItemID) (int, error) {
+	page, err := s.store.QueryItems(ctx, storage.ItemFilter{
+		ParentID: &id,
+		Limit:    1,
+	})
+	if err != nil {
+		return 0, err
+	}
+	return page.TotalCount, nil
+}
+
+// mediaSourcesFor builds BaseItemDto.MediaSources for item — see that
+// field's doc comment on baseItemDto. Confirmed against the reference
+// server (staging, :8097): GET /Items/{itemId} embeds this same array
+// directly on the item response, not just on PlaybackInfo. nil for an item
+// with no playable file (item.Path empty — a folder-shaped item like a
+// Series/Season/BoxSet), matching PlaybackInfo's own 404 for such an item
+// (nothing to describe).
+func mediaSourcesFor(item storage.Item) []mediaSourceInfoDto {
+	if item.Path == "" {
+		return nil
+	}
+	source := baseMediaSourceInfo(item, item.Container)
+	// No device profile to negotiate against here (this function's doc
+	// comment) — SupportsDirectPlay/TranscodingSubProtocol mirror
+	// handlePlaybackInfo's own ModeDirectPlay branch (playback.go) since a
+	// bare item description has nothing to decide against, same as that
+	// branch's own reasoning.
+	source.SupportsDirectPlay = true
+	source.TranscodingSubProtocol = "http"
+	return []mediaSourceInfoDto{source}
 }
 
 // baseItemPersonDto mirrors the OpenAPI schema's BaseItemPerson, trimmed
@@ -201,35 +343,48 @@ type baseItemDtoQueryResult struct {
 // "not every MediaStream field, most of which ... is transcode-decision
 // detail out of this slice's scope").
 //
-// IsInterlaced through SupportsExternalStream are NOT omitempty and carry
-// no corresponding storage.MediaStreamRef field — found required by
-// reading jellyfin-sdk-kotlin's MediaStream.kt directly: this DTO is
-// nested inside both MediaSourceInfo (PlaybackInfo response) and
-// BaseItemDto (GetItem response), so it hits kotlinx.serialization's
+// IsHearingImpaired/IsTextSubtitleStream/SupportsExternalStream are NOT
+// omitempty and carry no corresponding storage.MediaStreamRef field —
+// found required by reading jellyfin-sdk-kotlin's MediaStream.kt directly:
+// this DTO is nested inside both MediaSourceInfo (PlaybackInfo response)
+// and BaseItemDto (GetItem response), so it hits kotlinx.serialization's
 // strict MissingFieldException on every item that has any audio/video
 // track at all, i.e. effectively every playable item, the moment the
 // native player parses either response. false is an accurate value for
-// every one of these given what this project tracks today (no interlace
-// detection, no forced/external-subtitle distinction beyond IsForced
-// itself, no "original language" flag).
+// every one of these given what this project tracks today (no hearing-
+// impaired flag, no forced/external-subtitle distinction beyond IsForced
+// itself). IsInterlaced/IsOriginal/IsExternal, unlike those three, DO now
+// have a real storage.MediaStreamRef field behind them (docs/12's
+// "Episode/movie detail page — MediaStream.DisplayTitle" — needed to
+// compute DisplayTitle below, and exposed on the wire since the reference
+// server does too).
 type mediaStreamDto struct {
-	Codec                  string `json:"Codec,omitempty"`
-	Language               string `json:"Language,omitempty"`
-	Title                  string `json:"Title,omitempty"`
-	Type                   string `json:"Type"`
-	Index                  int    `json:"Index"`
-	IsDefault              bool   `json:"IsDefault"`
-	IsForced               bool   `json:"IsForced"`
-	IsInterlaced           bool   `json:"IsInterlaced"`
-	IsHearingImpaired      bool   `json:"IsHearingImpaired"`
-	IsOriginal             bool   `json:"IsOriginal"`
-	IsExternal             bool   `json:"IsExternal"`
-	IsTextSubtitleStream   bool   `json:"IsTextSubtitleStream"`
-	SupportsExternalStream bool   `json:"SupportsExternalStream"`
-	Channels               *int   `json:"Channels,omitempty"`
-	Width                  *int   `json:"Width,omitempty"`
-	Height                 *int   `json:"Height,omitempty"`
-	BitRate                *int64 `json:"BitRate,omitempty"`
+	Codec                  string   `json:"Codec,omitempty"`
+	Language               string   `json:"Language,omitempty"`
+	Title                  string   `json:"Title,omitempty"`
+	DisplayTitle           string   `json:"DisplayTitle,omitempty"`
+	Type                   string   `json:"Type"`
+	Index                  int      `json:"Index"`
+	IsDefault              bool     `json:"IsDefault"`
+	IsForced               bool     `json:"IsForced"`
+	IsInterlaced           bool     `json:"IsInterlaced"`
+	IsHearingImpaired      bool     `json:"IsHearingImpaired"`
+	IsOriginal             bool     `json:"IsOriginal"`
+	IsExternal             bool     `json:"IsExternal"`
+	IsTextSubtitleStream   bool     `json:"IsTextSubtitleStream"`
+	SupportsExternalStream bool     `json:"SupportsExternalStream"`
+	Channels               *int     `json:"Channels,omitempty"`
+	Width                  *int     `json:"Width,omitempty"`
+	Height                 *int     `json:"Height,omitempty"`
+	BitRate                *int64   `json:"BitRate,omitempty"`
+	Profile                string   `json:"Profile,omitempty"`
+	ChannelLayout          string   `json:"ChannelLayout,omitempty"`
+	TimeBase               string   `json:"TimeBase,omitempty"`
+	AspectRatio            string   `json:"AspectRatio,omitempty"`
+	RefFrames              *int     `json:"RefFrames,omitempty"`
+	PixelFormat            string   `json:"PixelFormat,omitempty"`
+	Level                  *float64 `json:"Level,omitempty"`
+	SampleRate             *int     `json:"SampleRate,omitempty"`
 }
 
 func mediaStreamDtos(streams []storage.MediaStreamRef) []mediaStreamDto {
@@ -239,17 +394,29 @@ func mediaStreamDtos(streams []storage.MediaStreamRef) []mediaStreamDto {
 	dtos := make([]mediaStreamDto, 0, len(streams))
 	for _, s := range streams {
 		dtos = append(dtos, mediaStreamDto{
-			Codec:     s.Codec,
-			Language:  s.Language,
-			Title:     s.Title,
-			Type:      string(s.Type),
-			Index:     s.Index,
-			IsDefault: s.IsDefault,
-			IsForced:  s.IsForced,
-			Channels:  s.Channels,
-			Width:     s.Width,
-			Height:    s.Height,
-			BitRate:   s.BitRate,
+			Codec:         s.Codec,
+			Language:      s.Language,
+			Title:         s.Title,
+			DisplayTitle:  displayTitleFor(s),
+			Type:          string(s.Type),
+			Index:         s.Index,
+			IsDefault:     s.IsDefault,
+			IsForced:      s.IsForced,
+			IsInterlaced:  s.IsInterlaced,
+			IsOriginal:    s.IsOriginal,
+			IsExternal:    s.IsExternal,
+			Channels:      s.Channels,
+			Width:         s.Width,
+			Height:        s.Height,
+			BitRate:       s.BitRate,
+			Profile:       s.Profile,
+			ChannelLayout: s.ChannelLayout,
+			TimeBase:      s.TimeBase,
+			AspectRatio:   s.AspectRatio,
+			RefFrames:     s.RefFrames,
+			PixelFormat:   s.PixelFormat,
+			Level:         s.Level,
+			SampleRate:    s.SampleRate,
 		})
 	}
 	return dtos
@@ -445,6 +612,14 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		BackdropImageTags:       backdropImageTags,
 		PrimaryImageAspectRatio: primaryImageAspectRatio,
 		People:                  peopleDtos(item.People),
+		GenreItems:              genreItemsFor(item.Genres),
+		ExternalUrls:            externalURLsFor(item.Type, item.ProviderIDs),
+		MediaSources:            mediaSourcesFor(item),
+	}
+	if childCountItemTypes[item.Type] {
+		if n, err := s.childCountFor(ctx, item.ID); err == nil {
+			dto.ChildCount = &n
+		}
 	}
 	if item.ParentID != nil {
 		dto.ParentID = string(*item.ParentID)

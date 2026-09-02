@@ -108,6 +108,55 @@ type MediaStreamRef struct {
 	Width     *int // video only
 	Height    *int // video only
 	BitRate   *int64
+
+	// Profile is the codec profile ffprobe reports (e.g. "Main 10" for
+	// HEVC video, "LC" for AAC audio) — the reference server's own
+	// DisplayTitle algorithm (docs/12's "Episode/movie detail page —
+	// MediaStream.DisplayTitle") prefers this over a friendly codec name
+	// for an audio stream when it's set and isn't the generic "lc" value.
+	Profile string
+
+	// ChannelLayout is ffprobe's own channel-layout label (e.g. "5.1",
+	// "stereo") — audio only, preferred over a bare Channels count in
+	// DisplayTitle when the prober can supply it.
+	ChannelLayout string
+
+	// IsExternal marks a subtitle stream sourced from an external/sidecar
+	// file rather than embedded in the media container — always false for
+	// a video/audio stream mediaStreamsFromProbe (internal/scan) produces,
+	// since ffprobe only ever sees the one file it's pointed at.
+	IsExternal bool
+
+	// IsOriginal marks the stream flagged as the original-language track
+	// — ffprobe's disposition.original, when the installed ffmpeg reports
+	// it (an older ffmpeg build simply omits the key, read as false).
+	IsOriginal bool
+
+	// IsInterlaced is derived from ffprobe's field_order ("progressive" ->
+	// false; "tt"/"bb"/"tb"/"bt" -> true; "unknown"/absent -> false, same
+	// "don't guess" convention as the resolution-label breakpoints below).
+	IsInterlaced bool
+
+	// TimeBase/AspectRatio/RefFrames/PixelFormat/Level/SampleRate are
+	// ffprobe passthrough fields with no other consumer today beyond
+	// exposing them on the wire (mediaStreamDto, internal/api/dto.go) —
+	// docs/12's DisplayTitle scope note lists these as fields "a prober
+	// already extracts (or easily could)" that the reference server's own
+	// MediaStream DTO also carries.
+	TimeBase    string // e.g. "1/1000" (video r_frame_rate's inverse unit)
+	AspectRatio string // e.g. "16:9" (display_aspect_ratio) — video only
+	RefFrames   *int   // video only
+	PixelFormat string // e.g. "yuv420p10le" — video only
+	Level       *float64
+	SampleRate  *int // audio only, Hz
+
+	// ColorTransfer is ffprobe's raw color_transfer value (e.g.
+	// "smpte2084", "arib-std-b67", "bt709") — video only. Not itself
+	// exposed on the wire; DisplayTitle's dynamic-range label (HDR/SDR,
+	// docs/12) is derived from it at response-build time rather than
+	// classified and stored here, same "recompute, don't persist a
+	// derived value" convention as DisplayTitle itself.
+	ColorTransfer string
 }
 
 // Person is one cast/crew credit on an Item — the storage-side counterpart

@@ -92,7 +92,16 @@ func (s *Server) handleShowsNextUp(w http.ResponseWriter, r *http.Request) {
 	}
 	userID := ac.User.ID
 
-	q := r.URL.Query()
+	// caseInsensitiveQuery (library.go): jellyfin-web's series-detail-page
+	// call sends "SeriesId" (PascalCase), not "seriesId" — confirmed live
+	// via Playwright against a real jellyfin-web build; reading the raw,
+	// case-sensitive r.URL.Query() here meant that param never matched,
+	// silently falling through to "no series requested" (every series'
+	// NextUp entry) and producing a cross-series leak on the series detail
+	// page's own "Next Up" widget. Applied to every param this handler
+	// reads, not just seriesId, since the same client is the source of all
+	// of them and there is no reason to expect the others are safe.
+	q := caseInsensitiveQuery(r)
 
 	// enableResumable defaults true (absent or anything but exactly
 	// "false") — confirmed against the real server: an in-progress
@@ -102,7 +111,7 @@ func (s *Server) handleShowsNextUp(w http.ResponseWriter, r *http.Request) {
 	// home-screen call (this file's package doc comment) always sends
 	// "false" itself — Continue Watching (GET /UserItems/Resume,
 	// library.go) is where it wants in-progress items, not this row.
-	enableResumable := !strings.EqualFold(q.Get("enableResumable"), "false")
+	enableResumable := !strings.EqualFold(q.Get("enableresumable"), "false")
 
 	// enableRewatching defaults false. Confirmed only partially against the
 	// real server: with every episode of a series marked played and this
@@ -120,11 +129,11 @@ func (s *Server) handleShowsNextUp(w http.ResponseWriter, r *http.Request) {
 	// flag a silent no-op forever. If this turns out wrong once a
 	// reproducible real-server case is found, it's a one-line fix isolated
 	// to nextUpCandidateForSeries below.
-	enableRewatching := strings.EqualFold(q.Get("enableRewatching"), "true")
+	enableRewatching := strings.EqualFold(q.Get("enablerewatching"), "true")
 
 	var cutoff time.Time
 	hasCutoff := false
-	if v := q.Get("nextUpDateCutoff"); v != "" {
+	if v := q.Get("nextupdatecutoff"); v != "" {
 		if t, err := time.Parse(time.RFC3339, v); err == nil {
 			cutoff = t
 			hasCutoff = true
@@ -155,7 +164,7 @@ func (s *Server) handleShowsNextUp(w http.ResponseWriter, r *http.Request) {
 	// server (the real, intended use) never observes the difference
 	// anyway.
 	var seriesIDs []storage.ItemID
-	if v := q.Get("seriesId"); v != "" {
+	if v := q.Get("seriesid"); v != "" {
 		if _, err := s.store.GetItem(r.Context(), storage.ItemID(v)); err == nil {
 			seriesIDs = []storage.ItemID{storage.ItemID(v)}
 		}
@@ -203,7 +212,7 @@ func (s *Server) handleShowsNextUp(w http.ResponseWriter, r *http.Request) {
 	total := len(candidates)
 
 	offset := 0
-	if v := q.Get("startIndex"); v != "" {
+	if v := q.Get("startindex"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
 			offset = n
 		}
@@ -232,7 +241,7 @@ func (s *Server) handleShowsNextUp(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{
 		Items:            items,
-		TotalRecordCount: nextUpTotalRecordCount(q.Get("enableTotalRecordCount"), total),
+		TotalRecordCount: nextUpTotalRecordCount(q.Get("enabletotalrecordcount"), total),
 		StartIndex:       offset,
 	})
 }

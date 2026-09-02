@@ -314,6 +314,23 @@ func TestNextUpSeriesIDFilter(t *testing.T) {
 	if len(scopedResult.Items) != 1 || scopedResult.Items[0].ID != string(epA2) {
 		t.Fatalf("Items = %+v, want exactly A's episode 2 (%s)", scopedResult.Items, epA2)
 	}
+
+	// SeriesId=A, PascalCase — the casing jellyfin-web's series-detail-page
+	// call actually sends (confirmed live via Playwright). Regression
+	// guard for the bug where handleShowsNextUp read the raw,
+	// case-sensitive r.URL.Query() and so never matched "SeriesId",
+	// silently falling back to "every series" and leaking another
+	// series' episode into this series' "Next Up" widget.
+	pascalScoped := get(http.MethodGet, "/Shows/NextUp?SeriesId="+string(seriesAID))
+	defer pascalScoped.Body.Close()
+	var pascalResult baseItemDtoQueryResult
+	if err := json.NewDecoder(pascalScoped.Body).Decode(&pascalResult); err != nil {
+		t.Fatalf("decoding response: %v", err)
+	}
+	if len(pascalResult.Items) != 1 || pascalResult.Items[0].ID != string(epA2) {
+		t.Fatalf("Items (SeriesId, PascalCase) = %+v, want exactly A's episode 2 (%s)", pascalResult.Items, epA2)
+	}
+
 	_ = epB2
 }
 

@@ -285,6 +285,10 @@ func (s *Server) routes() {
 	// this route with either regardless of registration order.
 	s.mux.HandleFunc("GET /Shows/NextUp", requireAuth(s.handleShowsNextUp))
 	s.mux.HandleFunc("GET /Studios", requireAuth(s.handleStudios))
+	// LiveTv/Programs — jellyfin-web's series detail page calls this
+	// unconditionally even though no LiveTV tuner is ever configured here.
+	// See library.go's handleLiveTvPrograms doc comment.
+	s.mux.HandleFunc("GET /LiveTv/Programs", requireAuth(s.handleLiveTvPrograms))
 	// Not in the current OpenAPI spec (docs/04's verification source), but
 	// still sent by a real client: jellyfin-web's item-details page uses
 	// the legacy jellyfin-apiclient package (same one behind the

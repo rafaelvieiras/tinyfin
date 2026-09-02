@@ -401,6 +401,26 @@ func TestShowSeasonsAndEpisodes(t *testing.T) {
 	if len(all.Items) != 3 {
 		t.Fatalf("Episodes(all) = %+v, want 3 items", all.Items)
 	}
+
+	// GET /Shows/{seriesId}/Episodes?SeasonId=<season1> — PascalCase, the
+	// casing jellyfin-web's season-detail-page call actually sends
+	// (confirmed live via Playwright). Regression guard for the bug where
+	// this handler read the raw, case-sensitive r.URL.Query() and so never
+	// matched "SeasonId", silently falling back to "every episode of the
+	// series" instead of just this season's — the "More from Season X"
+	// carousel bug.
+	ep1PascalResp := get(http.MethodGet, "/Shows/"+string(seriesID)+"/Episodes?SeasonId="+string(season1ID))
+	defer ep1PascalResp.Body.Close()
+	if ep1PascalResp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /Shows/{seriesId}/Episodes?SeasonId=... status = %d, want 200", ep1PascalResp.StatusCode)
+	}
+	var ep1Pascal baseItemDtoQueryResult
+	if err := json.NewDecoder(ep1PascalResp.Body).Decode(&ep1Pascal); err != nil {
+		t.Fatalf("decoding Episodes (SeasonId, PascalCase): %v", err)
+	}
+	if len(ep1Pascal.Items) != 2 {
+		t.Fatalf("Episodes(SeasonId=season1, PascalCase) = %+v, want 2 items", ep1Pascal.Items)
+	}
 }
 
 func TestItemImageNotFound(t *testing.T) {
@@ -674,6 +694,153 @@ func TestItemGetIncludesPeople(t *testing.T) {
 	director := dto.People[1]
 	if director.Name != "Lana Wachowski" || director.Type != "Director" || director.Role != "" {
 		t.Errorf("People[1] = %+v, want {Lana Wachowski, \"\", Director}", director)
+	}
+}
+
+// TestItemGetIncludesGenreItemsExternalUrlsAndMediaSources regression-guards
+// item 5/6 of the series/episode revalidation: GenreItems (a stable Id per
+// Genres entry), ExternalUrls (derived from ProviderIDs), and MediaSources
+// (the same per-source description PlaybackInfo returns, minus its
+// device-profile negotiation) were entirely missing from baseItemDto.
+func TestItemGetIncludesGenreItemsExternalUrlsAndMediaSources(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "mia", "miapass")
+	token := loginToken(t, ts.URL, user.Name, "miapass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "GenreLib", storage.CollectionTypeMovies)
+	if err := st.UpsertItem(context.Background(), storage.Item{
+		Type: storage.ItemTypeMovie, LibraryID: libID, Name: "Genre Movie",
+		Genres:      []string{"Action", "Sci-Fi"},
+		ProviderIDs: map[string]string{"Tmdb": "603", "Imdb": "tt0133093"},
+		Path:        "/media/GenreLib/Genre Movie.mkv",
+		Container:   "mkv",
+	}); err != nil {
+		t.Fatalf("UpsertItem: %v", err)
+	}
+	itemID := mustFindItemByName(t, st, libID, "Genre Movie")
+
+	resp := get(http.MethodGet, "/Items/"+string(itemID))
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /Items/{itemId} status = %d, want 200", resp.StatusCode)
+	}
+	var dto baseItemDto
+	if err := json.NewDecoder(resp.Body).Decode(&dto); err != nil {
+		t.Fatalf("decoding item: %v", err)
+	}
+
+	if len(dto.GenreItems) != 2 {
+		t.Fatalf("GenreItems = %+v, want 2 entries", dto.GenreItems)
+	}
+	if dto.GenreItems[0].Name != "Action" || dto.GenreItems[0].ID == "" {
+		t.Errorf("GenreItems[0] = %+v, want {Action, <non-empty Id>}", dto.GenreItems[0])
+	}
+	if dto.GenreItems[1].Name != "Sci-Fi" || dto.GenreItems[1].ID == "" {
+		t.Errorf("GenreItems[1] = %+v, want {Sci-Fi, <non-empty Id>}", dto.GenreItems[1])
+	}
+
+	if len(dto.ExternalUrls) != 2 {
+		t.Fatalf("ExternalUrls = %+v, want 2 entries", dto.ExternalUrls)
+	}
+	var sawTMDB, sawIMDb bool
+	for _, u := range dto.ExternalUrls {
+		switch u.Name {
+		case "TheMovieDb":
+			sawTMDB = true
+			if u.URL != "https://www.themoviedb.org/movie/603" {
+				t.Errorf("TheMovieDb URL = %q, want https://www.themoviedb.org/movie/603", u.URL)
+			}
+		case "IMDb":
+			sawIMDb = true
+			if u.URL != "https://www.imdb.com/title/tt0133093" {
+				t.Errorf("IMDb URL = %q, want https://www.imdb.com/title/tt0133093", u.URL)
+			}
+		}
+	}
+	if !sawTMDB || !sawIMDb {
+		t.Errorf("ExternalUrls = %+v, want both TheMovieDb and IMDb entries", dto.ExternalUrls)
+	}
+
+	if len(dto.MediaSources) != 1 {
+		t.Fatalf("MediaSources = %+v, want 1 entry", dto.MediaSources)
+	}
+	if dto.MediaSources[0].ID != string(itemID) || dto.MediaSources[0].Container != "mkv" {
+		t.Errorf("MediaSources[0] = %+v, want Id=%s Container=mkv", dto.MediaSources[0], itemID)
+	}
+}
+
+// TestItemGetChildCount regression-guards ChildCount: only populated for a
+// folder-shaped item type (Series/Season/BoxSet) that groups other items,
+// counting direct (non-recursive) children.
+func TestItemGetChildCount(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "noa", "noapass")
+	token := loginToken(t, ts.URL, user.Name, "noapass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "ChildCountLib", storage.CollectionTypeTVShows)
+	seriesID, seasonID := seedTestSeries(t, st, libID, "CC Series", "CC Season")
+	seedTestEpisode(t, st, libID, seriesID, seasonID, 1, 1, "CC Episode 1")
+	seedTestEpisode(t, st, libID, seriesID, seasonID, 1, 2, "CC Episode 2")
+
+	// Series -> 1 direct child (its one season).
+	seriesResp := get(http.MethodGet, "/Items/"+string(seriesID))
+	defer seriesResp.Body.Close()
+	var seriesDTO baseItemDto
+	if err := json.NewDecoder(seriesResp.Body).Decode(&seriesDTO); err != nil {
+		t.Fatalf("decoding series: %v", err)
+	}
+	if seriesDTO.ChildCount == nil || *seriesDTO.ChildCount != 1 {
+		t.Errorf("series ChildCount = %v, want 1", seriesDTO.ChildCount)
+	}
+
+	// Season -> 2 direct children (its two episodes).
+	seasonResp := get(http.MethodGet, "/Items/"+string(seasonID))
+	defer seasonResp.Body.Close()
+	var seasonDTO baseItemDto
+	if err := json.NewDecoder(seasonResp.Body).Decode(&seasonDTO); err != nil {
+		t.Fatalf("decoding season: %v", err)
+	}
+	if seasonDTO.ChildCount == nil || *seasonDTO.ChildCount != 2 {
+		t.Errorf("season ChildCount = %v, want 2", seasonDTO.ChildCount)
+	}
+
+	// Episode -> ChildCount not populated for this Type at all.
+	epID := mustFindItemByName(t, st, libID, "CC Episode 1")
+	epResp := get(http.MethodGet, "/Items/"+string(epID))
+	defer epResp.Body.Close()
+	var epDTO baseItemDto
+	if err := json.NewDecoder(epResp.Body).Decode(&epDTO); err != nil {
+		t.Fatalf("decoding episode: %v", err)
+	}
+	if epDTO.ChildCount != nil {
+		t.Errorf("episode ChildCount = %v, want nil", epDTO.ChildCount)
+	}
+}
+
+// TestLiveTvProgramsIsHonestEmpty regression-guards item 4 of the
+// series/episode revalidation: jellyfin-web's series detail page calls
+// GET /LiveTv/Programs unconditionally even though no LiveTV tuner is ever
+// configured here — confirmed against the reference server that this comes
+// back 200 with an empty QueryResult, not 404.
+func TestLiveTvProgramsIsHonestEmpty(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "liv", "livpass")
+	token := loginToken(t, ts.URL, user.Name, "livpass")
+	get := authedClient(t, ts.URL, token)
+
+	resp := get(http.MethodGet, "/LiveTv/Programs")
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /LiveTv/Programs status = %d, want 200", resp.StatusCode)
+	}
+	var result baseItemDtoQueryResult
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatalf("decoding response: %v", err)
+	}
+	if len(result.Items) != 0 || result.TotalRecordCount != 0 {
+		t.Errorf("result = %+v, want empty Items and TotalRecordCount 0", result)
 	}
 }
 
