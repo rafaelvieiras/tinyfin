@@ -36,8 +36,8 @@ func TestOpenAndMigrate(t *testing.T) {
 	if err := st.db.QueryRow(`SELECT MAX(version) FROM schema_migrations`).Scan(&version); err != nil {
 		t.Fatalf("reading schema_migrations: %v", err)
 	}
-	if version != 1 {
-		t.Fatalf("expected schema version 1, got %d", version)
+	if version != 2 {
+		t.Fatalf("expected schema version 2, got %d", version)
 	}
 
 	// Reopening an already-migrated database must be a no-op, not an error.
@@ -166,6 +166,55 @@ func TestSeedAndGetItem(t *testing.T) {
 	}
 	if len(got.Tags) != 1 || got.Tags[0] != "pilot-episode" {
 		t.Errorf("got.Tags = %v, want [pilot-episode]", got.Tags)
+	}
+}
+
+// TestItemPeopleRoundTrips proves storage.Item.People (added alongside
+// migration 0002_people.sql) survives an UpsertItem/GetItem round trip via
+// the same JSON-column marshal/unmarshal pattern already used for
+// Genres/Tags/Taglines.
+func TestItemPeopleRoundTrips(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+	libraryID, _, _, _, _ := seedTree(t, st)
+
+	item := storage.Item{
+		Type: storage.ItemTypeMovie, LibraryID: libraryID, Name: "Cast Test Movie",
+		People: []storage.Person{
+			{Name: "Keanu Reeves", Role: "Neo", Type: "Actor", TMDBID: 6384},
+			{Name: "Lana Wachowski", Type: "Director"},
+		},
+	}
+	if err := st.UpsertItem(ctx, item); err != nil {
+		t.Fatalf("UpsertItem: %v", err)
+	}
+
+	page, err := st.QueryItems(ctx, storage.ItemFilter{LibraryID: &libraryID, Limit: 10})
+	if err != nil {
+		t.Fatalf("QueryItems: %v", err)
+	}
+	var itemID storage.ItemID
+	for _, it := range page.Items {
+		if it.Name == "Cast Test Movie" {
+			itemID = it.ID
+		}
+	}
+	if itemID == "" {
+		t.Fatal("could not find just-inserted Cast Test Movie")
+	}
+
+	got, err := st.GetItem(ctx, itemID)
+	if err != nil {
+		t.Fatalf("GetItem: %v", err)
+	}
+	if len(got.People) != 2 {
+		t.Fatalf("got.People = %+v, want 2 entries", got.People)
+	}
+	if got.People[0].Name != "Keanu Reeves" || got.People[0].Role != "Neo" || got.People[0].Type != "Actor" || got.People[0].TMDBID != 6384 {
+		t.Errorf("got.People[0] = %+v, want {Keanu Reeves, Neo, Actor, 6384}", got.People[0])
+	}
+	if got.People[1].Name != "Lana Wachowski" || got.People[1].Type != "Director" {
+		t.Errorf("got.People[1] = %+v, want {Lana Wachowski, \"\", Director, 0}", got.People[1])
 	}
 }
 

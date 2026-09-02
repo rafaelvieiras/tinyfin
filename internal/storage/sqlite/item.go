@@ -21,6 +21,7 @@ const itemColumns = `items.id, items.type, items.library_id, items.parent_id, it
 	items.path, items.container, items.size,
 	items.collection_type,
 	items.media_streams,
+	items.people,
 	items.date_created`
 
 // rowScanner is satisfied by both *sql.Row and *sql.Rows, so scanItem works
@@ -49,6 +50,7 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 		size                                    int64
 		collectionType                          string
 		mediaStreamsJSON                        string
+		peopleJSON                              string
 		dateCreated                             time.Time
 	)
 
@@ -63,6 +65,7 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 		&path, &container, &size,
 		&collectionType,
 		&mediaStreamsJSON,
+		&peopleJSON,
 		&dateCreated,
 	); err != nil {
 		return storage.Item{}, err
@@ -149,6 +152,9 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 	if err := unmarshalJSONInto(mediaStreamsJSON, &item.MediaStreams); err != nil {
 		return storage.Item{}, err
 	}
+	if err := unmarshalJSONInto(peopleJSON, &item.People); err != nil {
+		return storage.Item{}, err
+	}
 
 	return item, nil
 }
@@ -223,6 +229,10 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 	if err != nil {
 		return err
 	}
+	peopleJSON, err := marshalJSON(item.People)
+	if err != nil {
+		return err
+	}
 
 	const query = `INSERT INTO items (
 		id, type, library_id, parent_id, name, original_title, sort_name, overview,
@@ -235,9 +245,10 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 		path, container, size,
 		collection_type,
 		media_streams,
+		people,
 		search_text,
 		date_created
-	) VALUES (?,?,?,?,?,?,?,?, ?,?,?, ?,?,?,?,?,?,?, ?,?, ?,?, ?,?,?, ?, ?,?,?, ?, ?, ?, ?)
+	) VALUES (?,?,?,?,?,?,?,?, ?,?,?, ?,?,?,?,?,?,?, ?,?, ?,?, ?,?,?, ?, ?,?,?, ?, ?, ?, ?, ?)
 	ON CONFLICT(id) DO UPDATE SET
 		type=excluded.type, library_id=excluded.library_id, parent_id=excluded.parent_id, name=excluded.name,
 		original_title=excluded.original_title, sort_name=excluded.sort_name, overview=excluded.overview,
@@ -251,6 +262,7 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 		path=excluded.path, container=excluded.container, size=excluded.size,
 		collection_type=excluded.collection_type,
 		media_streams=excluded.media_streams,
+		people=excluded.people,
 		search_text=excluded.search_text,
 		date_created=excluded.date_created`
 
@@ -266,6 +278,7 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 			item.Path, item.Container, item.Size,
 			string(item.CollectionType),
 			mediaStreamsJSON,
+			peopleJSON,
 			itemSearchText(item),
 			item.DateCreated,
 		); err != nil {

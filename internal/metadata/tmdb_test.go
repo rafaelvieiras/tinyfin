@@ -3,6 +3,7 @@ package metadata
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -79,6 +80,98 @@ func TestTMDBProviderLookupMovie(t *testing.T) {
 	}
 	if res.Images[0].URL != tmdbImageBase+"/poster.jpg" {
 		t.Errorf("Images[0].URL = %q, want %q", res.Images[0].URL, tmdbImageBase+"/poster.jpg")
+	}
+}
+
+// TestTMDBProviderLookupMovieIncludesCredits proves lookupMovie's
+// append_to_response=credits integration maps TMDB's cast/crew shape into
+// Result.People: cast becomes Actor entries in billing order, and only the
+// crew jobs crewTypeForJob recognizes (Director/Writer family/Producer)
+// come through — everything else is dropped.
+func TestTMDBProviderLookupMovieIncludesCredits(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/search/movie", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(t, w, tmdbSearchResponse{Results: []tmdbSearchResult{{ID: 603, Title: "The Matrix"}}})
+	})
+	mux.HandleFunc("/movie/603", func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.Query().Get("append_to_response"); got != "credits" {
+			t.Errorf("append_to_response = %q, want credits", got)
+		}
+		writeJSON(t, w, tmdbDetailsResponse{
+			tmdbSearchResult: tmdbSearchResult{ID: 603, Title: "The Matrix", ReleaseDate: "1999-03-31"},
+			Credits: tmdbCredits{
+				Cast: []tmdbCastMember{
+					{ID: 8, Name: "Carrie-Anne Moss", Character: "Trinity", Order: 1},
+					{ID: 6384, Name: "Keanu Reeves", Character: "Neo", Order: 0},
+				},
+				Crew: []tmdbCrewMember{
+					{ID: 9, Name: "Lana Wachowski", Job: "Director"},
+					{ID: 10, Name: "Lilly Wachowski", Job: "Writer"},
+					{ID: 11, Name: "Joel Silver", Job: "Producer"},
+					{ID: 12, Name: "Bill Pope", Job: "Director of Photography"},
+				},
+			},
+		})
+	})
+
+	p := newTestTMDBProvider(t, mux)
+	res, err := p.Lookup(context.Background(), Query{Kind: KindMovie, Title: "The Matrix", Year: 1999})
+	if err != nil {
+		t.Fatalf("Lookup: %v", err)
+	}
+
+	// 2 cast (Actor, billing order) + 3 recognized crew jobs; "Director of
+	// Photography" is dropped.
+	if len(res.People) != 5 {
+		t.Fatalf("len(People) = %d, want 5; got %+v", len(res.People), res.People)
+	}
+	if got := res.People[0]; got.Name != "Keanu Reeves" || got.Role != "Neo" || got.Type != "Actor" || got.TMDBID != 6384 {
+		t.Errorf("People[0] = %+v, want {Keanu Reeves, Neo, Actor, 6384} (billing order 0 first)", got)
+	}
+	if got := res.People[1]; got.Name != "Carrie-Anne Moss" || got.Role != "Trinity" || got.Type != "Actor" {
+		t.Errorf("People[1] = %+v, want {Carrie-Anne Moss, Trinity, Actor, ...}", got)
+	}
+	var gotTypes []string
+	for _, p := range res.People[2:] {
+		gotTypes = append(gotTypes, p.Type)
+	}
+	wantTypes := []string{"Director", "Writer", "Producer"}
+	if len(gotTypes) != len(wantTypes) {
+		t.Fatalf("crew types = %v, want %v", gotTypes, wantTypes)
+	}
+	for i, wt := range wantTypes {
+		if gotTypes[i] != wt {
+			t.Errorf("crew[%d].Type = %q, want %q", i, gotTypes[i], wt)
+		}
+	}
+}
+
+// TestCreditsToPeopleCapsCastAndOrdersByBilling proves creditsToPeople
+// bounds cast to maxCastCredits and sorts by TMDB's "order" field
+// regardless of input order.
+func TestCreditsToPeopleCapsCastAndOrdersByBilling(t *testing.T) {
+	var cast []tmdbCastMember
+	for i := 0; i < maxCastCredits+5; i++ {
+		// Deliberately reversed input order so a passing test proves
+		// creditsToPeople sorts, not just passes input through.
+		order := maxCastCredits + 5 - i
+		cast = append(cast, tmdbCastMember{Name: fmt.Sprintf("Actor %d", order), Order: order})
+	}
+	people := creditsToPeople(tmdbCredits{Cast: cast})
+	if len(people) != maxCastCredits {
+		t.Fatalf("len(people) = %d, want %d (capped)", len(people), maxCastCredits)
+	}
+	if people[0].Name != "Actor 1" {
+		t.Errorf("people[0].Name = %q, want %q (lowest Order first)", people[0].Name, "Actor 1")
+	}
+	for i, p := range people {
+		wantName := fmt.Sprintf("Actor %d", i+1)
+		if p.Name != wantName {
+			t.Errorf("people[%d].Name = %q, want %q", i, p.Name, wantName)
+		}
+		if p.Type != "Actor" {
+			t.Errorf("people[%d].Type = %q, want Actor", i, p.Type)
+		}
 	}
 }
 

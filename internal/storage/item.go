@@ -110,6 +110,30 @@ type MediaStreamRef struct {
 	BitRate   *int64
 }
 
+// Person is one cast/crew credit on an Item — the storage-side counterpart
+// of the reference server's BaseItemPerson (confirmed via its published
+// OpenAPI schema, not the C# source). Type is the enum value that schema
+// documents: "Actor", "Director", "Writer", "Producer", ... — kept as a
+// plain string, same convention as ItemType/SortBy above, rather than a
+// closed Go type, so a value this project doesn't have a constant for yet
+// doesn't need an interface change to store. Role is the character name
+// for an Actor credit, empty for every other Type (mirrors
+// BaseItemPerson.Role, which the reference server itself only populates
+// for actors).
+type Person struct {
+	Name string
+	Role string
+	Type string
+
+	// TMDBID is the credit's TMDB person ID, when the enriching Provider
+	// supplied one (internal/metadata's TMDBProvider) — kept distinct from
+	// Item.ProviderIDs (which maps a provider name to *this item's* ID,
+	// not a person's) so a later pass can resolve a person's own image
+	// without re-searching TMDB by name. 0 when unknown (e.g. a filename-
+	// derived item with no provider enrichment yet).
+	TMDBID int
+}
+
 // Item is the generic item model backing ItemStore — the storage-side
 // counterpart of the reference server's BaseItemDto, narrowed to the
 // fields docs/04's highest-priority groups (item navigation, playback,
@@ -186,6 +210,13 @@ type Item struct {
 	CollectionType CollectionType
 
 	MediaStreams []MediaStreamRef
+
+	// People is an item's cast/crew — BaseItemDto.People on the reference
+	// server. Populated only by a Provider that returns credits
+	// (internal/metadata's TMDBProvider today); nil for a filename-derived
+	// item with no provider enrichment, same "consume metadata, don't
+	// require it" convention as Genres/Overview/ratings above.
+	People []Person
 
 	DateCreated time.Time
 }

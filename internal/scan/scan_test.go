@@ -320,6 +320,115 @@ func TestScanLibraryFolderJPGDetected(t *testing.T) {
 	}
 }
 
+// peopleProvider is a metadata.Provider double that always returns a fixed
+// People list on a Movie lookup — used to prove enrich/peopleFromResult
+// actually applies Result.People onto the cataloged storage.Item, distinct
+// from fakeProvider above (which doesn't set People at all, so every other
+// scan_test.go test using it stays unaffected by this feature).
+type peopleProvider struct{}
+
+func (peopleProvider) Lookup(ctx context.Context, q metadata.Query) (metadata.Result, error) {
+	if q.Kind != metadata.KindMovie {
+		return metadata.Result{}, metadata.ErrNotFound
+	}
+	return metadata.Result{
+		Overview: "overview",
+		People: []metadata.Person{
+			{Name: "Keanu Reeves", Role: "Neo", Type: "Actor", TMDBID: 6384},
+			{Name: "Lana Wachowski", Type: "Director"},
+		},
+	}, nil
+}
+
+// TestScanLibraryMovieAppliesPeopleFromProvider proves a Provider's
+// Result.People (TMDBProvider's new credits mapping, tmdb.go's
+// creditsToPeople) makes it onto the cataloged storage.Item.People —
+// the internal/metadata -> internal/scan -> internal/storage conversion
+// chain this feature's cast/crew support depends on end to end.
+func TestScanLibraryMovieAppliesPeopleFromProvider(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "The Matrix (1999)", "movie.mkv"), "content")
+
+	st := newTestStore(t)
+	s := New(st, peopleProvider{}, Config{})
+
+	lib := storage.Library{ID: "lib-people", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root}}
+	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("UpsertLibrary: %v", err)
+	}
+	if _, err := s.ScanLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("ScanLibrary: %v", err)
+	}
+
+	page, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &lib.ID, Limit: 10})
+	if err != nil || len(page.Items) != 1 {
+		t.Fatalf("QueryItems: err=%v, len=%d, want 1", err, len(page.Items))
+	}
+	item := page.Items[0]
+	if len(item.People) != 2 {
+		t.Fatalf("len(People) = %d, want 2; got %+v", len(item.People), item.People)
+	}
+	if item.People[0].Name != "Keanu Reeves" || item.People[0].Role != "Neo" || item.People[0].Type != "Actor" || item.People[0].TMDBID != 6384 {
+		t.Errorf("People[0] = %+v, want {Keanu Reeves, Neo, Actor, 6384}", item.People[0])
+	}
+	if item.People[1].Name != "Lana Wachowski" || item.People[1].Type != "Director" {
+		t.Errorf("People[1] = %+v, want {Lana Wachowski, \"\", Director, 0}", item.People[1])
+	}
+}
+
+// TestScanLibraryLogoAndBannerDetected regression-guards docs/12's "Movie
+// detail page — local Logo/clearlogo artwork recognition": a movie folder
+// with a logo.png (or banner.png) sitting next to poster.jpg/fanart.jpg
+// used to be scanned for Primary/Backdrop only, leaving
+// GET /Items/{id}/Images/Logo 404ing even with the file present on disk.
+func TestScanLibraryLogoAndBannerDetected(t *testing.T) {
+	root := t.TempDir()
+	movieDir := filepath.Join(root, "Some Movie (2020)")
+	writeFile(t, filepath.Join(movieDir, "movie.mkv"), "content")
+	writeFile(t, filepath.Join(movieDir, "logo.png"), "fake-png-bytes")
+	writeFile(t, filepath.Join(movieDir, "banner.jpg"), "fake-jpeg-bytes")
+
+	st := newTestStore(t)
+	s := New(st, metadata.NoopProvider{}, Config{})
+
+	lib := storage.Library{ID: "lib-logobanner", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root}}
+	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("UpsertLibrary: %v", err)
+	}
+
+	if _, err := s.ScanLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("ScanLibrary: %v", err)
+	}
+
+	page, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &lib.ID, Limit: 10})
+	if err != nil || len(page.Items) != 1 {
+		t.Fatalf("QueryItems: err=%v, len=%d, want 1", err, len(page.Items))
+	}
+	item := page.Items[0]
+
+	logoRefs, err := st.GetImageRefs(context.Background(), item.ID, "Logo")
+	if err != nil {
+		t.Fatalf("GetImageRefs(Logo): %v", err)
+	}
+	if len(logoRefs) != 1 {
+		t.Fatalf("len(Logo image refs) = %d, want 1 (logo.png should be detected)", len(logoRefs))
+	}
+	if filepath.Base(logoRefs[0].Path) != "logo.png" {
+		t.Errorf("Logo image ref path = %q, want basename %q", logoRefs[0].Path, "logo.png")
+	}
+
+	bannerRefs, err := st.GetImageRefs(context.Background(), item.ID, "Banner")
+	if err != nil {
+		t.Fatalf("GetImageRefs(Banner): %v", err)
+	}
+	if len(bannerRefs) != 1 {
+		t.Fatalf("len(Banner image refs) = %d, want 1 (banner.jpg should be detected)", len(bannerRefs))
+	}
+	if filepath.Base(bannerRefs[0].Path) != "banner.jpg" {
+		t.Errorf("Banner image ref path = %q, want basename %q", bannerRefs[0].Path, "banner.jpg")
+	}
+}
+
 func TestScanLibraryNoProviderStillCatalogs(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "Some Movie (2020)", "movie.mkv"), "content")

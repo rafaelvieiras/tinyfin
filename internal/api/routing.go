@@ -52,6 +52,13 @@ var routePaths = []string{
 	"/Items/{itemId}",
 	"/Items/{itemId}/Ancestors",
 	"/Items/{itemId}/Similar",
+	// Same segment count (4, including the leading empty split element) as
+	// the two entries above and /Items/{itemId}/PlaybackInfo below, but no
+	// collision risk: normalizePathCase checks every non-wildcard segment,
+	// and this pattern's last segment ("ThemeMedia") differs from all of
+	// theirs — same reasoning as the FavoriteItems/PlayedItems comment
+	// further down this list.
+	"/Items/{itemId}/ThemeMedia",
 	"/UserItems/Resume",
 	"/Shows/{seriesId}/Seasons",
 	"/Shows/{seriesId}/Episodes",

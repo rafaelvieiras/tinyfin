@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
@@ -90,6 +92,22 @@ type baseItemDto struct {
 	// is N+1 bounded queries, not an unbounded scan.
 	ImageTags map[string]string `json:"ImageTags,omitempty"`
 
+	// BackdropImageTags: unlike every other image kind, an item can have
+	// more than one Backdrop (fanart.jpg plus any provider-returned
+	// extras), so the reference server carries it as its own array field
+	// rather than folding it into the ImageTags map above — array index N
+	// corresponds to the tag for GET /Items/{itemId}/Images/Backdrop/N.
+	// Found missing, not just unpolished, by comparing a movie detail
+	// page's GET /Users/{userId}/Items/{itemId} response against a real
+	// Jellyfin server (staging, :8097) for a title whose fanart.jpg the
+	// scanner already indexed and Images/Backdrop/0 already served
+	// correctly: without this field a client has no way to know the
+	// backdrop exists at all, so it never requests it (same "tag absence
+	// means no image" behavior ImageTags's own doc comment above
+	// describes) — see docs/12's "Movie detail page — image tags for
+	// Backdrop and Logo".
+	BackdropImageTags []string `json:"BackdropImageTags,omitempty"`
+
 	// PrimaryImageAspectRatio is the Primary image's width/height ratio.
 	// Found missing, not just unpolished, by reading jellyfin-web's
 	// cardBuilder image-loader module (the chunk exporting
@@ -122,6 +140,51 @@ type baseItemDto struct {
 	// file had actually been watched, even though the server had the exact
 	// position on file.
 	UserData *userItemDataDto `json:"UserData,omitempty"`
+
+	// People is an item's cast/crew (BaseItemDto.People) — populated from
+	// storage.Item.People, which today only a TMDB-enriched item carries
+	// (internal/metadata's TMDBProvider.lookupMovie, docs/08's "consume
+	// metadata, don't require it"). nil for a filename-derived item with
+	// no provider enrichment, same convention as Genres/Overview above.
+	People []baseItemPersonDto `json:"People,omitempty"`
+}
+
+// baseItemPersonDto mirrors the OpenAPI schema's BaseItemPerson, trimmed
+// to the fields storage.Person carries (same "minimal over guessed"
+// approach as baseItemDto itself). Id is a deterministic UUID derived from
+// the person's name (personID below) — the same identity convention
+// internal/scan's deterministicID uses for items/images, chosen for the
+// same reason: a person appearing on more than one item (or surviving a
+// re-scan) needs to resolve to the same Id every time, not a fresh one per
+// response.
+type baseItemPersonDto struct {
+	Name string `json:"Name"`
+	ID   string `json:"Id"`
+	Role string `json:"Role,omitempty"`
+	Type string `json:"Type"`
+}
+
+// personID mints a stable, canonical-UUID-formatted Id for a cast/crew
+// credit from its name — deterministic (same sha256+formatUUID technique
+// as internal/scan/id.go's deterministicID and this package's own
+// themeMediaItemID, each package keeping its own small copy per those
+// files' doc comments on why) so the same actor/director appearing across
+// different items, or across a re-scan, always gets the same Id instead of
+// a fresh one per response.
+func personID(name string) string {
+	sum := sha256.Sum256([]byte("person-" + name))
+	return formatUUID(hex.EncodeToString(sum[:16]))
+}
+
+func peopleDtos(people []storage.Person) []baseItemPersonDto {
+	if len(people) == 0 {
+		return nil
+	}
+	dtos := make([]baseItemPersonDto, 0, len(people))
+	for _, p := range people {
+		dtos = append(dtos, baseItemPersonDto{Name: p.Name, ID: personID(p.Name), Role: p.Role, Type: p.Type})
+	}
+	return dtos
 }
 
 // baseItemDtoQueryResult mirrors the OpenAPI schema's
@@ -225,33 +288,68 @@ func mediaTypeFor(t storage.ItemType) string {
 	}
 }
 
-// primaryImage builds BaseItemDto.ImageTags and PrimaryImageAspectRatio
-// for id from a single GetImageRefs(Primary) call — the two fields are
-// always derived from the same ImageRef, so one query covers both.
-// Currently just the Primary kind, which is all the card/detail views
-// this slice renders actually need (see ImageTags's doc comment on
-// baseItemDto). ref.Tag is used as the cache-busting value when
-// the store has one; handleItemImage doesn't validate the tag against
-// anything, so any stable non-empty value works when a scanner hasn't
-// populated a real one yet. The aspect ratio is nil, not 0, when
+// singleInstanceImageKinds are the ImageKind values an item can only ever
+// have one of — these fold into the ImageTags map (key = kind name), the
+// same way Primary always has. Backdrop is deliberately not in this list:
+// an item can have more than one, so it gets its own BackdropImageTags
+// array instead (see that field's doc comment on baseItemDto and
+// docs/12's "Movie detail page — image tags for Backdrop and Logo").
+// Trickplay/Chapter images aren't image_refs kinds at all (separate
+// stores) and so aren't candidates here regardless.
+var singleInstanceImageKinds = []storage.ImageKind{"Primary", "Logo", "Banner", "Thumb", "Disc"}
+
+// imageTagsFor builds BaseItemDto.ImageTags, BackdropImageTags, and
+// PrimaryImageAspectRatio for id — one GetImageRefs call per candidate
+// kind (bounded by singleInstanceImageKinds plus Backdrop, and by the
+// page size the caller itself is bounded to, per ImageTags's own doc
+// comment on the N+1 tradeoff). ref.Tag is used as the cache-busting
+// value when the store has one; handleItemImage doesn't validate the tag
+// against anything, so any stable non-empty value works when a scanner
+// hasn't populated a real one yet. The aspect ratio is nil, not 0, when
 // Width/Height weren't recorded (an ImageRef predating scan/scan.go's
 // imageDimensions) — 0 would read to jellyfin-web as a real "square"
 // ratio (see PrimaryImageAspectRatio's doc comment) instead of "unknown".
-func (s *Server) primaryImage(ctx context.Context, id storage.ItemID) (tags map[string]string, aspectRatio *float64) {
-	refs, err := s.store.GetImageRefs(ctx, id, storage.ImageKind("Primary"))
-	if err != nil || len(refs) == 0 {
-		return nil, nil
+//
+// BackdropImageTags is built in the order GetImageRefs already returns
+// (ORDER BY idx ASC, sqlite/image.go) — the same index
+// GET /Items/{itemId}/Images/Backdrop/{index} matches against
+// (handleItemImage), so array position N always corresponds to that
+// route's index N for any item whose Backdrop refs were written with
+// contiguous indices starting at 0 (true of every writer in this
+// codebase today: storeProviderImage/seedFolderImage never set Index
+// explicitly, so it defaults to 0).
+func (s *Server) imageTagsFor(ctx context.Context, id storage.ItemID) (tags map[string]string, aspectRatio *float64, backdropTags []string) {
+	for _, kind := range singleInstanceImageKinds {
+		refs, err := s.store.GetImageRefs(ctx, id, kind)
+		if err != nil || len(refs) == 0 {
+			continue
+		}
+		tag := refs[0].Tag
+		if tag == "" {
+			tag = "1"
+		}
+		if tags == nil {
+			tags = make(map[string]string, len(singleInstanceImageKinds))
+		}
+		tags[string(kind)] = tag
+		if kind == storage.ImageKind("Primary") && refs[0].Width > 0 && refs[0].Height > 0 {
+			ratio := float64(refs[0].Width) / float64(refs[0].Height)
+			aspectRatio = &ratio
+		}
 	}
-	tag := refs[0].Tag
-	if tag == "" {
-		tag = "1"
+
+	if refs, err := s.store.GetImageRefs(ctx, id, storage.ImageKind("Backdrop")); err == nil && len(refs) > 0 {
+		backdropTags = make([]string, 0, len(refs))
+		for _, ref := range refs {
+			tag := ref.Tag
+			if tag == "" {
+				tag = "1"
+			}
+			backdropTags = append(backdropTags, tag)
+		}
 	}
-	tags = map[string]string{"Primary": tag}
-	if refs[0].Width > 0 && refs[0].Height > 0 {
-		ratio := float64(refs[0].Width) / float64(refs[0].Height)
-		aspectRatio = &ratio
-	}
-	return tags, aspectRatio
+
+	return tags, aspectRatio, backdropTags
 }
 
 // libraryBaseItemDto builds the BaseItemDto for a library root itself — a
@@ -311,7 +409,7 @@ func (s *Server) userDataFor(ctx context.Context, userID storage.UserID, itemID 
 }
 
 func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto {
-	imageTags, primaryImageAspectRatio := s.primaryImage(ctx, item.ID)
+	imageTags, primaryImageAspectRatio, backdropImageTags := s.imageTagsFor(ctx, item.ID)
 	dto := baseItemDto{
 		Name:                    item.Name,
 		ServerID:                s.cfg.ServerID,
@@ -344,7 +442,9 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		MediaType:               mediaTypeFor(item.Type),
 		MediaStreams:            mediaStreamDtos(item.MediaStreams),
 		ImageTags:               imageTags,
+		BackdropImageTags:       backdropImageTags,
 		PrimaryImageAspectRatio: primaryImageAspectRatio,
+		People:                  peopleDtos(item.People),
 	}
 	if item.ParentID != nil {
 		dto.ParentID = string(*item.ParentID)

@@ -500,10 +500,26 @@ func (s *Scanner) enrich(ctx context.Context, pool *jobPool, item *storage.Item,
 	if len(res.ExternalIDs) > 0 {
 		item.ProviderIDs = res.ExternalIDs
 	}
+	if len(res.People) > 0 {
+		item.People = peopleFromResult(res.People)
+	}
 
 	for _, img := range res.Images {
 		s.storeProviderImage(ctx, item.ID, img)
 	}
+}
+
+// peopleFromResult converts a metadata.Result's provider-decoupled People
+// (metadata.Person) into storage.Person — the same kind of Result ->
+// storage.Item field conversion enrich already does inline for every other
+// field above, pulled into its own function only because it's a slice
+// element-by-element mapping rather than a plain assignment.
+func peopleFromResult(people []metadata.Person) []storage.Person {
+	out := make([]storage.Person, 0, len(people))
+	for _, p := range people {
+		out = append(out, storage.Person{Name: p.Name, Role: p.Role, Type: p.Type, TMDBID: p.TMDBID})
+	}
+	return out
 }
 
 // storeProviderImage downloads img and stores a local ImageRef for it.
@@ -536,28 +552,40 @@ func (s *Scanner) storeProviderImage(ctx context.Context, itemID storage.ItemID,
 
 // seedFolderImages picks up a movie/series folder's own local artwork, if
 // present — the Kodi/Jellyfin filename conventions documented at
-// kodi.wiki's "Artwork" guide: poster.jpg, poster.png, folder.jpg,
-// folder.png, and "<video-basename>-poster.jpg" for the Primary image;
-// fanart.jpg, fanart.png, backdrop.jpg, and "<video-basename>-fanart.jpg"
-// for Backdrop. Each list is tried in that priority order and the scan
-// stops at the first match, per file's own kind. This is a fallback that
-// runs before provider enrichment so a locally-provided image always
-// exists even with no Provider configured; storeProviderImage overwrites
-// it (same deterministic ImageRef ID) if the provider later returns a
-// match. videoFile is the item's video filename (with extension) so the
+// kodi.wiki's "Artwork" guide (Primary/Backdrop) and Jellyfin's own
+// published movie-library naming guide, jellyfin.org (Logo/Banner —
+// docs/12's "Movie detail page — local Logo/clearlogo artwork
+// recognition"): poster.jpg, poster.png, folder.jpg, folder.png, and
+// "<video-basename>-poster.jpg" for the Primary image; fanart.jpg,
+// fanart.png, backdrop.jpg, and "<video-basename>-fanart.jpg" for
+// Backdrop; logo.png, logo.jpg, clearlogo.png, clearlogo.jpg, and their
+// "<video-basename>-logo.*" suffix forms for Logo; banner.png, banner.jpg,
+// and their "<video-basename>-banner.*" suffix forms for Banner. Each list
+// is tried in that priority order and the scan stops at the first match,
+// per file's own kind. This is a fallback that runs before provider
+// enrichment so a locally-provided image always exists even with no
+// Provider configured; storeProviderImage overwrites it (same
+// deterministic ImageRef ID) if the provider later returns a match.
+// videoFile is the item's video filename (with extension) so the
 // "<video-basename>-*" candidates can be built; pass "" when there's no
 // single associated video file (e.g. a series root folder) to skip those
 // candidates.
 func (s *Scanner) seedFolderImages(ctx context.Context, itemID storage.ItemID, folder, videoFile string) {
 	primary := []string{"poster.jpg", "poster.png", "folder.jpg", "folder.png"}
 	backdrop := []string{"fanart.jpg", "fanart.png", "backdrop.jpg"}
+	logo := []string{"logo.png", "logo.jpg", "clearlogo.png", "clearlogo.jpg"}
+	banner := []string{"banner.png", "banner.jpg"}
 	if videoFile != "" {
 		base := strings.TrimSuffix(videoFile, filepath.Ext(videoFile))
 		primary = append(primary, base+"-poster.jpg")
 		backdrop = append(backdrop, base+"-fanart.jpg")
+		logo = append(logo, base+"-logo.png", base+"-logo.jpg")
+		banner = append(banner, base+"-banner.png", base+"-banner.jpg")
 	}
 	s.seedFolderImage(ctx, itemID, folder, "Primary", primary)
 	s.seedFolderImage(ctx, itemID, folder, "Backdrop", backdrop)
+	s.seedFolderImage(ctx, itemID, folder, "Logo", logo)
+	s.seedFolderImage(ctx, itemID, folder, "Banner", banner)
 }
 
 // seedFolderImage stores the first of candidates (filenames relative to

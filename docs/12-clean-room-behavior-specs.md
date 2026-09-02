@@ -224,3 +224,197 @@ rather than chased further per the scope note above:
   in `library.go`, the same default jellyfin-web's own bundle sends per `docs/11`) and is, if
   anything, a more consistent reading of this section's own stated rule at smaller `limit` values
   than the reference server itself produces.
+
+---
+
+## Movie detail page — image tags for Backdrop and Logo
+
+### The gap this resolves
+
+A revalidation pass against the movie detail page (comparing `GET /Users/{userId}/Items/{itemId}`
+between Tinyfin and the reference server for the same title) found that Tinyfin's scanner already
+records a `Backdrop` image reference for a movie's `fanart.jpg`/`backdrop.jpg` — `GET
+/Items/{itemId}/Images/Backdrop/0` correctly serves it — but the item's own detail response never
+tells a client that image exists, so no client ever requests it. `ImageTags`/`BackdropImageTags`
+were the only two image-related response fields checked in code, and only `ImageTags["Primary"]`
+was ever populated.
+
+### Behavior, in prose
+
+This isn't a reference-server algorithm to reverse-engineer — it's a documented wire contract
+(source: the reference server's own published OpenAPI schema, fetched live from a running instance
+at `/api-docs/openapi.json`, not the C# source) that Tinyfin's response-building code simply wasn't
+using fully:
+
+- `ImageTags` is a string-keyed map, one entry per *single-instance* image kind the item actually
+  has (`"Primary"`, `"Logo"`, `"Banner"`, `"Thumb"`, `"Disc"`, and a handful of rarer kinds) — the
+  map key is the kind name, the value is an opaque tag (a cache-busting version string; Tinyfin
+  already generates one of these correctly for `Primary`, the same generation should apply to every
+  kind that has an image).
+- `BackdropImageTags` is a separate top-level field specifically because an item can have *more
+  than one* backdrop — it's an array of tags (parallel to backdrop index 0, 1, 2, ... which
+  `GET /Items/{itemId}/Images/Backdrop/{index}` already addresses by index in Tinyfin), never
+  folded into the `ImageTags` map.
+- A client only ever requests an image URL for a kind whose tag is actually present in the item
+  response — this is why the existing Backdrop image was silently unused: it was fully servable but
+  never advertised.
+- There is no field named `LogoImageTag` — a Logo image is just another entry in the `ImageTags`
+  map (key `"Logo"`), exactly like Primary.
+
+### Fix, described behaviorally (not an algorithm to extract — just wiring)
+
+The response-building code needs to check every image kind Tinyfin's scanner already records for an
+item (not only `Primary`) and populate `ImageTags`/`BackdropImageTags` accordingly, using the same
+tag-generation Tinyfin already applies to `Primary`. This closes the gap for `Backdrop` immediately
+(the scanner already records it, per above); see the next section for the separate gap in what the
+scanner records for `Logo`.
+
+### Implementation findings
+
+Implemented as `dto.go`'s `imageTagsFor` (replacing the old `Primary`-only `primaryImage`) — one
+`GetImageRefs` call per single-instance kind (`Primary`, `Logo`, `Banner`, `Thumb`, `Disc`) plus one
+for `Backdrop`, folding the former into `ImageTags` and the latter into `BackdropImageTags` in the
+order `GetImageRefs` already returns (`ORDER BY idx ASC`). Confirmed live against
+`jellyfin-real-staging:8097` for the same title (`A Arte da Guerra`, 2000): after a rescan, Tinyfin's
+response showed `ImageTags: {"Primary":..., "Logo":..., "Banner":...}` and `BackdropImageTags:
+["1"]` — matching the reference server's own response shape for that field set.
+
+One real gap found *during* this live comparison, out of scope for this task and not fixed here: the
+reference server's response for the same title also carries `ImageTags.Thumb` and `ImageTags.Disc`
+(from a `<video-basename>-thumb.jpg` and a `disc.png` sitting in the same folder) — Tinyfin's
+`imageTagsFor` would already surface these correctly *if* the scanner recorded them, but
+`internal/scan/scan.go`'s `seedFolderImages` has no filename recognition for `Thumb`/`Disc` at all
+(only `Primary`/`Backdrop`/`Logo`/`Banner`, the four kinds this task's Logo/Banner section covers).
+Worth a small follow-up pass, same shape as the Logo/Banner section below.
+
+---
+
+## Movie detail page — local Logo/clearlogo artwork recognition
+
+### The gap this resolves
+
+Beyond the DTO-wiring gap above, `GET /Items/{itemId}/Images/Logo` returns 404 even when a movie's
+own folder has a `logo.png` file sitting right next to its `poster.jpg`/`fanart.jpg` — the scanner
+never recorded a `Logo` image reference for it at all, unlike `Primary`/`Backdrop` which the scanner
+already resolves from `poster.jpg`/`fanart.jpg` etc. (`internal/scan/scan.go`, sourced from
+kodi.wiki's "Artwork" guide per that code's own existing comment).
+
+### Behavior, in prose
+
+Source: Jellyfin's own published user documentation (`jellyfin.org`'s movie library naming guide),
+not the C# source — this is a filename convention, the same kind of publicly documented convention
+the existing `Primary`/`Backdrop` recognition in `internal/scan/scan.go` was already sourced from,
+extended to the two image kinds that guide documents but Tinyfin's scanner doesn't yet recognize:
+
+- **Logo** — a movie-folder file named `logo` or `clearlogo` (any of the image extensions already
+  supported for the other kinds, e.g. `.png`/`.jpg`), standalone (`logo.png`) or as a suffix off the
+  video's own basename (`<video-basename>-logo.png`), the same standalone-or-suffix pattern already
+  implemented for `Primary`/`Backdrop`.
+- **Banner** — same pattern, filename `banner`. (Not part of the movie-detail-page gap that
+  triggered this investigation, but the same documentation source covers it and it's the same
+  one-line addition as Logo — worth doing together rather than leaving a known, equally-easy gap for
+  a future pass to rediscover.)
+
+No new *behavior* beyond "recognize these two more standalone/suffix filename patterns, the same
+way the existing two are recognized" — this is an extension of `internal/scan/scan.go`'s existing
+`primary`/`backdrop` filename-list pattern, not a new resolution algorithm.
+
+### Implementation findings
+
+Implemented as a direct extension of `seedFolderImages`/`seedFolderImage` — two more candidate lists
+(`logo`/`banner`) tried in the same standalone-then-suffix priority order as `primary`/`backdrop`,
+same deterministic-`ImageRef`-ID upsert. Confirmed live: the real staging movie folder used for the
+`ImageTags` validation above already had both `logo.png` and `banner.jpg` sitting on disk (left there
+by a prior manual test-fixture setup, not something this task added) — before this fix, a rescan
+recorded neither; after, `GET /Items/{itemId}/Images/Logo` and `.../Images/Banner` both returned 200
+with the real file bytes (`image/png` 78KB and `image/jpeg` 135KB respectively), and both `ImageTags`
+keys appeared as documented in the section above.
+
+---
+
+## Movie detail page — Theme Media (`GET /Items/{itemId}/ThemeMedia`)
+
+### The gap this resolves
+
+The movie detail page revalidation found `GET /Items/{itemId}/ThemeMedia` isn't implemented at all
+in Tinyfin (404; no route registered, no handler, zero mentions anywhere in the codebase), while the
+reference server returns 200 for the same request (an empty-but-present result for the specific
+title tested, which had no theme files — so this section's shape is confirmed from the wire
+contract and public docs, not from observing a populated response live).
+
+### Wire shape (source: reference server's own published OpenAPI schema, fetched live, not the C# source)
+
+- `GET /Items/{itemId}/ThemeMedia` — path param `itemId`; query params `userId` (optional, attaches
+  per-user data the same way other item responses do), `inheritFromParent` (bool, default `false`),
+  `sortBy`/`sortOrder` (standard item-list sort params, same vocabulary as `GET /Items`).
+- Response body: three parallel result blocks — `ThemeVideosResult`, `ThemeSongsResult`,
+  `SoundtrackSongsResult` — each independently shaped as `{ Items: [BaseItemDto...],
+  TotalRecordCount, StartIndex, OwnerId }`. `OwnerId` is the id of the item the returned theme media
+  actually belongs to — the requested item itself when found directly on it, or an ancestor's id
+  when `inheritFromParent=true` caused a fallback further up the tree (relevant for episodes
+  inheriting a series' theme; a movie has no such ancestor to inherit from).
+- A movie item type only ever has `ThemeVideosResult`/`ThemeSongsResult` populated (no
+  `SoundtrackSongsResult` concept for movies in scope here); each `Items` entry is a normal
+  `BaseItemDto` for the underlying local audio/video file, not a synthetic wrapper.
+
+### Behavior, in prose (source: Jellyfin's own published user documentation, `jellyfin.org`'s movie library guide — not the C# source)
+
+- **Theme songs**: a file named `theme.<ext>` (any supported audio extension) directly in the item's
+  own folder, **or** any audio file inside a `theme-music/` subfolder of that item's folder, is
+  recognized as a theme song.
+- **Theme videos**: video files inside a `backdrops/` subfolder of the item's own folder are
+  recognized as theme videos (the same folder Tinyfin doesn't currently use for anything — this is
+  a video, not the numbered-backdrop-image convention already implemented for the `Backdrop` image
+  kind, which lives directly in the item folder as `fanart.jpg`/`backdrop.jpg`, not inside a
+  `backdrops/` subfolder).
+- When a client wants to know if it should play a theme song or a theme video and both exist for the
+  same item, Jellyfin's documented behavior is: prefer the theme video (this is a client-side
+  playback choice communicated by which of the two result blocks is non-empty — the endpoint itself
+  just reports both truthfully, it doesn't suppress one in favor of the other).
+- `inheritFromParent=false` (the default, and what the movie detail page requests): only the
+  requested item's own folder is checked, no walk up to a parent. Tinyfin's implementation needs the
+  parent-walk behavior only if a caller actually sends `inheritFromParent=true` — a movie itself has
+  no meaningful "parent" for this purpose (it isn't nested under a series/season), so this only
+  matters for the Episode/Season case, out of scope for this specific gap (movie detail page) but
+  worth a route that at least doesn't break when a TV client sends it.
+
+### Scope note
+
+Movie detail page testing didn't exercise a title that actually has a `theme.mp3`/`backdrops/`
+folder present, so the *empty*-result shape (200, all three blocks present with `Items: []`) is what
+was live-confirmed; the *populated* shape is the OpenAPI schema plus the documented filename
+convention above, not something observed live. An implementer should still verify the populated case
+live once a test title with a theme file exists in the staging catalog, rather than trusting this
+section blind.
+
+### Implementation findings
+
+Implemented as `internal/api/theme_media.go`'s `handleThemeMedia`, resolved at **request time** (not
+scan time): the item's folder is derived from `storage.Item.Path` (`filepath.Dir`) and read directly
+on every call, rather than indexed as a new storage type at scan time. This was a deliberate choice,
+not forced by anything in the wire contract — theme media has no per-item metadata worth
+precomputing (unlike an image's width/height/aspect-ratio), so there's no real cost to resolving it
+live, and it means a theme file dropped into a folder shows up on the very next request with no
+rescan needed (confirmed live, see below) — a nicer property than the image kinds above, which do
+need a rescan.
+
+Both shapes from the spec above are now live-confirmed, not just the empty one:
+
+- **Empty shape**: confirmed against a staging title with no theme files — 200, all three blocks
+  present with `Items: []`, matching the reference server's own response for the same title
+  (`jellyfin-real-staging:8097`, same `Filmes` library, empty on both servers since neither had a
+  theme file for it).
+- **Populated shape**: confirmed by writing a real `theme.mp3` into the same staging movie folder
+  used for the ImageTags/Logo/Banner validation above and requesting `GET
+  /Items/{itemId}/ThemeMedia` again with no rescan in between — `ThemeSongsResult.Items` came back
+  with one entry (`Name: "theme"`, `Type`/`MediaType: "Audio"`, a stable deterministic `Id`),
+  `ThemeVideosResult` stayed empty (no `backdrops/` folder was added), `TotalRecordCount`/`OwnerId`
+  matched. The test file was deleted immediately after, and a follow-up request confirmed the
+  response reverted to fully empty — no leftover state, consistent with this being resolved at
+  request time rather than persisted.
+- One minor formatting note found during the live comparison, not a functional divergence:
+  `jellyfin-real-staging`'s own IDs (including `SoundtrackSongsResult.OwnerId`, `"N"`-format, no
+  dashes) are formatted without hyphens on this particular reference-server instance, while Tinyfin
+  formats every ID with the canonical dashed UUID form throughout the whole project (existing,
+  pre-this-task convention — `formatUUID`). Not something this task's `ThemeMedia` work introduced or
+  should special-case; noted only so a future byte-for-byte ID-format audit isn't surprised by it.

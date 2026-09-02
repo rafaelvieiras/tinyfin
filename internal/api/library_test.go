@@ -558,6 +558,125 @@ func TestItemsIncludesPrimaryImageAspectRatio(t *testing.T) {
 	}
 }
 
+// TestItemImageTagsIncludesBackdropAndLogo regression-guards the gap found
+// comparing a movie detail page's GET /Users/{userId}/Items/{itemId}
+// against a real Jellyfin server (staging, :8097, docs/12's "Movie detail
+// page — image tags for Backdrop and Logo"): a movie whose scanner already
+// recorded Backdrop and Logo image refs (both independently servable via
+// GET /Items/{itemId}/Images/{kind}) still came back with only
+// ImageTags["Primary"] populated, so a client never even requested the
+// other two.
+func TestItemImageTagsIncludesBackdropAndLogo(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "harper", "harperpass")
+	token := loginToken(t, ts.URL, user.Name, "harperpass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "ImageTagsLib", storage.CollectionTypeMovies)
+	if err := st.UpsertItem(context.Background(), storage.Item{
+		Type: storage.ItemTypeMovie, LibraryID: libID, Name: "Multi Image Movie",
+	}); err != nil {
+		t.Fatalf("UpsertItem: %v", err)
+	}
+	itemID := mustFindItemByName(t, st, libID, "Multi Image Movie")
+
+	refs := []storage.ImageRef{
+		{ItemID: itemID, Kind: "Primary", Path: "poster.jpg", Tag: "primary-tag"},
+		{ItemID: itemID, Kind: "Backdrop", Index: 0, Path: "fanart.jpg", Tag: "backdrop-0-tag"},
+		{ItemID: itemID, Kind: "Logo", Path: "logo.png", Tag: "logo-tag"},
+	}
+	for _, ref := range refs {
+		if err := st.UpsertImageRef(context.Background(), ref); err != nil {
+			t.Fatalf("UpsertImageRef(%s): %v", ref.Kind, err)
+		}
+	}
+
+	resp := get(http.MethodGet, "/Items/"+string(itemID))
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /Items/{itemId} status = %d, want 200", resp.StatusCode)
+	}
+	var dto baseItemDto
+	if err := json.NewDecoder(resp.Body).Decode(&dto); err != nil {
+		t.Fatalf("decoding item: %v", err)
+	}
+
+	if got := dto.ImageTags["Primary"]; got != "primary-tag" {
+		t.Errorf("ImageTags[Primary] = %q, want primary-tag", got)
+	}
+	if got := dto.ImageTags["Logo"]; got != "logo-tag" {
+		t.Errorf("ImageTags[Logo] = %q, want logo-tag", got)
+	}
+	if _, ok := dto.ImageTags["Backdrop"]; ok {
+		t.Error("ImageTags[Backdrop] present, want Backdrop folded only into BackdropImageTags, not ImageTags")
+	}
+	if want := []string{"backdrop-0-tag"}; len(dto.BackdropImageTags) != 1 || dto.BackdropImageTags[0] != want[0] {
+		t.Errorf("BackdropImageTags = %v, want %v", dto.BackdropImageTags, want)
+	}
+}
+
+// TestItemGetIncludesPeople regression-guards item 4 of the movie detail
+// page revalidation: storage.Item.People (populated by a TMDB-enriched
+// scan, internal/metadata's lookupMovie credits mapping) has to actually
+// reach the wire as BaseItemDto.People, with a stable deterministic Id per
+// person (dto.go's personID) — not just exist in storage.
+func TestItemGetIncludesPeople(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "leo", "leopass")
+	token := loginToken(t, ts.URL, user.Name, "leopass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "PeopleLib", storage.CollectionTypeMovies)
+	if err := st.UpsertItem(context.Background(), storage.Item{
+		Type: storage.ItemTypeMovie, LibraryID: libID, Name: "Cast Movie",
+		People: []storage.Person{
+			{Name: "Keanu Reeves", Role: "Neo", Type: "Actor", TMDBID: 6384},
+			{Name: "Lana Wachowski", Type: "Director"},
+		},
+	}); err != nil {
+		t.Fatalf("UpsertItem: %v", err)
+	}
+	itemID := mustFindItemByName(t, st, libID, "Cast Movie")
+
+	resp := get(http.MethodGet, "/Items/"+string(itemID))
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /Items/{itemId} status = %d, want 200", resp.StatusCode)
+	}
+	var dto baseItemDto
+	if err := json.NewDecoder(resp.Body).Decode(&dto); err != nil {
+		t.Fatalf("decoding item: %v", err)
+	}
+
+	if len(dto.People) != 2 {
+		t.Fatalf("len(People) = %d, want 2; got %+v", len(dto.People), dto.People)
+	}
+	actor := dto.People[0]
+	if actor.Name != "Keanu Reeves" || actor.Role != "Neo" || actor.Type != "Actor" {
+		t.Errorf("People[0] = %+v, want {Keanu Reeves, Neo, Actor}", actor)
+	}
+	if actor.ID == "" {
+		t.Error("People[0].Id is empty, want a deterministic non-empty Id")
+	}
+
+	// Same name -> same Id, requested twice (regression guard for
+	// personID's determinism, not just presence).
+	resp2 := get(http.MethodGet, "/Items/"+string(itemID))
+	defer resp2.Body.Close()
+	var dto2 baseItemDto
+	if err := json.NewDecoder(resp2.Body).Decode(&dto2); err != nil {
+		t.Fatalf("decoding item (2nd call): %v", err)
+	}
+	if dto2.People[0].ID != actor.ID {
+		t.Errorf("People[0].Id changed across requests: %q vs %q, want stable", actor.ID, dto2.People[0].ID)
+	}
+
+	director := dto.People[1]
+	if director.Name != "Lana Wachowski" || director.Type != "Director" || director.Role != "" {
+		t.Errorf("People[1] = %+v, want {Lana Wachowski, \"\", Director}", director)
+	}
+}
+
 // TestUsersItemsFavoritesFilter regression-guards a real bug found via a
 // live jellyfin-web session: clicking "Favoritos" in the navbar
 // (#/home?tab=1) issues GET /Users/{userId}/Items?Filters=IsFavorite&

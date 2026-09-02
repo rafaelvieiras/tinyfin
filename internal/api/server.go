@@ -268,6 +268,10 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /Items/{itemId}", requireAuth(s.handleItemGet))
 	s.mux.HandleFunc("GET /Items/{itemId}/Ancestors", requireAuth(s.handleItemAncestors))
 	s.mux.HandleFunc("GET /Items/{itemId}/Similar", requireAuth(s.handleItemSimilar))
+	// theme_media.go — found 404ing on every single item detail page load
+	// by testing against a real jellyfin-web build (docs/11's route
+	// coverage table, docs/12's "Movie detail page — Theme Media" section).
+	s.mux.HandleFunc("GET /Items/{itemId}/ThemeMedia", requireAuth(s.handleThemeMedia))
 	s.mux.HandleFunc("GET /UserItems/Resume", requireAuth(s.handleUserItemsResume))
 	s.mux.HandleFunc("GET /Shows/{seriesId}/Seasons", requireAuth(s.handleShowSeasons))
 	s.mux.HandleFunc("GET /Shows/{seriesId}/Episodes", requireAuth(s.handleShowEpisodes))

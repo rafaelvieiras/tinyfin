@@ -109,6 +109,20 @@ type Image struct {
 	URL  string
 }
 
+// Person is one cast/crew credit a Lookup result found — mirrors
+// storage.Person's shape (Name/Role/Type/TMDBID) but is kept decoupled
+// from it, same "plain structs, no internal/storage dependency" rule as
+// every other field on this package's Result (this file's own doc
+// comment); internal/scan converts a Result's People into
+// []storage.Person, the same conversion it already does for Images ->
+// []storage.ImageRef.
+type Person struct {
+	Name   string
+	Role   string // character name — Actor credits only, empty otherwise
+	Type   string // "Actor", "Director", "Writer", "Producer", ...
+	TMDBID int
+}
+
 // Result is the enrichment Lookup returns on a match. Every field is
 // optional (zero value = "provider didn't have this") — internal/scan
 // overlays only the non-zero fields onto its filename-derived Item,
@@ -129,6 +143,12 @@ type Result struct {
 	ExternalIDs map[string]string
 
 	Images []Image
+
+	// People is cast/crew, when the provider returns it (TMDBProvider's
+	// lookupMovie today — see that method's doc comment for the "why
+	// movie only, why these Type values" reasoning). nil for every other
+	// Kind/provider until a later pass extends coverage.
+	People []Person
 }
 
 // Provider is the metadata-enrichment contract docs/08 describes. A

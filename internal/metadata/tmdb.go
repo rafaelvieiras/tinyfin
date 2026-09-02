@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -81,6 +82,87 @@ type tmdbDetailsResponse struct {
 	tmdbSearchResult
 	Genres  []tmdbGenre `json:"genres"`
 	Tagline string      `json:"tagline"`
+	// Credits is populated by requesting append_to_response=credits on
+	// the details call (lookupMovie) — TMDB's documented way to fold a
+	// second endpoint's response into the first request instead of
+	// issuing /movie/{id}/credits separately.
+	Credits tmdbCredits `json:"credits"`
+}
+
+// tmdbCredits mirrors the shape TMDB's /movie/{id}/credits endpoint (or
+// append_to_response=credits on /movie/{id}) returns — trimmed to the
+// fields creditsToPeople below actually uses.
+type tmdbCredits struct {
+	Cast []tmdbCastMember `json:"cast"`
+	Crew []tmdbCrewMember `json:"crew"`
+}
+
+type tmdbCastMember struct {
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	Character   string `json:"character"`
+	Order       int    `json:"order"`
+	ProfilePath string `json:"profile_path"`
+}
+
+type tmdbCrewMember struct {
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	Job         string `json:"job"`
+	ProfilePath string `json:"profile_path"`
+}
+
+// maxCastCredits bounds how many cast entries lookupMovie carries onto a
+// Result.People — a movie's full TMDB cast list can run to 50+ people, most
+// of them uncredited bit parts a detail page never needs; this project's
+// own instruction for this feature calls out this exact bound to avoid an
+// oversized item response.
+const maxCastCredits = 20
+
+// crewTypeForJob maps a TMDB crew "job" string to the Person.Type enum a
+// BaseItemPerson's Type field uses on the wire (docs/12-adjacent: same
+// enum the reference server's own OpenAPI schema documents for
+// BaseItemPerson, confirmed independently of this project's TMDB
+// integration). Only the jobs this project's own task instruction calls
+// out map to something — every other TMDB crew department (camera, sound,
+// costume, ...) is deliberately left unmapped rather than guessing at a
+// Type value the reference server wouldn't recognize.
+func crewTypeForJob(job string) (string, bool) {
+	switch job {
+	case "Director":
+		return "Director", true
+	case "Writer", "Screenplay", "Story":
+		return "Writer", true
+	case "Producer":
+		return "Producer", true
+	default:
+		return "", false
+	}
+}
+
+// creditsToPeople converts TMDB's cast/crew shape into this package's own
+// Result.People — cast ordered by TMDB's own "order" field (billing
+// order), capped at maxCastCredits; crew filtered down to only the jobs
+// crewTypeForJob recognizes.
+func creditsToPeople(c tmdbCredits) []Person {
+	cast := append([]tmdbCastMember(nil), c.Cast...)
+	sort.Slice(cast, func(i, j int) bool { return cast[i].Order < cast[j].Order })
+	if len(cast) > maxCastCredits {
+		cast = cast[:maxCastCredits]
+	}
+
+	people := make([]Person, 0, len(cast)+len(c.Crew))
+	for _, m := range cast {
+		people = append(people, Person{Name: m.Name, Role: m.Character, Type: "Actor", TMDBID: m.ID})
+	}
+	for _, m := range c.Crew {
+		t, ok := crewTypeForJob(m.Job)
+		if !ok {
+			continue
+		}
+		people = append(people, Person{Name: m.Name, Type: t, TMDBID: m.ID})
+	}
+	return people
 }
 
 type tmdbEpisodeResponse struct {
@@ -107,7 +189,11 @@ func (p *TMDBProvider) lookupMovie(ctx context.Context, q Query) (Result, error)
 		return Result{}, ErrNotFound
 	}
 
-	details, err := p.get(ctx, fmt.Sprintf("/movie/%d", sr.Results[0].ID), nil)
+	// append_to_response=credits folds /movie/{id}/credits into this same
+	// call — simpler to integrate than a second request, and TMDB's own
+	// documented way to do exactly this (this method's one call stays a
+	// single HTTP round trip either way).
+	details, err := p.get(ctx, fmt.Sprintf("/movie/%d", sr.Results[0].ID), url.Values{"append_to_response": {"credits"}})
 	if err != nil {
 		return Result{}, err
 	}
@@ -124,6 +210,7 @@ func (p *TMDBProvider) lookupMovie(ctx context.Context, q Query) (Result, error)
 	}
 	res.PremiereDateUnix = parseTMDBDate(d.ReleaseDate)
 	res.ExternalIDs = map[string]string{"Tmdb": strconv.Itoa(d.ID)}
+	res.People = creditsToPeople(d.Credits)
 	return res, nil
 }
 
