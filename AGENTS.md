@@ -53,13 +53,30 @@ All six are in the [README](README.md) and [CONTRIBUTING.md](CONTRIBUTING.md):
 
 ## Clean-room requirement
 
-Tinyfin implements the Jellyfin *wire protocol* (HTTP routes, headers, JSON shapes) as observed
-from the outside — client behavior, public API documentation, and the OpenAPI surface. **Never**
-copy code from the `jellyfin/jellyfin` C# source tree into this repository, not even as a
-reference kept in a comment. Behavior gets derived from external, black-box observation (real
-client traffic, published API docs) or reimplemented from first principles against a written
-spec in `docs/`. This boundary is what keeps the MIT license clean; do not blur it for
-convenience.
+Tinyfin implements the Jellyfin *wire protocol* (HTTP routes, headers, JSON shapes). What's
+protected here, and what isn't: a protocol and the ideas/algorithms behind it are not
+copyrightable (17 U.S.C. §102(b); CJEU, *SAS Institute v. World Programming*, C-406/10 —
+studying a program's functioning to build a compatible one is lawful). What's off-limits is the
+reference server's *expression* of it — its code, comments, identifiers, file/class structure.
+**Never** copy any of that from the `jellyfin/jellyfin` C# source tree into this repository, not
+even a fragment kept "as a reference" in a comment. This boundary is what keeps the MIT license
+clean; do not blur it for convenience. See D12 in
+[`docs/00-decision-log.md`](docs/00-decision-log.md) for the full reasoning.
+
+Prefer black-box observation — real client traffic, a running reference server, published API
+docs (`docs/04`'s verification approach) — over reading the C# source at all. It's usually enough
+for wire compatibility and needs nothing further. Reach for the C# source only when black-box
+behavior alone can't resolve something. When you do, follow a strict two-phase process:
+
+1. **Extraction.** Reading the source is allowed, but only to understand *behavior* — inputs,
+   outputs, data flow, algorithm, state transitions. Write that understanding down as a
+   functional spec in `docs/` before touching Go code. The spec describes what happens, never how
+   the reference server's own code happens to be organized: no file/class/function names, no
+   comments, no variable names, no code structure carried over.
+2. **Implementation.** Go code is written only from that spec, plus black-box verification
+   against a running reference server. Never implement with the C# source open in the same
+   session — that's side-by-side reimplementation, which this process exists to prevent
+   regardless of how the resulting code reads.
 
 ## Decisions-first workflow
 
