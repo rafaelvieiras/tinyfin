@@ -234,10 +234,36 @@ func (s *Scanner) walkMovies(ctx context.Context, pool *jobPool, lib storage.Lib
 	}
 }
 
+// reconcileItemID returns the ID a movie/episode at path within lib should
+// be upserted under: an existing item already cataloged at that path, if
+// one is found, otherwise freshID (the freshly computed deterministic ID
+// for path).
+//
+// path alone is normally enough to make freshID stable across rescans
+// (deterministicID is a pure hash of it), so in the common case this
+// lookup finds nothing and just confirms freshID is unclaimed. It exists
+// to reconcile the case where a row already exists at path under some
+// *other* ID — the ID-minting formula changed, or the row predates the
+// scanner entirely (cmd/devseed, a throwaway manual-seeding tool, used
+// its own "item-"+slug(folder) scheme before this project settled on
+// "item-movie-"+path/"item-episode-"+path; running the real scanner over
+// devseed-seeded data reproduced this exact scenario, confirmed live in
+// staging). Without this lookup, UpsertItem's ON CONFLICT(id) can only
+// de-duplicate against a row sharing the same ID — never against another
+// row that is, by path, obviously the same file — so every such mismatch
+// silently doubles the catalog instead of updating it in place.
+func (s *Scanner) reconcileItemID(ctx context.Context, libraryID storage.LibraryID, path string, freshID storage.ItemID) storage.ItemID {
+	page, err := s.store.QueryItems(ctx, storage.ItemFilter{LibraryID: &libraryID, Path: path, Limit: 1})
+	if err != nil || len(page.Items) == 0 {
+		return freshID
+	}
+	return page.Items[0].ID
+}
+
 func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.Library, hostFolder, folder, videoFile string, size int64) error {
 	title, year := ParseTitleYear(folder)
 	itemPath := filepath.Join(hostFolder, videoFile)
-	itemID := storage.ItemID(deterministicID("item-movie-" + itemPath))
+	itemID := s.reconcileItemID(ctx, lib.ID, itemPath, storage.ItemID(deterministicID("item-movie-"+itemPath)))
 
 	info, probeErr := s.probe(ctx, itemPath)
 	item := storage.Item{
@@ -384,7 +410,7 @@ func (s *Scanner) walkEpisodes(ctx context.Context, pool *jobPool, lib storage.L
 }
 
 func (s *Scanner) processEpisode(ctx context.Context, pool *jobPool, lib storage.Library, episodePath string, seriesID, seasonID storage.ItemID, seriesTitle string, seasonNum, episodeNum int, epTitle string, size int64) error {
-	itemID := storage.ItemID(deterministicID("item-episode-" + episodePath))
+	itemID := s.reconcileItemID(ctx, lib.ID, episodePath, storage.ItemID(deterministicID("item-episode-"+episodePath)))
 	name := epTitle
 	if name == "" {
 		name = fmt.Sprintf("Episode %d", episodeNum)

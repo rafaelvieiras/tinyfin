@@ -454,6 +454,11 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 		whereArgs = append(whereArgs, string(*filter.SeriesID))
 	}
 
+	if filter.Path != "" {
+		wheres = append(wheres, "items.path = ?")
+		whereArgs = append(whereArgs, filter.Path)
+	}
+
 	if len(filter.ItemTypes) > 0 {
 		ph := make([]string, len(filter.ItemTypes))
 		for i, t := range filter.ItemTypes {

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/metadata"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
@@ -405,6 +406,64 @@ func TestScanLibraryRecordsPosterDimensions(t *testing.T) {
 	}
 	if refs[0].Width != 400 || refs[0].Height != 600 {
 		t.Errorf("ImageRef.Width/Height = %d/%d, want 400/600", refs[0].Width, refs[0].Height)
+	}
+}
+
+// TestScanLibraryReconcilesLegacyItemIDByPath reproduces the duplication
+// bug found via POST /Library/Refresh in staging: cmd/devseed (a throwaway
+// manual-seeding tool, not part of the scanner) minted item IDs with its
+// own "item-"+slug(folder) scheme, distinct from the real scanner's
+// "item-movie-"+path. Rescanning a devseed-seeded library used to catalog
+// every file a second time under the scanner's own ID, silently doubling
+// the library instead of updating the existing row. reconcileItemID
+// (scan.go) closes this by looking the path up in the store before
+// minting a fresh ID.
+func TestScanLibraryReconcilesLegacyItemIDByPath(t *testing.T) {
+	root := t.TempDir()
+	movieDir := filepath.Join(root, "The Matrix (1999)")
+	videoPath := filepath.Join(movieDir, "movie.mkv")
+	writeFile(t, videoPath, "not a real video, just enough to exist")
+
+	st := newTestStore(t)
+	lib := storage.Library{
+		ID: "lib-legacy", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
+	}
+	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("UpsertLibrary: %v", err)
+	}
+
+	// Simulate a pre-existing row at this exact path, cataloged under an ID
+	// the current scanner would never mint itself (devseed's legacy scheme,
+	// or any future re-derivation) — this is the row a rescan must update
+	// in place, not duplicate.
+	legacyID := storage.ItemID("legacy-devseed-id-0001")
+	legacyItem := storage.Item{
+		ID: legacyID, Type: storage.ItemTypeMovie, LibraryID: lib.ID,
+		Name: "The Matrix (stale name)", SortName: "The Matrix (stale name)",
+		Path: videoPath, DateCreated: time.Now(),
+	}
+	if err := st.UpsertItem(context.Background(), legacyItem); err != nil {
+		t.Fatalf("UpsertItem (legacy): %v", err)
+	}
+
+	s := New(st, metadata.NoopProvider{}, Config{})
+	if _, err := s.ScanLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("ScanLibrary: %v", err)
+	}
+
+	page, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &lib.ID, Limit: 10})
+	if err != nil {
+		t.Fatalf("QueryItems: %v", err)
+	}
+	if len(page.Items) != 1 {
+		t.Fatalf("len(Items) = %d, want 1 (rescan must not duplicate the legacy row); items=%+v", len(page.Items), page.Items)
+	}
+	item := page.Items[0]
+	if item.ID != legacyID {
+		t.Errorf("Item.ID = %q, want %q (rescan must reuse the pre-existing row's ID, not mint a new one)", item.ID, legacyID)
+	}
+	if item.Name != "The Matrix" {
+		t.Errorf("Item.Name = %q, want %q (rescan must still refresh the reused row's fields)", item.Name, "The Matrix")
 	}
 }
 

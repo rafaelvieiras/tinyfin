@@ -57,7 +57,16 @@ type ItemFilter struct {
 	// (docs/04's Specialized media types group), which needs every episode
 	// across every season of a series in one query, not just one season's
 	// direct children the way ParentID alone would give.
-	SeriesID   *ItemID
+	SeriesID *ItemID
+	// Path matches Item.Path exactly — backs the scanner's rescan-reconciles-
+	// by-path lookup (internal/scan/scan.go's existingItemID): before
+	// minting a fresh deterministic ID for a movie/episode, the scanner
+	// checks whether an item already exists at that path (LibraryID+Path)
+	// and reuses its ID instead, so a file cataloged under an older or
+	// differently-derived ID (a prior devseed run, a since-changed hashing
+	// scheme, ...) gets updated in place on the next scan rather than
+	// duplicated alongside a second row for the same file.
+	Path       string
 	ItemTypes  []ItemType
 	Genres     []string
 	SearchText string // backs FTS5 search, 09
