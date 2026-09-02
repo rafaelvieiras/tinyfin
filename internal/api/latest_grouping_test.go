@@ -337,3 +337,168 @@ func itoa(n int) string {
 	}
 	return string(digits[n/10]) + string(digits[n%10])
 }
+
+// markPlayed sets PlayCount=1/Played=true on every itemID given, for userID
+// — the same "touched" convention nextUpCandidateForSeries (nextup.go)
+// reads via GetPlaystate. Used below to fully or partially watch a series'
+// episodes.
+func markPlayed(t *testing.T, st storage.PlaystateStore, userID storage.UserID, itemIDs ...storage.ItemID) {
+	t.Helper()
+	for _, id := range itemIDs {
+		if err := st.SetPlaystate(context.Background(), userID, id, storage.Playstate{Played: true, PlayCount: 1}); err != nil {
+			t.Fatalf("SetPlaystate(%q): %v", id, err)
+		}
+	}
+}
+
+// TestItemsLatestSeriesGroupingExcludesFullyWatchedSeries: docs/12's
+// "Implementation findings" — a series every one of whose episodes is
+// played for the requesting user never appears in the grouped result, even
+// though its own recency would otherwise place it ahead of a series that
+// still has unwatched episodes.
+func TestItemsLatestSeriesGroupingExcludesFullyWatchedSeries(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "dave", "davepass")
+	token := loginToken(t, ts.URL, user.Name, "davepass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "Séries Infantis", storage.CollectionTypeTVShows)
+	now := time.Now().UTC()
+
+	// Watched Show: newest addition of the two series below, but every
+	// episode (including ones outside the window) is marked played.
+	watchedSeriesID := upsertSeries(t, st, libID, "Watched Show", now.Add(-100*24*time.Hour))
+	watchedSeasonID := upsertSeason(t, st, libID, watchedSeriesID, "Watched Season 1", 1, now.Add(-100*24*time.Hour))
+	watchedOldEp := upsertEpisode(t, st, libID, watchedSeriesID, watchedSeasonID, "WS1E1", 1, now.Add(-100*24*time.Hour))
+	watchedNewEp := upsertEpisode(t, st, libID, watchedSeriesID, watchedSeasonID, "WS1E2", 2, now.Add(-5*time.Minute))
+	markPlayed(t, st, user.ID, watchedOldEp, watchedNewEp)
+
+	// Unwatched Show: older addition than Watched Show, but has no playstate
+	// at all — must still appear since Watched Show is excluded.
+	unwatchedSeriesID := upsertSeries(t, st, libID, "Unwatched Show", now.Add(-100*24*time.Hour))
+	unwatchedSeasonID := upsertSeason(t, st, libID, unwatchedSeriesID, "Unwatched Season 1", 1, now.Add(-100*24*time.Hour))
+	upsertEpisode(t, st, libID, unwatchedSeriesID, unwatchedSeasonID, "US1E1", 1, now.Add(-100*24*time.Hour))
+	upsertEpisode(t, st, libID, unwatchedSeriesID, unwatchedSeasonID, "US1E2", 2, now.Add(-100*24*time.Hour))
+	unwatchedNewEp := upsertEpisode(t, st, libID, unwatchedSeriesID, unwatchedSeasonID, "US1E3", 3, now.Add(-15*time.Minute))
+
+	// limit=5, far larger than the number of series that will appear (1) —
+	// Watched Show must not consume a slot by being excluded.
+	items := latestGrouped(t, get, libID, "&limit=5")
+	if len(items) != 1 {
+		t.Fatalf("Items/Latest = %+v, want exactly 1 card (fully watched series excluded)", items)
+	}
+	if items[0].Type != "Episode" || items[0].ID != string(unwatchedNewEp) {
+		t.Errorf("card = %+v, want Unwatched Show's episode %q", items[0], unwatchedNewEp)
+	}
+}
+
+// TestItemsLatestSeriesGroupingPartiallyWatchedSeriesAppears: a series with
+// at least one unwatched episode still appears normally, even though other
+// episodes of that same series are played.
+func TestItemsLatestSeriesGroupingPartiallyWatchedSeriesAppears(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "dave", "davepass")
+	token := loginToken(t, ts.URL, user.Name, "davepass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "Séries Infantis", storage.CollectionTypeTVShows)
+	now := time.Now().UTC()
+
+	seriesID := upsertSeries(t, st, libID, "Partial Show", now.Add(-100*24*time.Hour))
+	seasonID := upsertSeason(t, st, libID, seriesID, "Season 1", 1, now.Add(-100*24*time.Hour))
+	watchedEp := upsertEpisode(t, st, libID, seriesID, seasonID, "PS1E1", 1, now.Add(-100*24*time.Hour))
+	upsertEpisode(t, st, libID, seriesID, seasonID, "PS1E2", 2, now.Add(-100*24*time.Hour)) // left unwatched
+	newEp := upsertEpisode(t, st, libID, seriesID, seasonID, "PS1E3", 3, now.Add(-10*time.Minute))
+	markPlayed(t, st, user.ID, watchedEp) // only one of three episodes played
+
+	items := latestGrouped(t, get, libID, "")
+	if len(items) != 1 {
+		t.Fatalf("Items/Latest = %+v, want exactly 1 card (partially watched series still appears)", items)
+	}
+	if items[0].Type != "Episode" || items[0].ID != string(newEp) {
+		t.Errorf("card = %+v, want %q", items[0], newEp)
+	}
+}
+
+// TestItemsLatestSeriesGroupingNeverWatchedSeriesAppears: a series with no
+// playstate rows at all for the requesting user appears normally — the
+// exclusion only triggers when every episode is explicitly played, not as a
+// default for "no watch history".
+func TestItemsLatestSeriesGroupingNeverWatchedSeriesAppears(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "dave", "davepass")
+	token := loginToken(t, ts.URL, user.Name, "davepass")
+	get := authedClient(t, ts.URL, token)
+	_ = user
+
+	libID := createTestLibrary(t, st, "Séries Infantis", storage.CollectionTypeTVShows)
+	now := time.Now().UTC()
+
+	seriesID := upsertSeries(t, st, libID, "Never Watched Show", now.Add(-1*time.Hour))
+	seasonID := upsertSeason(t, st, libID, seriesID, "Season 1", 1, now.Add(-1*time.Hour))
+	// This series' single season has exactly one episode total, so this
+	// addition is bulk (episodeCount == seasonTotal, docs/12) and, being a
+	// single-season show, the card represents the SERIES.
+	upsertEpisode(t, st, libID, seriesID, seasonID, "NW1E1", 1, now.Add(-10*time.Minute))
+
+	items := latestGrouped(t, get, libID, "")
+	if len(items) != 1 {
+		t.Fatalf("Items/Latest = %+v, want exactly 1 card (never-watched series appears)", items)
+	}
+	if items[0].Type != "Series" || items[0].ID != string(seriesID) {
+		t.Errorf("card = %+v, want Never Watched Show's Series card %q", items[0], seriesID)
+	}
+}
+
+// TestItemsLatestSeriesGroupingLimitCountsOnlyEligibleSeries: a fully
+// watched series excluded ahead of the limit truncation must not consume
+// one of the requested slots — with limit=2 and three series (one fully
+// watched, ranked first by recency), both remaining eligible series must
+// still appear.
+func TestItemsLatestSeriesGroupingLimitCountsOnlyEligibleSeries(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "dave", "davepass")
+	token := loginToken(t, ts.URL, user.Name, "davepass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "Séries Infantis", storage.CollectionTypeTVShows)
+	now := time.Now().UTC()
+
+	// Series A: newest addition, but fully watched — must be skipped and
+	// must not eat into the limit=2 budget below.
+	seriesAID := upsertSeries(t, st, libID, "Series A", now.Add(-100*24*time.Hour))
+	aSeasonID := upsertSeason(t, st, libID, seriesAID, "A Season 1", 1, now.Add(-100*24*time.Hour))
+	aEp := upsertEpisode(t, st, libID, seriesAID, aSeasonID, "AS1E1", 1, now.Add(-5*time.Minute))
+	markPlayed(t, st, user.ID, aEp)
+
+	// Series B: next newest, unwatched.
+	seriesBID := upsertSeries(t, st, libID, "Series B", now.Add(-100*24*time.Hour))
+	bSeasonID := upsertSeason(t, st, libID, seriesBID, "B Season 1", 1, now.Add(-100*24*time.Hour))
+	upsertEpisode(t, st, libID, seriesBID, bSeasonID, "BS1E1", 1, now.Add(-10*time.Minute))
+
+	// Series C: oldest of the three, unwatched.
+	seriesCID := upsertSeries(t, st, libID, "Series C", now.Add(-100*24*time.Hour))
+	cSeasonID := upsertSeason(t, st, libID, seriesCID, "C Season 1", 1, now.Add(-100*24*time.Hour))
+	upsertEpisode(t, st, libID, seriesCID, cSeasonID, "CS1E1", 1, now.Add(-20*time.Minute))
+
+	// Each series here has exactly one season with exactly one episode, so
+	// that lone episode is "the entirety of a short/complete season"
+	// (docs/12's bulk rule) — the card representing each eligible series is
+	// the SERIES itself, not the episode directly (same rule
+	// TestItemsLatestSeriesGroupingSingleSeasonShowBulk covers).
+	items := latestGrouped(t, get, libID, "&limit=2")
+	if len(items) != 2 {
+		t.Fatalf("Items/Latest (limit=2) = %+v, want exactly 2 cards (Series A excluded, doesn't consume a slot)", items)
+	}
+	if items[0].ID != string(seriesBID) {
+		t.Errorf("items[0] = %+v, want Series B's card %q", items[0], seriesBID)
+	}
+	if items[1].ID != string(seriesCID) {
+		t.Errorf("items[1] = %+v, want Series C's card %q", items[1], seriesCID)
+	}
+	for _, it := range items {
+		if it.ID == string(seriesAID) {
+			t.Errorf("Series A's card leaked into the result: %+v", it)
+		}
+	}
+}

@@ -341,7 +341,12 @@ func (s *Server) handleItemsLatest(w http.ResponseWriter, r *http.Request) {
 	var items []storage.Item
 	if grouped && filter.LibraryID != nil {
 		if lib, err := s.store.GetLibrary(ctx, *filter.LibraryID); err == nil && lib.CollectionType == storage.CollectionTypeTVShows {
-			grp, err := s.tvShowsLatestGrouped(ctx, *filter.LibraryID, filter.Limit)
+			ac, _ := AuthFromContext(ctx)
+			var userID storage.UserID
+			if ac != nil {
+				userID = ac.User.ID
+			}
+			grp, err := s.tvShowsLatestGrouped(ctx, *filter.LibraryID, filter.Limit, userID)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return

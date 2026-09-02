@@ -149,19 +149,58 @@ confirmed live: omitted or anything but exactly `false` groups; `groupItems=fals
 flat list. `docs/11`'s prior note that jellyfin-web's own bundle always requests grouped results
 still holds — `groupItems` was not observed absent from a real jellyfin-web call.
 
-Two more things surfaced during live comparison that are real, reproducible reference-server
-behavior but are **not** implemented by Tinyfin's `internal/api/latest_grouping.go`, logged here
+### Fully watched series are excluded (implemented)
+
+Confirmed live against `jellyfin-real-staging:8097`, black-box only (no reference source read for
+this refinement — this file's earlier preliminary note, made while implementing series grouping
+itself, already described the observable behavior precisely enough to implement and verify against
+a running server without reopening the reference source): **a series every one of whose episodes
+is played (`PlayCount > 0`) for the requesting user never appears in the grouped `GET
+/Items/Latest` result, at all, regardless of how recent its own addition is** — it does not rank
+into the response even at a `limit` far larger than the number of series that do appear, and,
+critically, it does not consume one of the requested `limit` slots by being excluded: a series
+ranked immediately behind it by recency, with even one unwatched episode, takes its place rather
+than the slot count shrinking by one.
+
+What was confirmed, precisely, by testing rather than assumed from the original citation below:
+
+- **The check is over the whole series**, every episode the series has, not just the
+  Episode/Season rows that happen to have landed in the grouping candidate pool (a bounded, recent
+  window — see `latestSeriesGroupingPoolSize` above). Reproduced live: marking every episode of a
+  103-episode series played via the reference server's own recursive
+  `POST /Users/{userId}/PlayedItems/{seriesId}` (confirmed this cascades: the response came back
+  `UnplayedItemCount: 0`, and a spot-checked episode's own `UserData.PlayCount` was `1`) made that
+  series disappear from the grouped result entirely.
+- **"Watched" is `PlayCount > 0`**, the same criterion `nextUpCandidateForSeries` (`nextup.go`)
+  already uses for the analogous question on `GET /Shows/NextUp` — not the `Played` bool
+  specifically (they agree in every case actually exercised here, since marking an episode played
+  always sets both together) and not something requiring a distinct "no playstate row at all"
+  case: `GetPlaystate`'s own zero-value convention already reads a never-touched episode back as
+  `PlayCount 0`, so "never watched" and "explicitly unplayed" both naturally fail the check with no
+  special-casing.
+- **A partially watched series (at least one unwatched episode remaining) is unaffected** — it
+  still appears normally, card selection unchanged, confirmed live by leaving one episode of a
+  series unplayed and one played.
+- **A never-watched series (no playstate rows for the user at all) is unaffected** — confirmed live
+  and also the default state of every other fixture in this section's other tests; this exclusion
+  is not "hide anything without watch history," only "hide a series with nothing left unwatched."
+- The single-Episode-card case (docs/12 step 3's "no season key" fallback and the plain
+  single-episode branch) was not separately exercised live: a card that resolves to one specific
+  Episode is, by construction, the item whose addition is being reported, and per this project's
+  scan/import model a newly-scanned episode has no playstate yet — so this exclusion's precondition
+  (every episode of the series played) can't co-occur with "the card is this brand-new episode" in
+  practice. Implemented uniformly anyway (checked once per series group, before card selection,
+  regardless of what type of card that group would resolve to) rather than carved out as a special
+  case, since nothing in the confirmed rule above suggests the card's own type should matter.
+
+Implemented in `internal/api/latest_grouping.go`'s `isSeriesFullyWatched`, called from
+`tvShowsLatestGrouped` once per ranked series group, skipping (not counting toward `limit`) any
+group it reports as fully watched, before that group's card is resolved.
+
+One more thing surfaced during live comparison that is real, reproducible reference-server
+behavior but is **not** implemented by Tinyfin's `internal/api/latest_grouping.go`, logged here
 rather than chased further per the scope note above:
 
-- **A series with zero unwatched items among its candidates never appears in the grouped result at
-  all**, even when it would otherwise rank into the requested `limit` by recency (confirmed: a
-  4-season series whose every episode had `Played: true` was skipped entirely, even at `limit`
-  values far larger than the number of series that did appear — a series ranked just behind it by
-  recency, with unwatched episodes, took its place instead). This reads as a "recently added,
-  unwatched" refinement on top of the ranking this section describes, not a change to the
-  window/bulk/card-selection rule itself. Out of scope for the grouping gap this section closes —
-  Tinyfin's `tvShowsLatestGrouped` does not filter by playstate — recorded here for whoever picks
-  up a future "Latest should skip fully-watched series" gap.
 - **A series whose only recent-addition burst is roughly a month or older than the request time
   sometimes still resolves to a single-episode card**, even though its own items, read directly,
   clearly meet this section's stated 24-hour-trailing-window/bulk/multi-season criteria for a
