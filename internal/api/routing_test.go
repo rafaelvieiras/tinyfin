@@ -16,6 +16,13 @@ func TestNormalizePathCase(t *testing.T) {
 		{"/quickconnect/enabled", "/QuickConnect/Enabled"},
 		{"/branding/configuration", "/Branding/Configuration"},
 		{"/sessions/capabilities/full", "/Sessions/Capabilities/Full"},
+		// Regression: /Users/{userId}/FavoriteItems/{itemId} and
+		// /Users/{userId}/PlayedItems/{itemId} share a segment count with
+		// /Users/{userId}/Items/{itemId} but must not be swallowed by it —
+		// their third segment is a distinguishing literal, not a wildcard,
+		// on both sides.
+		{"/users/abc-123/favoriteitems/item-xyz", "/Users/abc-123/FavoriteItems/item-xyz"},
+		{"/users/abc-123/playeditems/item-xyz", "/Users/abc-123/PlayedItems/item-xyz"},
 	}
 	for _, c := range cases {
 		if got := normalizePathCase(c.in); got != c.want {

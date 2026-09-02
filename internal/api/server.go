@@ -327,6 +327,16 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /UserPlayedItems/{itemId}", requireAuth(s.handleUserPlayedItemsMark))
 	s.mux.HandleFunc("GET /MediaSegments/{itemId}", requireAuth(s.handleMediaSegments))
 
+	// Legacy per-user favorite/watched routes (userdata.go) — the actual
+	// paths jellyfin-web's bundled client calls for the item-detail page's
+	// favorite/mark-watched buttons, distinct from the newer/SDK-shaped
+	// POST /UserPlayedItems/{itemId} above. {userId} accepted, ignored —
+	// same simplification as GET /Users/{userId}/Items/{itemId} above.
+	s.mux.HandleFunc("POST /Users/{userId}/FavoriteItems/{itemId}", requireAuth(s.handleFavoriteItemAdd))
+	s.mux.HandleFunc("DELETE /Users/{userId}/FavoriteItems/{itemId}", requireAuth(s.handleFavoriteItemRemove))
+	s.mux.HandleFunc("POST /Users/{userId}/PlayedItems/{itemId}", requireAuth(s.handlePlayedItemAdd))
+	s.mux.HandleFunc("DELETE /Users/{userId}/PlayedItems/{itemId}", requireAuth(s.handlePlayedItemRemove))
+
 	// Library management (library_admin.go, Phase 3) — admin-only, unlike
 	// every other route above: these create/remove libraries and trigger
 	// scans, not just read the catalog.

@@ -57,6 +57,15 @@ var routePaths = []string{
 	"/Sessions/Playing/Stopped",
 	"/UserPlayedItems/{itemId}",
 	"/MediaSegments/{itemId}",
+	// No length collision with /Users/{userId}/Items/{itemId} above despite
+	// matching segment count (5, including the leading empty split
+	// element): normalizePathCase checks every non-wildcard segment, and
+	// these two differ from it at the third segment ("FavoriteItems"/
+	// "PlayedItems" vs "Items", all three literals) — no wildcard sits at
+	// that position on either side, so no pattern can swallow another
+	// regardless of list order here.
+	"/Users/{userId}/FavoriteItems/{itemId}",
+	"/Users/{userId}/PlayedItems/{itemId}",
 	"/Library/VirtualFolders",
 	"/Library/Refresh",
 }
