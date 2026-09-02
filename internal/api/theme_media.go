@@ -97,10 +97,10 @@ func (s *Server) handleThemeMedia(w http.ResponseWriter, r *http.Request) {
 		userID = ac.User.ID
 	}
 	for i := range songs {
-		songs[i].UserData = s.userDataFor(ctx, userID, storage.ItemID(songs[i].ID))
+		songs[i].UserData = s.userDataFor(ctx, userID, storage.Item{ID: storage.ItemID(songs[i].ID), Type: storage.ItemType(songs[i].Type)})
 	}
 	for i := range videos {
-		videos[i].UserData = s.userDataFor(ctx, userID, storage.ItemID(videos[i].ID))
+		videos[i].UserData = s.userDataFor(ctx, userID, storage.Item{ID: storage.ItemID(videos[i].ID), Type: storage.ItemType(videos[i].Type)})
 	}
 
 	writeJSON(w, http.StatusOK, themeMediaResponse{

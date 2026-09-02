@@ -82,18 +82,30 @@ type tvshowNFO struct {
 	commonNFOFields
 }
 
-// episodeNFO is a Kodi <episodedetails> .nfo document. Season/Episode are
-// parsed but deliberately not applied to the item: nameparse.go already
-// derives season/episode numbers from the filename before any .nfo is
-// consulted, and that's reliable enough on its own — see the package doc
-// comment's "don't duplicate logic" note in the task this file implements.
+// episodeNFO is a Kodi <episodedetails> .nfo document. It embeds
+// commonNFOFields so an episode .nfo gets the same Genres/ProviderIDs/
+// CommunityRating/ProductionYear/Tags/MPAA/OriginalTitle handling as
+// <movie>/<tvshow> via applyCommonNFOFields — Title/Plot/PremiereDate
+// included, since commonNFOFields already reads <title>, <plot> and
+// <premiered>.
+//
+// Aired is separate because Kodi's <episodedetails> schema historically
+// uses <aired> (not <premiered>) for the air date; applyEpisodeNFO tries
+// <premiered> first (via applyCommonNFOFields) and falls back to <aired>
+// only if that left PremiereDate unset, so either convention works without
+// duplicating the date-parsing logic.
+//
+// Season/Episode are parsed but deliberately not applied to the item:
+// nameparse.go already derives season/episode numbers from the filename
+// before any .nfo is consulted, and that's reliable enough on its own —
+// see the package doc comment's "don't duplicate logic" note in the task
+// this file implements.
 type episodeNFO struct {
 	XMLName xml.Name `xml:"episodedetails"`
-	Title   string   `xml:"title"`
-	Plot    string   `xml:"plot"`
-	Aired   string   `xml:"aired"`
-	Season  int      `xml:"season"`
-	Episode int      `xml:"episode"`
+	commonNFOFields
+	Aired   string `xml:"aired"`
+	Season  int    `xml:"season"`
+	Episode int    `xml:"episode"`
 }
 
 // readFirstExisting returns the contents of the first path in candidates
@@ -233,7 +245,10 @@ func (s *Scanner) applySeriesNFO(pool *jobPool, item *storage.Item, seriesPath s
 }
 
 // applyEpisodeNFO looks for "<episode-video-basename>.nfo" next to
-// episodePath and overlays any fields it defines onto item.
+// episodePath and overlays any fields it defines onto item. It reuses
+// applyCommonNFOFields (same handling <movie>/<tvshow> get), then falls
+// back to <aired> for PremiereDate if <premiered> wasn't present — see the
+// episodeNFO doc comment.
 func (s *Scanner) applyEpisodeNFO(pool *jobPool, item *storage.Item, episodePath string) {
 	base := strings.TrimSuffix(episodePath, filepath.Ext(episodePath))
 	data, found := readFirstExisting(base + ".nfo")
@@ -245,14 +260,10 @@ func (s *Scanner) applyEpisodeNFO(pool *jobPool, item *storage.Item, episodePath
 		pool.addWarning(fmt.Sprintf("parsing episode .nfo for %q: %v (ignored)", episodePath, err))
 		return
 	}
-	if n.Title != "" {
-		item.Name = n.Title
-		item.SortName = n.Title
-	}
-	if n.Plot != "" {
-		item.Overview = n.Plot
-	}
-	if t, ok := parseNFODate(n.Aired); ok {
-		item.PremiereDate = &t
+	applyCommonNFOFields(item, n.commonNFOFields)
+	if item.PremiereDate == nil && n.Aired != "" {
+		if t, ok := parseNFODate(n.Aired); ok {
+			item.PremiereDate = &t
+		}
 	}
 }

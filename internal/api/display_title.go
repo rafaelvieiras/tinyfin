@@ -110,6 +110,61 @@ func friendlyAudioCodecName(codec string) string {
 	return strings.ToUpper(codec)
 }
 
+// languageNames maps an ISO 639-2/B three-letter language code (the format
+// ffprobe emits in a stream's `language` tag) to its English display name —
+// docs/12's "Audio streams" point 1 ("its localized display name"; Tinyfin
+// has no localization system, so the English name is what's used regardless
+// of client locale). Covers the codes common in media libraries; found
+// missing via a live comparison against the reference server (see docs/12):
+// Tinyfin was using the raw three-letter code ("por") as the attribute
+// instead of the language's name ("Portuguese").
+var languageNames = map[string]string{
+	"por": "Portuguese",
+	"eng": "English",
+	"jpn": "Japanese",
+	"spa": "Spanish",
+	"fre": "French",
+	"fra": "French",
+	"ger": "German",
+	"deu": "German",
+	"ita": "Italian",
+	"kor": "Korean",
+	"chi": "Chinese",
+	"zho": "Chinese",
+	"rus": "Russian",
+	"ara": "Arabic",
+	"hin": "Hindi",
+	"dan": "Danish",
+	"dut": "Dutch",
+	"nld": "Dutch",
+	"swe": "Swedish",
+	"nor": "Norwegian",
+	"fin": "Finnish",
+	"pol": "Polish",
+	"tur": "Turkish",
+	"gre": "Greek",
+	"ell": "Greek",
+	"heb": "Hebrew",
+	"tha": "Thai",
+	"vie": "Vietnamese",
+	"ind": "Indonesian",
+	"ukr": "Ukrainian",
+	"ces": "Czech",
+	"cze": "Czech",
+	"hun": "Hungarian",
+}
+
+// languageName implements docs/12's "Audio streams" point 1 "localized
+// display name" — same map-plus-fallback pattern as friendlyAudioCodecName:
+// any code with no entry above falls back to its own code, uppercased,
+// rather than locking up or guessing at an unknown code's name.
+func languageName(code string) string {
+	if name, ok := languageNames[strings.ToLower(code)]; ok {
+		return name
+	}
+	return strings.ToUpper(code)
+}
+
 // isUsableLanguage reports whether lang is a real language code rather than
 // an "unset" placeholder — docs/12's "Audio streams" point 1 ("if set and
 // not a placeholder/unset marker"). "und"/"unk" are ffprobe/Matroska's own
@@ -194,7 +249,7 @@ func audioDisplayTitle(s storage.MediaStreamRef) string {
 	var attrs []string
 
 	if isUsableLanguage(s.Language) {
-		attrs = append(attrs, s.Language)
+		attrs = append(attrs, languageName(s.Language))
 	}
 
 	if isUsableProfile(s.Profile) {
@@ -236,7 +291,7 @@ func subtitleDisplayTitle(s storage.MediaStreamRef) string {
 	var attrs []string
 
 	if isUsableLanguage(s.Language) {
-		attrs = append(attrs, s.Language)
+		attrs = append(attrs, languageName(s.Language))
 	} else {
 		attrs = append(attrs, "Und")
 	}

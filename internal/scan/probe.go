@@ -42,6 +42,8 @@ type ffprobeStream struct {
 	FieldOrder    string `json:"field_order"`
 	ColorTransfer string `json:"color_transfer"`
 	Disposition   struct {
+		Default  int `json:"default"`
+		Forced   int `json:"forced"`
 		Original int `json:"original"`
 	} `json:"disposition"`
 	// Tags.Title/Language: an embedded per-track title/language tag, when
@@ -104,10 +106,12 @@ func isInterlacedFieldOrder(fieldOrder string) bool {
 }
 
 // mediaStreamsFromProbe converts ffprobe's stream list into
-// storage.MediaStreamRef entries, keeping only video/audio tracks (subtitle
-// tracks embedded in a container aren't surfaced by ffprobe's default
-// -show_streams shape used here without further flags, matching devseed's
-// original scope).
+// storage.MediaStreamRef entries for video, audio, and subtitle tracks.
+// IsDefault/IsForced reflect each stream's own disposition.default/
+// disposition.forced flag (ffprobe reports these per-stream — e.g. a file
+// with two audio tracks can have disposition.default=1 on only one of
+// them — rather than being hardcoded true for every stream of a kept
+// type).
 func mediaStreamsFromProbe(info ffprobeOutput) []storage.MediaStreamRef {
 	var streams []storage.MediaStreamRef
 	idx := 0
@@ -117,7 +121,8 @@ func mediaStreamsFromProbe(info ffprobeOutput) []storage.MediaStreamRef {
 			w, h := st.Width, st.Height
 			ref := storage.MediaStreamRef{
 				Index: idx, Type: storage.StreamTypeVideo, Codec: st.CodecName,
-				IsDefault:     true,
+				IsDefault:     st.Disposition.Default == 1,
+				IsForced:      st.Disposition.Forced == 1,
 				Width:         &w,
 				Height:        &h,
 				Title:         st.Tags.Title,
@@ -146,7 +151,8 @@ func mediaStreamsFromProbe(info ffprobeOutput) []storage.MediaStreamRef {
 			ch := st.Channels
 			ref := storage.MediaStreamRef{
 				Index: idx, Type: storage.StreamTypeAudio, Codec: st.CodecName,
-				IsDefault:     true,
+				IsDefault:     st.Disposition.Default == 1,
+				IsForced:      st.Disposition.Forced == 1,
 				Channels:      &ch,
 				Title:         st.Tags.Title,
 				Language:      st.Tags.Language,
@@ -156,6 +162,17 @@ func mediaStreamsFromProbe(info ffprobeOutput) []storage.MediaStreamRef {
 			}
 			if sr, err := strconv.Atoi(st.SampleRate); err == nil && sr > 0 {
 				ref.SampleRate = &sr
+			}
+			streams = append(streams, ref)
+			idx++
+		case "subtitle":
+			ref := storage.MediaStreamRef{
+				Index: idx, Type: storage.StreamTypeSubtitle, Codec: st.CodecName,
+				IsDefault:  st.Disposition.Default == 1,
+				IsForced:   st.Disposition.Forced == 1,
+				Title:      st.Tags.Title,
+				Language:   st.Tags.Language,
+				IsOriginal: st.Disposition.Original != 0,
 			}
 			streams = append(streams, ref)
 			idx++

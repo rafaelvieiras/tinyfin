@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -420,6 +421,66 @@ func TestShowSeasonsAndEpisodes(t *testing.T) {
 	}
 	if len(ep1Pascal.Items) != 2 {
 		t.Fatalf("Episodes(SeasonId=season1, PascalCase) = %+v, want 2 items", ep1Pascal.Items)
+	}
+}
+
+// TestShowEpisodesNoDefaultLimit regression-guards a real bug found via live
+// traffic comparison (Playwright, same jellyfin-web bundle against
+// tinyfin-staging and a real reference server, both pointed at a
+// 153-episode single-season series): GET /Shows/{seriesId}/Episodes with no
+// Limit/StartIndex in the request was silently capped at defaultItemsLimit
+// (100) here, while the reference server returns every matching episode in
+// that case — docs/12's "Shows/Episodes — no default page cap" section has
+// the confirmed behavior. This uses more than 100 episodes in one season,
+// no Limit on the request, and expects all of them back.
+func TestShowEpisodesNoDefaultLimit(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "frank", "frankpass")
+	token := loginToken(t, ts.URL, user.Name, "frankpass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "Long Runner", storage.CollectionTypeTVShows)
+
+	series := storage.Item{Type: storage.ItemTypeSeries, LibraryID: libID, Name: "Long Series", Path: "/media/series/Long Series"}
+	if err := st.UpsertItem(context.Background(), series); err != nil {
+		t.Fatalf("UpsertItem series: %v", err)
+	}
+	seriesID := mustFindItemByName(t, st, libID, "Long Series")
+
+	one := 1
+	season := storage.Item{Type: storage.ItemTypeSeason, LibraryID: libID, ParentID: &seriesID, SeriesID: &seriesID, Name: "Season 1", IndexNumber: &one, Path: "/media/series/Long Series/Season 1"}
+	if err := st.UpsertItem(context.Background(), season); err != nil {
+		t.Fatalf("UpsertItem Season 1: %v", err)
+	}
+	seasonID := mustFindItemByName(t, st, libID, "Season 1")
+
+	const episodeCount = 153
+	for i := 1; i <= episodeCount; i++ {
+		idx := i
+		name := fmt.Sprintf("Episode %03d", i)
+		episode := storage.Item{
+			Type: storage.ItemTypeEpisode, LibraryID: libID, ParentID: &seasonID, SeriesID: &seriesID, SeasonID: &seasonID,
+			Name: name, IndexNumber: &idx, Path: "/media/series/Long Series/Season 1/" + name + ".mkv",
+		}
+		if err := st.UpsertItem(context.Background(), episode); err != nil {
+			t.Fatalf("UpsertItem %s: %v", name, err)
+		}
+	}
+
+	resp := get(http.MethodGet, "/Shows/"+string(seriesID)+"/Episodes?seasonId="+string(seasonID))
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /Shows/{seriesId}/Episodes?seasonId=... status = %d, want 200", resp.StatusCode)
+	}
+	var result baseItemDtoQueryResult
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatalf("decoding Episodes: %v", err)
+	}
+	if result.TotalRecordCount != episodeCount {
+		t.Fatalf("TotalRecordCount = %d, want %d", result.TotalRecordCount, episodeCount)
+	}
+	if len(result.Items) != episodeCount {
+		t.Fatalf("len(Items) = %d, want %d (no Limit in request should not truncate)", len(result.Items), episodeCount)
 	}
 }
 
@@ -1073,6 +1134,167 @@ func TestUsersItemsFavoritesSeriesSortName(t *testing.T) {
 		if got[i] != want[i] {
 			t.Errorf("Items[%d].Name = %q, want %q (order = %v, want %v — grouped by series, not interleaved by episode title)", i, got[i], want[i], got, want)
 			break
+		}
+	}
+}
+
+// TestItemGetVideoAndPermissionFields regression-guards docs/12's "Episode
+// DTO — item-level video/permission/identity fields": Width/Height/IsHD
+// mirroring the primary video stream, HasSubtitles derived from the
+// stream list, VideoType/PlayAccess/LocationType's fixed simplified
+// values, and CanDelete/CanDownload's admin-gated simplification.
+func TestItemGetVideoAndPermissionFields(t *testing.T) {
+	ts, st := newTestServer(t)
+	admin := createTestAdminUser(t, st, "root", "rootpass")
+	token := loginToken(t, ts.URL, admin.Name, "rootpass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "VideoFieldsLib", storage.CollectionTypeMovies)
+	if err := st.UpsertItem(context.Background(), storage.Item{
+		Type: storage.ItemTypeMovie, LibraryID: libID, Name: "HD Movie",
+		Path: "/media/VideoFieldsLib/HD Movie.mkv", Container: "mkv",
+		MediaStreams: []storage.MediaStreamRef{
+			{Type: storage.StreamTypeVideo, Codec: "h264", Width: intPtr(1440), Height: intPtr(1080), IsDefault: true},
+			{Type: storage.StreamTypeAudio, Codec: "aac", IsDefault: true},
+			{Type: storage.StreamTypeSubtitle, Codec: "subrip", Language: "eng"},
+		},
+	}); err != nil {
+		t.Fatalf("UpsertItem: %v", err)
+	}
+	itemID := mustFindItemByName(t, st, libID, "HD Movie")
+
+	resp := get(http.MethodGet, "/Items/"+string(itemID))
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /Items/{itemId} status = %d, want 200", resp.StatusCode)
+	}
+	var dto baseItemDto
+	if err := json.NewDecoder(resp.Body).Decode(&dto); err != nil {
+		t.Fatalf("decoding item: %v", err)
+	}
+
+	if dto.Width == nil || *dto.Width != 1440 {
+		t.Errorf("Width = %v, want 1440", dto.Width)
+	}
+	if dto.Height == nil || *dto.Height != 1080 {
+		t.Errorf("Height = %v, want 1080", dto.Height)
+	}
+	if !dto.IsHD {
+		t.Errorf("IsHD = false, want true (Height 1080 >= 720)")
+	}
+	if !dto.HasSubtitles {
+		t.Errorf("HasSubtitles = false, want true (item has a Subtitle MediaStream)")
+	}
+	if dto.VideoType != "VideoFile" {
+		t.Errorf("VideoType = %q, want VideoFile", dto.VideoType)
+	}
+	if dto.PlayAccess != "Full" {
+		t.Errorf("PlayAccess = %q, want Full", dto.PlayAccess)
+	}
+	if dto.LocationType != "FileSystem" {
+		t.Errorf("LocationType = %q, want FileSystem", dto.LocationType)
+	}
+	if !dto.CanDelete {
+		t.Errorf("CanDelete = false, want true (admin caller)")
+	}
+	if !dto.CanDownload {
+		t.Errorf("CanDownload = false, want true (admin caller, non-folder item)")
+	}
+	if dto.Etag == "" {
+		t.Errorf("Etag = %q, want a non-empty opaque hash", dto.Etag)
+	}
+	if dto.DisplayPreferencesID == "" {
+		t.Errorf("DisplayPreferencesId = %q, want a non-empty opaque hash", dto.DisplayPreferencesID)
+	}
+}
+
+// TestItemGetParentImageInheritance regression-guards docs/12's
+// "Season/Episode DTO — inherited Parent* image fields and
+// SeriesPrimaryImageTag": a Season with no art of its own inherits its
+// Logo/Backdrop from the series, and always carries the series' own
+// Primary tag regardless.
+func TestItemGetParentImageInheritance(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "iris", "irispass")
+	token := loginToken(t, ts.URL, user.Name, "irispass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "ParentImageLib", storage.CollectionTypeTVShows)
+	seriesID, seasonID := seedTestSeries(t, st, libID, "PI Series", "PI Season")
+
+	for _, ref := range []storage.ImageRef{
+		{ItemID: seriesID, Kind: storage.ImageKind("Primary"), Path: "/media/PI Series/poster.jpg", Tag: "series-primary"},
+		{ItemID: seriesID, Kind: storage.ImageKind("Logo"), Path: "/media/PI Series/logo.png", Tag: "series-logo"},
+		{ItemID: seriesID, Kind: storage.ImageKind("Backdrop"), Index: 0, Path: "/media/PI Series/backdrop.jpg", Tag: "series-backdrop"},
+	} {
+		if err := st.UpsertImageRef(context.Background(), ref); err != nil {
+			t.Fatalf("UpsertImageRef(%s): %v", ref.Kind, err)
+		}
+	}
+
+	resp := get(http.MethodGet, "/Items/"+string(seasonID))
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /Items/{itemId} status = %d, want 200", resp.StatusCode)
+	}
+	var dto baseItemDto
+	if err := json.NewDecoder(resp.Body).Decode(&dto); err != nil {
+		t.Fatalf("decoding season: %v", err)
+	}
+
+	if dto.SeriesPrimaryImageTag != "series-primary" {
+		t.Errorf("SeriesPrimaryImageTag = %q, want series-primary", dto.SeriesPrimaryImageTag)
+	}
+	if dto.ParentLogoItemID != string(seriesID) || dto.ParentLogoImageTag != "series-logo" {
+		t.Errorf("ParentLogoItemId/Tag = %q/%q, want %q/series-logo", dto.ParentLogoItemID, dto.ParentLogoImageTag, seriesID)
+	}
+	if dto.ParentBackdropItemID != string(seriesID) || len(dto.ParentBackdropImageTags) != 1 || dto.ParentBackdropImageTags[0] != "series-backdrop" {
+		t.Errorf("ParentBackdropItemId/Tags = %q/%v, want %q/[series-backdrop]", dto.ParentBackdropItemID, dto.ParentBackdropImageTags, seriesID)
+	}
+}
+
+// TestItemGetUnplayedItemCount regression-guards docs/12's
+// "Season/Series/BoxSet UserData — UnplayedItemCount": a Season/Series'
+// UserData.UnplayedItemCount counts unplayed leaf episodes recursively,
+// not direct children (ChildCount's own relationship).
+func TestItemGetUnplayedItemCount(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "upton", "uptonpass")
+	token := loginToken(t, ts.URL, user.Name, "uptonpass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "UnplayedLib", storage.CollectionTypeTVShows)
+	seriesID, seasonID := seedTestSeries(t, st, libID, "Unplayed Series", "Unplayed Season")
+	ep1 := seedTestEpisode(t, st, libID, seriesID, seasonID, 1, 1, "UI Episode 1")
+	seedTestEpisode(t, st, libID, seriesID, seasonID, 1, 2, "UI Episode 2")
+	seedTestEpisode(t, st, libID, seriesID, seasonID, 1, 3, "UI Episode 3")
+
+	if err := st.SetPlaystate(context.Background(), user.ID, ep1, storage.Playstate{Played: true, PlayCount: 1}); err != nil {
+		t.Fatalf("SetPlaystate: %v", err)
+	}
+
+	for _, tc := range []struct {
+		name string
+		id   storage.ItemID
+	}{
+		{"season", seasonID},
+		{"series", seriesID},
+	} {
+		resp := get(http.MethodGet, "/Items/"+string(tc.id))
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("GET /Items/{%s} status = %d, want 200", tc.name, resp.StatusCode)
+		}
+		var dto baseItemDto
+		if err := json.NewDecoder(resp.Body).Decode(&dto); err != nil {
+			t.Fatalf("decoding %s: %v", tc.name, err)
+		}
+		if dto.UserData == nil || dto.UserData.UnplayedItemCount == nil || *dto.UserData.UnplayedItemCount != 2 {
+			var got any = "<nil UserData>"
+			if dto.UserData != nil {
+				got = dto.UserData.UnplayedItemCount
+			}
+			t.Errorf("%s UserData.UnplayedItemCount = %v, want 2 (3 episodes, 1 played)", tc.name, got)
 		}
 	}
 }

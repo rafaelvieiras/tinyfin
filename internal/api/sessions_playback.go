@@ -132,6 +132,15 @@ type userItemDataDto struct {
 	Played                bool   `json:"Played"`
 	Key                   string `json:"Key"`
 	ItemID                string `json:"ItemId"`
+
+	// UnplayedItemCount is only ever set for a folder-shaped item that
+	// aggregates its children's watched status (Series/Season/BoxSet,
+	// dto.go's childCountItemTypes) — nil for anything else, and for the
+	// call sites in this file, which build a userItemDataDto directly
+	// rather than through dto.go's userDataFor (playable, non-folder
+	// items). See dto.go's unplayedItemCountFor and docs/12's
+	// "Season/Series/BoxSet UserData — UnplayedItemCount".
+	UnplayedItemCount *int `json:"UnplayedItemCount,omitempty"`
 }
 
 // handleUserPlayedItemsMark is POST /UserPlayedItems/{itemId} — called by

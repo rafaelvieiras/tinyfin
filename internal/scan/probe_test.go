@@ -174,3 +174,69 @@ func TestMediaStreamsFromProbeAudioSampleRateMissing(t *testing.T) {
 		t.Errorf("SampleRate = %v, want nil", streams[0].SampleRate)
 	}
 }
+
+// TestMediaStreamsFromProbeSubtitle covers a codec_type=subtitle stream —
+// found dropped entirely during byte-for-byte comparison against the
+// reference server (staging, :8097) for a real staging file that carries
+// an embedded ASS subtitle track: mediaStreamsFromProbe used to only
+// switch on "video"/"audio", silently discarding "subtitle" streams, which
+// broke the reference client's Subtitles dropdown against tinyfin.
+func TestMediaStreamsFromProbeSubtitle(t *testing.T) {
+	st := ffprobeStream{
+		CodecType: "subtitle",
+		CodecName: "ass",
+	}
+	st.Tags.Title = "Português"
+	st.Tags.Language = "por"
+	st.Disposition.Default = 1
+	info := ffprobeOutput{Streams: []ffprobeStream{st}}
+	streams := mediaStreamsFromProbe(info)
+	if len(streams) != 1 {
+		t.Fatalf("mediaStreamsFromProbe() returned %d streams, want 1", len(streams))
+	}
+	s := streams[0]
+	if s.Type != storage.StreamTypeSubtitle {
+		t.Errorf("Type = %v, want Subtitle", s.Type)
+	}
+	if s.Codec != "ass" {
+		t.Errorf("Codec = %q, want %q", s.Codec, "ass")
+	}
+	if s.Title != "Português" {
+		t.Errorf("Title = %q, want %q", s.Title, "Português")
+	}
+	if s.Language != "por" {
+		t.Errorf("Language = %q, want %q", s.Language, "por")
+	}
+	if !s.IsDefault {
+		t.Errorf("IsDefault = false, want true (disposition.default=1)")
+	}
+	if s.IsForced {
+		t.Errorf("IsForced = true, want false (disposition.forced=0)")
+	}
+}
+
+// TestMediaStreamsFromProbeIsDefaultPerStream covers disposition.default
+// being respected per-stream rather than hardcoded true for every kept
+// stream: found via byte-for-byte comparison against the reference server
+// (staging, :8097) for a real staging file with two audio tracks where
+// only the first has disposition.default=1 — the reference server's
+// MediaStreams response reflects that per-track, tinyfin used to mark
+// IsDefault true on both.
+func TestMediaStreamsFromProbeIsDefaultPerStream(t *testing.T) {
+	defaultAudio := ffprobeStream{CodecType: "audio", CodecName: "aac"}
+	defaultAudio.Disposition.Default = 1
+	nonDefaultAudio := ffprobeStream{CodecType: "audio", CodecName: "aac"}
+	nonDefaultAudio.Disposition.Default = 0
+
+	info := ffprobeOutput{Streams: []ffprobeStream{defaultAudio, nonDefaultAudio}}
+	streams := mediaStreamsFromProbe(info)
+	if len(streams) != 2 {
+		t.Fatalf("mediaStreamsFromProbe() returned %d streams, want 2", len(streams))
+	}
+	if !streams[0].IsDefault {
+		t.Errorf("streams[0].IsDefault = false, want true (disposition.default=1)")
+	}
+	if streams[1].IsDefault {
+		t.Errorf("streams[1].IsDefault = true, want false (disposition.default=0)")
+	}
+}

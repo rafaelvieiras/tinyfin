@@ -376,6 +376,7 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 			log.Printf("scan: upserting season %q: %v", e.Name(), err)
 			continue
 		}
+		s.seedSeasonImage(ctx, seasonID, seriesPath, seasonNum)
 
 		pool.enqueue(func() error {
 			enriched := seasonItem
@@ -628,6 +629,31 @@ func (s *Scanner) seedFolderImage(ctx context.Context, itemID storage.ItemID, fo
 		}
 		return
 	}
+}
+
+// seedSeasonImage picks up a season's local Primary artwork — a distinct
+// Kodi filename convention from seedFolderImages above (kodi.wiki's
+// "Artwork" guide, "Season" section): unlike a movie/series poster, a
+// season poster is not stored inside the season's own subfolder — it lives
+// directly in the *series root* folder (the same folder that already holds
+// poster.jpg/fanart.jpg/tvshow.nfo for the series itself), named
+// season{NN}-poster.jpg where NN is the season number zero-padded to two
+// digits (season01-poster.jpg, season02-poster.jpg, ...). Kodi also accepts
+// season{NN}.jpg/seasonNN.tbn variants; this only covers the -poster.jpg/
+// .jpg forms (plus their .png equivalents), matching what's actually seen
+// on real libraries. Same "first match wins, local runs before provider
+// enrichment" fallback as seedFolderImage/seedFolderImages: a locally
+// provided season poster always exists even with no Provider configured,
+// and storeProviderImage overwrites it later (same deterministic ImageRef
+// ID) if the provider returns a Season image.
+func (s *Scanner) seedSeasonImage(ctx context.Context, seasonID storage.ItemID, seriesPath string, seasonNum int) {
+	candidates := []string{
+		fmt.Sprintf("season%02d-poster.jpg", seasonNum),
+		fmt.Sprintf("season%02d.jpg", seasonNum),
+		fmt.Sprintf("season%02d-poster.png", seasonNum),
+		fmt.Sprintf("season%02d.png", seasonNum),
+	}
+	s.seedFolderImage(ctx, seasonID, seriesPath, "Primary", candidates)
 }
 
 // imageDimensions decodes just r's header to get an image's pixel

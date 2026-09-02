@@ -2,8 +2,12 @@ package scan
 
 import (
 	"encoding/xml"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
 
 func TestMovieNFOParsing(t *testing.T) {
@@ -190,6 +194,151 @@ func TestEpisodeNFOParsing(t *testing.T) {
 	if !ok || !aired.Equal(time.Date(1986, 2, 26, 0, 0, 0, 0, time.UTC)) {
 		t.Errorf("parseNFODate(Aired) = %v, %v; want 1986-02-26, true", aired, ok)
 	}
+}
+
+// writeEpisodeNFO writes data to "<dir>/episode.nfo" and returns the video
+// path applyEpisodeNFO expects ("<dir>/episode.mkv", so base+".nfo" resolves
+// to the file just written).
+func writeEpisodeNFO(t *testing.T, dir, data string) string {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, "episode.nfo"), []byte(data), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	return filepath.Join(dir, "episode.mkv")
+}
+
+// TestApplyEpisodeNFO covers the real bug this task fixes: an
+// <episodedetails> .nfo used to only apply Title/Plot/Aired by hand,
+// silently dropping every other commonNFOFields tag (ProviderIds, Genres,
+// CommunityRating, ProductionYear, ...) since episodeNFO didn't embed
+// commonNFOFields. It now does, via applyCommonNFOFields — this asserts
+// that wiring end to end through applyEpisodeNFO.
+func TestApplyEpisodeNFO(t *testing.T) {
+	s := &Scanner{}
+	pool := newJobPool(1)
+
+	t.Run("premiered tag populates PremiereDate via commonNFOFields", func(t *testing.T) {
+		dir := t.TempDir()
+		video := writeEpisodeNFO(t, dir, `<?xml version="1.0" encoding="UTF-8"?>
+<episodedetails>
+  <title>Vigie as Esferas do Dragão</title>
+  <plot>Está ficando tarde...</plot>
+  <premiered>1986-04-02</premiered>
+  <uniqueid type="tmdb" default="true">484774</uniqueid>
+</episodedetails>`)
+		item := &storage.Item{}
+		s.applyEpisodeNFO(pool, item, video)
+
+		if item.Name != "Vigie as Esferas do Dragão" {
+			t.Errorf("Name = %q", item.Name)
+		}
+		if item.Overview != "Está ficando tarde..." {
+			t.Errorf("Overview = %q", item.Overview)
+		}
+		if item.PremiereDate == nil || !item.PremiereDate.Equal(time.Date(1986, 4, 2, 0, 0, 0, 0, time.UTC)) {
+			t.Errorf("PremiereDate = %v, want 1986-04-02", item.PremiereDate)
+		}
+		if got := item.ProviderIDs["Tmdb"]; got != "484774" {
+			t.Errorf("ProviderIDs[Tmdb] = %q, want 484774", got)
+		}
+	})
+
+	t.Run("aired tag used as fallback when premiered is absent", func(t *testing.T) {
+		dir := t.TempDir()
+		video := writeEpisodeNFO(t, dir, `<episodedetails>
+  <title>The Secret of the Dragon Balls</title>
+  <aired>1986-02-26</aired>
+</episodedetails>`)
+		item := &storage.Item{}
+		s.applyEpisodeNFO(pool, item, video)
+
+		if item.PremiereDate == nil || !item.PremiereDate.Equal(time.Date(1986, 2, 26, 0, 0, 0, 0, time.UTC)) {
+			t.Errorf("PremiereDate = %v, want 1986-02-26 (from <aired> fallback)", item.PremiereDate)
+		}
+	})
+
+	t.Run("premiered takes priority over aired when both present", func(t *testing.T) {
+		dir := t.TempDir()
+		video := writeEpisodeNFO(t, dir, `<episodedetails>
+  <title>Both Dates</title>
+  <premiered>1986-04-02</premiered>
+  <aired>1986-02-26</aired>
+</episodedetails>`)
+		item := &storage.Item{}
+		s.applyEpisodeNFO(pool, item, video)
+
+		if item.PremiereDate == nil || !item.PremiereDate.Equal(time.Date(1986, 4, 2, 0, 0, 0, 0, time.UTC)) {
+			t.Errorf("PremiereDate = %v, want 1986-04-02 (premiered wins over aired)", item.PremiereDate)
+		}
+	})
+
+	t.Run("genre tag populates Genres", func(t *testing.T) {
+		dir := t.TempDir()
+		video := writeEpisodeNFO(t, dir, `<episodedetails>
+  <title>Genre Test</title>
+  <genre>Anime</genre>
+  <genre>Adventure</genre>
+</episodedetails>`)
+		item := &storage.Item{}
+		s.applyEpisodeNFO(pool, item, video)
+
+		if len(item.Genres) != 2 || item.Genres[0] != "Anime" || item.Genres[1] != "Adventure" {
+			t.Errorf("Genres = %v, want [Anime Adventure]", item.Genres)
+		}
+	})
+
+	t.Run("uniqueid tmdb populates ProviderIDs", func(t *testing.T) {
+		dir := t.TempDir()
+		video := writeEpisodeNFO(t, dir, `<episodedetails>
+  <title>Provider ID Test</title>
+  <uniqueid type="tmdb">999</uniqueid>
+</episodedetails>`)
+		item := &storage.Item{}
+		s.applyEpisodeNFO(pool, item, video)
+
+		if got := item.ProviderIDs["Tmdb"]; got != "999" {
+			t.Errorf("ProviderIDs[Tmdb] = %q, want 999", got)
+		}
+	})
+
+	t.Run("year, rating, mpaa, tags, originaltitle all flow through", func(t *testing.T) {
+		dir := t.TempDir()
+		video := writeEpisodeNFO(t, dir, `<episodedetails>
+  <title>Full Fields</title>
+  <originaltitle>Full Fields Original</originaltitle>
+  <year>1986</year>
+  <mpaa>TV-Y7</mpaa>
+  <tag>saga</tag>
+  <rating>8.2</rating>
+</episodedetails>`)
+		item := &storage.Item{}
+		s.applyEpisodeNFO(pool, item, video)
+
+		if item.OriginalTitle != "Full Fields Original" {
+			t.Errorf("OriginalTitle = %q", item.OriginalTitle)
+		}
+		if item.ProductionYear == nil || *item.ProductionYear != 1986 {
+			t.Errorf("ProductionYear = %v, want 1986", item.ProductionYear)
+		}
+		if item.OfficialRating != "TV-Y7" {
+			t.Errorf("OfficialRating = %q, want TV-Y7", item.OfficialRating)
+		}
+		if len(item.Tags) != 1 || item.Tags[0] != "saga" {
+			t.Errorf("Tags = %v, want [saga]", item.Tags)
+		}
+		if item.CommunityRating == nil || *item.CommunityRating != 8.2 {
+			t.Errorf("CommunityRating = %v, want 8.2", item.CommunityRating)
+		}
+	})
+
+	t.Run("no nfo file leaves item untouched", func(t *testing.T) {
+		dir := t.TempDir()
+		item := &storage.Item{Name: "Untouched"}
+		s.applyEpisodeNFO(pool, item, filepath.Join(dir, "no-nfo-here.mkv"))
+		if item.Name != "Untouched" {
+			t.Errorf("Name = %q, want unchanged", item.Name)
+		}
+	})
 }
 
 func TestParseNFODate(t *testing.T) {

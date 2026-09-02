@@ -187,6 +187,74 @@ type baseItemDto struct {
 	// playable file behind it (item.Path empty), same as PlaybackInfo
 	// itself would have nothing useful to say about one.
 	MediaSources []mediaSourceInfoDto `json:"MediaSources,omitempty"`
+
+	// Width/Height/IsHD/HasSubtitles/VideoType mirror the item's own
+	// primary video track (docs/12's "Episode DTO — item-level
+	// video/permission/identity fields") — distinct from mediaStreamDto's
+	// own per-stream Width/Height. Populated only for a video-file item
+	// (videoFileItemTypes below) that actually has a Path; nil/""/false
+	// (omitempty) otherwise, matching that section's "absent, not a
+	// guessed zero" convention.
+	Width        *int   `json:"Width,omitempty"`
+	Height       *int   `json:"Height,omitempty"`
+	IsHD         bool   `json:"IsHD,omitempty"`
+	HasSubtitles bool   `json:"HasSubtitles,omitempty"`
+	VideoType    string `json:"VideoType,omitempty"`
+
+	// PlayAccess/CanDelete/CanDownload/Etag/DisplayPreferencesId are all
+	// per-request-caller fields (docs/12's same section) — populated only
+	// alongside UserData below, when ctx carries an authenticated caller.
+	PlayAccess           string `json:"PlayAccess,omitempty"`
+	CanDelete            bool   `json:"CanDelete"`
+	CanDownload          bool   `json:"CanDownload"`
+	Etag                 string `json:"Etag,omitempty"`
+	DisplayPreferencesID string `json:"DisplayPreferencesId,omitempty"`
+
+	// LocationType: docs/12's same section — "FileSystem" for an item
+	// with a real Path, "Virtual" otherwise (a placeholder or a
+	// folder-shaped item with nothing of its own on disk). Unlike the
+	// fields above, this doesn't depend on the caller, so it's always
+	// populated, not gated behind auth.
+	LocationType string `json:"LocationType,omitempty"`
+
+	// SeriesStudio is the owning series' first Studios entry, when it has
+	// one — docs/12's same section. Populated for both Season and Episode
+	// (anything with a SeriesID), same fetch this file's SeriesName
+	// lookup already does.
+	SeriesStudio string `json:"SeriesStudio,omitempty"`
+
+	// LocalTrailerCount/SpecialFeatureCount/RemoteTrailers/LockedFields:
+	// this project doesn't implement trailers, extras, or metadata field
+	// locking as concepts yet — always the zero/empty value, present so a
+	// client expecting the keys doesn't have to special-case their
+	// absence (docs/12's same section).
+	LocalTrailerCount   int           `json:"LocalTrailerCount"`
+	SpecialFeatureCount int           `json:"SpecialFeatureCount"`
+	RemoteTrailers      []mediaURLDto `json:"RemoteTrailers,omitempty"`
+	LockedFields        []string      `json:"LockedFields,omitempty"`
+
+	// SeriesPrimaryImageTag/Parent{Logo,Backdrop,Thumb}* are the
+	// image-inheritance fields docs/12's "Season/Episode DTO — inherited
+	// Parent* image fields and SeriesPrimaryImageTag" section covers in
+	// full — populated by parentImageFieldsFor below for a Season or
+	// Episode item.
+	SeriesPrimaryImageTag   string   `json:"SeriesPrimaryImageTag,omitempty"`
+	ParentLogoItemID        string   `json:"ParentLogoItemId,omitempty"`
+	ParentLogoImageTag      string   `json:"ParentLogoImageTag,omitempty"`
+	ParentBackdropItemID    string   `json:"ParentBackdropItemId,omitempty"`
+	ParentBackdropImageTags []string `json:"ParentBackdropImageTags,omitempty"`
+	ParentThumbItemID       string   `json:"ParentThumbItemId,omitempty"`
+	ParentThumbImageTag     string   `json:"ParentThumbImageTag,omitempty"`
+}
+
+// mediaURLDto mirrors the reference server's MediaUrl — {Name, Url} —
+// RemoteTrailers' element shape. Never populated today (baseItemDto.
+// RemoteTrailers' own doc comment); kept as its own type rather than reusing
+// externalURLDto so the two concepts (a provider's own page vs. a remote
+// trailer's playback URL) don't get accidentally conflated later.
+type mediaURLDto struct {
+	Name string `json:"Name"`
+	URL  string `json:"Url"`
 }
 
 // nameIDPairDto mirrors the reference server's NameIdPair — a {Name, Id}
@@ -297,6 +365,50 @@ func (s *Server) childCountFor(ctx context.Context, id storage.ItemID) (int, err
 		return 0, err
 	}
 	return page.TotalCount, nil
+}
+
+// unplayedItemCountFor computes UserData.UnplayedItemCount for (userID,
+// item) — see docs/12's "Season/Series/BoxSet UserData — UnplayedItemCount"
+// for the full behavior spec. Gated by childCountItemTypes, same as
+// ChildCount above: unlike ChildCount, this counts unplayed *leaf*
+// descendants (Episodes), not direct children (a Series' direct children
+// are Seasons, which aren't the thing a client wants an unplayed count
+// over) — but it's the same folder-shaped-item set the reference server
+// aggregates user data for, so there's no need for a separate item-type
+// gate.
+//
+// A Season's direct ParentID children already are its Episodes (no deeper
+// level to recurse into, per item.go's ParentID doc comment), so that case
+// reuses the same non-recursive ParentID query childCountFor does. A
+// Series' direct children are Seasons, not Episodes, so that case queries
+// Episodes by SeriesID instead — the same one-hop back-reference
+// SeriesName's own lookup elsewhere in this file relies on — rather than
+// walking through Seasons. BoxSet child membership isn't wired up beyond
+// ParentID in this codebase yet (childCountFor's own doc comment), so it
+// falls back to the same ParentID query Season uses, with nothing further
+// to recurse into today either.
+//
+// One bounded QueryItems call per item, same N+1-but-bounded-by-the-page
+// trade-off childCountFor's own doc comment already accepts.
+func (s *Server) unplayedItemCountFor(ctx context.Context, userID storage.UserID, item storage.Item) (*int, error) {
+	played := false
+	filter := storage.ItemFilter{
+		UserID: &userID,
+		Played: &played,
+		Limit:  1,
+	}
+	if item.Type == storage.ItemTypeSeries {
+		filter.SeriesID = &item.ID
+		filter.ItemTypes = []storage.ItemType{storage.ItemTypeEpisode}
+	} else {
+		filter.ParentID = &item.ID
+	}
+	page, err := s.store.QueryItems(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	n := page.TotalCount
+	return &n, nil
 }
 
 // mediaSourcesFor builds BaseItemDto.MediaSources for item — see that
@@ -549,6 +661,157 @@ func (s *Server) imageTagsFor(ctx context.Context, id storage.ItemID) (tags map[
 	return tags, aspectRatio, backdropTags
 }
 
+// parentImageInheritanceItemTypes are the ItemTypes SeriesPrimaryImageTag
+// and the Parent{Logo,Backdrop,Thumb}* fields are ever populated for —
+// docs/12's "Season/Episode DTO — inherited Parent* image fields and
+// SeriesPrimaryImageTag" section.
+var parentImageInheritanceItemTypes = map[storage.ItemType]bool{
+	storage.ItemTypeSeason:  true,
+	storage.ItemTypeEpisode: true,
+}
+
+// parentImageInheritance holds baseItemDto's SeriesPrimaryImageTag and
+// Parent{Logo,Backdrop,Thumb}* fields — see parentImageFieldsFor below.
+type parentImageInheritance struct {
+	SeriesPrimaryImageTag   string
+	ParentLogoItemID        string
+	ParentLogoImageTag      string
+	ParentBackdropItemID    string
+	ParentBackdropImageTags []string
+	ParentThumbItemID       string
+	ParentThumbImageTag     string
+}
+
+// parentImageFieldsFor computes parentImageInheritance for an item whose
+// own already-computed image tags are ownTags/ownBackdropTags (baseItemDto
+// already has these from imageTagsFor above, so this never re-derives
+// them) — see docs/12's "Season/Episode DTO — inherited Parent* image
+// fields and SeriesPrimaryImageTag" for the full behavior spec.
+//
+// series is the owning series' own item (nil if unresolved) — always the
+// SeriesPrimaryImageTag source when non-nil, regardless of the item's own
+// art. ancestors is the image-inheritance chain closest-first (an
+// Episode's is [season, series]; a Season's is just [series]) — for each
+// of Logo/Backdrop/Thumb, the first ancestor in that order carrying an
+// image of the missing kind wins; a kind the item already has its own
+// image for is left alone entirely. The reference server's own
+// Thumb-specific quirk (the series' Thumb overriding a closer ancestor's)
+// is deliberately not replicated — see docs/12's "Scope note for the
+// implementer" in that same section for why it's unobservable given what
+// this project's scanner indexes today.
+func (s *Server) parentImageFieldsFor(ctx context.Context, ownTags map[string]string, ownBackdropTags []string, series *storage.Item, ancestors []storage.Item) parentImageInheritance {
+	var out parentImageInheritance
+
+	if series != nil {
+		if tags, _, _ := s.imageTagsFor(ctx, series.ID); tags != nil {
+			if tag, ok := tags["Primary"]; ok {
+				out.SeriesPrimaryImageTag = tag
+			}
+		}
+	}
+
+	if _, ok := ownTags["Logo"]; !ok {
+		for _, anc := range ancestors {
+			tags, _, _ := s.imageTagsFor(ctx, anc.ID)
+			if tag, ok := tags["Logo"]; ok {
+				out.ParentLogoItemID, out.ParentLogoImageTag = string(anc.ID), tag
+				break
+			}
+		}
+	}
+
+	if len(ownBackdropTags) == 0 {
+		for _, anc := range ancestors {
+			_, _, backdrops := s.imageTagsFor(ctx, anc.ID)
+			if len(backdrops) > 0 {
+				out.ParentBackdropItemID, out.ParentBackdropImageTags = string(anc.ID), backdrops
+				break
+			}
+		}
+	}
+
+	if _, ok := ownTags["Thumb"]; !ok {
+		for _, anc := range ancestors {
+			tags, _, _ := s.imageTagsFor(ctx, anc.ID)
+			if tag, ok := tags["Thumb"]; ok {
+				out.ParentThumbItemID, out.ParentThumbImageTag = string(anc.ID), tag
+				break
+			}
+		}
+	}
+
+	return out
+}
+
+// videoFileItemTypes are the ItemTypes Width/Height/IsHD/VideoType are
+// ever populated for — docs/12's "Episode DTO — item-level
+// video/permission/identity fields" section. Series/Season are folder-
+// shaped and never have a video file of their own, so they're excluded
+// even though mediaTypeFor labels them "Video" for a different purpose
+// (playback-eligibility, not "this item has a resolution").
+var videoFileItemTypes = map[storage.ItemType]bool{
+	storage.ItemTypeMovie:   true,
+	storage.ItemTypeEpisode: true,
+	storage.ItemTypeTrailer: true,
+}
+
+// primaryVideoStreamFor returns item's own primary video track — the first
+// Video-type entry in its MediaStreams, in ffprobe's own stream order — or
+// nil if it has none. Backs Width/Height/IsHD (docs/12's same section).
+func primaryVideoStreamFor(streams []storage.MediaStreamRef) *storage.MediaStreamRef {
+	for i := range streams {
+		if streams[i].Type == storage.StreamTypeVideo {
+			return &streams[i]
+		}
+	}
+	return nil
+}
+
+// hasSubtitleStream reports whether item has at least one Subtitle-type
+// MediaStream — backs HasSubtitles (docs/12's same section).
+func hasSubtitleStream(streams []storage.MediaStreamRef) bool {
+	for _, s := range streams {
+		if s.Type == storage.StreamTypeSubtitle {
+			return true
+		}
+	}
+	return false
+}
+
+// locationTypeFor computes BaseItemDto.LocationType for item — docs/12's
+// "Episode DTO — item-level video/permission/identity fields" section.
+// "FileSystem" for an item with a real Path, "Virtual" otherwise (a
+// placeholder or a folder-shaped item with nothing of its own on disk) —
+// Tinyfin has no remote/channel source concept, so the reference server's
+// third possible value ("Remote") never applies here.
+func locationTypeFor(item storage.Item) string {
+	if item.Path != "" {
+		return "FileSystem"
+	}
+	return "Virtual"
+}
+
+// etagFor and displayPreferencesIDFor mint the opaque, deterministic
+// identifier strings docs/12's "Episode DTO — item-level
+// video/permission/identity fields" section describes — a client never
+// parses or compares these across servers, so any deterministic hash
+// producing the reference server's own fixed-length-hex-string shape is
+// equivalent. etagFor is keyed on the item's own identity plus its
+// DateCreated (this project's closest equivalent to a "last modified"
+// signal — storage.Item doesn't separately track one). displayPreferencesIDFor
+// is deliberately keyed on itemType alone, not the item's own id — mirroring
+// the reference server's own (surprising but confirmed) behavior of sharing
+// one DisplayPreferencesId across every item of the same type.
+func etagFor(item storage.Item) string {
+	sum := sha256.Sum256([]byte("etag-" + string(item.ID) + "-" + item.DateCreated.UTC().Format(time.RFC3339Nano)))
+	return hex.EncodeToString(sum[:16])
+}
+
+func displayPreferencesIDFor(itemType storage.ItemType) string {
+	sum := sha256.Sum256([]byte("display-preferences-" + string(itemType)))
+	return hex.EncodeToString(sum[:16])
+}
+
 // libraryBaseItemDto builds the BaseItemDto for a library root itself — a
 // storage.Library, not a storage.Item (they're separate stores,
 // storage/library.go's doc comment), so it can't go through baseItemDto()
@@ -579,30 +842,44 @@ func (s *Server) libraryBaseItemDto(ctx context.Context, lib storage.Library) ba
 		CollectionType: string(lib.CollectionType),
 	}
 	if ac, ok := AuthFromContext(ctx); ok && ac != nil {
-		dto.UserData = s.userDataFor(ctx, ac.User.ID, storage.ItemID(lib.ID))
+		dto.UserData = s.userDataFor(ctx, ac.User.ID, storage.Item{ID: storage.ItemID(lib.ID), Type: storage.ItemTypeCollectionFolder})
 	}
 	return dto
 }
 
-// userDataFor builds BaseItemDto.UserData for (userID, itemID) from
+// userDataFor builds BaseItemDto.UserData for (userID, item) from
 // PlaystateStore — see baseItemDto's UserData field doc comment. A lookup
 // error (no row yet — the common case for an item the user has never
 // touched) is treated as the storage.Playstate zero value, same convention
 // sessions_playback.go's reportPlaybackPosition/handleUserPlayedItemsMark
 // already use.
-func (s *Server) userDataFor(ctx context.Context, userID storage.UserID, itemID storage.ItemID) *userItemDataDto {
-	state, err := s.store.GetPlaystate(ctx, userID, itemID)
+//
+// UnplayedItemCount is populated alongside the rest, gated by
+// childCountItemTypes (same folder-shaped-item set ChildCount uses) — see
+// unplayedItemCountFor's doc comment and docs/12's "Season/Series/BoxSet
+// UserData — UnplayedItemCount". A query error there is treated as "leave
+// it unset" rather than failing the whole UserData, same "best effort,
+// don't break the item response over a secondary field" posture ChildCount
+// itself already takes in baseItemDto below.
+func (s *Server) userDataFor(ctx context.Context, userID storage.UserID, item storage.Item) *userItemDataDto {
+	state, err := s.store.GetPlaystate(ctx, userID, item.ID)
 	if err != nil {
 		state = storage.Playstate{}
 	}
-	return &userItemDataDto{
+	dto := &userItemDataDto{
 		PlaybackPositionTicks: state.PlaybackPositionTicks,
 		PlayCount:             state.PlayCount,
 		IsFavorite:            state.IsFavorite,
 		Played:                state.Played,
-		Key:                   string(itemID),
-		ItemID:                string(itemID),
+		Key:                   string(item.ID),
+		ItemID:                string(item.ID),
 	}
+	if childCountItemTypes[item.Type] {
+		if n, err := s.unplayedItemCountFor(ctx, userID, item); err == nil {
+			dto.UnplayedItemCount = n
+		}
+	}
+	return dto
 }
 
 func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto {
@@ -646,6 +923,7 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		Studios:                 studioItemsFor(item.Studios),
 		ExternalUrls:            externalURLsFor(item.Type, item.ProviderIDs),
 		MediaSources:            mediaSourcesFor(item),
+		LocationType:            locationTypeFor(item),
 	}
 	if childCountItemTypes[item.Type] {
 		if n, err := s.childCountFor(ctx, item.ID); err == nil {
@@ -655,20 +933,63 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 	if item.ParentID != nil {
 		dto.ParentID = string(*item.ParentID)
 	}
+
+	var seriesItem, seasonItem *storage.Item
 	if item.SeriesID != nil {
 		dto.SeriesID = string(*item.SeriesID)
 		if series, err := s.store.GetItem(ctx, *item.SeriesID); err == nil {
 			dto.SeriesName = series.Name
+			seriesItem = &series
+			if len(series.Studios) > 0 {
+				dto.SeriesStudio = series.Studios[0]
+			}
 		}
 	}
 	if item.SeasonID != nil {
 		dto.SeasonID = string(*item.SeasonID)
 		if season, err := s.store.GetItem(ctx, *item.SeasonID); err == nil {
 			dto.SeasonName = season.Name
+			seasonItem = &season
 		}
 	}
+
+	if parentImageInheritanceItemTypes[item.Type] {
+		var ancestors []storage.Item
+		if seasonItem != nil {
+			ancestors = append(ancestors, *seasonItem)
+		}
+		if seriesItem != nil {
+			ancestors = append(ancestors, *seriesItem)
+		}
+		fields := s.parentImageFieldsFor(ctx, imageTags, backdropImageTags, seriesItem, ancestors)
+		dto.SeriesPrimaryImageTag = fields.SeriesPrimaryImageTag
+		dto.ParentLogoItemID = fields.ParentLogoItemID
+		dto.ParentLogoImageTag = fields.ParentLogoImageTag
+		dto.ParentBackdropItemID = fields.ParentBackdropItemID
+		dto.ParentBackdropImageTags = fields.ParentBackdropImageTags
+		dto.ParentThumbItemID = fields.ParentThumbItemID
+		dto.ParentThumbImageTag = fields.ParentThumbImageTag
+	}
+
+	if videoFileItemTypes[item.Type] && item.Path != "" {
+		dto.VideoType = "VideoFile"
+		if primary := primaryVideoStreamFor(item.MediaStreams); primary != nil {
+			dto.Width = primary.Width
+			dto.Height = primary.Height
+			if primary.Height != nil && *primary.Height >= 720 {
+				dto.IsHD = true
+			}
+		}
+	}
+	dto.HasSubtitles = hasSubtitleStream(item.MediaStreams)
+
 	if ac, ok := AuthFromContext(ctx); ok && ac.Authenticated {
-		dto.UserData = s.userDataFor(ctx, ac.User.ID, item.ID)
+		dto.UserData = s.userDataFor(ctx, ac.User.ID, item)
+		dto.PlayAccess = "Full"
+		dto.CanDelete = ac.User.IsAdministrator
+		dto.CanDownload = ac.User.IsAdministrator && !isFolderType(item.Type)
+		dto.Etag = etagFor(item)
+		dto.DisplayPreferencesID = displayPreferencesIDFor(item.Type)
 	}
 	return dto
 }

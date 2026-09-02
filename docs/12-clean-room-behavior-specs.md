@@ -596,8 +596,11 @@ already a substring of `Title`** (case-insensitive) — avoids a redundant `"108
 label when the file's own metadata already says what an attribute would add.
 
 **Audio streams**: same two modes (has its own `Title` vs. not), attributes computed differently:
-1. The stream's language, if set and not a placeholder/unset marker — its localized display name
-   (Tinyfin has no localization system for this; the raw language code is an acceptable stand-in).
+1. The stream's language, if set and not a placeholder/unset marker — its localized display name.
+   Tinyfin has no localization system for this, so it always uses the *English* display name (e.g.
+   `"por"` → `"Portuguese"`) rather than the raw three-letter code or a client-locale-specific name —
+   confirmed not to be the raw code via a live byte-for-byte comparison, see "Implementation
+   findings" below.
 2. Either the stream's codec *profile* (if set and not the generic value abbreviated `"lc"`), used
    verbatim, **or**, only when there's no usable profile, a friendly codec name: `"ac3"` → `"Dolby
    Digital"`, `"eac3"` → `"Dolby Digital+"`, `"dca"`/`"dts"` → `"DTS"`, anything else → the codec
@@ -612,9 +615,10 @@ Join whichever of these apply with `" - "`. With an explicit `Title`, same "appe
 already a substring" merge rule as video streams above.
 
 **Subtitle streams** (out of scope for the movie/episode gaps that motivated this section, recorded
-for completeness since it's the same field/mechanism): language (or an "Und"/undefined label when
-unset) first, then `"Hearing Impaired"`/`"Default"`/`"Forced"` flags as applicable, then the codec
-uppercased, then `"External"` when applicable — same `Title`-substring-merge rule.
+for completeness since it's the same field/mechanism): language (its English display name, same
+lookup as the audio case above; or an "Und"/undefined label when unset) first, then `"Hearing
+Impaired"`/`"Default"`/`"Forced"` flags as applicable, then the codec uppercased, then `"External"`
+when applicable — same `Title`-substring-merge rule.
 
 ### Scope note
 
@@ -675,6 +679,36 @@ labels into the client's locale (staging is pt-BR), Tinyfin has no localization 
 emits the English label the spec's own wording uses throughout — not a bug, and not something this task
 asked to fix.
 
+**A second real gap found via live comparison, not introduced by this change**: a further
+byte-for-byte comparison (Playwright capturing jellyfin-web's own traffic against both staging
+servers, same `.mkv`) on a different file — `Dragon Ball (1986) - S01E006.mkv`, audio track 1
+(`language=por`, `title="Português (Álamo)"`, profile `LC`) — surfaced that the "language" attribute
+in point 1 above was implemented as the raw three-letter code (`s.Language`, e.g. `"por"`) rather
+than that code's English display name (`"Portuguese"`). The reference server's own `DisplayTitle` for
+this exact stream was `"Português (Álamo) - Portuguese - AAC - Stereo - Padrão"`; Tinyfin's was
+`"Português (Álamo) - AAC - Stereo - Default"` — missing the `"Portuguese"` attribute entirely: the
+merge-with-title rule appends each attribute unless it's already a substring of `Title`, and the raw
+code `"por"` *is* a substring of `Title` (`"Português (Álamo)"` contains "por"), so the old code's
+bare-code attribute got silently swallowed by the merge rule on this exact file — a second-order
+effect of the raw-code bug that a language-name-only test case wouldn't have caught. Fixed by adding
+a `languageName` lookup table (`display_title.go`, same map-plus-uppercase-fallback shape as
+`friendlyAudioCodecName`) mapping common ISO 639-2/B codes to their English name, used in place of
+the raw code in both `audioDisplayTitle` and `subtitleDisplayTitle`. `"Portuguese"` is not a substring
+of `"Português (Álamo)"`, so it now survives the merge and appends correctly. An unrecognized code
+still falls back to itself uppercased (matching `friendlyAudioCodecName`'s own fallback), rather than
+failing or guessing.
+
+**Live comparison after the language-name fix** (same Dragon Ball file/stream, both servers):
+
+| Server | `DisplayTitle` (audio track 1) |
+|---|---|
+| Reference server (`:8097`) | `"Português (Álamo) - Portuguese - AAC - Stereo - Padrão"` |
+| Tinyfin (`:8096`), before fix | `"Português (Álamo) - AAC - Stereo - Default"` — missing `"Portuguese"` |
+| Tinyfin (`:8096`), after fix | `"Português (Álamo) - Portuguese - AAC - Stereo - Default"` |
+
+The remaining divergence is the same accepted `"Padrão"`/`"Default"` localization gap documented
+above — not something this fix touches.
+
 ---
 
 ## TMDB enrichment — Series/Season, Studios, EndDate
@@ -724,3 +758,368 @@ version 2 → 3, confirmed via a read-only `sqlite3` query) with no error/panic 
 its pre-existing 338 items (21 Movie, 4 Series, 9 Season, 319 Episode) came through with a
 correctly-defaulted, empty `studios` column — the no-enrichment shape this change is supposed to
 degrade to.
+
+---
+
+## Shows/Episodes — no default page cap
+
+### The gap this resolves
+
+`GET /Shows/{seriesId}/Episodes` (the season-detail-page episode list). Real-traffic comparison
+via Playwright, running the same bundled jellyfin-web build against both `tinyfin-staging:8096`
+and `jellyfin-real-staging:8097` pointed at an identical library (a "Dragon Ball" series with a
+single 153-episode season), surfaced a divergence: the request jellyfin-web actually sends for
+this page never includes a `Limit` or `StartIndex` query param at all
+(`GET /Shows/{seriesId}/Episodes?SeasonId={seasonId}&UserId={userId}&Fields=...`). Both servers
+reported `TotalRecordCount: 153`, but only the reference server's `Items` array actually held all
+153 — Tinyfin's held 100, silently truncated by the same generic 100-item default this project
+applies to plain library listings. Black-box comparison confirmed the discrepancy but not *why*
+the reference server doesn't also cap at some default — that's what this section resolves, read
+from the reference source under the clean-room process (`AGENTS.md`).
+
+### Behavior, in prose
+
+This endpoint's paging is opt-in per request, not a fallback the server applies on the caller's
+behalf. Internally, the endpoint always assembles the *complete* matching episode list first
+(every episode of the requested season, or of the whole series when no season is specified),
+applies any non-paging filters (a missing-episode filter, an "adjacent to" trim, an explicit
+start-item skip), and only *then* checks whether the incoming request itself carried a start
+index or a limit value. If neither was present on the request, no windowing step runs at all —
+the full, already-filtered list is what gets returned, with no smaller default substituted in its
+place. Windowing only happens when the caller explicitly asked for it by sending one or both of
+those two params.
+
+In other words: there is no reference-side default page size for this endpoint whatsoever, not
+even a larger one than Tinyfin's generic 100 — "the client didn't ask for paging" and "return
+everything" are the same case here. The `TotalRecordCount` the reference server reports is simply
+the size of that same complete, filtered list — which is why it already agreed with Tinyfin's
+(also-correct) total even while the two servers' `Items` arrays diverged: both computed the same
+true count, but only the reference server also returned that many rows in the absence of an
+explicit `Limit`.
+
+This is a narrower rule than the generic library-listing endpoint (`GET /Items`), which does fall
+back to a real default page size when the client omits `Limit` — that endpoint's behavior isn't
+in question here and shouldn't change. The divergence is specific to the show/episode-listing
+endpoint not sharing that same fallback.
+
+### Scope note for the implementer
+
+Implement by mirroring the "only window when the request actually asked for it" behavior: when
+the incoming request supplies an explicit, positive `Limit` and/or `StartIndex`, honor them
+exactly as the generic listing endpoint already does elsewhere in this codebase (same
+parse-and-clamp pattern). When neither is present, do not substitute any fixed default — the
+result set should be exactly what matches, unbounded by any page-size constant. Since this
+project's storage layer requires a strictly positive `Limit` on every query (`docs/05`, `O3`),
+"unbounded" has to be expressed as a limit value high enough that it is never the actual
+constraint for any real library — not as a literal absence of a limit — the same accommodation
+the storage interface already forces on every other caller of it.
+
+### Live validation
+
+Confirmed against `tinyfin-staging:8096` after the fix (same Dragon Ball series/season used
+above): an authenticated `GET /Shows/{seriesId}/Episodes?seasonId={seasonId}` with no `Limit` in
+the request now returns all 153 items, matching `TotalRecordCount`.
+
+---
+
+## Season detail — local per-season poster artwork recognition
+
+### The gap this resolves
+
+A real traffic comparison (jellyfin-web bundled against `tinyfin-staging:8096` and
+`jellyfin-real-staging:8097`, both pointed at the same read-only media mount) found the Season 1
+card for "Dragon Ball" rendering as a gray placeholder on Tinyfin — no `ImageTags.Primary` — while
+the reference server showed the real poster for the exact same on-disk files. The series' root
+folder (`.../Dragon Ball (1986)/`) has `poster.jpg`, `fanart.jpg`, `tvshow.nfo`, and a
+`season01-poster.jpg` sitting alongside them; `internal/scan/scan.go`'s `walkSeasons` never looked
+for any local artwork at all for a Season item — `seedFolderImages`/`seedFolderImage` (this
+project's existing Kodi-filename-convention artwork lookup, see the "Movie detail page — local
+Logo/clearlogo artwork recognition" section above) were only ever called for Movie and Series
+items. TMDB-sourced season images were already wired correctly through `enrich`'s generic
+`res.Images` handling (`storeProviderImage`) — this gap was purely the local-file half, and is
+blocked from live TMDB validation only by staging having no TMDB API key configured (a known,
+separately documented limitation, not a bug).
+
+### Behavior, in prose
+
+Source: Kodi's own published user documentation (kodi.wiki's "Artwork" guide), the same public
+naming-convention source `seedFolderImages`'s existing doc comment already cites for
+`poster.jpg`/`fanart.jpg`/`logo.png`/`banner.png` — not the reference server's C# source, and not
+subject to this project's clean-room process (`docs/00-decision-log.md`'s D12) for that reason,
+same category as the rest of this file's Kodi/`jellyfin.org`-sourced artwork sections:
+
+- A season-specific poster is **not** stored inside the season's own subfolder (`Season 01/`) — it
+  lives directly in the **series root** folder, the same folder that already holds the series'
+  own `poster.jpg`/`fanart.jpg`/`tvshow.nfo`.
+- Its filename is `season{NN}-poster.jpg`, where `NN` is the season number zero-padded to two
+  digits: `season01-poster.jpg`, `season02-poster.jpg`, etc. Kodi also documents `season{NN}.jpg`
+  and `seasonNN.tbn` as accepted variants for the same artwork slot.
+- This is the Primary image kind only (a season poster) — Kodi's guide documents season-level
+  Backdrop/Banner/Logo variants too, but no real library file for any of those was found during
+  this investigation, so only the poster form is covered.
+
+### Fix, described behaviorally (not an algorithm to extract — just wiring)
+
+A new local-artwork lookup, run for every Season item, tries — in the series root folder, not the
+season's own subfolder — `season{NN}-poster.jpg`, `season{NN}.jpg`, `season{NN}-poster.png`,
+`season{NN}.png` in that order, first match wins, same "local always exists, provider overwrites
+later via the same deterministic `ImageRef` ID" rule `seedFolderImages`'s doc comment already
+states for Movie/Series. This local lookup must run *before* `enrich` so a locally-provided season
+poster is never left unset just because no Provider is configured (matches the existing ordering
+for Movie's `seedFolderImages` → `enrich` and Series' `seedFolderImages` → `enrich` in
+`walkMovies`/`processMovie` and `walkSeries`).
+
+### Implementation findings
+
+Implemented as `internal/scan/scan.go`'s `seedSeasonImage`, a new function built directly on top
+of the existing `seedFolderImage` helper (same candidate-list-first-match pattern the
+Primary/Backdrop/Logo/Banner lists already use) rather than a new resolution algorithm — the only
+new thing is passing the series root path instead of the season's own folder, and building the
+candidate filenames with the season number. Called from `walkSeasons` right after the season
+item's own upsert, before its `enrich` job is enqueued. Covered by
+`TestScanLibrarySeasonPosterDetected` in `internal/scan/scan_test.go`.
+
+Confirmed live against `tinyfin-staging:8096` for the exact series/season from the original
+comparison (Dragon Ball, Season 1, real `season01-poster.jpg` on the production media mount):
+before the fix, `GET /Shows/{seriesId}/Seasons?userId=...` returned no `ImageTags` entry at all for
+Season 1; after a rebuild and a triggered rescan (`POST /Library/Refresh`), the same call returns
+`ImageTags: {"Primary": "1"}`, and `GET /Items/{seasonId}/Images/Primary` serves 54,247 bytes,
+MD5-identical to the on-disk `season01-poster.jpg` — matching the reference server's own behavior
+for this title.
+
+---
+
+## Season/Series/BoxSet UserData — `UnplayedItemCount`
+
+### The gap this resolves
+
+Real-traffic comparison via Playwright (same bundled jellyfin-web build against
+`tinyfin-staging:8096` and `jellyfin-real-staging:8097`, "Dragon Ball" — a single, 153-episode
+season) showed `GET /Shows/{seriesId}/Seasons` on the reference server returning
+`UserData.UnplayedItemCount: 152` on the Season 1 item (152 of 153 episodes unwatched), while
+Tinyfin's equivalent response omits the key from `UserData` entirely. This is the field that
+actually drives the season card's unplayed-count badge in jellyfin-web — not `ChildCount`, which
+the reference server doesn't even return on this endpoint (it stays `null` there regardless of the
+`Fields=ItemCounts` request parameter). This section is the behavior spec for computing it.
+
+### Behavior, in prose
+
+Only a folder-shaped item that is meant to aggregate its children's watched status carries this
+field at all — a plain synthetic browsing view (a library root, a "Favorites"-style aggregate
+view, or anything not a real, on-disk library entry) never does, because walking its children for
+this purpose is considered too expensive/meaningless for that kind of node. Series, Season, and
+BoxSet are the ordinary library-entry folder types this applies to.
+
+For an item that qualifies, the server first works out the *complete set of real, playable leaf
+descendants* underneath it — every item, at any depth, that is not itself a sub-folder and is not
+a placeholder standing in for an episode that has no real file (a missing/unaired-episode marker).
+This is a genuinely recursive walk: for a Series specifically, its immediate children are Seasons,
+which are themselves folders, so the leaves that actually count are the Episodes one level further
+down, not the Seasons. A special (an episode filed under a "season zero") is an ordinary episode
+for this purpose — nothing excludes it. An episode that has no on-disk media file but isn't a
+formally-tracked "missing episode" placeholder is still counted (only the formal placeholder
+marker is excluded, not "any item lacking a file" in general).
+
+Once that leaf set is known, the server counts two numbers: how many of those leaves the
+requesting user has marked played, and the total leaf count. `UnplayedItemCount` is simply
+`total - played`. When the total is zero (an empty folder), the count is zero. This is computed
+per request, for the requesting user — it is not a value stored anywhere, since "played" is itself
+per-user state.
+
+### Scope note for the implementer
+
+Tinyfin's hierarchy is shallow enough (`Series -> Season -> Episode`, nothing deeper) that a
+general recursive-descendant walk isn't needed to get the same leaf set the rule above describes:
+
+- For a **Season**, its own direct children already are the leaf Episodes — no deeper level
+  exists to recurse into.
+- For a **Series**, the leaf Episodes are not its direct children (its direct children are
+  Seasons), but every Item this project scans already carries a direct series-id back-reference on
+  the Episode row itself (populated at scan time, independent of the Season/Series parent chain) —
+  so the leaf set for a Series is reachable in one query keyed on that back-reference, without
+  walking through Seasons at all.
+- **BoxSet** membership beyond a direct parent link isn't wired up in this codebase yet (same gap
+  `ChildCount` already has for BoxSet, see that field's own doc comment in `internal/api/dto.go`)
+  — so there is nothing to recurse into for a BoxSet beyond its direct children either, today.
+
+A single bounded, indexed query per item (counting rows matching the relevant parent/series
+reference for the requesting user, filtered to "not played") is enough — same performance
+trade-off `internal/api/dto.go`'s existing child-count helper already documents and accepts (no
+N+1 across a whole page, no unbounded scan; each page is itself bounded by the caller's own
+`Limit`, AGENTS.md principle 1). No new aggregate table is needed.
+
+### Live validation
+
+Confirmed against `tinyfin-staging:8096` after the fix (same Dragon Ball series/season, with a
+partial-watch playstate seeded for its episodes): an authenticated
+`GET /Shows/{seriesId}/Seasons?userId={userId}` now returns a populated
+`UserData.UnplayedItemCount` on the Season 1 item, reflecting the number of that season's episodes
+not yet marked played for the requesting user.
+
+---
+
+## Season/Episode DTO — inherited `Parent*` image fields and `SeriesPrimaryImageTag`
+
+### The gap this resolves
+
+The same real-traffic comparison showed a real Jellyfin Season item carrying several
+image-inheritance fields Tinyfin's equivalent response doesn't have at all:
+`ParentLogoItemId`/`ParentLogoImageTag`, `ParentBackdropItemId`/`ParentBackdropImageTags`,
+`ParentThumbItemId`/`ParentThumbImageTag`, and `SeriesPrimaryImageTag`. These let a client render a
+season (or episode) card with the series' own logo/backdrop/thumb art and poster when the season
+or episode doesn't have that art of its own — without them, a season card with no art of its own
+renders with nothing at all instead of falling back to the show's branding, which is what the real
+server's own card-building logic expects to be able to do. The same fields are missing from
+Tinyfin's Episode response for the same reason.
+
+### Behavior, in prose
+
+`SeriesPrimaryImageTag` is unconditional: whenever the item belongs to a series (a Season or an
+Episode) and that series has its own Primary (poster) image, this field always carries that
+image's tag — regardless of whether the season/episode already has its own Primary image. It is
+not part of the "only when the item itself lacks one" fallback pattern the other fields below
+follow; it's a fixed "what does this item's show look like" reference a client can use for
+show-level branding independent of the specific season/episode artwork. (A second, item-specific
+fallback exists on the reference server for an Episode's own Primary image specifically —
+`ParentPrimaryImageItemId`/`ParentPrimaryImageTag`, preferring the season's own poster over the
+series' — but that pair is out of scope here: it wasn't part of the observed gap and isn't needed
+today, since Tinyfin's Episode responses fall back to `ImageTags.Primary` already resolving
+correctly once an episode or its season has art.)
+
+The Logo/Backdrop/Thumb fields follow one shared rule: they only ever populate when the item
+itself has no image of that same kind (checked against the item's own already-computed image
+tags/backdrop list) — an item that has its own Logo, for instance, never gets a
+`ParentLogoItemId`/`ParentLogoImageTag` pair at all. When the item does lack that kind of image,
+the server walks its ancestor chain closest-first (an Episode's chain is its Season, then that
+Season's Series; a Season's chain is just its Series) and uses the *first* ancestor in that order
+that has an image of the missing kind — once one is found, closer ancestors are preferred and
+further ones are never consulted for that kind. This is the same rule for Logo, Backdrop, and
+Thumb alike, with one documented quirk on the reference server: for Thumb specifically, if the
+series (the *last* ancestor in the walk) has its own Thumb image, the series' Thumb wins even over
+a closer ancestor (the season) that also has one — every other kind, including Backdrop and Logo,
+is strictly closest-ancestor-wins with no such override.
+
+Each of these fields is a pair: the `*ItemId` half names which ancestor the art actually came from
+(so a client can request the image from that ancestor's own image endpoint), and the
+`*ImageTag`/`*ImageTags` half is that ancestor's own cache-busting tag(s) for the image, the same
+tag value that ancestor's own `ImageTags`/`BackdropImageTags` would carry.
+
+### Scope note for the implementer
+
+The closest-ancestor-wins-except-Thumb-prefers-series quirk noted above only matters when more
+than one ancestor in the chain can actually carry a Thumb image of its own. Tinyfin's scanner does
+not recognize/store a Thumb-kind image for any item type today (no local-file detection for it
+exists yet, unlike Primary/Logo/Backdrop/Banner) — so, as implemented now, that distinction is
+unobservable: there is never a case where a season's own Thumb and its series' own Thumb both
+exist and disagree. Implement the plain closest-ancestor-wins rule uniformly across Logo, Backdrop,
+and Thumb for now; if Thumb-image detection is ever added to the scanner, revisit this specific
+override before trusting Thumb inheritance in a mixed case.
+
+`ImageBlurHashes` (blurhash placeholders embedded per image tag) is a related field the reference
+server also populates alongside all of the above — **not implemented here**, same as this doc's
+other already-noted image-processing gaps: it requires actual image decoding/blurhash generation,
+a separate, larger feature than DTO field wiring. Documented as a known gap, not part of this
+DTO's field set for now.
+
+### Live validation
+
+Confirmed against `tinyfin-staging:8096` after the fix (same Dragon Ball series/season, whose
+series item has its own Primary/Logo/Backdrop art already indexed): an authenticated
+`GET /Shows/{seriesId}/Seasons?userId={userId}` now returns `SeriesPrimaryImageTag`,
+`ParentLogoItemId`/`ParentLogoImageTag`, and `ParentBackdropItemId`/`ParentBackdropImageTags` on
+the Season 1 item, each pointing back at the series' own item id and image tags.
+
+---
+
+## Episode DTO — item-level video/permission/identity fields
+
+### The gap this resolves
+
+The same comparison, on `GET /Users/{id}/Items/{episodeId}`, found a real Jellyfin Episode
+response carrying a further set of fields with no corresponding struct field in Tinyfin at all
+(not merely unpopulated) — item-level `Width`/`Height` (distinct from the per-stream ones already
+nested under `MediaStreams`), `IsHD`, `HasSubtitles`, `VideoType`, `PlayAccess`, `CanDelete`,
+`CanDownload`, `LocationType`, `Etag`, `DisplayPreferencesId`, and `SeriesStudio`, plus a handful
+of always-empty placeholders (`LocalTrailerCount`, `SpecialFeatureCount`, `RemoteTrailers`,
+`LockedFields`) for features this project doesn't implement yet. This section covers the behavior
+for each.
+
+### Behavior, in prose
+
+**Item-level `Width`/`Height`/`IsHD`.** These mirror the resolution of the item's own primary
+video track (the same numbers the corresponding `MediaStreams` entry already carries for that
+track) hoisted onto the item itself, for a client that wants resolution without digging through
+the stream list. They're only meaningful for an item that actually has a video file behind it.
+`IsHD` is a simple derived flag off that same height: true at 720 lines or taller, false (and, on
+the reference server, omitted rather than sent as an explicit `false`) below that.
+
+**`HasSubtitles`.** True whenever the item has at least one subtitle track among its media
+streams, false (and omitted, same convention as `IsHD`) otherwise. Purely derived from the
+already-known stream list, not separately stored.
+
+**`VideoType`.** Describes what kind of on-disk structure the video came from — a plain video
+file, versus a DVD- or Blu-ray-style disc folder structure. Tinyfin's scanner only ever recognizes
+plain video files (it has no disc-folder-structure recognition at all), so this is always the
+"plain file" value for any item that has a video file behind it, and absent otherwise.
+
+**`PlayAccess`.** Reports whether the requesting user is allowed to play media at all, as a
+coarse `"Full"`/`"None"` distinction tied to a playback-permission toggle on the user's account.
+Tinyfin doesn't model that per-user toggle (there's no granular permission system yet — every
+authenticated user can play everything), so this simplifies to always `"Full"` for any
+authenticated caller.
+
+**`CanDelete`/`CanDownload`.** On the reference server, `CanDelete` is true when the item is a
+real, on-disk library entry (true for essentially everything reachable through normal browsing in
+this project's scope, which has no remote/channel source concept at all) *and* the user is either
+allowed to delete generally or specifically permitted to delete from that item's library —
+Tinyfin doesn't model that per-user/per-folder permission grid, so this simplifies to "true for an
+administrator, false otherwise." `CanDownload` follows a same-shaped but stricter rule: it is
+never true for a folder-shaped item (Series/Season/BoxSet — the download permission only ever
+applies to an actual playable file) even for an administrator, and — for a real playable item —
+also depends on the same per-user download-permission toggle Tinyfin doesn't model, simplified the
+same way: true for an administrator on a non-folder item, false otherwise.
+
+**`LocationType`.** Reports where the item's content lives. Tinyfin only ever has two of the
+reference server's possible values in practice, since it has no remote/channel source concept:
+the "on local disk" value when the item has a real file path, and the "no file at all" value
+(covering both a placeholder/virtual item and a folder-shaped item with nothing of its own on
+disk) when it doesn't.
+
+**`Etag`/`DisplayPreferencesId`.** Both are opaque, deterministic identifier strings the
+reference server derives via a one-way hash — not values a client parses or attaches meaning to
+beyond "did this change" (`Etag`) or "which display-preferences bucket does this item share with
+others" (`DisplayPreferencesId`). `Etag` is derived from the item's own identity plus whatever the
+server considers its "last modified" signal to be. `DisplayPreferencesId`, notably, is **not**
+unique per item on the reference server for an ordinary (non-generic-folder) item type — it's
+derived purely from the item's *type*, meaning every Episode, e.g., shares the same
+`DisplayPreferencesId` as every other Episode; only a bare, undifferentiated folder item gets one
+keyed off its own individual identity instead. Since neither value needs to match the reference
+server's exact hash (they're opaque, per-server-instance identifiers, never compared across
+servers by a client), Tinyfin can use any deterministic hash producing the same shape (a
+fixed-length hex string) as long as it's stable across repeated requests for the same
+item/item-type.
+
+**`SeriesStudio`.** The first studio/network name in the owning series' own studio list, when the
+series has one — a convenience so an episode/season card can show its network without a client
+having to separately fetch the series. Absent when the series has no studio recorded.
+
+**`LocalTrailerCount`/`SpecialFeatureCount`/`RemoteTrailers`/`LockedFields`.** These describe
+trailers, bonus/extra content, and metadata-field-locking — none of which this project implements
+as a concept yet. They're carried on the DTO as always-empty/always-zero placeholders so a client
+that expects the keys to exist doesn't have to special-case their absence, without implying any of
+those features actually work yet.
+
+**Out of scope, deliberately not implemented here:** `Chapters` (chapter-marker extraction is a
+separate, larger ffmpeg-probing feature — a distinct probe pass from the stream/format probing
+already implemented — not part of this DTO-field-wiring pass) and `Trickplay` (scrubbing-preview
+sprite generation, a separate feature this project hasn't built any part of yet, same "documented
+gap, not silently reinterpreted" treatment this doc already gives Dolby Vision detection
+elsewhere).
+
+### Live validation
+
+Confirmed against `tinyfin-staging:8096` after the fix: an authenticated
+`GET /Users/{userId}/Items/{episodeId}` for the same Dragon Ball episode used throughout this
+comparison now returns `Width`/`Height` matching its primary video stream's own resolution,
+`IsHD: true`, `VideoType: "VideoFile"`, `PlayAccess: "Full"`, `CanDelete: true`,
+`CanDownload: true` for the admin test account.

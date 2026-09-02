@@ -39,6 +39,17 @@ import (
 // principle 1).
 const defaultItemsLimit = 100
 
+// unboundedEpisodesLimit stands in for "no limit" on GET
+// /Shows/{seriesId}/Episodes when the client's request carries neither
+// Limit nor StartIndex — docs/12's "Shows/Episodes — no default page cap"
+// confirms the reference server applies no default page size at all in
+// that case (unlike GET /Items above), returning every matching episode.
+// storage.ItemFilter.Limit is required and rejected if <= 0 (docs/05, O3),
+// so "no limit" can't be expressed as a literal absence of one — this is a
+// value high enough to never be the real constraint for any season/series
+// a single library realistically holds.
+const unboundedEpisodesLimit = 1 << 20
+
 // handleUserViews serves GET /UserViews: the library roots, one BaseItemDto
 // per storage.Library. QueryLibraries is intentionally unbounded (docs/05:
 // library count is operator-scale, not catalog-scale, same reasoning as
@@ -524,12 +535,20 @@ func (s *Server) handleShowSeasons(w http.ResponseWriter, r *http.Request) {
 // (ParentID, same reasoning as handleShowSeasons); without one, ParentID
 // alone can't express "every episode across every season", so this is the
 // one caller that needs ItemFilter.SeriesID (types.go) instead.
+//
+// Unlike handleItemsList, an omitted Limit/StartIndex here does NOT fall
+// back to defaultItemsLimit — docs/12's "Shows/Episodes — no default page
+// cap" confirms the reference server applies no default page size on this
+// endpoint at all, returning every matching episode when the client didn't
+// ask for paging. A season with more than defaultItemsLimit episodes (a
+// long-running non-Western series, e.g. the 153-episode single-season case
+// that surfaced this) was silently truncated before this was fixed.
 func (s *Server) handleShowEpisodes(w http.ResponseWriter, r *http.Request) {
 	seriesID := storage.ItemID(r.PathValue("seriesId"))
 	filter := storage.ItemFilter{
 		ItemTypes: []storage.ItemType{storage.ItemTypeEpisode},
 		SortBy:    []storage.SortField{{By: storage.SortByParentIndexNumber}, {By: storage.SortByIndexNumber}},
-		Limit:     defaultItemsLimit,
+		Limit:     unboundedEpisodesLimit,
 	}
 	// caseInsensitiveQuery: jellyfin-web's season-detail-page call sends
 	// "SeasonId" (PascalCase) — confirmed live via Playwright against a real
@@ -537,12 +556,29 @@ func (s *Server) handleShowEpisodes(w http.ResponseWriter, r *http.Request) {
 	// meant the filter never matched, silently falling through to "every
 	// episode of the series" (the no-seasonId branch) instead of just that
 	// season's ~12 episodes, breaking the "More from Season X" carousel.
-	if v := caseInsensitiveQuery(r).Get("seasonid"); v != "" {
+	q := caseInsensitiveQuery(r)
+	if v := q.Get("seasonid"); v != "" {
 		seasonID := storage.ItemID(v)
 		filter.ParentID = &seasonID
 	} else {
 		filter.SeriesID = &seriesID
 	}
+
+	// Same explicit-limit/startIndex handling as handleItemsList — a client
+	// that does send these (e.g. a future paged episode view) is honored
+	// exactly like every other listing endpoint; only the no-params case
+	// differs from handleItemsList, per this function's doc comment above.
+	if v := q.Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			filter.Limit = n
+		}
+	}
+	if v := q.Get("startindex"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			filter.Offset = n
+		}
+	}
+
 	page, err := s.store.QueryItems(r.Context(), filter)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

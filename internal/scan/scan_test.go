@@ -450,6 +450,53 @@ func TestScanLibraryLogoAndBannerDetected(t *testing.T) {
 	}
 }
 
+// TestScanLibrarySeasonPosterDetected regression-guards the Kodi
+// season-poster convention (kodi.wiki's "Artwork" guide, "Season" section):
+// a season{NN}-poster.jpg sitting in the *series root* folder (not inside
+// the "Season NN" subfolder) must be recorded as that season item's Primary
+// image, the same way poster.jpg/folder.jpg already are for a movie/series
+// folder itself. Reproduces the real-world gap found comparing tinyfin's
+// Dragon Ball Season 1 card (no ImageTags.Primary) against the reference
+// server for a library that has a real season01-poster.jpg on disk.
+func TestScanLibrarySeasonPosterDetected(t *testing.T) {
+	root := t.TempDir()
+	seriesDir := filepath.Join(root, "Dragon Ball (1986)")
+	base := filepath.Join(seriesDir, "Season 01")
+	writeFile(t, filepath.Join(base, "Dragon Ball - S01E01 - The Secret of the Dragon Balls.mkv"), "ep1")
+	writeFile(t, filepath.Join(seriesDir, "poster.jpg"), "series-poster-bytes")
+	writeFile(t, filepath.Join(seriesDir, "season01-poster.jpg"), "season-poster-bytes")
+
+	st := newTestStore(t)
+	s := New(st, metadata.NoopProvider{}, Config{})
+
+	lib := storage.Library{ID: "lib-seasonposter", Name: "Séries", CollectionType: storage.CollectionTypeTVShows, Paths: []string{root}}
+	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("UpsertLibrary: %v", err)
+	}
+	if _, err := s.ScanLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("ScanLibrary: %v", err)
+	}
+
+	seasonPage, err := st.QueryItems(context.Background(), storage.ItemFilter{
+		LibraryID: &lib.ID, ItemTypes: []storage.ItemType{storage.ItemTypeSeason}, Limit: 10,
+	})
+	if err != nil || len(seasonPage.Items) != 1 {
+		t.Fatalf("season query: err=%v, len=%d, want 1", err, len(seasonPage.Items))
+	}
+	season := seasonPage.Items[0]
+
+	refs, err := st.GetImageRefs(context.Background(), season.ID, "Primary")
+	if err != nil {
+		t.Fatalf("GetImageRefs(Primary): %v", err)
+	}
+	if len(refs) != 1 {
+		t.Fatalf("len(season Primary image refs) = %d, want 1 (season01-poster.jpg should be detected)", len(refs))
+	}
+	if filepath.Base(refs[0].Path) != "season01-poster.jpg" {
+		t.Errorf("season image ref path = %q, want basename %q", refs[0].Path, "season01-poster.jpg")
+	}
+}
+
 func TestScanLibraryNoProviderStillCatalogs(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "Some Movie (2020)", "movie.mkv"), "content")

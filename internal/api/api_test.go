@@ -56,6 +56,26 @@ func createTestUser(t *testing.T, st storage.UserStore, name, password string) s
 	return u
 }
 
+// createTestAdminUser is createTestUser plus IsAdministrator: true — for
+// tests covering baseItemDto's admin-gated fields (CanDelete/CanDownload,
+// docs/12's "Episode DTO — item-level video/permission/identity fields").
+func createTestAdminUser(t *testing.T, st storage.UserStore, name, password string) storage.User {
+	t.Helper()
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		t.Fatalf("bcrypt.GenerateFromPassword: %v", err)
+	}
+	id, err := st.CreateUser(context.Background(), storage.User{Name: name, PasswordHash: string(hash), IsAdministrator: true})
+	if err != nil {
+		t.Fatalf("CreateUser: %v", err)
+	}
+	u, err := st.GetUser(context.Background(), id)
+	if err != nil {
+		t.Fatalf("GetUser: %v", err)
+	}
+	return u
+}
+
 func TestSystemInfoPublicNoAuth(t *testing.T) {
 	ts, _ := newTestServer(t)
 

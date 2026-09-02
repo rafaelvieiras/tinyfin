@@ -112,7 +112,7 @@ func TestAudioDisplayTitleFriendlyCodecName(t *testing.T) {
 		Type: storage.StreamTypeAudio, Codec: "ac3", Language: "eng",
 		Channels: intPtr(6),
 	}
-	want := "eng - Dolby Digital - 6 ch"
+	want := "English - Dolby Digital - 6 ch"
 	if got := displayTitleFor(s); got != want {
 		t.Errorf("displayTitleFor() = %q, want %q", got, want)
 	}
@@ -189,6 +189,41 @@ func TestAudioDisplayTitleUnsetLanguageOmitted(t *testing.T) {
 	}
 }
 
+// TestAudioDisplayTitleLanguageName covers docs/12's "Audio streams" point
+// 1's language-name lookup: the ISO 639-2/B code is converted to its English
+// display name, not shown raw — regression guard for a real gap found via
+// live comparison (a Dragon Ball (1986) S01E006 audio track, language "por",
+// title "Português (Álamo)"): the reference server's DisplayTitle included
+// "Portuguese" as an attribute; Tinyfin's did not, because it appended the
+// raw code "por" and that raw code disappeared into the merge-with-title
+// substring check ("por" is itself a substring of "Português").
+func TestAudioDisplayTitleLanguageName(t *testing.T) {
+	s := storage.MediaStreamRef{
+		Type: storage.StreamTypeAudio, Codec: "aac", Profile: "LC",
+		Language: "por", ChannelLayout: "stereo", IsDefault: true,
+		Title: "Português (Álamo)",
+	}
+	want := "Português (Álamo) - Portuguese - AAC - Stereo - Default"
+	if got := displayTitleFor(s); got != want {
+		t.Errorf("displayTitleFor() = %q, want %q", got, want)
+	}
+}
+
+// TestAudioDisplayTitleUnknownLanguageCodeFallback covers languageName's
+// fallback for a code with no entry in the lookup table — same
+// map-plus-uppercase-fallback pattern as friendlyAudioCodecName: an unknown
+// code renders as itself, uppercased, rather than failing or guessing at a
+// name.
+func TestAudioDisplayTitleUnknownLanguageCodeFallback(t *testing.T) {
+	s := storage.MediaStreamRef{
+		Type: storage.StreamTypeAudio, Codec: "aac", Language: "xyz",
+	}
+	want := "XYZ - AAC"
+	if got := displayTitleFor(s); got != want {
+		t.Errorf("displayTitleFor() = %q, want %q", got, want)
+	}
+}
+
 // TestAudioDisplayTitleWithOwnTitleRealExample regression-guards live
 // validation against the reference server (staging, :8097) for a real
 // staging file (MIB - Homens de Preto S01E01): its audio track's embedded
@@ -230,7 +265,7 @@ func TestSubtitleDisplayTitle(t *testing.T) {
 				Type: storage.StreamTypeSubtitle, Codec: "ass", Language: "por",
 				IsDefault: true, IsForced: true,
 			},
-			want: "por - Default - Forced - ASS",
+			want: "Portuguese - Default - Forced - ASS",
 		},
 		{
 			name: "external",
@@ -238,7 +273,7 @@ func TestSubtitleDisplayTitle(t *testing.T) {
 				Type: storage.StreamTypeSubtitle, Codec: "srt", Language: "eng",
 				IsExternal: true,
 			},
-			want: "eng - SRT - External",
+			want: "English - SRT - External",
 		},
 	}
 	for _, tc := range tests {
