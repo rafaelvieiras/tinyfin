@@ -307,8 +307,21 @@ const defaultLatestLimit = 20
 // BaseItemDto array here, not a BaseItemDtoQueryResult envelope (confirmed
 // against the OpenAPI schema, not guessed — UserLibraryController's
 // GetLatestMedia return type).
+//
+// A request scoped to a TV-shows library groups its result by series
+// (latest_grouping.go, docs/12's "Items/Latest — series grouping") rather
+// than returning the flat, ungrouped list below directly — that grouping
+// only applies when the caller wants it (grouped, confirmed live against
+// the reference server as the groupItems query param, defaulting to
+// grouped — see latest_grouping.go's doc comment) and when parentId
+// resolves to a library whose CollectionType is tvshows specifically; every
+// other scope (a movies library, a mixed/music library, or no parentId at
+// all — the home view aggregating every library) keeps this handler's
+// original flat behavior, which is already correct for those per docs/12's
+// "Movies — confirmed, no grouping" section.
 func (s *Server) handleItemsLatest(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
+	q := caseInsensitiveQuery(r)
+	ctx := r.Context()
 
 	filter := storage.ItemFilter{
 		Recursive: true,
@@ -323,17 +336,34 @@ func (s *Server) handleItemsLatest(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	page, err := s.store.QueryItems(r.Context(), filter)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	grouped := !strings.EqualFold(q.Get("groupitems"), "false")
+
+	var items []storage.Item
+	if grouped && filter.LibraryID != nil {
+		if lib, err := s.store.GetLibrary(ctx, *filter.LibraryID); err == nil && lib.CollectionType == storage.CollectionTypeTVShows {
+			grp, err := s.tvShowsLatestGrouped(ctx, *filter.LibraryID, filter.Limit)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			items = grp
+		}
 	}
 
-	items := make([]baseItemDto, 0, len(page.Items))
-	for _, it := range page.Items {
-		items = append(items, s.baseItemDto(r.Context(), it))
+	if items == nil {
+		page, err := s.store.QueryItems(ctx, filter)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		items = page.Items
 	}
-	writeJSON(w, http.StatusOK, items)
+
+	dtos := make([]baseItemDto, 0, len(items))
+	for _, it := range items {
+		dtos = append(dtos, s.baseItemDto(ctx, it))
+	}
+	writeJSON(w, http.StatusOK, dtos)
 }
 
 // mediaTypeItemTypes maps a wire MediaType value (mediaTypeFor's output,
