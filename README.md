@@ -4,8 +4,13 @@
 > designed for near-zero idle memory footprint — with an explicit, opt-in path to
 > multi-node scale that the reference implementation does not offer.
 
-**Status:** `Phase 0 — foundation documentation`. No code yet; this repository currently exists
-to lock down architecture decisions before implementation starts.
+**Status:** Phases 0–3 are implemented and verified end to end against real Jellyfin clients
+(`jellyfin-web` and the official Android app): single-node storage, user/library/browsing API,
+Direct Play/Remux/Direct Stream/Transcode via `jellyfin-ffmpeg`, and TMDB-backed metadata
+enrichment with a working library scanner. Phase 4 (scale mode — multi-node storage and
+session/realtime state) hasn't started. See [`ROADMAP.md`](ROADMAP.md) for the detailed,
+phase-by-phase checklist and [`AGENTS.md`](AGENTS.md) for the principles and process governing
+further work.
 **License:** [MIT](LICENSE). Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ---
@@ -18,6 +23,54 @@ can point at a Tinyfin instance instead and keep working — while using a fract
 memory a reference Jellyfin/Emby installation needs, and without hard-coding itself into the
 single-node ceiling that the reference implementation, and comparable single-binary/embedded-SQLite
 projects such as PocketBase, deliberately accept.
+
+## Running it
+
+### Docker (recommended)
+
+```sh
+docker build -t tinyfin --build-arg WITH_WEB=true .
+docker run -p 8096:8096 \
+  -v ./data:/data \
+  -v /path/to/your/media:/media:ro \
+  tinyfin
+```
+
+(the image's default entrypoint already points `-data` at `/data/tinyfin.db`, matching the volume
+above — no extra flags needed for a first run.)
+
+`WITH_WEB=true` bundles a real, unmodified [`jellyfin-web`](https://github.com/jellyfin/jellyfin-web)
+build into the image, served at `/web/` — off by default so the base image stays MIT-only with no
+GPL code linked in (see [`docs/00-decision-log.md`](docs/00-decision-log.md)'s **D9**). `jellyfin-ffmpeg`
+is always bundled regardless (Remux/Direct Stream/Transcode need it unconditionally). See
+[`staging/docker-compose.yml`](staging/docker-compose.yml) for a fuller example, including a
+side-by-side reference Jellyfin server for wire-compatibility comparison.
+
+Once it's up, point any Jellyfin client (the bundled web UI at `/web/`, the official mobile/TV
+apps, Kodi's add-on, Findroid, Infuse, ...) at `http://<host>:8096` like it's a normal Jellyfin
+server — that's the whole premise.
+
+### From source
+
+```sh
+go build -o tinyfin ./cmd/tinyfin
+./tinyfin -data tinyfin.db -addr :8096
+```
+
+Flags (all optional, see `-h` for the authoritative list):
+
+| Flag | Env var | Default | What it does |
+|---|---|---|---|
+| `-data` | — | `tinyfin.db` | Path to the SQLite database file |
+| `-addr` | — | `:8096` | Address to listen on |
+| `-web-dir` | `TINYFIN_WEB_DIR` | `/web` | A built `jellyfin-web` `dist/` to serve at `/web/`; skipped if the directory doesn't exist |
+| `-ffmpeg-path` | `TINYFIN_FFMPEG_PATH` | `/usr/lib/jellyfin-ffmpeg/ffmpeg` | `jellyfin-ffmpeg` binary, for Remux/Direct Stream/Transcode (`docs/07`) |
+| `-ffprobe-path` | `TINYFIN_FFPROBE_PATH` | `/usr/lib/jellyfin-ffmpeg/ffprobe` | `ffprobe` binary, for the library scanner's media-info extraction (`docs/08`) |
+| `-tmdb-api-key` | `TINYFIN_TMDB_API_KEY` | *(empty)* | Enables TMDB metadata enrichment when set; catalog-only scanning otherwise (`internal/metadata`) |
+
+A library still has to be added and scanned before there's anything to browse — either through a
+real client's admin dashboard (`POST /Library/VirtualFolders`, `internal/api/library_admin.go`) or
+directly against the API.
 
 ## Why this exists
 
@@ -90,6 +143,7 @@ implementations are in today.
 
 | Doc | Covers |
 |---|---|
+| [`AGENTS.md`](AGENTS.md) | Entry point for contributors (human or LLM): the principles that don't bend, the clean-room requirement, where everything else lives |
 | [`docs/00-decision-log.md`](docs/00-decision-log.md) | Open questions, tracked until resolved |
 | [`docs/01-vision-and-scope.md`](docs/01-vision-and-scope.md) | Target use case, explicit non-goals |
 | [`docs/02-glossary.md`](docs/02-glossary.md) | Terms used consistently across the other docs |

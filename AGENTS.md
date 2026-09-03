@@ -10,7 +10,9 @@
 Tinyfin is a **wire-compatible reimplementation of the Jellyfin server API** in Go, built so that
 existing Jellyfin clients keep working unmodified while idle memory usage stays near-zero and a
 path to multi-node scale exists without being mandatory. Module:
-`github.com/rafaelvieiras/tinyfin` (once code exists — currently docs-only).
+`github.com/rafaelvieiras/tinyfin`. Phases 0–3 are implemented (single-node compatibility core,
+transcoding pipeline, metadata provider interface — see [`ROADMAP.md`](ROADMAP.md) for what's
+actually done); Phase 4 (scale mode) hasn't started.
 
 ## Principles that don't bend
 

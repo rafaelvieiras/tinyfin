@@ -2,10 +2,13 @@
 
 Thanks for your interest. Tinyfin is free software under the [MIT license](LICENSE). This guide
 summarizes how the project works — read it before opening a substantial PR, because the process
-is deliberately decision-and-documentation-first, not just code-first.
+is deliberately decision-and-documentation-first, not just code-first. [`AGENTS.md`](AGENTS.md) is
+the actual entry point (principles, clean-room requirement, where everything lives) — read that
+first if you haven't; this file covers the PR-facing parts of the same process.
 
-> **Status:** `Phase 0 — foundation documentation`. Work right now is entirely about deciding and
-> writing down the model before any code exists.
+> **Status:** Phases 0–3 are implemented (single-node compatibility core, transcoding pipeline,
+> metadata provider interface — see [`ROADMAP.md`](ROADMAP.md)). The decisions-before-code process
+> below still governs new work, especially anything touching Phase 4 (scale mode).
 
 ## How the project thinks
 
@@ -32,6 +35,16 @@ Foundational decisions are tracked, not improvised inside a PR:
 Before proposing a structural change (storage interface, API surface, transcode pipeline),
 check whether it touches an already-decided item. If it does, the path is proposing a new,
 explicit revision of that decision — not editing the spec document directly without discussion.
+
+## Clean-room requirement
+
+If your change touches how Tinyfin behaves on the wire, you'll likely need to know what a real
+Jellyfin client/server actually does. Reading the `jellyfin/jellyfin` C# source to build that
+knowledge is restricted, not banned outright: prefer black-box observation (real client traffic, a
+running reference server) first, and if the C# source genuinely has to be read, follow the
+two-phase extraction/implementation process **AGENTS.md**'s "Clean-room requirement" section
+defines, in full, before writing any Go code from it. This is what keeps the MIT license clean —
+see **D12** in [`docs/00-decision-log.md`](docs/00-decision-log.md).
 
 ## API compatibility is non-negotiable
 

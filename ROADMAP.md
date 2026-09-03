@@ -254,6 +254,28 @@ what starting Phase 1 actually requires next.
       untouched (WAL mode's actual concurrency benefit, why the connection pool itself stays
       uncapped). Regression-guarded by `TestConcurrentUpsertItem`
       (`internal/storage/sqlite/store_test.go`), which reliably reproduced the bug before the fix.
+- [x] Dashboard library-management route mapping/diff and gap closure: a dedicated
+      Playwright-driven pass over `/dashboard/libraries` and every modal it opens (`docs/11`'s
+      "Dashboard — Bibliotecas" section), captured live against both the reference server and
+      Tinyfin, found the highest-impact gap the whole `docs/11` route-coverage doc has surfaced so
+      far — jellyfin-web's real "Adicionar Biblioteca de Mídia" submission sends folder paths in
+      the `POST /Library/VirtualFolders` request body (`LibraryOptions.PathInfos`), not the `paths`
+      query param `handleAddVirtualFolder` read, so a library added through the real admin
+      dashboard silently ended up with zero folders (`204 No Content`, indistinguishable from
+      success). Fixed, along with everything else that same pass found 404ing or silently
+      no-op'ing: `POST /Library/VirtualFolders/LibraryOptions` (save an existing library's
+      options — persisted as an opaque blob and echoed back, not modeled field-by-field, since
+      Tinyfin doesn't act on most of them) and `POST /Library/VirtualFolders/Name` (rename);
+      `POST /Items/{itemId}/Refresh` (the per-library "Rastrear biblioteca" scan action, distinct
+      from the already-working whole-server `POST /Library/Refresh`); the `Environment/*` folder
+      browser (`DefaultDirectoryBrowser`/`Drives`/`DirectoryContents`/`ParentPath`/`ValidatePath`);
+      `Localization/cultures`/`countries` and `Libraries/AvailableOptions` (the Add/Manage modal's
+      "Configurações da Biblioteca" section is client-side gated on all three succeeding —
+      `AvailableOptions` honestly lists only TMDB as a fetcher, not the reference server's full
+      plugin catalog Tinyfin doesn't have); and admin image management,
+      `GET /Items/{itemId}/Images` (list) plus `POST`/`DELETE .../Images/{imageType}[/{imageIndex}]`
+      (upload/delete). All of it confirmed live end to end against a rebuilt `tinyfin-staging`, not
+      just unit-tested.
 - [ ] TVDB provider — not implemented (see above).
 - [x] **Goal:** a freshly scanned library gets enriched metadata without Tinyfin implementing its
       own scraping. Verified via `internal/scan`'s test suite (movies and TV shows, with and
