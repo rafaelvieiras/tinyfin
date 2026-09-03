@@ -76,6 +76,12 @@ var routePaths = []string{
 	"/Users/{userId}/Items/{itemId}",
 	"/Items/{itemId}/Images/{imageType}",
 	"/Items/{itemId}/Images/{imageType}/{imageIndex}",
+	// Same segment count (4) as /Items/{itemId}/PlaybackInfo below and
+	// /Items/{itemId}/Ancestors, /Items/{itemId}/Similar, /Items/{itemId}/
+	// ThemeMedia above — no collision, same reasoning: differs from all of
+	// them at the final literal segment ("Images"/"Refresh").
+	"/Items/{itemId}/Images",
+	"/Items/{itemId}/Refresh",
 	"/Items/{itemId}/PlaybackInfo",
 	// Must precede /Videos/{itemId}/{file} below: same reasoning as
 	// /Items/Latest above — these are the same segment count (3) as
@@ -109,7 +115,19 @@ var routePaths = []string{
 	"/Users/{userId}/FavoriteItems/{itemId}",
 	"/Users/{userId}/PlayedItems/{itemId}",
 	"/Library/VirtualFolders",
+	// Fully literal, no wildcard segment at all — no collision is possible
+	// regardless of any other pattern in this list.
+	"/Library/VirtualFolders/LibraryOptions",
+	"/Library/VirtualFolders/Name",
 	"/Library/Refresh",
+	"/Environment/DefaultDirectoryBrowser",
+	"/Environment/Drives",
+	"/Environment/DirectoryContents",
+	"/Environment/ParentPath",
+	"/Environment/ValidatePath",
+	"/Localization/cultures",
+	"/Localization/countries",
+	"/Libraries/AvailableOptions",
 }
 
 // normalizePathCase rewrites path to the registered route's exact casing if

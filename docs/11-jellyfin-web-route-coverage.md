@@ -52,14 +52,16 @@ Status legend:
 
 | | Count |
 |---|---|
-| Route entries catalogued below (excluding Live TV/Channels, out of scope per `docs/01` — `GET /LiveTv/Programs` is the one exception, counted here, see "Explicitly out of scope" below) — some entries group several closely-related paths on one row, so this counts table rows, not raw path-template strings | 86 |
-| ✅ Implemented | 33 |
+| Route entries catalogued below (excluding Live TV/Channels, out of scope per `docs/01` — `GET /LiveTv/Programs` is the one exception, counted here, see "Explicitly out of scope" below) — some entries group several closely-related paths on one row, so this counts table rows, not raw path-template strings | 99 |
+| ✅ Implemented | 44 |
 | ⚠️ Parcial (stub/honest-empty) | 5 |
-| ❌ Not implemented | 48 |
+| ❌ Not implemented | 50 |
 
-38 of 86 (44%) return real or honestly-empty data today. The gaps cluster heavily in a few places
+49 of 99 (49%) return real or honestly-empty data today. The gaps cluster heavily in a few places
 that matter for ordinary browsing, not just admin/edge-case features — see "Biggest real gaps" at the
-bottom.
+bottom. The `/dashboard/libraries` admin flow (below) added 9 rows and initially downgraded one
+(`Library/VirtualFolders`, ✅→⚠️) in a dedicated mapping/diff pass; a follow-up implementation pass
+then closed every gap that pass found — see "Dashboard — Bibliotecas (admin library management)".
 
 ---
 
@@ -87,7 +89,7 @@ bottom.
 | `GET /Items/{itemId}/SpecialFeatures` | ❌ | Catalog only, same caveat as above. |
 | `GET /Items/Root` | ❌ | Catalog only — media-folder root discovery. |
 | `GET /Items/Counts` | ❌ | Catalog only — aggregate counts (e.g. dashboard widgets). |
-| `POST /Items/{itemId}/Refresh` | ❌ | Catalog only — admin-triggered metadata refresh for a single item. |
+| `POST /Items/{itemId}/Refresh` | ✅ | Implemented (`internal/api/item_refresh.go`, admin-only). Originally catalogued as "single item refresh"; the `/dashboard/libraries` pass found this is actually the **primary per-library scan mechanism** too — jellyfin-web's "Rastrear biblioteca" (scan just one library) menu action calls exactly this route with the library's own `ItemId`, not a library-scoped variant: `POST /Items/{itemId}/Refresh?Recursive=true&ImageRefreshMode=Default&MetadataRefreshMode=Default&ReplaceAllImages=false&RegenerateTrickplay=false&ReplaceAllMetadata=false` (query params accepted and ignored — Tinyfin has no refresh-mode distinctions to honor). When `itemId` matches a library's own `ItemId`, queues that library's scan (`s.runScan`), same mechanism `POST /Library/Refresh` uses for every library — confirmed live against `tinyfin-staging` (204, scan ran). When `itemId` matches an ordinary catalog item instead, responds 204 as an honest no-op: Tinyfin has no single-item metadata re-fetch mechanism yet, so it acknowledges the item exists rather than pretending to refresh it. Unknown `itemId` (neither a library nor an item): 404. |
 | `GET /Playlists`, `GET /Playlists/{id}`, `GET/POST /Playlists/{id}/Items`, `.../Users` | ❌ | No playlist support at all — catalog only, not exercised live (no playlists in test library). |
 | `GET /Genres`, `GET /Genres/{genreName}` | ❌ | Catalog only. See "Specialized media types" below — genre browsing has no route at all. |
 | `GET /Years` | ❌ | From apiclient's concatenated-suffix scan (year filter). No route registered. |
@@ -135,7 +137,8 @@ bottom.
 | `GET /Branding/Configuration` | ✅ | Confirmed live, fetched right after login. |
 | `GET /Branding/Css`, `/Branding/Css.css` | ❌ | Catalog only — custom admin-configured CSS injection. No-op unless an admin has set one; low priority. |
 | `GET /Branding/Splashscreen` | ❌ | Catalog only. |
-| `GET /Items/{itemId}/RemoteImages`, `/RemoteImages/Providers`, `/RemoteImages/Download` | ❌ | Catalog only — admin metadata-editing "search for a better poster" UI. |
+| `GET /Items/{itemId}/RemoteImages`, `/RemoteImages/Providers`, `/RemoteImages/Download` | ❌ | Confirmed 404 live for `/RemoteImages/Providers` specifically, via the `/dashboard/libraries` → "Editar imagens" flow (any library card's own image is edited through the exact same generic item-image admin UI a movie/series detail page would use — the library is just another `itemId`). |
+| `GET /Items/{itemId}/Images` (no `imageType` — the "list every image with metadata" admin variant, distinct from the already-implemented `GET /Items/{itemId}/Images/{imageType}` byte-serving route), `POST /Items/{itemId}/Images/{imageType}[/{imageIndex}]` (upload), `DELETE /Items/{itemId}/Images/{imageType}[/{imageIndex}]` (delete) | ✅ | Implemented (`internal/api/item_images_admin.go`, admin-only). `GET` lists every `ImageRef` the item has across all known kinds (honest-empty list, not 404, for an item with none) — confirmed live against `tinyfin-staging` for a real movie (Primary/Logo/Banner/Backdrop all listed with real dimensions/size). `POST`'s body is raw base64 image bytes (confirmed live against the reference server, not multipart), file extension follows `Content-Type`; for the one multi-instance kind (`Backdrop`), an `imageIndex` naming an existing image overwrites it in place, any other value (or none) appends as the next index — matches reference-server behavior confirmed live. `DELETE` is idempotent (204 whether or not the image/index existed), matching the reference server's own confirmed-live behavior, not a 404-on-miss guess. |
 
 ## Subtitles and lyrics
 
@@ -172,8 +175,8 @@ bottom.
 | Route | Status | Note |
 |---|---|---|
 | `GET /System/Info/Public`, `GET /System/Info` | ✅ | Confirmed live. |
-| `GET/POST/DELETE /Library/VirtualFolders` | ✅ | Registered, admin-gated. Not exercised live in this pass (would require the admin dashboard flow) but present in `server.go`. |
-| `POST /Library/Refresh` | ✅ | Same as above. |
+| `GET/POST/DELETE /Library/VirtualFolders` | ✅ | Registered, admin-gated. Upgraded back from ⚠️: `POST`'s paths-in-body bug is fixed — `handleAddVirtualFolder` now reads `LibraryOptions.PathInfos[].Path` from the request body (what the real dashboard actually sends), falling back to the `paths` query param only when the body carries none, confirmed live end to end against `tinyfin-staging` (a library added through the same body shape jellyfin-web sends now lands with its folder in `Locations`, not empty). `GET`'s response DTO (`virtualFolderInfo`) still doesn't model `PrimaryImageItemId`/`RefreshStatus`/`RefreshProgress` (deliberate gap, unchanged), but now echoes back whatever `LibraryOptions` blob was last saved via the new `.../LibraryOptions` route below (see there for the "opaque save-and-echo, not a modeled ~35-field object" scope decision) — closing most, not all, of the previously-flagged DTO gap. |
+| `POST /Library/Refresh` | ✅ | Same registration status as above; this specific route (scan *every* library) is confirmed working, same as `POST /Items/{itemId}/Refresh` above (now also implemented, for the per-library case). |
 | `GET /System/Endpoint` | ✅ | Implemented (`internal/api/system.go`). Shape and requires-auth confirmed against the reference server (staging, :8097): `{"IsLocal":bool,"IsInNetwork":bool}`, 401 with no token. `IsLocal`/`IsInNetwork` derived from the request's actual TCP peer address (loopback / RFC 1918 private / link-local) — confirmed `X-Forwarded-For` is ignored entirely by the real server, so no reverse-proxy trust config was added to match that. Confirmed live: `curl` against `tinyfin-staging` matches from outside the container (private Docker bridge address → `IsLocal:false, IsInNetwork:true`) and a Playwright session shows this called once at startup with no 404. |
 | `GET /System/Configuration`, `/System/Configuration/{key}`, `/System/Configuration/Branding` | ❌ | Catalog only — admin dashboard settings pages. |
 | `GET /System/ActivityLog/Entries` | ❌ | Catalog only. |
@@ -186,6 +189,83 @@ bottom.
 | `GET /Localization/Countries`, `/Cultures`, `/Options`, `/ParentalRatings` | ❌ | Catalog only — admin setup wizard / user-creation dropdowns. |
 | `GET /GetUtcTime` | ❌ | Catalog only — client time-sync check. |
 | `POST /ClientLog/Document` | ❌ | Catalog only — client crash/log upload endpoint. |
+
+---
+
+## Dashboard — Bibliotecas (admin library management)
+
+A dedicated pass over `/dashboard/libraries` and every modal it opens — page load, "Adicionar
+Biblioteca de Mídia", the per-library "⋮" menu ("Editar imagens", "Gerenciar biblioteca",
+"Renomear", "Rastrear biblioteca", "Remover") — captured live via Playwright against both the
+reference server (`localhost:8097`) and Tinyfin (`localhost:8096`), same method as the rest of
+this doc (source 3). Unlike the browsing-focused capture this doc started from, this pass logged
+into the real admin dashboard and drove every modal open, not just the routes a non-admin session
+would ever see.
+
+**The headline finding — resolved: adding a library silently dropped every folder path.**
+jellyfin-web's "Adicionar Biblioteca de Mídia" → OK submits
+`POST /Library/VirtualFolders?collectionType=movies&refreshLibrary=true&name=<name>` with the
+folder list carried in the **request body**, under `LibraryOptions.PathInfos` (confirmed live
+against the reference server — full body captured:
+`{"LibraryOptions":{...,"PathInfos":[{"Path":"/media/movies"}],...}}`, and the resulting
+`GET /Library/VirtualFolders` response showed the new library with
+`"Locations":["/media/movies"]`, matching). `library_admin.go`'s `handleAddVirtualFolder` used to
+only ever read `paths` from the **query string** (`r.URL.Query()["paths"]`) — a shape the real
+dashboard UI never actually sends (its query string carries only `collectionType`, `refreshLibrary`,
+and `name`) — so a library added through the real admin dashboard was silently created with an
+**empty `Paths` array** (`204 No Content`, indistinguishable from success). **Fixed**:
+`handleAddVirtualFolder` now decodes the JSON body first and extracts
+`LibraryOptions.PathInfos[].Path` when present, falling back to the `paths` query param only when
+the body carries none (keeping the old curl-friendly shape working too). Confirmed live end to end
+against `tinyfin-staging`: a library added with the exact body shape jellyfin-web sends now shows
+up with its real folder in `Locations`, and a subsequent scan walks it. This was the single most
+impactful gap this pass found — every other issue below was a modal that didn't fully render or a
+menu action that 404d, but this one silently produced a broken library that *looked* successful.
+
+Page load (`GET /dashboard/libraries` itself) fires, beyond the already-catalogued `System/Info` and
+`Library/VirtualFolders`:
+
+| Route | Status | Note |
+|---|---|---|
+| `GET /web/ConfigurationPages?enableInMainMenu=true` | ❌ | Confirmed 404 live on Tinyfin (200 on the reference server, `[]`-shaped — no admin plugin config pages registered either way). Harmless — jellyfin-web treats a failure here the same as an empty list, confirmed by the sidebar rendering identically either way. |
+| `GET /ScheduledTasks?isHidden=false` | ❌ | Confirmed 404 live on Tinyfin (200 on the reference server). Drives the "Tarefas Agendadas" sidebar entry's task list, not just the libraries page specifically — out of scope for this pass to fully spec (no scheduled-task system exists in Tinyfin at all, per `docs/01`), noted here only because it fires unconditionally on every dashboard page including this one. |
+
+Opening "Adicionar Biblioteca de Mídia" (and, identically, "Gerenciar biblioteca" on an existing
+library — same modal, pre-filled) fires:
+
+| Route | Status | Note |
+|---|---|---|
+| `GET /Localization/cultures`, `GET /Localization/countries` | ✅ | Implemented (`internal/api/localization.go`, `requireAuth`). Populate the "Idioma preferido de download" and "País/Região" dropdowns. Serve the real ISO 639-1/639-2 (192 entries) and ISO 3166 (139 entries) datasets — standard reference data, not the reference server's own IP — with field names confirmed live against `jellyfin-real-staging`. Confirmed live against `tinyfin-staging` that the "Configurações da Biblioteca" section of the modal now renders past "Pastas" instead of being gated off. |
+| `GET /Libraries/AvailableOptions?IsNewLibrary=false` (fired once with no `LibraryContentType`, again once the content-type dropdown is set, e.g. `&LibraryContentType=movies`) | ✅ | Implemented (`internal/api/localization.go`, `requireAuth`). Not previously catalogued under any name — a genuinely new route this pass found, not in the SDK/apiclient bundle's URL-template scan because it's built from separate path segments. Response shape (`MetadataSavers`/`MetadataReaders`/`SubtitleFetchers`/`LyricFetchers`/`MediaSegmentProviders` + per-kind `TypeOptions[]`) confirmed live against the reference server. Scope decision: since Tinyfin has no metadata-provider *registry* (TMDB is hardcoded, per `internal/metadata`), the fetcher lists are honest, not a copy of the reference server's full plugin catalog — `MetadataFetchers`/`ImageFetchers` list only `TheMovieDb`, only for the kinds `internal/metadata.TMDBProvider` actually covers (Movie/Series/Season/Episode; every other kind gets empty lists), `MetadataReaders` lists `Nfo` only where `internal/scan/nfo.go` actually reads one, `MetadataSavers` is always empty (nothing writes a sidecar file back). `SupportedImageTypes`/`DefaultImageOptions` are copied faithfully for every kind (wire facts about the item model, not a capability claim). Confirmed live against `tinyfin-staging`. |
+
+Clicking "Adicionar" under "Pastas" (the folder browser) fires:
+
+| Route | Status | Note |
+|---|---|---|
+| `GET /Environment/DefaultDirectoryBrowser`, `GET /Environment/Drives`, `GET /Environment/DirectoryContents?includeDirectories=true&path=...`, `GET /Environment/ParentPath?path=...`, `POST /Environment/ValidatePath` | ✅ | Implemented (`internal/api/environment.go`, admin-only), operating on the real container filesystem. Response shapes confirmed live against the reference server: `DefaultDirectoryBrowser` → `{}` (no `Path` key, not a default `"/"`); `Drives` → one entry per root (`[{"Name":"/","Path":"/","Type":"Directory"}]` on Linux/container, unlike the reference server's Windows-drive-letter list — scope decision, single root only); `DirectoryContents` → `[{"Name","Path","Type"}]`, neither `includeDirectories` nor `includeFiles` defaults to "everything" (both unset returns `[]`, confirmed live); `ParentPath` → a bare JSON string, `null` at the filesystem root (confirmed live, not `"/"`); `ValidatePath` body `{"Path":...,"ValidateWriteable":...}` (note spelling, confirmed from the apiclient bundle) → 204 if the path exists (confirmed live to accept files, not just directories — the reference server's own certificate-path picker validates a file through this same route). Confirmed live end to end against `tinyfin-staging`: `Drives` and `DirectoryContents?path=/media` both return the real mounted folders. |
+
+Saving "Gerenciar biblioteca" (edit an existing library's options) fires a route not in the SDK/
+apiclient catalog scan at all:
+
+| Route | Status | Note |
+|---|---|---|
+| `POST /Library/VirtualFolders/LibraryOptions` | ✅ | Implemented (`internal/api/library_admin.go`'s `handleSaveLibraryOptions`, admin-only), body `{"Id":"<libraryItemId>","LibraryOptions":{...full options object...}}` — addressed by `Id`, unlike `DELETE /Library/VirtualFolders`'s by-`Name` addressing, matching the reference server. This is the *only* way to change an existing library's options at all — `POST /Library/VirtualFolders` (the add route) only ever creates. Scope decision: the ~35-field `LibraryOptions` object is persisted as an opaque raw-JSON blob (`storage.Library.LibraryOptions`, new sqlite column/migration `0004_library_options.sql`) and echoed back verbatim on the next `GET /Library/VirtualFolders` — a save-and-echo round trip, not an interpretation of any of those fields (Tinyfin doesn't act on real-time-monitoring/trickplay/etc. settings today). 404 if the library `Id` doesn't exist, 400 on malformed JSON, 204 on success. Confirmed live end to end against `tinyfin-staging`: save then re-fetch returns the same `LibraryOptions` blob that was saved. |
+
+The per-library "⋮" menu's other three actions:
+
+| Route | Status | Note |
+|---|---|---|
+| "Rastrear biblioteca" (per-library scan) | ✅ | See `POST /Items/{itemId}/Refresh`'s updated row above — implemented, confirmed live against `tinyfin-staging` (queues the one library's scan). |
+| "Renomear" | ✅ | Implemented (`internal/api/library_admin.go`'s `handleRenameVirtualFolder`, admin-only), `POST /Library/VirtualFolders/Name?name=<current>&newName=<new>&refreshLibrary=<bool>` — route shape confirmed by static analysis of Tinyfin's own embedded `@jellyfin/sdk` bundle (not live-tested against the reference server: its own confirmation dialog warns renaming discards all metadata, too destructive to trigger against the persistent fixture). Looks up the library by current `name`, renames it (ID/Paths/LibraryOptions preserved), queues a scan if `refreshLibrary=true`; 404 if `name` doesn't match a library, 400 if `newName` is empty. Confirmed live against `tinyfin-staging`: rename-then-list shows the new name, folders intact. |
+| "Remover" | ✅ | Uses the already-implemented `DELETE /Library/VirtualFolders?name=<name>`; not re-confirmed live in this pass (would delete a real staging library) but the route and its by-`Name` addressing were already confirmed in the page-load capture above. |
+
+Also present in the bundle but not surfaced by any modal this pass exercised (no per-path
+add/remove UI exists in this jellyfin-web build's library-card menu — only whole-library add/
+rename/remove): `POST /Library/VirtualFolders/Paths` (add one path to an existing library) and
+`POST /Library/VirtualFolders/Paths/Update` (replace one path with another). Neither is registered
+in `server.go`; `library_admin.go`'s own doc comment already lists "per-path add/remove/update on
+an existing library" as a deliberate, documented gap — this pass just confirms the exact route
+shapes from the bundle rather than changing that call.
 
 ---
 
@@ -212,6 +292,12 @@ needs to not treat as broken. Every other `LiveTv/*`/`Channels/*` route stays ou
 
 Ranked by how much they'd actually bite a normal user clicking around, not by API-surface size:
 
+0. ~~**Adding a library through the real admin dashboard silently creates one with zero
+   folders.**~~ — resolved. `handleAddVirtualFolder` now reads `LibraryOptions.PathInfos` from the
+   request body (what the real dashboard actually sends), falling back to the `paths` query param
+   only when the body carries none; confirmed live end to end against `tinyfin-staging` with the
+   exact body shape jellyfin-web sends. See "Dashboard — Bibliotecas (admin library management)"
+   above for the full capture and fix.
 1. ~~**Favorites and "mark watched" are silently broken**~~ — resolved. Both
    `POST /Users/{userId}/FavoriteItems/{itemId}` and `POST /Users/{userId}/PlayedItems/{itemId}` (+
    `DELETE`) are implemented and re-audited byte-for-byte against the reference server; see their rows

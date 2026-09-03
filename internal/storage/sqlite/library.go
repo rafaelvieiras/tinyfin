@@ -14,8 +14,9 @@ func scanLibrary(rs rowScanner) (storage.Library, error) {
 		id, name, collectionType string
 		pathsJSON                string
 		lastScannedAt            sql.NullTime
+		libraryOptions           string
 	)
-	if err := rs.Scan(&id, &name, &collectionType, &pathsJSON, &lastScannedAt); err != nil {
+	if err := rs.Scan(&id, &name, &collectionType, &pathsJSON, &lastScannedAt, &libraryOptions); err != nil {
 		return storage.Library{}, err
 	}
 
@@ -28,6 +29,9 @@ func scanLibrary(rs rowScanner) (storage.Library, error) {
 		v := lastScannedAt.Time
 		lib.LastScannedAt = &v
 	}
+	if libraryOptions != "" {
+		lib.LibraryOptions = []byte(libraryOptions)
+	}
 	if err := unmarshalJSONInto(pathsJSON, &lib.Paths); err != nil {
 		return storage.Library{}, err
 	}
@@ -35,7 +39,7 @@ func scanLibrary(rs rowScanner) (storage.Library, error) {
 }
 
 func (s *Store) GetLibrary(ctx context.Context, id storage.LibraryID) (storage.Library, error) {
-	row := s.ex.QueryRowContext(ctx, `SELECT id, name, collection_type, paths, last_scanned_at FROM libraries WHERE id = ?`, string(id))
+	row := s.ex.QueryRowContext(ctx, `SELECT id, name, collection_type, paths, last_scanned_at, library_options FROM libraries WHERE id = ?`, string(id))
 	lib, err := scanLibrary(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -47,7 +51,7 @@ func (s *Store) GetLibrary(ctx context.Context, id storage.LibraryID) (storage.L
 }
 
 func (s *Store) QueryLibraries(ctx context.Context) ([]storage.Library, error) {
-	rows, err := s.ex.QueryContext(ctx, `SELECT id, name, collection_type, paths, last_scanned_at FROM libraries ORDER BY name ASC`)
+	rows, err := s.ex.QueryContext(ctx, `SELECT id, name, collection_type, paths, last_scanned_at, library_options FROM libraries ORDER BY name ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("sqlite: querying libraries: %w", err)
 	}
@@ -77,10 +81,10 @@ func (s *Store) UpsertLibrary(ctx context.Context, lib storage.Library) error {
 		return err
 	}
 
-	const query = `INSERT INTO libraries (id, name, collection_type, paths, last_scanned_at) VALUES (?, ?, ?, ?, ?)
-		ON CONFLICT(id) DO UPDATE SET name=excluded.name, collection_type=excluded.collection_type, paths=excluded.paths, last_scanned_at=excluded.last_scanned_at`
+	const query = `INSERT INTO libraries (id, name, collection_type, paths, last_scanned_at, library_options) VALUES (?, ?, ?, ?, ?, ?)
+		ON CONFLICT(id) DO UPDATE SET name=excluded.name, collection_type=excluded.collection_type, paths=excluded.paths, last_scanned_at=excluded.last_scanned_at, library_options=excluded.library_options`
 
-	_, err = s.exec(ctx, query, string(lib.ID), lib.Name, string(lib.CollectionType), pathsJSON, ptrToAny(lib.LastScannedAt))
+	_, err = s.exec(ctx, query, string(lib.ID), lib.Name, string(lib.CollectionType), pathsJSON, ptrToAny(lib.LastScannedAt), string(lib.LibraryOptions))
 	if err != nil {
 		return fmt.Errorf("sqlite: upserting library %q: %w", lib.ID, err)
 	}

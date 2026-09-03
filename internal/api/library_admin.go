@@ -9,15 +9,15 @@
 // requirement).
 //
 // Deliberately not implemented (a documented gap, not an oversight):
-// renaming a library, per-path add/remove/update on an existing library,
-// and library-specific options — the reference server's Paths/Name/
-// LibraryOptions sub-endpoints. Nothing this project's own dashboard flow
-// (add a library, scan it) needs today; add them only once a real client
-// interaction motivates it, per this project's "minimal over guessed"
-// convention.
+// per-path add/remove/update on an existing library — the reference
+// server's Paths sub-endpoints. Nothing this project's own dashboard flow
+// (add a library, scan it, rename it, save its options) needs today; add
+// it only once a real client interaction motivates it, per this project's
+// "minimal over guessed" convention.
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -26,13 +26,16 @@ import (
 
 // virtualFolderInfo mirrors the reference server's VirtualFolderInfo, kept
 // to the fields this project actually populates with real data
-// (LibraryOptions/PrimaryImageItemId/RefreshProgress/RefreshStatus are
-// left off rather than guessed — see the package doc comment).
+// (PrimaryImageItemId/RefreshProgress/RefreshStatus are left off rather
+// than guessed — see the package doc comment). LibraryOptions is the raw
+// blob POST /Library/VirtualFolders/LibraryOptions last saved, echoed back
+// as-is (Tinyfin doesn't interpret it — see storage.Library.LibraryOptions).
 type virtualFolderInfo struct {
-	Name           string   `json:"Name"`
-	Locations      []string `json:"Locations"`
-	CollectionType string   `json:"CollectionType"`
-	ItemId         string   `json:"ItemId"`
+	Name           string          `json:"Name"`
+	Locations      []string        `json:"Locations"`
+	CollectionType string          `json:"CollectionType"`
+	ItemId         string          `json:"ItemId"`
+	LibraryOptions json.RawMessage `json:"LibraryOptions,omitempty"`
 }
 
 func (s *Server) handleGetVirtualFolders(w http.ResponseWriter, r *http.Request) {
@@ -46,6 +49,7 @@ func (s *Server) handleGetVirtualFolders(w http.ResponseWriter, r *http.Request)
 		out = append(out, virtualFolderInfo{
 			Name: lib.Name, Locations: lib.Paths,
 			CollectionType: string(lib.CollectionType), ItemId: string(lib.ID),
+			LibraryOptions: json.RawMessage(lib.LibraryOptions),
 		})
 	}
 	writeJSON(w, http.StatusOK, out)
@@ -53,10 +57,15 @@ func (s *Server) handleGetVirtualFolders(w http.ResponseWriter, r *http.Request)
 
 // handleAddVirtualFolder is POST /Library/VirtualFolders — creates a
 // library and, if refreshLibrary=true, queues a scan for it in the
-// background (Server.runScan). paths accepts either a repeated query
-// param ("paths=a&paths=b", how axios — @jellyfin/sdk's HTTP client —
-// serializes an array param) or a single comma-delimited value, for
-// robustness against either client-side serialization convention.
+// background (Server.runScan). Paths come from the request body when one
+// is present: the real dashboard's "Add Media Library" flow (confirmed
+// live, byte for byte) sends collectionType/refreshLibrary/name on the
+// query string but paths inside the body as
+// LibraryOptions.PathInfos[].Path, not as a "paths" query param at all.
+// The "paths" query param (repeated, "paths=a&paths=b", how axios —
+// @jellyfin/sdk's HTTP client — serializes an array param; or a single
+// comma-delimited value) is kept as a fallback for direct callers (curl,
+// this project's own tests) when the body is absent or has no PathInfos.
 func (s *Server) handleAddVirtualFolder(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	name := strings.TrimSpace(q.Get("name"))
@@ -68,6 +77,9 @@ func (s *Server) handleAddVirtualFolder(w http.ResponseWriter, r *http.Request) 
 	paths := q["paths"]
 	if len(paths) == 1 && strings.Contains(paths[0], ",") {
 		paths = strings.Split(paths[0], ",")
+	}
+	if bodyPaths := pathInfosFromBody(r); len(bodyPaths) > 0 {
+		paths = bodyPaths
 	}
 
 	lib := storage.Library{
@@ -85,6 +97,33 @@ func (s *Server) handleAddVirtualFolder(w http.ResponseWriter, r *http.Request) 
 		go s.runScan(lib)
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// pathInfosFromBody extracts LibraryOptions.PathInfos[].Path from r's JSON
+// body, if any. A missing/empty body, or one that doesn't decode, yields
+// nil rather than an error — callers treat that as "fall back to the
+// paths query param," which is how curl/tests without a body still work.
+func pathInfosFromBody(r *http.Request) []string {
+	if r.Body == nil {
+		return nil
+	}
+	var body struct {
+		LibraryOptions struct {
+			PathInfos []struct {
+				Path string `json:"Path"`
+			} `json:"PathInfos"`
+		} `json:"LibraryOptions"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		return nil
+	}
+	paths := make([]string, 0, len(body.LibraryOptions.PathInfos))
+	for _, pi := range body.LibraryOptions.PathInfos {
+		if pi.Path != "" {
+			paths = append(paths, pi.Path)
+		}
+	}
+	return paths
 }
 
 // handleRemoveVirtualFolder is DELETE /Library/VirtualFolders — removes a
@@ -108,6 +147,74 @@ func (s *Server) handleRemoveVirtualFolder(w http.ResponseWriter, r *http.Reques
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
+	}
+	w.WriteHeader(http.StatusNotFound)
+}
+
+// handleSaveLibraryOptions is POST /Library/VirtualFolders/LibraryOptions —
+// saves a library's LibraryOptions blob, addressed by Id (unlike
+// DELETE/rename, which address by Name). The reference server's
+// LibraryOptions has ~35 fields (metadata providers, trickplay, etc.) this
+// project doesn't act on — see the package doc comment — so the blob is
+// persisted opaquely (storage.Library.LibraryOptions) and simply echoed
+// back by GET /Library/VirtualFolders rather than modeled field-by-field.
+func (s *Server) handleSaveLibraryOptions(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Id             string          `json:"Id"`
+		LibraryOptions json.RawMessage `json:"LibraryOptions"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	lib, err := s.store.GetLibrary(r.Context(), storage.LibraryID(body.Id))
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	lib.LibraryOptions = body.LibraryOptions
+	if err := s.store.UpsertLibrary(r.Context(), lib); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// handleRenameVirtualFolder is POST /Library/VirtualFolders/Name — renames
+// a library, addressed by its current name (?name=<current>&newName=<new>),
+// same addressing scheme as DELETE /Library/VirtualFolders. Not confirmed
+// live against the reference server (the dashboard itself warns renaming
+// drops metadata, too destructive to test against the persistent staging
+// fixture) — route shape is from static analysis of @jellyfin/sdk's
+// generated client, same sanctioned source as the rest of this file.
+func (s *Server) handleRenameVirtualFolder(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	name := q.Get("name")
+	newName := strings.TrimSpace(q.Get("newName"))
+	if newName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	libs, err := s.store.QueryLibraries(r.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	for _, lib := range libs {
+		if lib.Name != name {
+			continue
+		}
+		lib.Name = newName
+		if err := s.store.UpsertLibrary(r.Context(), lib); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if q.Get("refreshLibrary") == "true" {
+			go s.runScan(lib)
+		}
+		w.WriteHeader(http.StatusNoContent)
+		return
 	}
 	w.WriteHeader(http.StatusNotFound)
 }

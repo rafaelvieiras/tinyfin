@@ -309,6 +309,13 @@ func (s *Server) routes() {
 	// (broken poster/backdrop, no console-visible crash).
 	s.mux.HandleFunc("GET /Items/{itemId}/Images/{imageType}", s.handleItemImage)
 	s.mux.HandleFunc("GET /Items/{itemId}/Images/{imageType}/{imageIndex}", s.handleItemImage)
+	// Admin-only counterparts (item_images_admin.go) — list/upload/delete,
+	// unlike the public byte-serving GET routes above.
+	s.mux.HandleFunc("GET /Items/{itemId}/Images", requireAdmin(s.handleListItemImages))
+	s.mux.HandleFunc("POST /Items/{itemId}/Images/{imageType}", requireAdmin(s.handleUploadItemImage))
+	s.mux.HandleFunc("POST /Items/{itemId}/Images/{imageType}/{imageIndex}", requireAdmin(s.handleUploadItemImage))
+	s.mux.HandleFunc("DELETE /Items/{itemId}/Images/{imageType}", requireAdmin(s.handleDeleteItemImage))
+	s.mux.HandleFunc("DELETE /Items/{itemId}/Images/{imageType}/{imageIndex}", requireAdmin(s.handleDeleteItemImage))
 
 	// Direct Play negotiation and streaming (playback.go). "GET" patterns
 	// also match HEAD per net/http.ServeMux's documented behavior, so the
@@ -376,7 +383,28 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /Library/VirtualFolders", requireAdmin(s.handleGetVirtualFolders))
 	s.mux.HandleFunc("POST /Library/VirtualFolders", requireAdmin(s.handleAddVirtualFolder))
 	s.mux.HandleFunc("DELETE /Library/VirtualFolders", requireAdmin(s.handleRemoveVirtualFolder))
+	s.mux.HandleFunc("POST /Library/VirtualFolders/LibraryOptions", requireAdmin(s.handleSaveLibraryOptions))
+	s.mux.HandleFunc("POST /Library/VirtualFolders/Name", requireAdmin(s.handleRenameVirtualFolder))
 	s.mux.HandleFunc("POST /Library/Refresh", requireAdmin(s.handleLibraryRefresh))
+	// jellyfin-web's per-library "Rastrear biblioteca" menu action, distinct
+	// from POST /Library/Refresh above (which scans every library) — see
+	// item_refresh.go.
+	s.mux.HandleFunc("POST /Items/{itemId}/Refresh", requireAdmin(s.handleItemRefresh))
+
+	// Dashboard "Add/Manage Media Library" modal support (environment.go,
+	// localization.go) — the folder browser and the language/country/
+	// metadata-fetcher pickers the modal's "Library Settings" section is
+	// gated on. Environment/* stays admin-only (filesystem browsing);
+	// Localization/Libraries carry no library-management side effect, so
+	// they're wired with requireAuth like any other "list of options" GET.
+	s.mux.HandleFunc("GET /Environment/DefaultDirectoryBrowser", requireAdmin(s.handleDefaultDirectoryBrowser))
+	s.mux.HandleFunc("GET /Environment/Drives", requireAdmin(s.handleEnvironmentDrives))
+	s.mux.HandleFunc("GET /Environment/DirectoryContents", requireAdmin(s.handleDirectoryContents))
+	s.mux.HandleFunc("GET /Environment/ParentPath", requireAdmin(s.handleParentPath))
+	s.mux.HandleFunc("POST /Environment/ValidatePath", requireAdmin(s.handleValidatePath))
+	s.mux.HandleFunc("GET /Localization/cultures", requireAuth(s.handleLocalizationCultures))
+	s.mux.HandleFunc("GET /Localization/countries", requireAuth(s.handleLocalizationCountries))
+	s.mux.HandleFunc("GET /Libraries/AvailableOptions", requireAuth(s.handleLibrariesAvailableOptions))
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

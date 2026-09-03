@@ -36,8 +36,8 @@ func TestOpenAndMigrate(t *testing.T) {
 	if err := st.db.QueryRow(`SELECT MAX(version) FROM schema_migrations`).Scan(&version); err != nil {
 		t.Fatalf("reading schema_migrations: %v", err)
 	}
-	if version != 3 {
-		t.Fatalf("expected schema version 3, got %d", version)
+	if version != 4 {
+		t.Fatalf("expected schema version 4, got %d", version)
 	}
 
 	// Reopening an already-migrated database must be a no-op, not an error.

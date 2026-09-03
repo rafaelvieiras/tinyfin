@@ -36,4 +36,13 @@ type Library struct {
 	// LastScannedAt is nil until the scanner (08) has completed at least
 	// one pass over this library.
 	LastScannedAt *time.Time
+
+	// LibraryOptions is the reference server's LibraryOptions object for
+	// this library (metadata providers, trickplay, etc. — ~35 fields),
+	// persisted opaquely as the raw JSON the admin dashboard sent to POST
+	// /Library/VirtualFolders/LibraryOptions. Tinyfin doesn't act on any of
+	// those fields yet (a documented gap — see internal/api/library_admin.go),
+	// but round-trips them honestly: save, then GET /Library/VirtualFolders
+	// echoes back exactly this blob. nil/empty means "never set."
+	LibraryOptions []byte
 }
