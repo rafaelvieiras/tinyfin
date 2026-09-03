@@ -118,8 +118,9 @@ what starting Phase 1 actually requires next.
       render unconditionally before the request resolves (`Items/{itemId}/Similar`,
       `Items/Filters`/`Filters2`, `Studios`) — this project has no similarity/genre-scanning
       metadata yet (08), so empty is the accurate answer, not a stand-in for one. Left deliberately
-      unaddressed: `Shows/NextUp` (needs real series/episode test data to implement meaningfully,
-      none seeded yet) and the dashboard-admin/SyncPlay/WebSocket 404s, which `docs/04` already
+      unaddressed at this point: `Shows/NextUp` (needed real series/episode test data to implement
+      meaningfully, none seeded yet — implemented in a later pass, see `internal/api/nextup.go` and
+      its row in `docs/11`) and the dashboard-admin/SyncPlay/WebSocket 404s, which `docs/04` already
       scopes as lowest-priority and which every call site confirmed degrades gracefully.
 - [x] **Goal:** a real Jellyfin client browses a real library and plays a Direct-Play-compatible
       file end to end. Met for a real web client (`jellyfin-web`, above) and, as of the two
