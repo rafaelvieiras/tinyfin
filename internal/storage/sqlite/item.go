@@ -583,6 +583,87 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 	return storage.ItemPage{Items: items, TotalCount: total, Offset: filter.Offset}, nil
 }
 
+// sqliteAggregateTimeLayout is the format modernc.org/sqlite writes a bound
+// time.Time parameter as (conn.go's formatTime, which defaults to
+// t.String() — this driver isn't configured with an explicit
+// _time_format DSN param, store.go's DSN). A plain column selection
+// (itemColumns/scanItem) never needs this: the driver auto-converts a
+// column with a TIMESTAMP decltype straight to a time.Time value. An
+// aggregate like MAX(date_created) has no decltype, though, so the driver
+// hands the raw stored text back unconverted instead — parseAggregateTime
+// is that missing conversion step, done explicitly.
+const sqliteAggregateTimeLayout = "2006-01-02 15:04:05.999999999 -0700 MST"
+
+// parseAggregateTime parses raw (sqliteAggregateTimeLayout's format) back
+// into a time.Time. Every DateCreated this project writes goes through
+// time.Now().UTC() (UpsertItem's own zero-value default, item.go, and
+// every explicit caller — internal/scan/scan.go, cmd/devseed), so in
+// practice raw is always the "+0000 UTC" shape and carries no monotonic
+// reading. The "m=" strip below is defense in depth, not load-bearing
+// today: .UTC() already strips a time.Time's monotonic clock reading
+// before formatTime ever sees it (a bare, non-UTC time.Now() does carry
+// one, which t.String() appends as a trailing " m=+<seconds>" this
+// layout doesn't otherwise account for) — matching the driver's own read
+// path for a plain time.Time column (parseTimeString, conn.go), which
+// strips the identical suffix before parsing.
+func parseAggregateTime(raw string) (time.Time, error) {
+	if i := strings.Index(raw, "m="); i > 0 {
+		raw = strings.TrimSpace(raw[:i])
+	}
+	return time.Parse(sqliteAggregateTimeLayout, raw)
+}
+
+// QuerySeriesLatestActivity implements storage.ItemStore's method of the
+// same name: a GROUP BY series_id aggregate ranking distinct series by
+// their own MAX(date_created), rather than QueryItems' per-item ranking —
+// see storage.SeriesActivity's doc comment for why the two aren't
+// interchangeable for GET /Items/Latest's grouping.
+func (s *Store) QuerySeriesLatestActivity(ctx context.Context, libraryID storage.LibraryID, itemTypes []storage.ItemType, limit int) ([]storage.SeriesActivity, error) {
+	if limit <= 0 {
+		return nil, fmt.Errorf("sqlite: QuerySeriesLatestActivity: limit must be > 0, got %d", limit)
+	}
+
+	wheres := []string{"items.library_id = ?", "items.series_id IS NOT NULL"}
+	args := []any{string(libraryID)}
+
+	if len(itemTypes) > 0 {
+		ph := make([]string, len(itemTypes))
+		for i, t := range itemTypes {
+			ph[i] = "?"
+			args = append(args, string(t))
+		}
+		wheres = append(wheres, "items.type IN ("+strings.Join(ph, ",")+")")
+	}
+
+	query := "SELECT items.series_id, MAX(items.date_created) AS latest FROM items WHERE " +
+		strings.Join(wheres, " AND ") +
+		" GROUP BY items.series_id ORDER BY latest DESC, items.series_id ASC LIMIT ?"
+	args = append(args, limit)
+
+	rows, err := s.ex.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("sqlite: querying series latest activity: %w", err)
+	}
+	defer rows.Close()
+
+	var out []storage.SeriesActivity
+	for rows.Next() {
+		var seriesID, latestRaw string
+		if err := rows.Scan(&seriesID, &latestRaw); err != nil {
+			return nil, fmt.Errorf("sqlite: scanning series activity row: %w", err)
+		}
+		latest, err := parseAggregateTime(latestRaw)
+		if err != nil {
+			return nil, fmt.Errorf("sqlite: parsing series activity timestamp %q: %w", latestRaw, err)
+		}
+		out = append(out, storage.SeriesActivity{SeriesID: storage.ItemID(seriesID), Latest: latest})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("sqlite: iterating series activity rows: %w", err)
+	}
+	return out, nil
+}
+
 func (s *Store) QueryRelations(ctx context.Context, itemID storage.ItemID, kind string, asParent bool) ([]storage.ItemRelation, error) {
 	col := "parent_id"
 	if !asParent {

@@ -192,7 +192,7 @@ func main() {
 			Size:         size,
 			MediaStreams: streams,
 			RunTimeTicks: runtimeTicks,
-			DateCreated:  time.Now(),
+			DateCreated:  time.Now().UTC(),
 		}
 		if year > 0 {
 			item.ProductionYear = &year

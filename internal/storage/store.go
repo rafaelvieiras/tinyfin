@@ -59,6 +59,17 @@ type ItemStore interface {
 	UpsertItem(ctx context.Context, item Item) error
 	DeleteItem(ctx context.Context, id ItemID) error
 
+	// QuerySeriesLatestActivity ranks distinct series by their own most
+	// recent DateCreated among rows matching libraryID/itemTypes, newest
+	// first (a stable SeriesID tie-break, same convention QueryItems'
+	// DateCreated sort uses at the API layer) — the per-series counterpart
+	// of QueryItems' per-item ranking, letting a caller page through "most
+	// recently active series" without a raw-item pool masking a
+	// low-episode-count series behind a high-episode-count one (see
+	// SeriesActivity's doc comment). Limit is required, same
+	// no-full-catalog enforcement as QueryItems.
+	QuerySeriesLatestActivity(ctx context.Context, libraryID LibraryID, itemTypes []ItemType, limit int) ([]SeriesActivity, error)
+
 	// QueryRelations/UpsertRelation/DeleteRelation cover N:M and ordered
 	// item links that a single ParentID can't express: collection
 	// membership, playlist membership (with its own per-playlist order),

@@ -114,7 +114,7 @@ func (s *Server) reportPlaybackPosition(r *http.Request) storage.ItemID {
 		state = storage.Playstate{}
 	}
 	state.PlaybackPositionTicks = *body.PositionTicks
-	now := time.Now()
+	now := time.Now().UTC()
 	state.LastPlayedDate = &now
 	_ = s.store.SetPlaystate(r.Context(), ac.User.ID, itemID, state)
 	return itemID
@@ -174,7 +174,7 @@ func (s *Server) handleUserPlayedItemsMark(w http.ResponseWriter, r *http.Reques
 	state.Played = true
 	state.PlayCount++
 	state.PlaybackPositionTicks = 0
-	now := time.Now()
+	now := time.Now().UTC()
 	state.LastPlayedDate = &now
 	if err := s.store.SetPlaystate(r.Context(), ac.User.ID, itemID, state); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

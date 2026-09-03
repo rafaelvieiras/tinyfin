@@ -276,3 +276,20 @@ type Item struct {
 
 	DateCreated time.Time
 }
+
+// SeriesActivity is one entry of QuerySeriesLatestActivity's result: a
+// series' own most recent Episode/Season DateCreated within that query's
+// scope. Backs GET /Items/Latest's per-series ranking (internal/api's
+// latest_grouping.go, docs/12's "Items/Latest — series grouping") without
+// first materializing a raw-item-count-bounded pool across the whole
+// scope: a pool bounded by item count biases toward whichever handful of
+// series happen to contribute the most rows, silently excluding a
+// genuinely more-recently-touched series with fewer episodes — confirmed
+// live against a real library (four series scanned together, the one with
+// the earliest per-episode timestamps had none of its rows survive a
+// 200-item pool once the other three's combined episode counts exceeded
+// it, so it never appeared in the grouped result at all, at any limit).
+type SeriesActivity struct {
+	SeriesID ItemID
+	Latest   time.Time
+}

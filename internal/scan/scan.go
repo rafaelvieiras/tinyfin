@@ -199,7 +199,7 @@ func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, 
 
 	stats := pool.wait()
 
-	now := time.Now()
+	now := time.Now().UTC()
 	lib.LastScannedAt = &now
 	if err := s.store.UpsertLibrary(ctx, lib); err != nil {
 		return stats, fmt.Errorf("scan: persisting LastScannedAt for library %q: %w", lib.Name, err)
@@ -277,7 +277,18 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 		Size:         size,
 		MediaStreams: mediaStreamsFromProbe(info),
 		RunTimeTicks: runtimeTicksFromProbe(info),
-		DateCreated:  time.Now(),
+		// .UTC(), not bare time.Now(): the sqlite driver stores a time.Time
+		// as its own t.String() text (modernc.org/sqlite's formatTime), so
+		// a non-UTC-zoned value serializes with its local offset instead of
+		// "+0000 UTC" — different rows then sort inconsistently under a
+		// plain SQL "ORDER BY date_created" (lexicographic on that raw
+		// text), a real bug found live: two shows scanned seconds apart
+		// under a non-UTC host TZ ranked out of order because one process
+		// invocation happened to straddle local midnight while UTC hadn't.
+		// UpsertItem's own DateCreated-defaulting already follows this
+		// convention (item.go); every DateCreated this scanner sets
+		// explicitly needs to match it.
+		DateCreated: time.Now().UTC(),
 	}
 	if year > 0 {
 		item.ProductionYear = &year
@@ -323,7 +334,7 @@ func (s *Scanner) walkSeries(ctx context.Context, pool *jobPool, lib storage.Lib
 
 		seriesItem := storage.Item{
 			ID: seriesID, Type: storage.ItemTypeSeries, LibraryID: lib.ID,
-			Name: seriesTitle, SortName: seriesTitle, DateCreated: time.Now(),
+			Name: seriesTitle, SortName: seriesTitle, DateCreated: time.Now().UTC(),
 		}
 		if seriesYear > 0 {
 			seriesItem.ProductionYear = &seriesYear
@@ -370,7 +381,7 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 			ID: seasonID, Type: storage.ItemTypeSeason, LibraryID: lib.ID,
 			ParentID: &seriesID, SeriesID: &seriesID,
 			Name: fmt.Sprintf("Season %d", seasonNum), SortName: fmt.Sprintf("%04d", seasonNum),
-			IndexNumber: &idx, DateCreated: time.Now(),
+			IndexNumber: &idx, DateCreated: time.Now().UTC(),
 		}
 		if err := s.store.UpsertItem(ctx, seasonItem); err != nil {
 			log.Printf("scan: upserting season %q: %v", e.Name(), err)
@@ -440,7 +451,7 @@ func (s *Scanner) processEpisode(ctx context.Context, pool *jobPool, lib storage
 		Path: episodePath, Container: videoExt(episodePath), Size: size,
 		MediaStreams: mediaStreamsFromProbe(info),
 		RunTimeTicks: runtimeTicksFromProbe(info),
-		DateCreated:  time.Now(),
+		DateCreated:  time.Now().UTC(),
 	}
 
 	// Same ordering requirement as processMovie: upsert first so

@@ -165,8 +165,9 @@ than the slot count shrinking by one.
 What was confirmed, precisely, by testing rather than assumed from the original citation below:
 
 - **The check is over the whole series**, every episode the series has, not just the
-  Episode/Season rows that happen to have landed in the grouping candidate pool (a bounded, recent
-  window — see `latestSeriesGroupingPoolSize` above). Reproduced live: marking every episode of a
+  Episode/Season rows a per-series item fetch happens to return (a bounded, recent window — see
+  `latestSeriesItemFetchLimit`, `internal/api/latest_grouping.go`). Reproduced live: marking every
+  episode of a
   103-episode series played via the reference server's own recursive
   `POST /Users/{userId}/PlayedItems/{seriesId}` (confirmed this cascades: the response came back
   `UnplayedItemCount: 0`, and a spot-checked episode's own `UserData.PlayCount` was `1`) made that
@@ -196,6 +197,30 @@ What was confirmed, precisely, by testing rather than assumed from the original 
 Implemented in `internal/api/latest_grouping.go`'s `isSeriesFullyWatched`, called from
 `tvShowsLatestGrouped` once per ranked series group, skipping (not counting toward `limit`) any
 group it reports as fully watched, before that group's card is resolved.
+
+### Candidate-series ranking must not be biased by episode count (implementation note)
+
+Not a reference-server behavior question — step 1's "look at everything recently added across the
+scope, grouped by which series" is unambiguous — but a real implementation bug found live against
+a user's own library, worth recording so it isn't reintroduced: an earlier version of
+`tvShowsLatestGrouped` approximated step 1 with a single bounded `QueryItems` call (a raw-item pool
+sorted by `DateCreated`, capped around 200 items for the default `limit=20`) and only grouped by
+series *after* that pool was fetched. A library scanned with a lopsided episode-count split across
+a handful of shows could fill that pool entirely with the high-episode-count shows' own rows before
+a lower-episode-count show scanned moments earlier ever contributed a single row — that show then
+never appeared in the grouped result at all, at any `limit`, because it never reached the grouping
+step in the first place. Reproduced with real data: four shows (13/50/150/103 episodes) scanned
+within a couple of seconds of each other; the 103-episode show, scanned first (so its rows sorted
+just past the 200-item pool's cutoff once the other three's 213 combined rows filled it), never
+appeared.
+
+Fixed by ranking series *before* fetching any items: `storage.ItemStore.QuerySeriesLatestActivity`
+(a `GROUP BY series_id` / `MAX(date_created)` aggregate) ranks distinct series directly, and only
+the already-ranked series get their own items fetched (bounded per series,
+`latestSeriesItemFetchLimit`) to resolve a card. A series' presence in the ranking no longer
+depends on how many rows other series in the same scan happen to contribute — see
+`storage.SeriesActivity`'s doc comment and `TestItemsLatestSeriesGroupingHighEpisodeCountSeriesDoesNotHideOthers`
+(`internal/api/latest_grouping_test.go`).
 
 One more thing surfaced during live comparison that is real, reproducible reference-server
 behavior but is **not** implemented by Tinyfin's `internal/api/latest_grouping.go`, logged here

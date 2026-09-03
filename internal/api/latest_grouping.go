@@ -35,7 +35,6 @@ package api
 
 import (
 	"context"
-	"sort"
 	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
@@ -47,85 +46,51 @@ import (
 // for card-selection purposes.
 const seriesLatestWindowHours = 24
 
-// latestSeriesGroupingPoolMin/Multiplier/Max bound the single candidate
-// query tvShowsLatestGrouped issues: large enough that an active library's
-// distinct recently-touched series each bring enough of their own rows into
-// the pool to correctly detect a multi-episode/multi-season addition burst,
-// but still one bounded query — never the whole catalog (AGENTS.md
-// principle 1, "idle memory is a budget"). A series whose own items don't
-// happen to fall within this pool (an old, low-volume addition sitting far
-// behind a handful of very prolific series in raw recency) won't be found
-// even if it would otherwise rank inside the request's own `limit` — an
-// accepted tradeoff of keeping this a single bounded read rather than an
-// unbounded per-series scan.
+// latestSeriesPoolMin/Multiplier/Max bound the single QuerySeriesLatestActivity
+// call tvShowsLatestGrouped issues: enough distinct series ranked ahead of
+// the request's own `limit` to absorb isSeriesFullyWatched skips, but still
+// one bounded query — never the whole catalog (AGENTS.md principle 1, "idle
+// memory is a budget"). Unlike this file's previous raw-item-count-bounded
+// pool, this bound is in units of *series*, not episodes, so a handful of
+// prolific series can no longer crowd a lower-episode-count-but-equally-recent
+// series out of the ranking (storage.SeriesActivity's doc comment has the
+// live case that surfaced this).
 const (
-	latestSeriesGroupingPoolMin        = 200
-	latestSeriesGroupingPoolMultiplier = 10
-	latestSeriesGroupingPoolMax        = 1000
+	latestSeriesPoolMin        = 50
+	latestSeriesPoolMultiplier = 5
+	latestSeriesPoolMax        = 300
 )
 
-func latestSeriesGroupingPoolSize(limit int) int {
-	n := limit * latestSeriesGroupingPoolMultiplier
-	if n < latestSeriesGroupingPoolMin {
-		n = latestSeriesGroupingPoolMin
+func latestSeriesPoolSize(limit int) int {
+	n := limit * latestSeriesPoolMultiplier
+	if n < latestSeriesPoolMin {
+		n = latestSeriesPoolMin
 	}
-	if n > latestSeriesGroupingPoolMax {
-		n = latestSeriesGroupingPoolMax
+	if n > latestSeriesPoolMax {
+		n = latestSeriesPoolMax
 	}
 	return n
 }
 
-// seriesGroup accumulates the candidate Episode/Season rows belonging to
-// one series, plus that series' own most recent addition timestamp (docs/12
-// step 1: "for each series, note the most recent addition timestamp in that
-// series").
+// latestSeriesItemFetchLimit bounds the per-series item fetch
+// pickSeriesCard's caller issues to build one series' candidate window
+// (seriesLatestWindowHours' 24-hour trailing slice of that series' own
+// Episode/Season rows) — generous enough that even a large single-day bulk
+// import of one series lands entirely inside it, while still a single
+// bounded per-series query rather than an unbounded scan.
+const latestSeriesItemFetchLimit = 1000
+
+// seriesGroup accumulates one series' recent Episode/Season rows (already
+// scoped to that one series by the caller's SeriesID-filtered query), plus
+// that series' own most recent addition timestamp (docs/12 step 1: "for
+// each series, note the most recent addition timestamp in that series") —
+// carried through separately from items because it comes from
+// QuerySeriesLatestActivity, the authoritative per-series ranking source,
+// rather than being recomputed from whatever happens to be in items.
 type seriesGroup struct {
 	seriesID storage.ItemID
 	items    []storage.Item
 	latest   time.Time
-}
-
-// groupBySeries buckets candidate Episode/Season rows by their SeriesID.
-// Both types carry it directly (storage/item.go's doc comment on
-// SeriesID/SeasonID: populated on both Season and Episode rows) — a row
-// missing it is skipped defensively rather than panicking, since that
-// should never happen for these two types but nothing here should crash a
-// request over a data anomaly.
-func groupBySeries(items []storage.Item) map[storage.ItemID]*seriesGroup {
-	groups := make(map[storage.ItemID]*seriesGroup)
-	for _, it := range items {
-		if it.SeriesID == nil {
-			continue
-		}
-		g, ok := groups[*it.SeriesID]
-		if !ok {
-			g = &seriesGroup{seriesID: *it.SeriesID}
-			groups[*it.SeriesID] = g
-		}
-		g.items = append(g.items, it)
-		if it.DateCreated.After(g.latest) {
-			g.latest = it.DateCreated
-		}
-	}
-	return groups
-}
-
-// rankSeriesGroups orders groups newest-addition-first (docs/12 step 2),
-// with a deterministic tie-break (step 5: "a stable tie-break so ordering
-// doesn't jitter between identical requests") on SeriesID when two series'
-// latest timestamps are exactly equal.
-func rankSeriesGroups(groups map[storage.ItemID]*seriesGroup) []*seriesGroup {
-	ranked := make([]*seriesGroup, 0, len(groups))
-	for _, g := range groups {
-		ranked = append(ranked, g)
-	}
-	sort.Slice(ranked, func(i, j int) bool {
-		if !ranked[i].latest.Equal(ranked[j].latest) {
-			return ranked[i].latest.After(ranked[j].latest)
-		}
-		return ranked[i].seriesID < ranked[j].seriesID
-	})
-	return ranked
 }
 
 // seasonKeyOf reports the season identity a window item belongs to for the
@@ -319,32 +284,45 @@ func (s *Server) isSeriesFullyWatched(ctx context.Context, userID storage.UserID
 // function's doc comment — so it never displaces an otherwise-lower-ranked
 // series that still has something unwatched.
 func (s *Server) tvShowsLatestGrouped(ctx context.Context, libID storage.LibraryID, limit int, userID storage.UserID) ([]storage.Item, error) {
-	page, err := s.store.QueryItems(ctx, storage.ItemFilter{
-		LibraryID: &libID,
-		Recursive: true,
-		ItemTypes: []storage.ItemType{storage.ItemTypeEpisode, storage.ItemTypeSeason},
-		SortBy:    []storage.SortField{{By: storage.SortByDateCreated, Descending: true}},
-		Limit:     latestSeriesGroupingPoolSize(limit),
-	})
+	ranked, err := s.store.QuerySeriesLatestActivity(ctx, libID,
+		[]storage.ItemType{storage.ItemTypeEpisode, storage.ItemTypeSeason},
+		latestSeriesPoolSize(limit))
 	if err != nil {
 		return nil, err
 	}
 
-	ranked := rankSeriesGroups(groupBySeries(page.Items))
-
 	cards := make([]storage.Item, 0, limit)
-	for _, g := range ranked {
+	for _, activity := range ranked {
 		if len(cards) >= limit {
 			break
 		}
 
-		fullyWatched, err := s.isSeriesFullyWatched(ctx, userID, g.seriesID)
+		fullyWatched, err := s.isSeriesFullyWatched(ctx, userID, activity.SeriesID)
 		if err != nil {
 			return nil, err
 		}
 		if fullyWatched {
 			continue
 		}
+
+		page, err := s.store.QueryItems(ctx, storage.ItemFilter{
+			SeriesID:  &activity.SeriesID,
+			ItemTypes: []storage.ItemType{storage.ItemTypeEpisode, storage.ItemTypeSeason},
+			SortBy:    []storage.SortField{{By: storage.SortByDateCreated, Descending: true}},
+			Limit:     latestSeriesItemFetchLimit,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if len(page.Items) == 0 {
+			// Defensive only: QuerySeriesLatestActivity's own candidate rows
+			// are the same Episode/Season types being re-fetched here, so
+			// this series should always have at least one. Skip rather than
+			// crash over a data anomaly (e.g. deleted between the two
+			// queries).
+			continue
+		}
+		g := &seriesGroup{seriesID: activity.SeriesID, items: page.Items, latest: activity.Latest}
 
 		card, err := s.pickSeriesCard(ctx, g)
 		if err != nil {

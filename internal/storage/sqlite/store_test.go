@@ -275,6 +275,110 @@ func TestQueryItemsRecursiveVsDirect(t *testing.T) {
 	}
 }
 
+// TestQuerySeriesLatestActivity locks down the GROUP BY series_id/
+// MAX(date_created) ranking, and — the subtler regression risk — that the
+// aggregate's returned timestamp actually parses back into the right
+// instant. A MAX() aggregate column carries no declared type, so
+// modernc.org/sqlite hands back the raw stored text instead of
+// auto-converting to time.Time the way a plain "date_created" column
+// selection does (itemColumns/scanItem); that raw text is in Go's
+// time.Time.String() layout (the driver's default write format,
+// conn.go's formatTime), not RFC3339 — found by this test failing with a
+// Scan type-mismatch error before item.go's parseAggregateTime parsed it
+// explicitly with the matching layout. parseAggregateTime's own unit
+// tests below cover the monotonic-clock "m=" suffix edge case in
+// isolation, independent of host timezone.
+func TestQuerySeriesLatestActivity(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+	libraryID, seriesID, _, _, _ := seedTree(t, st)
+
+	// A second series in the same library, with a later episode addition
+	// than the first (seedTree's own episode uses time.Now().UTC() at seed
+	// time, a moment before this one). .UTC(), matching every real
+	// DateCreated write in this project (item.go's UpsertItem default,
+	// internal/scan/scan.go, cmd/devseed) — a bare time.Now() would still
+	// parse correctly (parseAggregateTime handles it) but would also carry
+	// a local UTC offset in its stored text, which sorts inconsistently
+	// against UTC-stored rows under a lexicographic SQL ORDER BY whenever
+	// the host's local timezone isn't UTC itself; not this test's concern.
+	series2ID := storage.ItemID(newID())
+	if err := st.UpsertItem(ctx, storage.Item{
+		ID: series2ID, Type: storage.ItemTypeSeries, LibraryID: libraryID, Name: "Second Series",
+	}); err != nil {
+		t.Fatalf("UpsertItem series2: %v", err)
+	}
+	later := time.Now().UTC().Add(time.Hour)
+	if err := st.UpsertItem(ctx, storage.Item{
+		ID: storage.ItemID(newID()), Type: storage.ItemTypeEpisode, LibraryID: libraryID,
+		SeriesID: &series2ID, Name: "Later Episode", DateCreated: later,
+	}); err != nil {
+		t.Fatalf("UpsertItem series2 episode: %v", err)
+	}
+
+	activity, err := st.QuerySeriesLatestActivity(ctx, libraryID,
+		[]storage.ItemType{storage.ItemTypeEpisode, storage.ItemTypeSeason}, 10)
+	if err != nil {
+		t.Fatalf("QuerySeriesLatestActivity: %v", err)
+	}
+	if len(activity) != 2 {
+		t.Fatalf("QuerySeriesLatestActivity = %+v, want 2 series (the movie sibling seedTree adds must not appear)", activity)
+	}
+	if activity[0].SeriesID != series2ID {
+		t.Errorf("activity[0].SeriesID = %q, want %q (newest-activity-first)", activity[0].SeriesID, series2ID)
+	}
+	if !activity[0].Latest.Equal(later) {
+		t.Errorf("activity[0].Latest = %v, want %v (aggregate timestamp round-tripped correctly)", activity[0].Latest, later)
+	}
+	if activity[1].SeriesID != seriesID {
+		t.Errorf("activity[1].SeriesID = %q, want %q", activity[1].SeriesID, seriesID)
+	}
+
+	// Limit is required, same no-full-catalog enforcement as QueryItems.
+	if _, err := st.QuerySeriesLatestActivity(ctx, libraryID, nil, 0); err == nil {
+		t.Error("QuerySeriesLatestActivity with limit=0 should return an error")
+	}
+}
+
+// TestParseAggregateTime exercises item.go's parseAggregateTime directly
+// against hand-built strings, independent of host timezone or a real
+// UpsertItem round-trip — the shapes modernc.org/sqlite's formatTime
+// (conn.go) actually produces for a bound time.Time parameter.
+func TestParseAggregateTime(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		want time.Time
+	}{
+		{
+			name: "UTC, no monotonic reading (every real DateCreated this project writes)",
+			raw:  "2026-09-02 17:18:03.659681521 +0000 UTC",
+			want: time.Date(2026, 9, 2, 17, 18, 3, 659681521, time.UTC),
+		},
+		{
+			name: "non-UTC offset, no monotonic reading",
+			raw:  "2026-09-02 22:52:44.400680293 -0300 -03",
+			want: time.Date(2026, 9, 2, 22, 52, 44, 400680293, time.FixedZone("", -3*60*60)),
+		},
+		{
+			name: "monotonic-clock \"m=\" suffix stripped (a bare, non-.UTC() time.Now())",
+			raw:  "2026-09-02 22:52:28.429374967 -0300 -03 m=+3600.031063515",
+			want: time.Date(2026, 9, 2, 22, 52, 28, 429374967, time.FixedZone("", -3*60*60)),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseAggregateTime(tt.raw)
+			if err != nil {
+				t.Fatalf("parseAggregateTime(%q): %v", tt.raw, err)
+			}
+			if !got.Equal(tt.want) {
+				t.Errorf("parseAggregateTime(%q) = %v, want %v", tt.raw, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestQueryItemsSearchText(t *testing.T) {
 	st := openTestStore(t)
 	ctx := context.Background()

@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -500,5 +501,105 @@ func TestItemsLatestSeriesGroupingLimitCountsOnlyEligibleSeries(t *testing.T) {
 		if it.ID == string(seriesAID) {
 			t.Errorf("Series A's card leaked into the result: %+v", it)
 		}
+	}
+}
+
+// TestItemsLatestSeriesGroupingHighEpisodeCountSeriesDoesNotHideOthers is a
+// regression test for a real production bug (reported live, reproduced
+// against staging with these exact episode counts): tvShowsLatestGrouped
+// used to build its candidate pool from a single raw-item-count-bounded
+// QueryItems call across the whole library (latestSeriesGroupingPoolSize,
+// ~200 items for the default limit=20). A handful of series scanned
+// together, with a lopsided episode-count split, could fill that pool
+// entirely with the high-episode-count series' own rows — a
+// lower-episode-count series scanned moments earlier (so its rows sort
+// just past the pool's cutoff) never contributed a single row to the pool,
+// and therefore never got grouped into a card at all, at any limit. Fixed
+// by ranking series first (QuerySeriesLatestActivity, a GROUP BY series_id
+// aggregate) and only then fetching each ranked series' own items — a
+// series' presence in the ranking no longer depends on how many rows
+// other series in the same scan happen to contribute.
+func TestItemsLatestSeriesGroupingHighEpisodeCountSeriesDoesNotHideOthers(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "dave", "davepass")
+	token := loginToken(t, ts.URL, user.Name, "davepass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "Séries Infantis", storage.CollectionTypeTVShows)
+	now := time.Now().UTC()
+
+	// Four single-season series scanned back-to-back (same real-world
+	// shape as the report: four shows scanned within a couple of seconds
+	// of each other), oldest-scanned first, with episode counts lopsided
+	// enough that the old 200-item pool would have been entirely consumed
+	// by the three larger shows before ever reaching the smallest/oldest
+	// one — 13 + 50 + 150 = 213, already past the pool's cap, leaving zero
+	// room for "Chapolin"'s 103 episodes even though it's a perfectly
+	// legitimate 4th-most-recent addition among only four series total.
+	//
+	// Builds items with explicit, self-chosen IDs directly via
+	// st.UpsertItem rather than the upsertSeries/upsertSeason/upsertEpisode
+	// helpers above: those helpers look their item back up by scanning the
+	// library's first 100 items by name (mustFindItemByName), which
+	// doesn't scale to this test's 300+ item library.
+	seedShow := func(slug, name string, episodeCount int, blockStart time.Time) storage.ItemID {
+		seriesID := storage.ItemID(slug + "-series")
+		if err := st.UpsertItem(context.Background(), storage.Item{
+			ID: seriesID, Type: storage.ItemTypeSeries, LibraryID: libID,
+			Name: name, Path: "/media/series/" + slug, DateCreated: blockStart,
+		}); err != nil {
+			t.Fatalf("UpsertItem series %q: %v", name, err)
+		}
+		seasonID := storage.ItemID(slug + "-season1")
+		if err := st.UpsertItem(context.Background(), storage.Item{
+			ID: seasonID, Type: storage.ItemTypeSeason, LibraryID: libID, ParentID: &seriesID, SeriesID: &seriesID,
+			Name: name + " Season 1", Path: "/media/series/" + slug + "/season1", DateCreated: blockStart,
+		}); err != nil {
+			t.Fatalf("UpsertItem season %q: %v", name, err)
+		}
+		for i := 0; i < episodeCount; i++ {
+			idx := i + 1
+			epID := storage.ItemID(fmt.Sprintf("%s-ep%d", slug, idx))
+			if err := st.UpsertItem(context.Background(), storage.Item{
+				ID: epID, Type: storage.ItemTypeEpisode, LibraryID: libID, ParentID: &seasonID, SeriesID: &seriesID, SeasonID: &seasonID,
+				Name: fmt.Sprintf("%s E%d", name, idx), IndexNumber: &idx,
+				Path:        fmt.Sprintf("/media/series/%s/season1/e%d.mkv", slug, idx),
+				DateCreated: blockStart.Add(time.Duration(i) * time.Millisecond),
+			}); err != nil {
+				t.Fatalf("UpsertItem episode %q #%d: %v", name, idx, err)
+			}
+		}
+		return seriesID
+	}
+
+	chapolinID := seedShow("chapolin", "Chapolin", 103, now.Add(-40*time.Second)) // scanned first (oldest)
+	dragonBallID := seedShow("dragonball", "Dragon Ball", 150, now.Add(-30*time.Second))
+	mibID := seedShow("mib", "MIB", 50, now.Add(-20*time.Second))
+	mortalKombatID := seedShow("mk", "Mortal Kombat", 13, now.Add(-10*time.Second)) // scanned last (newest)
+
+	items := latestGrouped(t, get, libID, "&limit=4")
+	if len(items) != 4 {
+		t.Fatalf("Items/Latest (limit=4) = %+v, want exactly 4 cards (one per series)", items)
+	}
+
+	gotIDs := make([]string, len(items))
+	for i, it := range items {
+		gotIDs[i] = it.ID
+	}
+	wantIDs := []string{string(mortalKombatID), string(mibID), string(dragonBallID), string(chapolinID)}
+	for i, want := range wantIDs {
+		if gotIDs[i] != want {
+			t.Errorf("items[%d].ID = %q, want %q (newest-series-addition-first order: %v)", i, gotIDs[i], want, gotIDs)
+		}
+	}
+
+	found := false
+	for _, it := range items {
+		if it.ID == string(chapolinID) {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("Chapolin's 103-episode series never appeared despite being the 4th-most-recent of only 4 series — the crowding-out bug regressed: %+v", items)
 	}
 }

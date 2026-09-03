@@ -133,7 +133,7 @@ func (s *Server) handlePlayedItemAdd(w http.ResponseWriter, r *http.Request) {
 	// equivalents of this jellyfin-web-facing route) and load-bearing for
 	// the same reason: GET /Shows/NextUp (nextup.go) depends on it to
 	// order/filter series by recency.
-	now := time.Now()
+	now := time.Now().UTC()
 	state.LastPlayedDate = &now
 	s.writePlaystateUserData(w, r, ac.User.ID, itemID, state)
 }
