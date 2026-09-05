@@ -1,0 +1,210 @@
+package api
+
+import (
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
+	"testing"
+
+	"github.com/rafaelvieiras/tinyfin/internal/storage/sqlite"
+)
+
+// newTestServerWithScheduledTasks is newTestServer (api_test.go) plus a
+// locally built mux exposing GET /ScheduledTasks — deliberately not
+// registered in server.go yet (route wiring is a separate, coordinated
+// change touching a file this task must not edit, same reasoning as
+// item_images_admin_test.go's newTestServerWithImageDir). Returns the
+// *sqlite.Store and *Server too: the store to seed users, srv to drive
+// srv.scanState directly (begin/end are unexported but reachable from a
+// test in the same package) so a scan in flight/finished can be simulated
+// without a real filesystem scan.
+func newTestServerWithScheduledTasks(t *testing.T) (*httptest.Server, *sqlite.Store, *Server) {
+	t.Helper()
+	st, err := sqlite.New(filepath.Join(t.TempDir(), "tinyfin.db"))
+	if err != nil {
+		t.Fatalf("sqlite.New: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := st.Close(); err != nil {
+			t.Errorf("Close: %v", err)
+		}
+	})
+
+	srv := NewServer(st, Config{ServerName: "TestServer"})
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /ScheduledTasks", requireAdmin(srv.handleScheduledTasks))
+	// Auth needs its own route too since the reference AuthenticateByName
+	// flow (loginToken) goes through srv, not this local mux.
+	mux.HandleFunc("POST /Users/AuthenticateByName", srv.handleAuthenticateByName)
+
+	handler := withCORS(srv.withAuthContext(withCaseInsensitivePaths(mux)))
+	ts := httptest.NewServer(handler)
+	t.Cleanup(ts.Close)
+	return ts, st, srv
+}
+
+// decodeScheduledTasks decodes resp's body into the single-entry task list
+// this handler always returns, failing the test on any decode/shape error.
+func decodeScheduledTasks(t *testing.T, resp *http.Response) []scheduledTaskInfo {
+	t.Helper()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /ScheduledTasks status = %d, want 200", resp.StatusCode)
+	}
+	var tasks []scheduledTaskInfo
+	if err := json.NewDecoder(resp.Body).Decode(&tasks); err != nil {
+		t.Fatalf("decoding response: %v", err)
+	}
+	return tasks
+}
+
+// TestScheduledTasksNoScanEverRun covers a fresh process where no library
+// scan has run yet: a single Idle entry, with LastExecutionResult entirely
+// absent (not a fabricated one) since no scan has finished this process's
+// lifetime.
+func TestScheduledTasksNoScanEverRun(t *testing.T) {
+	ts, st, _ := newTestServerWithScheduledTasks(t)
+	admin := createTestAdminUser(t, st, "admin", "adminpass")
+	token := loginToken(t, ts.URL, admin.Name, "adminpass")
+	get := authedClient(t, ts.URL, token)
+
+	tasks := decodeScheduledTasks(t, get(http.MethodGet, "/ScheduledTasks"))
+	if len(tasks) != 1 {
+		t.Fatalf("len(tasks) = %d, want 1", len(tasks))
+	}
+	task := tasks[0]
+	if task.State != "Idle" {
+		t.Errorf("State = %q, want %q", task.State, "Idle")
+	}
+	if task.LastExecutionResult != nil {
+		t.Errorf("LastExecutionResult = %+v, want nil (no scan has run yet)", task.LastExecutionResult)
+	}
+	if task.Id != scheduledTaskLibraryScanID || task.Key != scheduledTaskLibraryScanID {
+		t.Errorf("Id/Key = %q/%q, want both %q", task.Id, task.Key, scheduledTaskLibraryScanID)
+	}
+	if task.Category != "Library" {
+		t.Errorf("Category = %q, want %q", task.Category, "Library")
+	}
+	if task.IsHidden {
+		t.Error("IsHidden = true, want false")
+	}
+	if task.Triggers == nil || len(task.Triggers) != 0 {
+		t.Errorf("Triggers = %+v, want a non-nil empty slice", task.Triggers)
+	}
+	if task.Name == "" || task.Description == "" {
+		t.Error("Name/Description should not be empty")
+	}
+}
+
+// TestScheduledTasksScanRunning covers a scan currently in flight: State
+// must report "Running" regardless of whether any scan has ever finished
+// before.
+func TestScheduledTasksScanRunning(t *testing.T) {
+	ts, st, srv := newTestServerWithScheduledTasks(t)
+	admin := createTestAdminUser(t, st, "admin", "adminpass")
+	token := loginToken(t, ts.URL, admin.Name, "adminpass")
+	get := authedClient(t, ts.URL, token)
+
+	srv.scanState.begin()
+	defer srv.scanState.end(nil)
+
+	tasks := decodeScheduledTasks(t, get(http.MethodGet, "/ScheduledTasks"))
+	if len(tasks) != 1 {
+		t.Fatalf("len(tasks) = %d, want 1", len(tasks))
+	}
+	if tasks[0].State != "Running" {
+		t.Errorf("State = %q, want %q", tasks[0].State, "Running")
+	}
+}
+
+// TestScheduledTasksScanFinishedSuccess covers a scan that has already
+// finished successfully: State goes back to Idle, and LastExecutionResult
+// is now populated with Status "Completed".
+func TestScheduledTasksScanFinishedSuccess(t *testing.T) {
+	ts, st, srv := newTestServerWithScheduledTasks(t)
+	admin := createTestAdminUser(t, st, "admin", "adminpass")
+	token := loginToken(t, ts.URL, admin.Name, "adminpass")
+	get := authedClient(t, ts.URL, token)
+
+	srv.scanState.begin()
+	srv.scanState.end(nil)
+
+	tasks := decodeScheduledTasks(t, get(http.MethodGet, "/ScheduledTasks"))
+	if len(tasks) != 1 {
+		t.Fatalf("len(tasks) = %d, want 1", len(tasks))
+	}
+	task := tasks[0]
+	if task.State != "Idle" {
+		t.Errorf("State = %q, want %q", task.State, "Idle")
+	}
+	if task.LastExecutionResult == nil {
+		t.Fatal("LastExecutionResult = nil, want populated (a scan has finished)")
+	}
+	if task.LastExecutionResult.Status != "Completed" {
+		t.Errorf("LastExecutionResult.Status = %q, want %q", task.LastExecutionResult.Status, "Completed")
+	}
+	if task.LastExecutionResult.StartTimeUtc == "" || task.LastExecutionResult.EndTimeUtc == "" {
+		t.Error("LastExecutionResult.StartTimeUtc/EndTimeUtc should not be empty")
+	}
+	if task.LastExecutionResult.Id != scheduledTaskLibraryScanID || task.LastExecutionResult.Key != scheduledTaskLibraryScanID {
+		t.Errorf("LastExecutionResult.Id/Key = %q/%q, want both %q",
+			task.LastExecutionResult.Id, task.LastExecutionResult.Key, scheduledTaskLibraryScanID)
+	}
+}
+
+// TestScheduledTasksScanFinishedFailure covers a scan that finished with an
+// error: LastExecutionResult.Status must report "Failed", not "Completed".
+func TestScheduledTasksScanFinishedFailure(t *testing.T) {
+	ts, st, srv := newTestServerWithScheduledTasks(t)
+	admin := createTestAdminUser(t, st, "admin", "adminpass")
+	token := loginToken(t, ts.URL, admin.Name, "adminpass")
+	get := authedClient(t, ts.URL, token)
+
+	srv.scanState.begin()
+	srv.scanState.end(errors.New("boom"))
+
+	tasks := decodeScheduledTasks(t, get(http.MethodGet, "/ScheduledTasks"))
+	if len(tasks) != 1 {
+		t.Fatalf("len(tasks) = %d, want 1", len(tasks))
+	}
+	task := tasks[0]
+	if task.State != "Idle" {
+		t.Errorf("State = %q, want %q (the scan finished, even though it failed)", task.State, "Idle")
+	}
+	if task.LastExecutionResult == nil {
+		t.Fatal("LastExecutionResult = nil, want populated (a scan has finished)")
+	}
+	if task.LastExecutionResult.Status != "Failed" {
+		t.Errorf("LastExecutionResult.Status = %q, want %q", task.LastExecutionResult.Status, "Failed")
+	}
+}
+
+// TestScheduledTasksRequiresAdmin covers the auth gate: no session at all
+// gets 401, and an authenticated but non-admin user gets 403 — same pattern
+// requireAdmin's own doc comment (auth.go) describes for library_admin.go's
+// sibling routes.
+func TestScheduledTasksRequiresAdmin(t *testing.T) {
+	ts, st, _ := newTestServerWithScheduledTasks(t)
+
+	noAuthResp, err := http.Get(ts.URL + "/ScheduledTasks")
+	if err != nil {
+		t.Fatalf("GET /ScheduledTasks (no auth): %v", err)
+	}
+	defer noAuthResp.Body.Close()
+	if noAuthResp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("no-auth status = %d, want 401", noAuthResp.StatusCode)
+	}
+
+	user := createTestUser(t, st, "dave", "davepass")
+	token := loginToken(t, ts.URL, user.Name, "davepass")
+	get := authedClient(t, ts.URL, token)
+
+	nonAdminResp := get(http.MethodGet, "/ScheduledTasks")
+	defer nonAdminResp.Body.Close()
+	if nonAdminResp.StatusCode != http.StatusForbidden {
+		t.Fatalf("non-admin status = %d, want 403", nonAdminResp.StatusCode)
+	}
+}

@@ -20,6 +20,15 @@ var routePaths = []string{
 	// side) — same reasoning as the FavoriteItems/PlayedItems comment
 	// further down this list.
 	"/System/Endpoint",
+	// 4 segments (including the leading empty split element) — no length
+	// collision with "/System/Info" (3) or "/System/Endpoint" (3) above.
+	"/System/Info/Storage",
+	// 2 segments (including the leading empty split element) — shorter than
+	// every other entry in this list, no collision possible.
+	"/ScheduledTasks",
+	// Fully literal, no wildcard segment at all — no collision is possible
+	// regardless of any other pattern in this list.
+	"/System/ActivityLog/Entries",
 	"/Users/Me",
 	"/Users",
 	"/Users/New",
@@ -49,6 +58,7 @@ var routePaths = []string{
 	"/Items/Latest",
 	"/Items/Filters",
 	"/Items/Filters2",
+	"/Items/Counts",
 	"/Items/{itemId}",
 	"/Items/{itemId}/Ancestors",
 	"/Items/{itemId}/Similar",
@@ -100,6 +110,10 @@ var routePaths = []string{
 	"/Playback/BitrateTest",
 	"/DisplayPreferences/{displayPreferencesId}",
 	"/Sessions/Capabilities/Full",
+	// 2 segments (including the leading empty split element), unlike every
+	// other "/Sessions/..." entry here (3+) — no collision risk possible at
+	// a different segment count.
+	"/Sessions",
 	"/Sessions/Playing",
 	"/Sessions/Playing/Progress",
 	"/Sessions/Playing/Stopped",
@@ -128,6 +142,17 @@ var routePaths = []string{
 	"/Localization/cultures",
 	"/Localization/countries",
 	"/Libraries/AvailableOptions",
+	// 3 segments (including the leading empty split element), same count as
+	// "/System/Info/Public"/"/Items/Latest"/"/Playback/BitrateTest" above —
+	// no collision risk: this pattern's second segment ("web", a literal)
+	// differs from all of theirs, same reasoning as every other entry in
+	// this list keyed off segment count. Also note: this path lives under
+	// cmd/tinyfin/webui.go's static-file-serving prefix when a web bundle
+	// is mounted — that wrapper special-cases this exact literal path
+	// before falling through to the file server, so case normalization
+	// here and the static-file shadow risk there are independent concerns
+	// that both had to be handled.
+	"/web/ConfigurationPages",
 }
 
 // normalizePathCase rewrites path to the registered route's exact casing if

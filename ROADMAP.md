@@ -277,6 +277,35 @@ what starting Phase 1 actually requires next.
       `GET /Items/{itemId}/Images` (list) plus `POST`/`DELETE .../Images/{imageType}[/{imageIndex}]`
       (upload/delete). All of it confirmed live end to end against a rebuilt `tinyfin-staging`, not
       just unit-tested.
+- [x] Dashboard overview (`/dashboard`, "Painel") route mapping and gap closure: the same
+      Playwright-driven live-capture method applied to the admin Dashboard's own overview page
+      (`docs/11`'s "Dashboard — Painel (overview)" section), against both the reference server and
+      Tinyfin. Black-box observation was sufficient for every gap this pass found — no reason to
+      read the reference server's C# source at all (AGENTS.md's clean-room requirement treats that
+      as a last resort, not a default step). Six routes 404d unconditionally on every page load;
+      implemented in parallel by five subagents, consolidated and live-verified by one coordinating
+      pass: `GET /Items/Counts` (real Movie/Series/Episode counts via `QueryItems`, every other
+      count field a structural zero — this project's scanner never produces those item types);
+      `GET /System/Info/Storage` (real `statfs`-backed free/used space per library folder and per
+      Tinyfin's own real directories — `Config.DataDir`/`WebDir`, new `Server`-construction fields
+      threaded from `main.go`); `GET /Sessions` (a new small in-process session registry, `docs/06`'s
+      default mode, populated from `Sessions/Capabilities/Full` and the existing playback-report
+      routes — registered admin-only, not the usual authenticated-non-admin pattern, since it lists
+      every user's session including IP address); `GET /System/ActivityLog/Entries` (a new, narrowly
+      scoped durable activity log — `SessionStarted`/`AuthenticationFailed` only, new sqlite table
+      and migration `0005_activity_log.sql`); `GET /ScheduledTasks` (reports exactly one real task,
+      library scanning, backed by a new `Server.scanState` tracker — not fabricating any of the
+      reference server's ~18 built-in tasks this project has no machinery for); and
+      `GET /web/ConfigurationPages` (always `[]` — no plugin system — which also needed a fix in
+      `cmd/tinyfin/main.go`'s static-web-asset wrapper, since it would otherwise shadow this one API
+      route living under the `/web/` prefix). Found and fixed one real, previously-hidden bug along
+      the way, unrelated to the six routes above: `internal/api/auth.go`'s `parseEmbyAuth` never
+      percent-decoded the `X-Emby-Authorization` header's fields, so a real jellyfin-web build's
+      percent-encoded `Client="Jellyfin%20Web"` came back verbatim instead of decoded — invisible
+      until `GET /Sessions` became the first route to ever echo `Client` back on the wire. All of it
+      confirmed live end to end against a rebuilt `tinyfin-staging`. WebSocket `/socket` remains this
+      page's one still-404ing call — already tracked separately as `docs/06`'s realtime session
+      channel, a larger feature this REST-focused pass didn't attempt.
 - [ ] TVDB provider — not implemented (see above).
 - [x] **Goal:** a freshly scanned library gets enriched metadata without Tinyfin implementing its
       own scraping. Verified via `internal/scan`'s test suite (movies and TV shows, with and

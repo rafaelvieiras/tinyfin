@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -82,6 +83,20 @@ func (s *Server) withAuthContext(next http.Handler) http.Handler {
 // header that doesn't start with the MediaBrowser scheme yields all-empty
 // results rather than an error — callers treat "nothing parsed" the same
 // as "no header sent".
+//
+// Each value is percent-decoded (url.PathUnescape, not QueryUnescape — a
+// literal "+" in a device/client name must stay a "+", not become a space)
+// before use. Confirmed necessary, not optional hardening, by testing
+// against a real jellyfin-web build: it sends this header's Client field as
+// literally `Client="Jellyfin%20Web"` (its own encodeURIComponent-style
+// escaping of the space), and a real Jellyfin server accepts that and
+// reports the field back decoded — found because sessions.go's GET
+// /Sessions is the first route in this project to ever echo Client back
+// verbatim; every earlier consumer of AuthContext.Client either discarded
+// it or only used it for equality/logging, where the un-decoded value
+// happened to never matter. A value that fails to decode (malformed
+// percent-escapes) falls back to the raw string rather than dropping the
+// field entirely.
 func parseEmbyAuth(header string) (client, device, deviceID, version, token string) {
 	const scheme = "MediaBrowser"
 
@@ -97,6 +112,9 @@ func parseEmbyAuth(header string) (client, device, deviceID, version, token stri
 			continue
 		}
 		val = strings.Trim(strings.TrimSpace(val), `"`)
+		if decoded, err := url.PathUnescape(val); err == nil {
+			val = decoded
+		}
 		switch strings.TrimSpace(key) {
 		case "Client":
 			client = val

@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/metadata"
@@ -104,6 +105,24 @@ type Config struct {
 	// fully cataloged, just without downloaded artwork beyond whatever a
 	// library folder's own poster.jpg/fanart.jpg already provides.
 	ScanImageDir string
+
+	// DataDir is the real directory holding the SQLite database file and
+	// its sidecar files (server-id, scan image cache) — cmd/tinyfin/main.go
+	// passes filepath.Dir of its -data flag. Tinyfin has no separate
+	// config/cache/log/metadata directory taxonomy the way the reference
+	// server does (it keeps everything next to the database), so this one
+	// path is the honest answer for every one of those concepts where a
+	// caller (system_info_storage.go) needs to report on them. Empty is a
+	// valid zero value only in tests that don't exercise that handler.
+	DataDir string
+
+	// WebDir is the resolved, existence-checked jellyfin-web directory
+	// main.go serves at /web/ (empty/unset if no web UI is bundled — the
+	// common non-WITH_WEB deployment, docs/00's D9). Kept here, rather than
+	// re-stat'd independently, so system_info_storage.go's "is there a web
+	// bundle to report on at all" question always agrees with what main.go
+	// actually decided to serve.
+	WebDir string
 }
 
 // Server is the API/metadata role's HTTP surface (docs/03). The zero value
@@ -114,6 +133,8 @@ type Server struct {
 	mux       *http.ServeMux
 	transcode *transcode.Manager
 	scanner   *scan.Scanner
+	scanState *scanTracker
+	sessions  *sessionRegistry
 }
 
 // NewServer builds a Server backed by store, applying cfg defaults where
@@ -141,9 +162,55 @@ func NewServer(store storage.Store, cfg Config) *Server {
 			FFprobePath: cfg.ScanFFprobePath,
 			ImageDir:    cfg.ScanImageDir,
 		}),
+		scanState: &scanTracker{},
+		sessions:  newSessionRegistry(),
 	}
 	s.routes()
 	return s
+}
+
+// scanTracker records the in-process state of the one background operation
+// this project has today — a library scan (runScan) — so GET
+// /ScheduledTasks (scheduled_tasks.go) can honestly report whether one is
+// currently running and when one last finished, without a real
+// task-scheduling engine behind it. runScan always executes on its own
+// goroutine (library_admin.go, item_refresh.go), and more than one can run
+// concurrently (POST /Library/Refresh fires one per library) — running
+// counts concurrent scans rather than being a bool, so the "is anything
+// running" answer stays correct until every one of them has finished.
+// lastStart/lastEnd/lastErr describe only the single most recently
+// started/finished scan, not a per-run history — a known simplification
+// that matches this type's existing scope, not a new one.
+type scanTracker struct {
+	mu        sync.Mutex
+	running   int
+	lastStart time.Time
+	lastEnd   time.Time
+	lastErr   error
+}
+
+func (t *scanTracker) begin() {
+	t.mu.Lock()
+	t.running++
+	t.lastStart = time.Now().UTC()
+	t.mu.Unlock()
+}
+
+func (t *scanTracker) end(err error) {
+	t.mu.Lock()
+	t.running--
+	t.lastEnd = time.Now().UTC()
+	t.lastErr = err
+	t.mu.Unlock()
+}
+
+// snapshot reports whether a scan is currently in flight and the start/
+// outcome of the most recently finished one (zero time.Time for both if
+// none has finished yet this process's lifetime).
+func (t *scanTracker) snapshot() (running bool, lastStart, lastEnd time.Time, lastErr error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.running > 0, t.lastStart, t.lastEnd, t.lastErr
 }
 
 // runScan runs a full Scanner pass over lib in the background, logging its
@@ -155,7 +222,9 @@ func NewServer(store storage.Store, cfg Config) *Server {
 // (a background operation it can poll/observe progress on, once this
 // project has a task-progress endpoint — not yet, a known gap).
 func (s *Server) runScan(lib storage.Library) {
+	s.scanState.begin()
 	stats, err := s.scanner.ScanLibrary(context.Background(), lib)
+	s.scanState.end(err)
 	if err != nil {
 		log.Printf("api: scanning library %q: %v", lib.Name, err)
 		return
@@ -233,6 +302,12 @@ func (s *Server) routes() {
 	// (system.go's handleSystemEndpoint doc comment) — found 404ing by
 	// testing a real jellyfin-web build via Playwright.
 	s.mux.HandleFunc("GET /System/Endpoint", requireAuth(s.handleSystemEndpoint))
+	s.mux.HandleFunc("GET /System/Info/Storage", requireAdmin(s.handleSystemInfoStorage))
+	s.mux.HandleFunc("GET /ScheduledTasks", requireAdmin(s.handleScheduledTasks))
+	s.mux.HandleFunc("GET /System/ActivityLog/Entries", requireAdmin(s.handleActivityLogEntries))
+	// Dashboard overview page, called unconditionally on mount — see
+	// handleConfigurationPages' doc comment (system.go).
+	s.mux.HandleFunc("GET /web/ConfigurationPages", requireAuth(s.handleConfigurationPages))
 	s.mux.HandleFunc("GET /Users/Me", requireAuth(s.handleUsersMe))
 	// Admin-only in the reference server (UserController's [Authorize]
 	// policy requires elevation for the list/create/delete routes below).
@@ -265,6 +340,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /Items/Latest", requireAuth(s.handleItemsLatest))
 	s.mux.HandleFunc("GET /Items/Filters", requireAuth(s.handleItemsFilters))
 	s.mux.HandleFunc("GET /Items/Filters2", requireAuth(s.handleItemsFilters2))
+	s.mux.HandleFunc("GET /Items/Counts", requireAuth(s.handleItemsCounts))
 	s.mux.HandleFunc("GET /Items/{itemId}", requireAuth(s.handleItemGet))
 	s.mux.HandleFunc("GET /Items/{itemId}/Ancestors", requireAuth(s.handleItemAncestors))
 	s.mux.HandleFunc("GET /Items/{itemId}/Similar", requireAuth(s.handleItemSimilar))
@@ -355,6 +431,12 @@ func (s *Server) routes() {
 	// doc comment) — called unconditionally by every official client right
 	// after sign-in.
 	s.mux.HandleFunc("POST /Sessions/Capabilities/Full", requireAuth(s.handleSessionsCapabilitiesFull))
+	// requireAdmin, not requireAuth: this lists every tracked session across
+	// every user (IP address, device name, client) — the admin Dashboard
+	// "Devices" widget this implements is the only confirmed caller, and
+	// exposing that to any authenticated non-admin user would be a real
+	// information-disclosure regression, not a scope simplification.
+	s.mux.HandleFunc("GET /Sessions", requireAdmin(s.handleSessionsList))
 
 	// Playstate reporting and media segments (sessions_playback.go) — found
 	// missing while mapping the whole native playback flow for coverage,

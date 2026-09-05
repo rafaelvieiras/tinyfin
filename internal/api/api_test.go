@@ -198,6 +198,90 @@ func TestAuthenticateByNameWrongPassword(t *testing.T) {
 	}
 }
 
+// TestAuthenticateByNameSuccessAppendsActivityLogEntry regression-guards
+// handleAuthenticateByName's success path (auth_by_name.go's
+// logAuthSuccess): a SessionStarted entry, UserID set to the logged-in
+// user, Severity "Information".
+func TestAuthenticateByNameSuccessAppendsActivityLogEntry(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "erin", "hunter2")
+
+	resp := authenticate(t, ts.URL, user.Name, "hunter2")
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+
+	hasUser := true
+	entries, total, err := st.QueryActivityEntries(context.Background(), storage.ActivityEntryFilter{Limit: 10, HasUserID: &hasUser})
+	if err != nil {
+		t.Fatalf("QueryActivityEntries: %v", err)
+	}
+	if total != 1 || len(entries) != 1 {
+		t.Fatalf("total=%d len(entries)=%d, want exactly one hasUserId=true entry", total, len(entries))
+	}
+	e := entries[0]
+	if e.Type != storage.ActivityTypeSessionStarted {
+		t.Errorf("Type = %q, want %q", e.Type, storage.ActivityTypeSessionStarted)
+	}
+	if e.UserID == nil || *e.UserID != user.ID {
+		t.Errorf("UserID = %v, want %q", e.UserID, user.ID)
+	}
+	if e.Severity != storage.ActivitySeverityInfo {
+		t.Errorf("Severity = %q, want %q", e.Severity, storage.ActivitySeverityInfo)
+	}
+}
+
+// TestAuthenticateByNameFailureAppendsActivityLogEntry regression-guards
+// handleAuthenticateByName's two failure paths (auth_by_name.go's
+// logAuthFailure, called for both "no such user" and "wrong password"): an
+// AuthenticationFailed entry with no UserID, Severity "Error", distinct
+// from what a successful login appends.
+func TestAuthenticateByNameFailureAppendsActivityLogEntry(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "frank", "correct-password")
+
+	resp := authenticate(t, ts.URL, user.Name, "wrong-password")
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", resp.StatusCode)
+	}
+
+	noUser := false
+	entries, total, err := st.QueryActivityEntries(context.Background(), storage.ActivityEntryFilter{Limit: 10, HasUserID: &noUser})
+	if err != nil {
+		t.Fatalf("QueryActivityEntries: %v", err)
+	}
+	if total != 1 || len(entries) != 1 {
+		t.Fatalf("total=%d len(entries)=%d, want exactly one hasUserId=false entry", total, len(entries))
+	}
+	e := entries[0]
+	if e.Type != storage.ActivityTypeAuthenticationFailed {
+		t.Errorf("Type = %q, want %q", e.Type, storage.ActivityTypeAuthenticationFailed)
+	}
+	if e.UserID != nil {
+		t.Errorf("UserID = %v, want nil", *e.UserID)
+	}
+	if e.Severity != storage.ActivitySeverityError {
+		t.Errorf("Severity = %q, want %q", e.Severity, storage.ActivitySeverityError)
+	}
+
+	// A login against a wholly unknown username hits the other failure
+	// call site (GetUserByName error) and appends the same shape of entry.
+	resp2 := authenticate(t, ts.URL, "no-such-user", "whatever")
+	resp2.Body.Close()
+	if resp2.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", resp2.StatusCode)
+	}
+	_, total2, err := st.QueryActivityEntries(context.Background(), storage.ActivityEntryFilter{Limit: 10, HasUserID: &noUser})
+	if err != nil {
+		t.Fatalf("QueryActivityEntries: %v", err)
+	}
+	if total2 != 2 {
+		t.Fatalf("total2 = %d, want 2 (both failure call sites logged)", total2)
+	}
+}
+
 func TestUsersListCreateDelete(t *testing.T) {
 	ts, st := newTestServer(t)
 	admin := createTestUser(t, st, "admin", "adminpass")

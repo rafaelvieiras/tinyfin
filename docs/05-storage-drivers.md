@@ -27,7 +27,10 @@ satisfies all of them at once.
 ```go
 package storage
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // Store is the single interface the API/metadata role depends on (docs/03).
 // Every read and write it performs goes through this interface — nothing
@@ -42,6 +45,7 @@ type Store interface {
 	SubtitleStore
 	LyricStore
 	LibraryStore
+	ActivityLogStore
 
 	// Tx runs fn against a Store bound to a single transaction: everything
 	// fn does through it commits or rolls back together. In scale mode a
@@ -217,6 +221,36 @@ type LibraryStore interface {
 	DeleteLibrary(ctx context.Context, id LibraryID) error
 }
 
+// ActivityLogStore covers the durable activity log GET
+// /System/ActivityLog/Entries serves (04's admin dashboard group) —
+// deliberately scoped to the two events this project actually generates: a
+// successful login (SessionStarted) and a failed login attempt
+// (AuthenticationFailed), the same narrow-but-complete scoping precedent
+// internal/api/localization.go's TMDB-only fetcher list documents (no
+// scan-progress, item-added, or user-management events here — see
+// internal/api/auth_by_name.go, the one place both events actually
+// happen, and internal/api/activity_log.go for the read side).
+type ActivityLogStore interface {
+	// AppendActivityEntry mints the entry's own auto-increment ID — a
+	// caller never supplies one, same "store is the ID authority" rule
+	// UserStore.CreateUser follows — and returns it. Appending a log entry
+	// is intentionally never allowed to fail the request that triggered it
+	// (internal/api's callers log-and-continue on error): this method
+	// itself still reports a real error rather than swallowing one, the
+	// caller decides what to do with it.
+	AppendActivityEntry(ctx context.Context, entry ActivityEntry) (int64, error)
+
+	// QueryActivityEntries pages newest-first (Date descending) — the only
+	// ordering that produces a sane "recent activity" widget, and what
+	// jellyfin-web's dashboard overview page actually expects. MinDate/
+	// HasUserID are optional filters (ActivityEntryFilter: nil means
+	// "don't filter on this"); Limit is required, same no-full-scan
+	// enforcement ItemFilter uses. The second return value is the
+	// pre-pagination match count (TotalRecordCount on the wire), same
+	// convention as ItemPage.TotalCount.
+	QueryActivityEntries(ctx context.Context, filter ActivityEntryFilter) ([]ActivityEntry, int, error)
+}
+
 // Identifier and query/result types referenced above. Field-level shape
 // for the domain structs below (Item, User, Device, Library, Playstate,
 // and the rest marked "fields TBD") is intentionally not finalized in this
@@ -283,6 +317,47 @@ type (
 	// TrickplayInfoDto: Width, Height, TileWidth, TileHeight,
 	// ThumbnailCount, Interval, Bandwidth. Fields TBD against 04.
 	TrickplayInfo struct{ /* fields TBD against 04, shape as above */ }
+
+	// ActivityType is the reference server's ActivityLogEntry.Type
+	// discriminator (04), narrowed to the two values this project
+	// actually generates — see ActivityLogStore's doc comment above for
+	// why the scope stops there. Kept as a plain string type, same
+	// convention as ItemType/SortBy, rather than a closed Go enum.
+	// Constants: ActivityTypeSessionStarted ("SessionStarted", a
+	// successful login), ActivityTypeAuthenticationFailed
+	// ("AuthenticationFailed", a rejected one — this value itself is
+	// inferred by analogy with the reference server's naming convention,
+	// not confirmed byte-for-byte the way SessionStarted was).
+	ActivityType string
+
+	// ActivitySeverity is the reference server's ActivityLogEntry.Severity
+	// (04). Only two values are produced today, matching the two
+	// ActivityType values one-to-one: ActivitySeverityInfo
+	// ("Information") for SessionStarted (confirmed live) and
+	// ActivitySeverityError ("Error") for AuthenticationFailed (inferred
+	// from how the reference server's dashboard visually separates its
+	// "Activity" and red-flagged "Alerts" widget columns, not
+	// independently confirmed byte-for-byte).
+	ActivitySeverity string
+
+	// ActivityEntry is one row of the durable activity log
+	// ActivityLogStore covers. ID is a plain auto-incrementing int64, not
+	// this package's usual opaque UUID-shaped ID type — the reference
+	// server's own ActivityLogEntry.Id is a plain integer (confirmed
+	// live), and jellyfin-web's dashboard widgets page through it as one.
+	// UserID is nil for a failed login attempt (no user was ever
+	// authenticated for that request — Name mentions the attempted
+	// username instead) and set for a successful one; it's also the field
+	// ActivityEntryFilter.HasUserID filters on.
+	ActivityEntry struct {
+		ID            int64
+		Name          string
+		ShortOverview string
+		Type          ActivityType
+		Date          time.Time
+		UserID        *UserID
+		Severity      ActivitySeverity
+	}
 )
 
 // ItemFilter drives every catalog read. Limit is required — implementations
@@ -316,6 +391,19 @@ type ItemPage struct {
 	Items      []Item
 	TotalCount int
 	Offset     int
+}
+
+// ActivityEntryFilter drives ActivityLogStore.QueryActivityEntries.
+// MinDate/HasUserID are optional: nil means "don't filter on this". Limit
+// is required — same no-full-scan enforcement ItemFilter uses above — an
+// implementation must reject Limit <= 0 rather than defaulting to "return
+// everything"; jellyfin-web's dashboard widgets that are this store's only
+// caller today always send one.
+type ActivityEntryFilter struct {
+	MinDate   *time.Time
+	HasUserID *bool
+	Limit     int
+	Offset    int
 }
 ```
 

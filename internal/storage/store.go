@@ -23,6 +23,7 @@ type Store interface {
 	SubtitleStore
 	LyricStore
 	LibraryStore
+	ActivityLogStore
 
 	// Tx runs fn against a Store bound to a single transaction: everything
 	// fn does through it commits or rolls back together. In scale mode a
@@ -197,4 +198,34 @@ type LibraryStore interface {
 	QueryLibraries(ctx context.Context) ([]Library, error)
 	UpsertLibrary(ctx context.Context, lib Library) error
 	DeleteLibrary(ctx context.Context, id LibraryID) error
+}
+
+// ActivityLogStore covers the durable activity log GET
+// /System/ActivityLog/Entries serves (04's admin dashboard group) —
+// deliberately scoped to the two events this project actually generates: a
+// successful login (SessionStarted) and a failed login attempt
+// (AuthenticationFailed), the same narrow-but-complete scoping precedent
+// internal/api/localization.go's TMDB-only fetcher list documents (no
+// scan-progress, item-added, or user-management events here — see
+// internal/api/auth_by_name.go, the one place both events actually
+// happen, and internal/api/activity_log.go for the read side).
+type ActivityLogStore interface {
+	// AppendActivityEntry mints the entry's own auto-increment ID — a
+	// caller never supplies one, same "store is the ID authority" rule
+	// UserStore.CreateUser follows — and returns it. Appending a log entry
+	// is intentionally never allowed to fail the request that triggered it
+	// (internal/api's callers log-and-continue on error): this method
+	// itself still reports a real error rather than swallowing one, the
+	// caller decides what to do with it.
+	AppendActivityEntry(ctx context.Context, entry ActivityEntry) (int64, error)
+
+	// QueryActivityEntries pages newest-first (Date descending) — the only
+	// ordering that produces a sane "recent activity" widget, and what
+	// jellyfin-web's dashboard overview page actually expects. MinDate/
+	// HasUserID are optional filters (ActivityEntryFilter: nil means
+	// "don't filter on this"); Limit is required, same no-full-scan
+	// enforcement ItemFilter uses. The second return value is the
+	// pre-pagination match count (TotalRecordCount on the wire), same
+	// convention as ItemPage.TotalCount.
+	QueryActivityEntries(ctx context.Context, filter ActivityEntryFilter) ([]ActivityEntry, int, error)
 }

@@ -94,18 +94,25 @@ func main() {
 	// sidecar file already has to *dataPath.
 	scanImageDir := *dataPath + ".images"
 
+	resolvedWebDir := ""
+	if info, err := os.Stat(*webDir); err == nil && info.IsDir() {
+		resolvedWebDir = *webDir
+	}
+
 	server := api.NewServer(store, api.Config{
 		ServerID:            serverID,
 		TranscodeFFmpegPath: resolvedFFmpegPath,
 		ScanFFprobePath:     resolvedFFprobePath,
 		ScanImageDir:        scanImageDir,
 		TMDBAPIKey:          *tmdbAPIKey,
+		DataDir:             filepath.Dir(*dataPath),
+		WebDir:              resolvedWebDir,
 	})
 
 	handler := server.Handler()
-	if info, err := os.Stat(*webDir); err == nil && info.IsDir() {
-		log.Printf("tinyfin: serving jellyfin-web from %s at /web/", *webDir)
-		handler = withWebUI(handler, *webDir)
+	if resolvedWebDir != "" {
+		log.Printf("tinyfin: serving jellyfin-web from %s at /web/", resolvedWebDir)
+		handler = withWebUI(handler, resolvedWebDir)
 	}
 
 	httpServer := &http.Server{

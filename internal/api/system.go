@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net"
 	"net/http"
 	"runtime"
@@ -103,21 +104,46 @@ func (s *Server) handleBrandingConfiguration(w http.ResponseWriter, r *http.Requ
 	writeJSON(w, http.StatusOK, brandingOptions{})
 }
 
+// handleConfigurationPages is GET /web/ConfigurationPages — the admin
+// Dashboard's plugin-supplied settings-page registry. Confirmed live
+// against a real Jellyfin server (staging, :8097): with no plugins
+// installed there, the response is a bare empty array, not a 404 or an
+// object — so an empty array is the actually-correct answer for a server
+// with no plugin system at all (docs/01's out-of-scope list), not merely a
+// convenient stub. Left unregistered, jellyfin-web's Dashboard overview
+// page 404s on every load, one of the handful of calls that page fires
+// unconditionally on mount.
+func (s *Server) handleConfigurationPages(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, []struct{}{})
+}
+
 // handleSessionsCapabilitiesFull is POST /Sessions/Capabilities/Full —
 // every official client (web and the Android/iOS apps' shared WebView
 // shell) calls this unconditionally right after sign-in, to register its
 // playback capabilities (supported codecs/containers, device profile) for
-// the session. Tinyfin has no session/capability store yet (docs/00's O2
-// device-profile decision relies on either an inline profile per request
-// or the compiled-in fallback keyed by the request's Client header — see
-// deviceprofile — not stored per-session state), so the body is accepted
-// and discarded: a 204 is enough to satisfy the client, which treats this
-// as a fire-and-forget registration call. Left unregistered, this 404s
-// and throws an uncaught promise rejection right on landing on the home
+// the session. Tinyfin now has an in-process session registry
+// (sessions.go's sessionRegistry, docs/06's default mode) to upsert into —
+// docs/00's O2 device-profile decision (either an inline profile per
+// request or the compiled-in fallback keyed by Client) is unaffected, this
+// is a separate concern: what GET /Sessions reports back, not how a
+// playback decision picks a device profile. The body is decoded
+// best-effort (a malformed body just registers zero-value capabilities,
+// same swallow-errors posture as sessions_playback.go's
+// reportPlaybackPosition) and the caller's auth context supplies
+// everything else the registry needs. A 204 is returned unconditionally,
+// same as before this existed: left unregistered entirely, this 404s and
+// throws an uncaught promise rejection right on landing on the home
 // screen — found by testing against a real jellyfin-web build (Android
 // WebView shell), where it manifested as the client's own
 // "can't connect to server" error rather than a visibly scoped failure.
 func (s *Server) handleSessionsCapabilitiesFull(w http.ResponseWriter, r *http.Request) {
+	var caps sessionCapabilitiesDto
+	_ = json.NewDecoder(r.Body).Decode(&caps)
+
+	if ac, ok := AuthFromContext(r.Context()); ok && ac != nil && ac.Authenticated {
+		s.sessions.upsertCapabilities(ac.DeviceID, string(ac.User.ID), ac.User.Name, ac.Client, ac.Device, ac.Version, remoteEndPoint(r), caps)
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
 

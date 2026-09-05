@@ -2,6 +2,8 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -44,11 +46,13 @@ func (s *Server) handleAuthenticateByName(w http.ResponseWriter, r *http.Request
 		// Same response for "no such user" and "wrong password" (below) —
 		// distinguishing them in the response would let a client enumerate
 		// valid usernames.
+		s.logAuthFailure(r, req.Username)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	if !passwordMatches(user.PasswordHash, req.Pw) {
+		s.logAuthFailure(r, req.Username)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -93,11 +97,61 @@ func (s *Server) handleAuthenticateByName(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	s.logAuthSuccess(r, user, ac.Client)
+
 	writeJSON(w, http.StatusOK, authenticationResult{
 		User:        s.userDto(user),
 		AccessToken: token.Token,
 		ServerID:    s.cfg.ServerID,
 	})
+}
+
+// logAuthFailure appends an AuthenticationFailed activity log entry
+// (docs/05's ActivityLogStore, internal/storage/activity.go) for a
+// rejected login attempt — username unknown or password wrong, the two
+// call sites above deliberately can't be told apart on the wire (this
+// handler's own doc comment), and aren't told apart in the log either.
+// UserID is left nil: no user was ever authenticated for this attempt,
+// only a (possibly nonexistent) attempted username, which Name mentions
+// instead. Failing to write this entry must never change the auth response
+// the client sees — the error is logged and dropped, not propagated
+// (docs/05's ActivityLogStore doc comment).
+func (s *Server) logAuthFailure(r *http.Request, username string) {
+	entry := storage.ActivityEntry{
+		Name:     fmt.Sprintf("Failed login attempt by %s", username),
+		Type:     storage.ActivityTypeAuthenticationFailed,
+		Date:     time.Now().UTC(),
+		Severity: storage.ActivitySeverityError,
+	}
+	if _, err := s.store.AppendActivityEntry(r.Context(), entry); err != nil {
+		log.Printf("api: appending activity log entry for failed login by %q: %v", username, err)
+	}
+}
+
+// logAuthSuccess appends a SessionStarted activity log entry for a
+// successful login, right before the AccessToken it protects goes out on
+// the wire. ShortOverview carries the remote IP the way the reference
+// server's own confirmed-live example does; client is ac.Client (the
+// AuthContext parsed off this same request, above) rather than a device
+// name, matching that example's "<user> is online in <client>" phrasing.
+// Same log-and-continue error handling as logAuthFailure.
+func (s *Server) logAuthSuccess(r *http.Request, user storage.User, client string) {
+	ipStr := "unknown"
+	if ip := remoteIP(r); ip != nil {
+		ipStr = ip.String()
+	}
+	uid := user.ID
+	entry := storage.ActivityEntry{
+		Name:          fmt.Sprintf("%s is online from %s", user.Name, client),
+		ShortOverview: "Remote IP: " + ipStr,
+		Type:          storage.ActivityTypeSessionStarted,
+		Date:          time.Now().UTC(),
+		UserID:        &uid,
+		Severity:      storage.ActivitySeverityInfo,
+	}
+	if _, err := s.store.AppendActivityEntry(r.Context(), entry); err != nil {
+		log.Printf("api: appending activity log entry for successful login by %q: %v", user.Name, err)
+	}
 }
 
 // passwordMatches verifies a submitted plaintext password against a stored

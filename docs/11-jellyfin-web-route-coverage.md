@@ -52,16 +52,21 @@ Status legend:
 
 | | Count |
 |---|---|
-| Route entries catalogued below (excluding Live TV/Channels, out of scope per `docs/01` — `GET /LiveTv/Programs` is the one exception, counted here, see "Explicitly out of scope" below) — some entries group several closely-related paths on one row, so this counts table rows, not raw path-template strings | 99 |
-| ✅ Implemented | 44 |
+| Route entries catalogued below (excluding Live TV/Channels, out of scope per `docs/01` — `GET /LiveTv/Programs` is the one exception, counted here, see "Explicitly out of scope" below) — some entries group several closely-related paths on one row, so this counts table rows, not raw path-template strings | 108 |
+| ✅ Implemented | 57 |
 | ⚠️ Parcial (stub/honest-empty) | 5 |
-| ❌ Not implemented | 50 |
+| ❌ Not implemented | 46 |
 
-49 of 99 (49%) return real or honestly-empty data today. The gaps cluster heavily in a few places
+62 of 108 (57%) return real or honestly-empty data today. The gaps cluster heavily in a few places
 that matter for ordinary browsing, not just admin/edge-case features — see "Biggest real gaps" at the
-bottom. The `/dashboard/libraries` admin flow (below) added 9 rows and initially downgraded one
+bottom. The `/dashboard/libraries` admin flow added 9 rows and initially downgraded one
 (`Library/VirtualFolders`, ✅→⚠️) in a dedicated mapping/diff pass; a follow-up implementation pass
-then closed every gap that pass found — see "Dashboard — Bibliotecas (admin library management)".
+then closed every gap that pass found — see "Dashboard — Bibliotecas (admin library management)". A
+later pass over `/dashboard` itself (the admin overview page) found and closed six more route gaps
+plus one previously-hidden auth-header decoding bug — see "Dashboard — Painel (overview)". These
+counts are recounted directly from the tables below (`grep`-counted status markers), not
+hand-tracked incrementally across passes — the project's established practice after an earlier
+count drifted from the table rows it was supposed to summarize.
 
 ---
 
@@ -88,7 +93,7 @@ then closed every gap that pass found — see "Dashboard — Bibliotecas (admin 
 | `GET /Items/{itemId}/LocalTrailers` | ❌ | From SDK/apiclient catalog. Not exercised live (test library has no local trailer files) but a real registered client call. |
 | `GET /Items/{itemId}/SpecialFeatures` | ❌ | Catalog only, same caveat as above. |
 | `GET /Items/Root` | ❌ | Catalog only — media-folder root discovery. |
-| `GET /Items/Counts` | ❌ | Catalog only — aggregate counts (e.g. dashboard widgets). |
+| `GET /Items/Counts` | ✅ | Implemented (`internal/api/items_counts.go`, `requireAuth`), found via the `/dashboard` (Painel) overview pass — see "Dashboard — Painel (overview)" below. `MovieCount`/`SeriesCount`/`EpisodeCount` are real (`QueryItems` with `Limit: 1`, reading `TotalRecordCount`, per the no-full-catalog-scan rule every other count-shaped read in this project follows); every other field (`ArtistCount`, `ProgramCount`, `TrailerCount`, `SongCount`, `AlbumCount`, `MusicVideoCount`, `BoxSetCount`, `BookCount`, `ItemCount`) is a structural zero, not fabricated — `internal/scan` never produces any of those item types. Confirmed live against `tinyfin-staging`. |
 | `POST /Items/{itemId}/Refresh` | ✅ | Implemented (`internal/api/item_refresh.go`, admin-only). Originally catalogued as "single item refresh"; the `/dashboard/libraries` pass found this is actually the **primary per-library scan mechanism** too — jellyfin-web's "Rastrear biblioteca" (scan just one library) menu action calls exactly this route with the library's own `ItemId`, not a library-scoped variant: `POST /Items/{itemId}/Refresh?Recursive=true&ImageRefreshMode=Default&MetadataRefreshMode=Default&ReplaceAllImages=false&RegenerateTrickplay=false&ReplaceAllMetadata=false` (query params accepted and ignored — Tinyfin has no refresh-mode distinctions to honor). When `itemId` matches a library's own `ItemId`, queues that library's scan (`s.runScan`), same mechanism `POST /Library/Refresh` uses for every library — confirmed live against `tinyfin-staging` (204, scan ran). When `itemId` matches an ordinary catalog item instead, responds 204 as an honest no-op: Tinyfin has no single-item metadata re-fetch mechanism yet, so it acknowledges the item exists rather than pretending to refresh it. Unknown `itemId` (neither a library nor an item): 404. |
 | `GET /Playlists`, `GET /Playlists/{id}`, `GET/POST /Playlists/{id}/Items`, `.../Users` | ❌ | No playlist support at all — catalog only, not exercised live (no playlists in test library). |
 | `GET /Genres`, `GET /Genres/{genreName}` | ❌ | Catalog only. See "Specialized media types" below — genre browsing has no route at all. |
@@ -164,7 +169,8 @@ then closed every gap that pass found — see "Dashboard — Bibliotecas (admin 
 | `POST /UserItems/{itemId}/Rating` | ❌ | Catalog only — star rating. |
 | `POST/GET /UserItems/{itemId}/UserData` | ❌ | Catalog only — direct playstate/favorite edit, alternate to the two routes above. |
 | WebSocket `/socket` | ❌ | Confirmed live — repeated WebSocket handshake failures (404) on every page. This is the realtime session channel `docs/06-session-and-realtime-state.md` scopes as its own interface; it isn't wired into the HTTP server at all yet. Consequence: no live "now playing on other devices," no remote control/cast-to-device, no server-push of any kind. |
-| `GET /Sessions`, `POST /Sessions/{id}/Command`, `/Message`, `/Playing`, `/Viewing`, `POST /Sessions/Logout` | ❌ | Catalog only — the REST half of remote session control. Mostly moot without the WebSocket channel above, but entirely absent either way. |
+| `GET /Sessions` | ✅ | Implemented (`internal/api/sessions.go`, admin-only — see its row's own reasoning below), found via the `/dashboard` (Painel) overview pass. A small in-process session registry (docs/06's default mode), populated from exactly two existing signals: `POST /Sessions/Capabilities/Full` (previously entirely discarded) and the three playback-report routes touching an already-registered device's `LastActivityDate`. Deliberately narrow — no now-playing tracking, no expiry beyond the `activeWithinSeconds` filter itself (see "Dashboard — Painel (overview)" below). Confirmed live against `tinyfin-staging`, including a real jellyfin-web session showing up correctly in the admin Dashboard "Dispositivos" widget. |
+| `POST /Sessions/{id}/Command`, `/Message`, `/Playing`, `/Viewing`, `POST /Sessions/Logout` | ❌ | Catalog only — remote session *control* (as opposed to the listing above). Mostly moot without the WebSocket channel above, but entirely absent either way. |
 | `POST /QuickConnect/Initiate`, `/Connect`, `/Authorize` | ❌ | Catalog only — only the capability-check route (`Enabled`) exists; the actual pairing flow can't complete even though the client believes QuickConnect is available. |
 | `GET /Devices`, `/Devices/Info`, `/Devices/Options` | ❌ | Catalog only — device management (admin). |
 | `GET/POST /Auth/Keys`, `/Auth/Keys/{key}` | ❌ | Catalog only — API key management (admin). |
@@ -178,12 +184,14 @@ then closed every gap that pass found — see "Dashboard — Bibliotecas (admin 
 | `GET/POST/DELETE /Library/VirtualFolders` | ✅ | Registered, admin-gated. Upgraded back from ⚠️: `POST`'s paths-in-body bug is fixed — `handleAddVirtualFolder` now reads `LibraryOptions.PathInfos[].Path` from the request body (what the real dashboard actually sends), falling back to the `paths` query param only when the body carries none, confirmed live end to end against `tinyfin-staging` (a library added through the same body shape jellyfin-web sends now lands with its folder in `Locations`, not empty). `GET`'s response DTO (`virtualFolderInfo`) still doesn't model `PrimaryImageItemId`/`RefreshStatus`/`RefreshProgress` (deliberate gap, unchanged), but now echoes back whatever `LibraryOptions` blob was last saved via the new `.../LibraryOptions` route below (see there for the "opaque save-and-echo, not a modeled ~35-field object" scope decision) — closing most, not all, of the previously-flagged DTO gap. |
 | `POST /Library/Refresh` | ✅ | Same registration status as above; this specific route (scan *every* library) is confirmed working, same as `POST /Items/{itemId}/Refresh` above (now also implemented, for the per-library case). |
 | `GET /System/Endpoint` | ✅ | Implemented (`internal/api/system.go`). Shape and requires-auth confirmed against the reference server (staging, :8097): `{"IsLocal":bool,"IsInNetwork":bool}`, 401 with no token. `IsLocal`/`IsInNetwork` derived from the request's actual TCP peer address (loopback / RFC 1918 private / link-local) — confirmed `X-Forwarded-For` is ignored entirely by the real server, so no reverse-proxy trust config was added to match that. Confirmed live: `curl` against `tinyfin-staging` matches from outside the container (private Docker bridge address → `IsLocal:false, IsInNetwork:true`) and a Playwright session shows this called once at startup with no 404. |
+| `GET /System/Info/Storage` | ✅ | Implemented (`internal/api/system_info_storage.go`, admin-only), found via the `/dashboard` (Painel) overview pass — not previously catalogued under any name. Real `statfs(2)`-backed free/used space per library folder (one stat per `storage.Library.Paths` entry, since a library can span multiple mounts) and per Tinyfin's own real directories: `ProgramDataFolder`/`CacheFolder`/`LogFolder`/`InternalMetadataFolder`/`ImageCacheFolder` all report the same real directory (`Config.DataDir` — Tinyfin has no config/cache/log/metadata split, unlike the reference server, so this is the honest single answer, not five fabricated paths), `TranscodingTempFolder` is `os.TempDir()` (the real transcode working directory), `WebFolder` is present only when a web bundle is actually configured. `StorageType` is always `"Fixed"` — a documented simplification, no dependency-free way to detect network mounts. Confirmed live against `tinyfin-staging`, including the Dashboard "Locais" widget rendering real GiB figures. See "Dashboard — Painel (overview)" below. |
 | `GET /System/Configuration`, `/System/Configuration/{key}`, `/System/Configuration/Branding` | ❌ | Catalog only — admin dashboard settings pages. |
-| `GET /System/ActivityLog/Entries` | ❌ | Catalog only. |
+| `GET /System/ActivityLog/Entries` | ✅ | Implemented (`internal/api/activity_log.go`, admin-only), found via the `/dashboard` (Painel) overview pass. Deliberately narrow, real (not stubbed) activity log: only two event types are ever generated — `SessionStarted` (successful login) and `AuthenticationFailed` (rejected login, unknown username or wrong password, indistinguishable on the wire the same way the reference server's own response never tells them apart) — durably persisted (`internal/storage/activity.go`, sqlite migration `0005_activity_log.sql`), not scan-progress/item-added/user-management events, which the reference server's own activity log also carries but this project has no hook points for yet. `hasUserId=true`/`false` genuinely filters on a nullable `user_id` column (a failed login has none), `minDate`/`startIndex`/`limit` all real. See "Dashboard — Painel (overview)" below for the full capture and scope writeup. |
 | `GET /System/Logs`, `/System/Logs/Log` | ❌ | Catalog only. |
 | `POST /System/Restart`, `/System/Shutdown` | ❌ | Catalog only. |
 | `GET /System/Ping` | ❌ | Catalog only. |
-| `GET/POST /ScheduledTasks`, `/ScheduledTasks/{taskId}`, `.../Triggers`, `.../Running/{taskId}` | ❌ | Catalog only — admin scheduled-task dashboard. |
+| `GET /ScheduledTasks` | ✅ | Implemented (`internal/api/scheduled_tasks.go`, admin-only), found via the `/dashboard` (Painel) overview pass. Reports exactly one entry — a library scan, the one real background operation this project has — rather than fabricating any of the reference server's ~18 built-in tasks (plugin updates, trickplay, subtitle/lyric downloads, ...) this project has no machinery for. `State` ("Running"/"Idle") and `LastExecutionResult` are live, backed by `Server.scanState` (a small tracker wrapping every `runScan` call); `Triggers` is always `[]` — no scheduling engine exists at all, a real, documented gap. See "Dashboard — Painel (overview)" below. |
+| `POST /ScheduledTasks/{taskId}`, `.../Triggers`, `.../Running/{taskId}` | ❌ | Catalog only — per-task admin actions (run now, cancel, edit triggers) on the task listed above. No scheduling engine exists to act on. |
 | `GET/POST /Backup`, `/Backup/Create`, `/Backup/Restore`, `/Backup/Manifest` | ❌ | Catalog only. |
 | `GET /Plugins`, `/Plugins/{id}`, `.../Configuration`, `.../Manifest`; `GET /Packages`, `/Packages/{name}` | ❌ | Catalog only — deliberately out of scope per `docs/01`'s plugin-loading non-goal; listed for completeness, not expected to ever move to ✅. |
 | `GET /Localization/Countries`, `/Cultures`, `/Options`, `/ParentalRatings` | ❌ | Catalog only — admin setup wizard / user-creation dropdowns. |
@@ -227,8 +235,8 @@ Page load (`GET /dashboard/libraries` itself) fires, beyond the already-catalogu
 
 | Route | Status | Note |
 |---|---|---|
-| `GET /web/ConfigurationPages?enableInMainMenu=true` | ❌ | Confirmed 404 live on Tinyfin (200 on the reference server, `[]`-shaped — no admin plugin config pages registered either way). Harmless — jellyfin-web treats a failure here the same as an empty list, confirmed by the sidebar rendering identically either way. |
-| `GET /ScheduledTasks?isHidden=false` | ❌ | Confirmed 404 live on Tinyfin (200 on the reference server). Drives the "Tarefas Agendadas" sidebar entry's task list, not just the libraries page specifically — out of scope for this pass to fully spec (no scheduled-task system exists in Tinyfin at all, per `docs/01`), noted here only because it fires unconditionally on every dashboard page including this one. |
+| `GET /web/ConfigurationPages?enableInMainMenu=true` | ✅ | Resolved by the later `/dashboard` (Painel) overview pass — see "Dashboard — Painel (overview)" below and `internal/api/system.go`'s `handleConfigurationPages`. |
+| `GET /ScheduledTasks?isHidden=false` | ✅ | Resolved by the later `/dashboard` (Painel) overview pass — see its row in "System/admin" above and "Dashboard — Painel (overview)" below. |
 
 Opening "Adicionar Biblioteca de Mídia" (and, identically, "Gerenciar biblioteca" on an existing
 library — same modal, pre-filled) fires:
@@ -266,6 +274,41 @@ rename/remove): `POST /Library/VirtualFolders/Paths` (add one path to an existin
 in `server.go`; `library_admin.go`'s own doc comment already lists "per-path add/remove/update on
 an existing library" as a deliberate, documented gap — this pass just confirms the exact route
 shapes from the bundle rather than changing that call.
+
+---
+
+## Dashboard — Painel (overview)
+
+A dedicated pass over `/dashboard` itself (the admin overview page — "Painel" in the pt-BR locale
+this build renders), same method as "Dashboard — Bibliotecas" above: live Playwright network
+capture on page load against both the reference server (`:8097`) and `tinyfin-staging` (`:8096`).
+Six routes 404d on Tinyfin that the page calls unconditionally on every load:
+
+| Route | Status | Note |
+|---|---|---|
+| `GET /Items/Counts` | ✅ | See its row in "Library and item navigation" above. Drives the "Filmes"/"Séries"/"Episódios" counter widget. |
+| `GET /System/Info/Storage` | ✅ | See its row in "System/admin" above. Drives the "Locais" storage-bars widget. |
+| `GET /Sessions?activeWithinSeconds=960` | ✅ | See its row in "Users, sessions, devices" above. Drives the "Dispositivos" widget. Registered admin-only, not `requireAuth`: it lists every tracked session across every user (IP address, device name, client included) and the admin Dashboard is the only confirmed caller — exposing that to any authenticated non-admin user would be a real information-disclosure regression, not a scope simplification, so this diverges from this project's usual "authenticated-but-not-admin" pattern for listing routes deliberately. |
+| `GET /System/ActivityLog/Entries` (called twice: `hasUserId=true` for the "Atividade" widget, `hasUserId=false` for the "Alertas" widget) | ✅ | See its row in "System/admin" above. |
+| `GET /ScheduledTasks?isHidden=false` | ✅ | See its row in "System/admin" above. Already noted as a `/dashboard/libraries`-page gap too (that section's rows now point here). |
+| `GET /web/ConfigurationPages?enableInMainMenu=true` | ✅ | Implemented (`internal/api/system.go`'s `handleConfigurationPages`, `requireAuth`) — always `[]`, matching the reference server's own response with no plugins installed (Tinyfin has no plugin system at all, per `docs/01`). Had to be special-cased in `cmd/tinyfin/webui.go`'s static-file-serving wrapper too: that wrapper treats every `/web/...` path as a jellyfin-web static asset by default, which would otherwise shadow this route entirely (a 404 from the file server, not from the API) whenever a web bundle is mounted. |
+
+**A real, previously-hidden wire-compatibility bug found in the process, unrelated to any of the
+six routes above**: a real jellyfin-web build sends this project's client-identification header
+with its `Client` field percent-encoded — literally `Client="Jellyfin%20Web"` — and the reference
+server decodes it before reporting it back anywhere. `internal/api/auth.go`'s `parseEmbyAuth` never
+decoded any field at all; this went unnoticed until now because no earlier route ever echoed
+`AuthContext.Client` back on the wire — `GET /Sessions` (above) is the first one that does, and it
+surfaced literally as `"Client":"Jellyfin%20Web"` in the Dashboard's "Dispositivos" widget in this
+pass's own testing. Fixed by percent-decoding every field (`url.PathUnescape`, not `QueryUnescape` —
+a literal `+` in a base64-shaped `DeviceId` must stay a `+`, not become a space); confirmed live
+against `tinyfin-staging` that the widget now reads "Jellyfin Web 12.0.0" like the reference server
+does, and covered by a new unit test (`internal/api/auth_test.go`).
+
+WebSocket `/socket` remains the one confirmed-live 404 this page still produces on every load (its
+own row above) — this pass didn't attempt it; it's a separate, larger feature (`docs/06`'s realtime
+session channel) already tracked as the project's known highest-priority remaining gap in that
+area, not something this REST-endpoint-focused pass could close incidentally.
 
 ---
 

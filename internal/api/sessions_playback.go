@@ -32,13 +32,30 @@ type playbackReportBody struct {
 }
 
 // handleSessionsPlaying is POST /Sessions/Playing — called once when
-// playback actually starts. There is no session/realtime-state store yet
-// (docs/06 is out of scope here, same reasoning as
-// handleSessionsCapabilitiesFull's doc comment in system.go), and the
-// resume position at start is whatever PlaybackInfo already told the
-// client, so this is a pure fire-and-forget acknowledgement.
+// playback actually starts. The resume position at start is whatever
+// PlaybackInfo already told the client, so there's nothing to persist here
+// — but sessions.go's registry does exist now, so this at least touches the
+// caller's LastActivityDate if it already has a session registered (see
+// touchSession below); it does not itself register one (that's
+// system.go's handleSessionsCapabilitiesFull's job — this route runs after
+// playback has already started, on a device that's expected to have called
+// that first).
 func (s *Server) handleSessionsPlaying(w http.ResponseWriter, r *http.Request) {
+	s.touchSession(r)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// touchSession stamps LastActivityDate to now on the caller's tracked
+// session (sessions.go's sessionRegistry), keyed by the auth context's
+// DeviceID — a no-op if there's no auth context or no session already
+// registered for that device (sessionRegistry.touch's own doc comment).
+// Shared by all three playback-report handlers below, which otherwise have
+// no reason to read AuthContext directly (reportPlaybackPosition already
+// does, for its own purposes, but doesn't expose it to its callers).
+func (s *Server) touchSession(r *http.Request) {
+	if ac, ok := AuthFromContext(r.Context()); ok && ac != nil {
+		s.sessions.touch(ac.DeviceID)
+	}
 }
 
 // handleSessionsPlayingProgress is POST /Sessions/Playing/Progress —
@@ -60,6 +77,7 @@ func (s *Server) handleSessionsPlaying(w http.ResponseWriter, r *http.Request) {
 // not-yet-finished episode be recognized as "touched" at all.
 func (s *Server) handleSessionsPlayingProgress(w http.ResponseWriter, r *http.Request) {
 	s.reportPlaybackPosition(r)
+	s.touchSession(r)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -81,6 +99,7 @@ func (s *Server) handleSessionsPlayingProgress(w http.ResponseWriter, r *http.Re
 // than needing to know in advance which mode was in play.
 func (s *Server) handleSessionsPlayingStopped(w http.ResponseWriter, r *http.Request) {
 	itemID := s.reportPlaybackPosition(r)
+	s.touchSession(r)
 	if itemID != "" {
 		s.transcode.Stop(string(itemID))
 	}

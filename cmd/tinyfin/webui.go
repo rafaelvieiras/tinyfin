@@ -25,6 +25,13 @@ func withWebUI(api http.Handler, dir string) http.Handler {
 		switch {
 		case r.URL.Path == "/", r.URL.Path == "/web":
 			http.Redirect(w, r, "/web/", http.StatusFound)
+		// An API route that happens to live under the /web/ prefix on the
+		// reference server (its plugin-settings-page registry) rather than
+		// a static asset — must be checked before the generic /web/ prefix
+		// case below, or the file server would shadow it and 404 trying to
+		// serve a file named "ConfigurationPages" that doesn't exist.
+		case r.URL.Path == "/web/ConfigurationPages":
+			api.ServeHTTP(w, r)
 		case strings.HasPrefix(r.URL.Path, "/web/"):
 			fileServer.ServeHTTP(w, r)
 		default:
