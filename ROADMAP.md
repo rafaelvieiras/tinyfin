@@ -438,6 +438,22 @@ what starting Phase 1 actually requires next.
       for the same physical file, leaving nothing to race over. See `docs/08`'s "Item IDs are scoped
       per library" section. Covered by `TestScanLibraryOverlappingPathsDoNotCollide`
       (`internal/scan/scan_test.go`).
+- [x] Fixed: "recently added" ordering wrong compared to the reference server. Rafael noticed
+      newly-scanned items were not in the same order jellyfin-web shows for the real Jellyfin
+      server. Root cause: every scan pass re-upserts every item it walks, not just newly discovered
+      files, and `UpsertItem`'s `ON CONFLICT(id) DO UPDATE SET` unconditionally overwrote
+      `date_created` with whatever the caller passed — and every `scan.go` call site stamped
+      `time.Now()` regardless of whether the item already existed. So every full/scheduled rescan
+      silently reset every pre-existing item's "date added" to that scan's own wall-clock time in
+      filesystem-traversal order, and `/Users/{userId}/Items/Latest` (sorted by `date_created DESC`)
+      showed scan order instead of true historical add order. Fixed centrally in
+      `internal/storage/sqlite/item.go`: `date_created` is no longer part of `UpsertItem`'s
+      `DO UPDATE SET` list, so a conflicting row's stored `date_created` is never touched again —
+      only a genuinely new row takes the value the caller passes. See `docs/08`'s "`date_created` is
+      set once and never touched again" section. Covered by `TestUpsertItemPreservesDateCreated`
+      (`internal/storage/sqlite/store_test.go`). Note: this only stops future corruption — items
+      already miscataloged by prior rescans need an independent repair, since the fix's own logic
+      means a rescan will not self-heal an existing row's wrong `date_created`.
 - [ ] TVDB provider — not implemented (see above).
 - [x] **Goal:** a freshly scanned library gets enriched metadata without Tinyfin implementing its
       own scraping. Verified via `internal/scan`'s test suite (movies and TV shows, with and

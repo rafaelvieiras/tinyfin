@@ -201,6 +201,17 @@ func itemSearchText(item storage.Item) string {
 	return strings.Join(parts, " ")
 }
 
+// UpsertItem inserts item, or updates it in place if item.ID already exists.
+//
+// date_created is deliberately absent from the ON CONFLICT DO UPDATE SET
+// clause below: every scan pass (not just first discovery) upserts every
+// item it walks, so treating date_created like every other column would
+// reset "date added" to the scan's wall-clock time on every single rescan,
+// scrambling the reference server's /Users/{userId}/Items/Latest ordering
+// into scan/traversal order instead of true historical add order (found live
+// in staging by Rafael). Once a row exists, its stored date_created always
+// wins; only a brand-new row takes the value passed in here (falling back to
+// time.Now() below if the caller left it zero).
 func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 	if item.ID == "" {
 		item.ID = storage.ItemID(newID())
@@ -271,8 +282,7 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 		collection_type=excluded.collection_type,
 		media_streams=excluded.media_streams,
 		people=excluded.people,
-		search_text=excluded.search_text,
-		date_created=excluded.date_created`
+		search_text=excluded.search_text`
 
 	err = s.withTx(ctx, func(ex dbtx) error {
 		if _, err := ex.ExecContext(ctx, query,

@@ -169,6 +169,45 @@ func TestSeedAndGetItem(t *testing.T) {
 	}
 }
 
+// TestUpsertItemPreservesDateCreated proves DateCreated is set only once, on
+// first insert, and survives every later re-upsert of the same item
+// unchanged — even when the caller passes a different DateCreated (exactly
+// what every scan.go call site does today, stamping time.Now() on every
+// rescan of every already-cataloged file). Real Jellyfin's "recently added"
+// ordering depends on this: found live in staging, where every full rescan
+// was silently resetting every existing item's "date added" to the scan's
+// own wall-clock time, scrambling /Users/{userId}/Items/Latest into
+// scan/traversal order instead of true historical add order.
+func TestUpsertItemPreservesDateCreated(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+	libraryID, _, _, _, _ := seedTree(t, st)
+
+	itemID := storage.ItemID(newID())
+	original := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+	if err := st.UpsertItem(ctx, storage.Item{
+		ID: itemID, Type: storage.ItemTypeMovie, LibraryID: libraryID,
+		Name: "Original Add Date Movie", DateCreated: original,
+	}); err != nil {
+		t.Fatalf("UpsertItem (insert): %v", err)
+	}
+
+	if err := st.UpsertItem(ctx, storage.Item{
+		ID: itemID, Type: storage.ItemTypeMovie, LibraryID: libraryID,
+		Name: "Original Add Date Movie", DateCreated: time.Now().UTC(),
+	}); err != nil {
+		t.Fatalf("UpsertItem (rescan): %v", err)
+	}
+
+	got, err := st.GetItem(ctx, itemID)
+	if err != nil {
+		t.Fatalf("GetItem: %v", err)
+	}
+	if !got.DateCreated.Equal(original) {
+		t.Errorf("got.DateCreated = %v after rescan, want unchanged %v", got.DateCreated, original)
+	}
+}
+
 // TestItemPeopleRoundTrips proves storage.Item.People (added alongside
 // migration 0002_people.sql) survives an UpsertItem/GetItem round trip via
 // the same JSON-column marshal/unmarshal pattern already used for

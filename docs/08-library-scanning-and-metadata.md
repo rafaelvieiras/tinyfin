@@ -100,6 +100,34 @@ overlapping `Paths` now each mint their own distinct ID for the same physical fi
 nothing left to race over. Covered by `TestScanLibraryOverlappingPathsDoNotCollide`
 (`internal/scan/scan_test.go`).
 
+## `date_created` is set once and never touched again
+
+Every scan pass walks *every* item found on disk, not just newly discovered files, and every one
+of them goes through `UpsertItem`. Before this fix, `UpsertItem`'s `ON CONFLICT(id) DO UPDATE SET`
+clause included `date_created=excluded.date_created` like every other column, and `scan.go`'s
+`processMovie`/`walkSeries`/`walkSeasons`/`processEpisode` all unconditionally stamped
+`DateCreated: time.Now().UTC()` on the `storage.Item` they built — including for a file that was
+already cataloged. The result: every full/scheduled rescan silently reset every pre-existing item's
+"date added" to that scan's own wall-clock time, in filesystem-traversal order. Since
+`/Users/{userId}/Items/Latest` (`handleItemsLatest`, `internal/api/library.go`) sorts by
+`date_created DESC`, "recently added" ended up reflecting scan/traversal order instead of true
+historical add order — noticed by Rafael comparing Tinyfin's ordering against the reference server's.
+
+Real Jellyfin never re-stamps an item's add date on a rescan (only genuine first discovery sets it);
+Tinyfin's single-item `RefreshItem` path already matched this (it loads the existing row via
+`GetItem` first and only mutates enrichment fields), but the full-library scan path never did.
+Fixed centrally instead of duplicating a "look up the existing row first" step at every scan.go call
+site: `date_created` is no longer part of `UpsertItem`'s `DO UPDATE SET` list at all
+(`internal/storage/sqlite/item.go`), so a conflicting row's stored `date_created` always wins
+regardless of what the caller passes — only a genuinely new row takes the value passed in (or
+`time.Now()`, if the caller left it zero). Covered by `TestUpsertItemPreservesDateCreated`
+(`internal/storage/sqlite/store_test.go`).
+
+Staging note: this fix only stops *future* corruption — items already miscataloged by prior rescans
+keep their now-wrong `date_created` until independently repaired (a rescan will not self-heal it,
+since the row already exists and the new code path deliberately leaves an existing row's
+`date_created` alone).
+
 ## Scan-time resource discipline
 
 The reference implementation has a documented failure mode here too: unbounded concurrent
