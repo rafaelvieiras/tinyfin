@@ -82,6 +82,41 @@ downgrade back to black-box-only. When you do, follow a strict two-phase process
    session — that's side-by-side reimplementation, which this process exists to prevent
    regardless of how the resulting code reads.
 
+## Reading jellyfin-web (the client)
+
+The clean-room requirement above is about the `jellyfin/jellyfin` C# **server** only. jellyfin-web
+(github.com/jellyfin/jellyfin-web, GPL-2.0) is a separate, standalone client project this server
+has to satisfy, not the reference implementation being reimplemented — reading its source carries
+none of that restriction, and doing so is not "reading the reference server's source" in AGENTS.md's
+sense above. Never copy its code into this repository either (it's GPL-2.0, this project is MIT —
+same D9/D12 boundary as always), but reading it to understand what it does is unrestricted and
+should be routine, not a last resort.
+
+Do this proactively whenever verifying a client interaction — a button, a conditional render, an
+action that fires (or doesn't fire) a request — not only after black-box observation alone fails to
+explain something. Two failure modes black-box network capture cannot see through on its own:
+
+- **A client-side guard can silently swallow a click.** If the client decides not to call anything
+  (a lookup that came back empty/undefined, a condition that's never true), there is no request to
+  capture, no 404 to notice — just silence that looks identical to "nothing happens on this page."
+  Only reading the component's code shows the precondition being checked.
+- **A `200` response's field *values*, not just its shape, can drive later client behavior.** Status
+  code and field-presence diffing against the reference server won't catch a field whose exact
+  *value* (an ID, a key, an enum string) is a hardcoded lookup target somewhere else in the client.
+
+Found live: the Dashboard's "Scan All Libraries" button spun forever because `GET /ScheduledTasks`
+returned `200` with the right shape but the wrong `Key`/`Id` *value* — jellyfin-web locates that
+task by filtering on the literal string `"RefreshLibrary"`, a value nothing in this project's own
+route-coverage passes had verified since the field looked auxiliary from Tinyfin's side. See
+`docs/12`'s note for the same task and `docs/11`'s "Method" section for how this is now folded into
+the standard route-coverage process.
+
+One caveat, already on record in `docs/11`: different jellyfin-web builds can diverge in what they
+actually send (the modern `@jellyfin/sdk` client vs. the legacy `jellyfin-apiclient` package
+embedded in the same bundle disagree on some URL shapes). Reading source is a way to find *what to
+verify*, not a substitute for confirming it live against the actual embedded bundle this project
+ships (`tinyfin-staging`'s own `/web`) — treat it as generating a hypothesis, not the final answer.
+
 ## Decisions-first workflow
 
 - Open questions live in [`docs/00-decision-log.md`](docs/00-decision-log.md) until resolved.

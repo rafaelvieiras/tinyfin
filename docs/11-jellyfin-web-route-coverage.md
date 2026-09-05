@@ -11,7 +11,7 @@ for what "compatible" means and how it's normally verified.
 
 ## Method
 
-Three sources, combined:
+Four sources, combined:
 
 1. **Static analysis of the embedded `@jellyfin/sdk` bundle** (`node_modules.@jellyfin.sdk.bundle.js`,
    extracted from the `tinyfin-staging` container's own `/web`) — every URL-template string literal
@@ -25,6 +25,18 @@ Three sources, combined:
    playback, TV series → season → episode, search, favorite/watched toggles — run against **both**
    the reference Jellyfin server (`localhost:8097`, official image) and Tinyfin itself
    (`localhost:8096`, `tinyfin-staging`).
+4. **Reading jellyfin-web's own source** (`github.com/jellyfin/jellyfin-web`, GPL-2.0 — a separate
+   client project, not the reference *server*, so none of AGENTS.md's clean-room restriction on the
+   `jellyfin/jellyfin` C# source applies; see AGENTS.md's "Reading jellyfin-web (the client)"
+   section) for the component behind any interaction being catalogued: what precondition gates a
+   button firing a request at all, and which response *field values* (not just shapes) a later
+   lookup depends on. Sources (1)-(3) alone can miss both — a client-side guard that blocks a
+   request produces no network traffic to capture, and a `200` response with the right shape but a
+   wrong field value looks identical to a correct one under status-code/shape diffing. This is now
+   routine for any row involving a click or a conditional render, not just a fallback for cases (1)-(3)
+   couldn't explain — see the `POST /ScheduledTasks/Running/{taskId}` row below for the case that
+   surfaced the gap: `GET /ScheduledTasks`'s `Key` field had the right shape and a `200` status, but
+   the wrong *value*, which is exactly what (1)-(3) can't distinguish from correct.
 
 Source (3) surfaced something source (1)/(2) alone couldn't: **the jellyfin-web build embedded in
 Tinyfin's own image calls a materially different set of URL shapes than the one embedded in the
