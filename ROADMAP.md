@@ -421,6 +421,23 @@ what starting Phase 1 actually requires next.
       `tvshow.nfo` has no `<namedseason>` tag, so it stays a no-op on both servers until the file is
       moved to the series root, which was reported back to Rafael as the actual fix needed on the
       media library side.
+- [x] Fixed: two libraries pointing at overlapping `Paths` corrupting each other's catalog on a
+      concurrent scan. Rafael noticed a leftover manually-created test library ("SmokeTestLibRenamed",
+      itself created earlier by manual Playwright-driven dashboard smoke-testing directly against
+      staging and never deleted) pointed at the same host folder as the real "Filmes" library, and
+      after running "Scan All Libraries," "Filmes" came back with a partial catalog — the missing
+      titles had ended up under the test library instead. Root cause: `internal/scan/id.go`'s
+      `deterministicID` hashed only the file's path, and `reconcileItemID`'s existing-row lookup was
+      scoped to the library currently being scanned, so it could never see the other library's row at
+      the same path — both scans minted the identical item ID, and `UpsertItem`'s `ON CONFLICT(id)`
+      let whichever library's goroutine wrote last steal that row's `LibraryID`.
+      `Server.refreshAllLibraries` launches one scan goroutine per library concurrently, turning this
+      into a race that nondeterministically split one library's real catalog across both. Fixed by
+      folding the scanning library's own ID into the hash at all four `deterministicID` call sites
+      (movie/series/season/episode) — two libraries with overlapping paths now each mint a distinct ID
+      for the same physical file, leaving nothing to race over. See `docs/08`'s "Item IDs are scoped
+      per library" section. Covered by `TestScanLibraryOverlappingPathsDoNotCollide`
+      (`internal/scan/scan_test.go`).
 - [ ] TVDB provider — not implemented (see above).
 - [x] **Goal:** a freshly scanned library gets enriched metadata without Tinyfin implementing its
       own scraping. Verified via `internal/scan`'s test suite (movies and TV shows, with and

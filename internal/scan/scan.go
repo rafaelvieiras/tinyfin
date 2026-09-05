@@ -239,19 +239,35 @@ func (s *Scanner) walkMovies(ctx context.Context, pool *jobPool, lib storage.Lib
 // one is found, otherwise freshID (the freshly computed deterministic ID
 // for path).
 //
-// path alone is normally enough to make freshID stable across rescans
+// path+libraryID is normally enough to make freshID stable across rescans
 // (deterministicID is a pure hash of it), so in the common case this
 // lookup finds nothing and just confirms freshID is unclaimed. It exists
 // to reconcile the case where a row already exists at path under some
 // *other* ID — the ID-minting formula changed, or the row predates the
 // scanner entirely (cmd/devseed, a throwaway manual-seeding tool, used
 // its own "item-"+slug(folder) scheme before this project settled on
-// "item-movie-"+path/"item-episode-"+path; running the real scanner over
-// devseed-seeded data reproduced this exact scenario, confirmed live in
-// staging). Without this lookup, UpsertItem's ON CONFLICT(id) can only
-// de-duplicate against a row sharing the same ID — never against another
-// row that is, by path, obviously the same file — so every such mismatch
-// silently doubles the catalog instead of updating it in place.
+// "item-movie-"+libraryID+"-"+path/"item-episode-"+libraryID+"-"+path;
+// running the real scanner over devseed-seeded data reproduced this exact
+// scenario, confirmed live in staging). Without this lookup, UpsertItem's
+// ON CONFLICT(id) can only de-duplicate against a row sharing the same ID —
+// never against another row that is, by path, obviously the same file — so
+// every such mismatch silently doubles the catalog instead of updating it
+// in place.
+//
+// libraryID is folded into freshID's hash (by every caller, not by this
+// function) precisely so that this lookup's own LibraryID scoping can't be
+// fooled: two libraries whose Paths happen to overlap on disk used to mint
+// the *same* freshID for the same file (a pure hash of path alone), and
+// since this lookup only ever checks the *current* library, it never saw
+// the other library's row — two concurrent "Scan All Libraries" goroutines
+// (Server.refreshAllLibraries) racing on the same file's UpsertItem would
+// then silently steal that item's LibraryID back and forth, splitting one
+// library's catalog into two nondeterministically. Reproduced live in
+// staging: two movie libraries pointing at the same host folder, one ending
+// up with a random subset of the other's movies after a concurrent scan.
+// Folding libraryID into the hash means each library now mints its own
+// distinct ID for the same physical file, so there is nothing left to race
+// over.
 func (s *Scanner) reconcileItemID(ctx context.Context, libraryID storage.LibraryID, path string, freshID storage.ItemID) storage.ItemID {
 	page, err := s.store.QueryItems(ctx, storage.ItemFilter{LibraryID: &libraryID, Path: path, Limit: 1})
 	if err != nil || len(page.Items) == 0 {
@@ -263,7 +279,7 @@ func (s *Scanner) reconcileItemID(ctx context.Context, libraryID storage.Library
 func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.Library, hostFolder, folder, videoFile string, size int64) error {
 	title, year := ParseTitleYear(folder)
 	itemPath := filepath.Join(hostFolder, videoFile)
-	itemID := s.reconcileItemID(ctx, lib.ID, itemPath, storage.ItemID(deterministicID("item-movie-"+itemPath)))
+	itemID := s.reconcileItemID(ctx, lib.ID, itemPath, storage.ItemID(deterministicID("item-movie-"+string(lib.ID)+"-"+itemPath)))
 
 	info, probeErr := s.probe(ctx, itemPath)
 	item := storage.Item{
@@ -330,7 +346,7 @@ func (s *Scanner) walkSeries(ctx context.Context, pool *jobPool, lib storage.Lib
 		seriesFolder := e.Name()
 		seriesPath := filepath.Join(root, seriesFolder)
 		seriesTitle, seriesYear := ParseTitleYear(seriesFolder)
-		seriesID := storage.ItemID(deterministicID("item-series-" + seriesPath))
+		seriesID := storage.ItemID(deterministicID("item-series-" + string(lib.ID) + "-" + seriesPath))
 
 		seriesItem := storage.Item{
 			ID: seriesID, Type: storage.ItemTypeSeries, LibraryID: lib.ID,
@@ -374,7 +390,7 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 			continue
 		}
 		seasonPath := filepath.Join(seriesPath, e.Name())
-		seasonID := storage.ItemID(deterministicID("item-season-" + seasonPath))
+		seasonID := storage.ItemID(deterministicID("item-season-" + string(lib.ID) + "-" + seasonPath))
 		idx := seasonNum
 
 		seasonItem := storage.Item{
@@ -436,7 +452,7 @@ func (s *Scanner) walkEpisodes(ctx context.Context, pool *jobPool, lib storage.L
 }
 
 func (s *Scanner) processEpisode(ctx context.Context, pool *jobPool, lib storage.Library, episodePath string, seriesID, seasonID storage.ItemID, seriesTitle string, seasonNum, episodeNum int, epTitle string, size int64) error {
-	itemID := s.reconcileItemID(ctx, lib.ID, episodePath, storage.ItemID(deterministicID("item-episode-"+episodePath)))
+	itemID := s.reconcileItemID(ctx, lib.ID, episodePath, storage.ItemID(deterministicID("item-episode-"+string(lib.ID)+"-"+episodePath)))
 	name := epTitle
 	if name == "" {
 		name = fmt.Sprintf("Episode %d", episodeNum)

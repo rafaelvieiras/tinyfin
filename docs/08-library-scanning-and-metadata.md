@@ -78,6 +78,28 @@ pipeline (extraction only — this describes observed behavior, no code/names/st
   the season-folder-before-series-root fallback order. Before this, Tinyfin had zero season-level
   `.nfo` support of any kind.
 
+## Item IDs are scoped per library
+
+`internal/scan/id.go`'s `deterministicID` hashes a stable seed into a UUID-shaped item ID so that
+re-scanning the same file upserts the same row instead of duplicating it. Every seed (movie, series,
+season, episode — the four call sites in `scan.go`) now includes the scanning library's own ID, not
+just the file's path.
+
+This was found live in staging, not derived on paper: a leftover manually-created test library
+happened to point at the same host folder as the real "Filmes" library. Before this fix, the seed
+was path-only, and `reconcileItemID`'s existing-row lookup (the mechanism that lets a changed ID
+formula reconcile in place rather than duplicate, see its own doc comment) was scoped to *the
+library currently being scanned* — so it could never see that the other library had already claimed
+that path. Both libraries' scans minted the identical ID for the identical file, and `UpsertItem`'s
+`ON CONFLICT(id)` let whichever scan wrote last silently reassign that row's `LibraryID`. Because
+`Server.refreshAllLibraries` ("Scan All Libraries") launches one goroutine per library concurrently,
+this became a race, nondeterministically splitting one library's real catalog across both — the
+exact symptom Rafael observed (a partial "Filmes" library, with the missing titles showing up under
+the leftover test library instead). Folding `LibraryID` into the hash means two libraries with
+overlapping `Paths` now each mint their own distinct ID for the same physical file, so there is
+nothing left to race over. Covered by `TestScanLibraryOverlappingPathsDoNotCollide`
+(`internal/scan/scan_test.go`).
+
 ## Scan-time resource discipline
 
 The reference implementation has a documented failure mode here too: unbounded concurrent

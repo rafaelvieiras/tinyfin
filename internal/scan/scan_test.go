@@ -644,6 +644,67 @@ func TestScanLibraryReconcilesLegacyItemIDByPath(t *testing.T) {
 	}
 }
 
+// TestScanLibraryOverlappingPathsDoNotCollide reproduces a real staging
+// incident: two libraries (e.g. a leftover manually-created test library)
+// pointing at the same host folder. Before the fix, deterministicID hashed
+// only the file's path, and reconcileItemID's existing-row lookup was
+// scoped to the library currently being scanned — so scanning libB over a
+// path libA had already cataloged minted the *same* item ID libA was
+// already using, and UpsertItem's ON CONFLICT(id) silently reassigned that
+// row's LibraryID from libA to libB. Concurrent "Scan All Libraries" runs
+// (Server.refreshAllLibraries) turned this into a race that split one
+// library's catalog into two nondeterministically — the exact symptom
+// Rafael reported live against tinyfin-staging. Scoping the hash by
+// LibraryID (scan.go's four deterministicID call sites) means the two
+// libraries now mint distinct IDs for the same physical file instead of
+// fighting over one row.
+func TestScanLibraryOverlappingPathsDoNotCollide(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "The Matrix (1999)", "movie.mkv"), "not a real video, just enough to exist")
+
+	st := newTestStore(t)
+	libA := storage.Library{
+		ID: "lib-a", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
+	}
+	libB := storage.Library{
+		ID: "lib-b", Name: "SmokeTestLibRenamed", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
+	}
+	if err := st.UpsertLibrary(context.Background(), libA); err != nil {
+		t.Fatalf("UpsertLibrary(libA): %v", err)
+	}
+	if err := st.UpsertLibrary(context.Background(), libB); err != nil {
+		t.Fatalf("UpsertLibrary(libB): %v", err)
+	}
+
+	s := New(st, metadata.NoopProvider{}, Config{})
+	if _, err := s.ScanLibrary(context.Background(), libA); err != nil {
+		t.Fatalf("ScanLibrary(libA): %v", err)
+	}
+	if _, err := s.ScanLibrary(context.Background(), libB); err != nil {
+		t.Fatalf("ScanLibrary(libB): %v", err)
+	}
+
+	pageA, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &libA.ID, Limit: 10})
+	if err != nil {
+		t.Fatalf("QueryItems(libA): %v", err)
+	}
+	if len(pageA.Items) != 1 {
+		t.Fatalf("len(libA.Items) = %d, want 1 (scanning libB over the same path must not steal libA's item)", len(pageA.Items))
+	}
+
+	pageB, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &libB.ID, Limit: 10})
+	if err != nil {
+		t.Fatalf("QueryItems(libB): %v", err)
+	}
+	if len(pageB.Items) != 1 {
+		t.Fatalf("len(libB.Items) = %d, want 1 (libB should catalog the same file as its own item)", len(pageB.Items))
+	}
+
+	if pageA.Items[0].ID == pageB.Items[0].ID {
+		t.Errorf("libA and libB item IDs collide (%q) — should be distinct per library", pageA.Items[0].ID)
+	}
+}
+
 // TestRefreshItemMovie covers RefreshItem's Movie path: a already-scanned
 // movie with a field cleared (simulating an incomplete/stale item) gets it
 // back after RefreshItem, and the re-fetch reuses the item's own
