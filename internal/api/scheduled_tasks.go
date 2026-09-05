@@ -7,13 +7,27 @@
 // plugins (docs/01), no trickplay subsystem, no subtitle/lyric fetching, no
 // scheduling engine at all — so none of those are fabricated here.
 //
-// This reports exactly one entry: a library scan, the one real background
-// operation this project actually has (POST /Library/Refresh,
-// POST /Items/{itemId}/Refresh — library_admin.go, item_refresh.go), backed
-// by Server.scanState (server.go's scanTracker). The dashboard overview
-// page this list serves only reads Name/State off each entry, so State is
-// the one field that must be live; everything else is a fixed description
-// of a capability that exists, not a schedule that runs it.
+// This reports exactly one entry: a library scan (POST /Library/Refresh,
+// library_admin.go; POST /Items/{itemId}/Refresh when itemId is a library's
+// own ID, item_refresh.go), backed by Server.scanState (server.go's
+// scanTracker). The dashboard overview page this list serves only reads
+// Name/State off each entry, so State is the one field that must be live;
+// everything else is a fixed description of a capability that exists, not
+// a schedule that runs it.
+//
+// Deliberately excluded: POST /Items/{itemId}/Refresh's *other* branch, an
+// ordinary catalog item's per-item metadata refresh (Server.runItemRefresh).
+// An early version of this project routed that through this same
+// scanState, on the reasoning that something should show as "running" for
+// it — found live to be its own bug: it made this task's State report
+// Running (so jellyfin-web's Dashboard "Scan All Libraries" button spins/
+// disables) for a single-item refresh with no library scan running at all.
+// The reference server never conflates the two: a per-item refresh is
+// tracked entirely separately (BaseItemDto.RefreshProgress/RefreshStatus on
+// the item itself, plus a per-item RefreshProgress WebSocket message) and
+// never touches GET /ScheduledTasks or its ScheduledTasksInfo WebSocket
+// push at all. Tinyfin doesn't implement that per-item mechanism yet — a
+// documented gap (docs/11), not a reason to borrow this one.
 package api
 
 import (

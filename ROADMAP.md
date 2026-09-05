@@ -345,6 +345,82 @@ what starting Phase 1 actually requires next.
       against a rebuilt `tinyfin-staging` with a real jellyfin-web build via Playwright: clicking the
       button now fires `POST /ScheduledTasks/Running/RefreshLibrary` → `204`, and a real scan runs to
       completion, no more permanent spinner.
+- [x] Fixed: per-item "Refresh metadata" (`POST /Items/{itemId}/Refresh` against an ordinary catalog
+      item, not a library) had no real effect, reported by Rafael after refreshing a series' metadata
+      from the dashboard and seeing nothing change or run. Root cause: `internal/api/item_refresh.go`'s
+      non-library branch was an intentional "honest no-op" — it confirmed the item existed and stopped
+      there, never re-reading anything at all — a documented gap, not a bug, until this real client
+      interaction motivated closing it. First pass added `scan.Scanner.RefreshItem`
+      (`internal/scan/scan.go`) calling only the remote `metadata.Provider`, reusing each item's
+      already-known `ProviderIDs` as the lookup's `ExternalIDs` (a Season/Episode query carries its
+      *parent series'* Tmdb ID, matching what `TMDBProvider.resolveSeriesID` expects). Rafael caught
+      that this missed the actual point: the reported series' media folder already had a `tvshow.nfo`
+      and artwork — Tinyfin's own scanner already knows how to read both, no TMDB key needed at all —
+      and RefreshItem never re-read either. Fixed by also re-running the same local-artwork-seed and
+      `.nfo`-apply steps `ScanLibrary` itself runs per item, in the same order (local artwork seeded,
+      remote provider runs, local `.nfo` applied last so it overrides the provider — "NFO overrides
+      provider" is this scanner's existing convention, not new). Series/Season store no filesystem
+      `Path` of their own (only Movie/Episode do) — their folder is derived from one child episode's
+      `Path` instead (`seriesFolder`/`seasonFolder`). Wired into the same `scanState`/
+      `GET /ScheduledTasks` tracking a library scan already uses (`Server.runItemRefresh`,
+      `server.go`), so a real per-item refresh now shows as "Running" on the dashboard the same way a
+      library scan does. Rafael then asked whether this local-vs-remote precedence had actually been
+      validated against the reference server rather than just assumed — it hadn't, so this became an
+      explicit clean-room C# extraction pass (AGENTS.md's clean-room requirement: an explicit request
+      is its own sufficient reason), reading `jellyfin/jellyfin`'s `MetadataService.cs` and
+      `ItemImageProvider.cs`. Result: the field-level merge order (local wins, remote fills gaps, old
+      value kept for the rest) already matched exactly — no change needed. Images did not: the
+      reference server never lets a remote provider replace an image the item already has unless
+      `ReplaceAllImages=true`, while Tinyfin always let the provider win regardless, because that query
+      param was never read at all. Fixed `internal/scan/scan.go`'s `storeProviderImage` to check for an
+      existing `ImageRef` of the same kind first, and threaded `ReplaceAllImages` from the HTTP query
+      param through `RefreshItem`; every `ScanLibrary` call site passes `false` (a routine scan/re-scan
+      doesn't replace existing images either, matching the reference server's default). See `docs/08`'s
+      "Local-vs-remote precedence" section for the full validated findings. Covered by new tests in
+      `internal/scan/scan_test.go` (remote re-fetch with a fake provider, series-ID propagation to
+      episodes, unsupported-type no-op, the actual bug report's scenario — a series with no provider
+      configured picking up a `tvshow.nfo`/poster added to its media folder — and
+      `ReplaceAllImages=false` vs. `true` behavior) and `internal/api/item_refresh_test.go`. Confirmed
+      live against `tinyfin-staging` end to end, including with a real TMDB key configured after the
+      fact: the exact reported series (`Mortal Kombat - Defensores da Terra`) went from `Overview`
+      empty/`ProviderIds: null`/only a `Logo` image to a fully populated `Overview`/`Genres`/
+      `ProviderIds`/`Primary`+`Backdrop` images after a single `POST /Items/{itemId}/Refresh`, verified
+      both via the live HTTP response and directly against the SQLite row.
+      One more round: Rafael then asked whether a per-item refresh job would show up as "scanning
+      library" on the dashboard. It would have — `Server.runItemRefresh` shared `scanState` with
+      `runScan` (the same tracker backing `GET /ScheduledTasks`'s one synthetic "Scan Media Libraries"
+      task), so refreshing any single item's metadata made jellyfin-web's Dashboard "Scan All
+      Libraries" button spin/disable itself with zero library scans running — a variant of the exact
+      bug this ROADMAP entry above started from. Checking jellyfin-web's own source confirmed the
+      reference server never conflates the two: a per-item refresh is tracked entirely separately
+      (`BaseItemDto.RefreshProgress`/`RefreshStatus` on the item, plus a per-item `RefreshProgress`
+      WebSocket message scoped by `ItemId`), never touching `GET /ScheduledTasks` at all. Fixed by
+      making `runItemRefresh` stop touching `scanState`/`notifyScheduledTasks` entirely — it now just
+      calls `scan.Scanner.RefreshItem` and logs the outcome. Tinyfin has no per-item progress indicator
+      of its own yet (no `RefreshProgress`/`RefreshStatus` DTO fields, no per-item WebSocket push) —
+      left as a documented gap (`docs/11`) rather than faked via the wrong tracker again. Regression-
+      guarded by `TestItemRefreshDoesNotAffectScheduledTasks` (`internal/api/scheduled_tasks_test.go`).
+      One more round: Rafael reported a third real series (`MIB - Homens de Preto`) whose refresh
+      also seemed to do nothing. Investigation (SQLite + filesystem inspection of the real media
+      folder) found its `tvshow.nfo` living inside `Season 01/` instead of the series root — a
+      misplaced file, not a Tinyfin bug: the reference server's own `SeriesNfoProvider` only ever
+      looks for `tvshow.nfo` in the series root, so the same file in the same place would produce
+      the same no-op on the reference server too (confirmed by reading that source). This did
+      surface a real, separate gap though: the reference server has a second, narrower provider for
+      exactly this location — `SeriesNfoSeasonProvider`/`SeriesNfoSeasonParser` — which reads a
+      season folder's own `tvshow.nfo` (falling back to the series root) but extracts only a
+      `<namedseason number="N">Custom Name</namedseason>` override for that one season's display
+      name, ignoring every other field. Tinyfin had no season-level `.nfo` support of any kind.
+      Rafael asked for it to be implemented. Added `internal/scan/nfo.go`'s `applySeasonNFO`
+      (season-folder-then-series-root lookup, `<namedseason>`-only extraction, overlays only
+      `item.Name`), wired into both a fresh scan (`walkSeasons`) and `RefreshItem`'s
+      `refreshLocalNFO` (new Season case). See `docs/08`'s "Local-vs-remote precedence" section.
+      Covered by `TestScanLibraryAppliesNamedSeason` and `TestRefreshItemSeasonAppliesNamedSeason`
+      (`internal/scan/scan_test.go`), the latter also proving the season-folder-over-series-root
+      priority. This does not by itself fix `MIB - Homens de Preto`'s metadata gap — its misplaced
+      `tvshow.nfo` has no `<namedseason>` tag, so it stays a no-op on both servers until the file is
+      moved to the series root, which was reported back to Rafael as the actual fix needed on the
+      media library side.
 - [ ] TVDB provider — not implemented (see above).
 - [x] **Goal:** a freshly scanned library gets enriched metadata without Tinyfin implementing its
       own scraping. Verified via `internal/scan`'s test suite (movies and TV shows, with and

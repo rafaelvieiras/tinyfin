@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/rafaelvieiras/tinyfin/internal/storage"
 	"github.com/rafaelvieiras/tinyfin/internal/storage/sqlite"
 )
 
@@ -267,5 +269,52 @@ func TestScheduledTaskStartRequiresAdmin(t *testing.T) {
 	defer nonAdminResp.Body.Close()
 	if nonAdminResp.StatusCode != http.StatusForbidden {
 		t.Fatalf("non-admin status = %d, want 403", nonAdminResp.StatusCode)
+	}
+}
+
+// TestItemRefreshDoesNotAffectScheduledTasks is a regression guard for a
+// real bug: an earlier version of Server.runItemRefresh (item_refresh.go)
+// shared scanState with runScan, so refreshing a single ordinary catalog
+// item's metadata made this endpoint report the "Scan Media Libraries" task
+// as Running — which is exactly what makes jellyfin-web's Dashboard "Scan
+// All Libraries" button spin/disable itself (scheduledTaskLibraryScanID's
+// doc comment), with no library scan running at all. Rafael caught this by
+// asking whether a per-item job would show up as "scanning library" on the
+// dashboard; checking jellyfin-web's own source confirmed the reference
+// server never conflates the two (an item refresh is tracked entirely
+// separately, never touching GET /ScheduledTasks or its ScheduledTasksInfo
+// WebSocket push). runItemRefresh no longer touches scanState at all — this
+// proves it stays that way.
+func TestItemRefreshDoesNotAffectScheduledTasks(t *testing.T) {
+	ts, st, srv := newTestServerWithScheduledTasks(t)
+	admin := createTestAdminUser(t, st, "admin", "adminpass")
+	token := loginToken(t, ts.URL, admin.Name, "adminpass")
+	get := authedClient(t, ts.URL, token)
+
+	libID := createTestLibrary(t, st, "Movies", storage.CollectionTypeMovies)
+	if err := st.UpsertItem(context.Background(), storage.Item{
+		Type: storage.ItemTypeMovie, LibraryID: libID, Name: "Refresh Movie",
+	}); err != nil {
+		t.Fatalf("UpsertItem: %v", err)
+	}
+	itemID := mustFindItemByName(t, st, libID, "Refresh Movie")
+
+	// runItemRefresh is unexported but reachable directly (same package,
+	// same as srv.scanState.begin/end elsewhere in this file) — called
+	// synchronously here, unlike the real (goroutine-backed) HTTP route, so
+	// the assertions below observe its aftermath deterministically.
+	srv.runItemRefresh(itemID, false)
+
+	running, lastStart, lastEnd, _ := srv.scanState.snapshot()
+	if running {
+		t.Error("scanState reports running after an item refresh, want untouched")
+	}
+	if !lastStart.IsZero() || !lastEnd.IsZero() {
+		t.Errorf("scanState.lastStart/lastEnd = %v/%v, want zero (item refresh must never touch scanState)", lastStart, lastEnd)
+	}
+
+	tasks := decodeScheduledTasks(t, get(http.MethodGet, "/ScheduledTasks"))
+	if len(tasks) != 1 || tasks[0].State != "Idle" || tasks[0].LastExecutionResult != nil {
+		t.Errorf("ScheduledTasks after item refresh = %+v, want the one task still Idle with no LastExecutionResult", tasks)
 	}
 }

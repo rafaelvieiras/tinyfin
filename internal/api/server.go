@@ -239,6 +239,35 @@ func (s *Server) runScan(lib storage.Library) {
 		lib.Name, stats.ItemsScanned, stats.ItemsEnriched, len(stats.Errors))
 }
 
+// runItemRefresh re-enriches one catalog item against the configured
+// metadata.Provider (scanner.RefreshItem) in the background.
+//
+// Deliberately does NOT touch scanState/notifyScheduledTasks the way runScan
+// does: an early version of this function did, on the reasoning that
+// item_refresh.go's single-item branch used to be an honest no-op and
+// sharing scanState would at least make *something* show as running once it
+// stopped being one. Rafael caught the real bug that introduced: GET
+// /ScheduledTasks reports exactly one synthetic task, "Scan Media
+// Libraries" (Key/Id "RefreshLibrary", scheduled_tasks.go), and
+// jellyfin-web's Dashboard "Scan All Libraries" button spins/disables
+// itself for as long as that one task's State isn't Idle — sharing
+// scanState meant refreshing any single item's metadata made that button
+// spin too, with no library scan running at all, a variant of the exact bug
+// this session opened with. Confirmed live in jellyfin-web's own source: a
+// single-item refresh never touches GET /ScheduledTasks or the
+// ScheduledTasksInfo WebSocket message at all — it's tracked entirely
+// separately, via BaseItemDto.RefreshProgress/RefreshStatus fields on the
+// item itself plus a per-item RefreshProgress WebSocket message
+// (react-client's emby-itemrefreshindicator/RefreshIndicator.tsx,
+// subscribing by ItemId). Tinyfin doesn't implement that per-item
+// mechanism yet — a documented gap (docs/11), not something this function
+// should paper over by borrowing the library-scan tracker.
+func (s *Server) runItemRefresh(itemID storage.ItemID, replaceImages bool) {
+	if err := s.scanner.RefreshItem(context.Background(), itemID, replaceImages); err != nil {
+		log.Printf("api: refreshing item %s: %v", itemID, err)
+	}
+}
+
 // Handler returns the complete http.Handler for the server: case-insensitive
 // path normalization (routing.go), then route dispatch wrapped in the
 // auth-parsing middleware (see auth.go for why this is a single

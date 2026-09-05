@@ -644,6 +644,458 @@ func TestScanLibraryReconcilesLegacyItemIDByPath(t *testing.T) {
 	}
 }
 
+// TestRefreshItemMovie covers RefreshItem's Movie path: a already-scanned
+// movie with a field cleared (simulating an incomplete/stale item) gets it
+// back after RefreshItem, and the re-fetch reuses the item's own
+// already-known Tmdb ID (Query.ExternalIDs) rather than re-searching by
+// title from scratch.
+func TestRefreshItemMovie(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "The Matrix (1999)", "movie.mkv"), "not a real video, just enough to exist")
+
+	st := newTestStore(t)
+	provider := &fakeProvider{}
+	s := New(st, provider, Config{})
+
+	lib := storage.Library{
+		ID: "lib-movies", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
+	}
+	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("UpsertLibrary: %v", err)
+	}
+	if _, err := s.ScanLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("ScanLibrary: %v", err)
+	}
+
+	page, err := st.QueryItems(context.Background(), storage.ItemFilter{
+		LibraryID: &lib.ID, ItemTypes: []storage.ItemType{storage.ItemTypeMovie}, Limit: 10,
+	})
+	if err != nil || len(page.Items) != 1 {
+		t.Fatalf("QueryItems: err=%v, len=%d, want 1", err, len(page.Items))
+	}
+	item := page.Items[0]
+
+	item.Overview = ""
+	if err := st.UpsertItem(context.Background(), item); err != nil {
+		t.Fatalf("UpsertItem (clearing Overview): %v", err)
+	}
+
+	if err := s.RefreshItem(context.Background(), item.ID, false); err != nil {
+		t.Fatalf("RefreshItem: %v", err)
+	}
+
+	after, err := st.GetItem(context.Background(), item.ID)
+	if err != nil {
+		t.Fatalf("GetItem after RefreshItem: %v", err)
+	}
+	if after.Overview == "" {
+		t.Error("Overview still empty after RefreshItem, want provider re-enrichment applied")
+	}
+
+	last := provider.queries[len(provider.queries)-1]
+	if last.ExternalIDs["Tmdb"] != "603" {
+		t.Errorf("RefreshItem query ExternalIDs[Tmdb] = %q, want %q (item's own already-known ProviderIDs)", last.ExternalIDs["Tmdb"], "603")
+	}
+}
+
+// TestRefreshItemEpisodeUsesSeriesExternalID covers RefreshItem's
+// Season/Episode path: the query it sends must carry the *parent series'*
+// ProviderIDs as ExternalIDs (what TMDBProvider.resolveSeriesID expects,
+// tmdb.go), not the episode's own — an episode has no independent Tmdb ID
+// in this project's Result shape, only the series does.
+func TestRefreshItemEpisodeUsesSeriesExternalID(t *testing.T) {
+	root := t.TempDir()
+	base := filepath.Join(root, "Dragon Ball (1986)", "Season 01")
+	writeFile(t, filepath.Join(base, "Dragon Ball - S01E01 - The Secret of the Dragon Balls.mkv"), "ep1")
+
+	st := newTestStore(t)
+	provider := &fakeProvider{}
+	s := New(st, provider, Config{})
+
+	lib := storage.Library{
+		ID: "lib-tv", Name: "Séries", CollectionType: storage.CollectionTypeTVShows, Paths: []string{root},
+	}
+	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("UpsertLibrary: %v", err)
+	}
+	if _, err := s.ScanLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("ScanLibrary: %v", err)
+	}
+
+	epPage, err := st.QueryItems(context.Background(), storage.ItemFilter{
+		LibraryID: &lib.ID, ItemTypes: []storage.ItemType{storage.ItemTypeEpisode}, Limit: 10,
+	})
+	if err != nil || len(epPage.Items) != 1 {
+		t.Fatalf("episode query: err=%v, len=%d, want 1", err, len(epPage.Items))
+	}
+	ep := epPage.Items[0]
+
+	if err := s.RefreshItem(context.Background(), ep.ID, false); err != nil {
+		t.Fatalf("RefreshItem: %v", err)
+	}
+
+	last := provider.queries[len(provider.queries)-1]
+	if last.Kind != metadata.KindEpisode {
+		t.Fatalf("last query Kind = %q, want %q", last.Kind, metadata.KindEpisode)
+	}
+	if last.SeriesTitle != "Dragon Ball" {
+		t.Errorf("last query SeriesTitle = %q, want %q", last.SeriesTitle, "Dragon Ball")
+	}
+	if last.ExternalIDs["Tmdb"] != "12" {
+		t.Errorf("last query ExternalIDs[Tmdb] = %q, want %q (parent series' Tmdb ID, from the earlier scan's enrichment)", last.ExternalIDs["Tmdb"], "12")
+	}
+}
+
+// TestRefreshItemUnsupportedTypeNoOp covers an ItemType this scanner has no
+// enrichment path for at all (same set ScanLibrary itself never enriches,
+// docs/08's video-first v1 scope) — RefreshItem must not call the provider
+// or error, just do nothing.
+func TestRefreshItemUnsupportedTypeNoOp(t *testing.T) {
+	st := newTestStore(t)
+	provider := &fakeProvider{}
+	s := New(st, provider, Config{})
+
+	lib := storage.Library{ID: "lib-music", Name: "Música", CollectionType: storage.CollectionTypeMusic}
+	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("UpsertLibrary: %v", err)
+	}
+	if err := st.UpsertItem(context.Background(), storage.Item{
+		ID: "item-song", Type: storage.ItemTypeAudio, LibraryID: lib.ID, Name: "Some Song",
+	}); err != nil {
+		t.Fatalf("UpsertItem: %v", err)
+	}
+
+	if err := s.RefreshItem(context.Background(), "item-song", false); err != nil {
+		t.Fatalf("RefreshItem: %v", err)
+	}
+	if len(provider.queries) != 0 {
+		t.Errorf("provider.queries = %v, want none — an Audio item should never reach the provider", provider.queries)
+	}
+}
+
+// TestRefreshItemSeriesAppliesLocalNFOAndArtwork is the exact regression
+// case a real bug report described: a series scanned with no metadata
+// provider configured (NoopProvider) stays incomplete, and its media
+// folder's own tvshow.nfo/poster.jpg — which ScanLibrary already knows how
+// to read — never gets picked up by a later "Refresh metadata" click,
+// because the old RefreshItem only ever asked the remote Provider (which
+// still has nothing) and never re-read anything local. Series stores no
+// Path of its own (RefreshItem's doc comment), so this also exercises
+// seriesFolder's derive-from-a-child-episode path.
+func TestRefreshItemSeriesAppliesLocalNFOAndArtwork(t *testing.T) {
+	root := t.TempDir()
+	seriesDir := filepath.Join(root, "Mortal Kombat")
+	base := filepath.Join(seriesDir, "Season 01")
+	writeFile(t, filepath.Join(base, "Mortal Kombat - S01E01 - Pilot.mkv"), "ep1")
+
+	st := newTestStore(t)
+	s := New(st, metadata.NoopProvider{}, Config{})
+
+	lib := storage.Library{
+		ID: "lib-mk", Name: "Séries", CollectionType: storage.CollectionTypeTVShows, Paths: []string{root},
+	}
+	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("UpsertLibrary: %v", err)
+	}
+	if _, err := s.ScanLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("ScanLibrary: %v", err)
+	}
+
+	seriesPage, err := st.QueryItems(context.Background(), storage.ItemFilter{
+		LibraryID: &lib.ID, ItemTypes: []storage.ItemType{storage.ItemTypeSeries}, Limit: 10,
+	})
+	if err != nil || len(seriesPage.Items) != 1 {
+		t.Fatalf("series query: err=%v, len=%d, want 1", err, len(seriesPage.Items))
+	}
+	series := seriesPage.Items[0]
+	if series.Overview != "" {
+		t.Fatalf("series.Overview = %q before adding a local .nfo, want empty (sanity check)", series.Overview)
+	}
+
+	// The media folder gaining a tvshow.nfo/poster.jpg after the initial
+	// scan (or simply never having been read before) is exactly the bug
+	// report's scenario.
+	writeFile(t, filepath.Join(seriesDir, "tvshow.nfo"), `<tvshow>
+  <title>Mortal Kombat - Defensores da Terra</title>
+  <plot>A animated series from the local tvshow.nfo.</plot>
+  <genre>Action</genre>
+</tvshow>`)
+	writeFile(t, filepath.Join(seriesDir, "poster.jpg"), "fake-poster-bytes")
+
+	if err := s.RefreshItem(context.Background(), series.ID, false); err != nil {
+		t.Fatalf("RefreshItem: %v", err)
+	}
+
+	after, err := st.GetItem(context.Background(), series.ID)
+	if err != nil {
+		t.Fatalf("GetItem after RefreshItem: %v", err)
+	}
+	wantOverview := "A animated series from the local tvshow.nfo."
+	if after.Overview != wantOverview {
+		t.Errorf("Overview after RefreshItem = %q, want %q (local tvshow.nfo must be re-read)", after.Overview, wantOverview)
+	}
+
+	refs, err := st.GetImageRefs(context.Background(), series.ID, "Primary")
+	if err != nil {
+		t.Fatalf("GetImageRefs: %v", err)
+	}
+	if len(refs) != 1 {
+		t.Fatalf("len(image refs) = %d, want 1 (local poster.jpg picked up by RefreshItem)", len(refs))
+	}
+}
+
+// TestScanLibraryAppliesNamedSeason proves a fresh scan picks up a
+// <namedseason> override from the series-root tvshow.nfo onto the matching
+// Season item's Name — validated against the reference server's
+// SeriesNfoSeasonProvider/SeriesNfoSeasonParser (docs/08's "Local-vs-remote
+// precedence" section): every other <tvshow> field in that same file
+// (title, plot, ...) is series-level and must NOT leak onto the Season
+// item, so this also asserts the Season's Name is the override, not the
+// series' own title.
+func TestScanLibraryAppliesNamedSeason(t *testing.T) {
+	root := t.TempDir()
+	seriesDir := filepath.Join(root, "Mortal Kombat")
+	base := filepath.Join(seriesDir, "Season 01")
+	writeFile(t, filepath.Join(base, "Mortal Kombat - S01E01 - Pilot.mkv"), "ep1")
+	writeFile(t, filepath.Join(seriesDir, "tvshow.nfo"), `<tvshow>
+  <title>Mortal Kombat - Defensores da Terra</title>
+  <namedseason number="1">Temporada Especial</namedseason>
+</tvshow>`)
+
+	st := newTestStore(t)
+	s := New(st, metadata.NoopProvider{}, Config{})
+
+	lib := storage.Library{
+		ID: "lib-namedseason", Name: "Séries", CollectionType: storage.CollectionTypeTVShows, Paths: []string{root},
+	}
+	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("UpsertLibrary: %v", err)
+	}
+	if _, err := s.ScanLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("ScanLibrary: %v", err)
+	}
+
+	seasonPage, err := st.QueryItems(context.Background(), storage.ItemFilter{
+		LibraryID: &lib.ID, ItemTypes: []storage.ItemType{storage.ItemTypeSeason}, Limit: 10,
+	})
+	if err != nil || len(seasonPage.Items) != 1 {
+		t.Fatalf("season query: err=%v, len=%d, want 1", err, len(seasonPage.Items))
+	}
+	if got, want := seasonPage.Items[0].Name, "Temporada Especial"; got != want {
+		t.Errorf("season Name = %q, want %q (from <namedseason>)", got, want)
+	}
+}
+
+// TestRefreshItemSeasonAppliesNamedSeason is TestScanLibraryAppliesNamedSeason's
+// per-item-refresh counterpart, and also proves the season's own folder
+// takes priority over the series root when both have a tvshow.nfo — the
+// same lookup order as the reference server's SeriesNfoSeasonProvider.
+func TestRefreshItemSeasonAppliesNamedSeason(t *testing.T) {
+	root := t.TempDir()
+	seriesDir := filepath.Join(root, "Mortal Kombat")
+	base := filepath.Join(seriesDir, "Season 01")
+	writeFile(t, filepath.Join(base, "Mortal Kombat - S01E01 - Pilot.mkv"), "ep1")
+
+	st := newTestStore(t)
+	s := New(st, metadata.NoopProvider{}, Config{})
+
+	lib := storage.Library{
+		ID: "lib-namedseason-refresh", Name: "Séries", CollectionType: storage.CollectionTypeTVShows, Paths: []string{root},
+	}
+	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("UpsertLibrary: %v", err)
+	}
+	if _, err := s.ScanLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("ScanLibrary: %v", err)
+	}
+
+	seasonPage, err := st.QueryItems(context.Background(), storage.ItemFilter{
+		LibraryID: &lib.ID, ItemTypes: []storage.ItemType{storage.ItemTypeSeason}, Limit: 10,
+	})
+	if err != nil || len(seasonPage.Items) != 1 {
+		t.Fatalf("season query: err=%v, len=%d, want 1", err, len(seasonPage.Items))
+	}
+	season := seasonPage.Items[0]
+
+	// A series-root tvshow.nfo with a <namedseason> for a season that has no
+	// tvshow.nfo of its own — the fallback path.
+	writeFile(t, filepath.Join(seriesDir, "tvshow.nfo"), `<tvshow>
+  <namedseason number="1">From Series Root</namedseason>
+</tvshow>`)
+	if err := s.RefreshItem(context.Background(), season.ID, false); err != nil {
+		t.Fatalf("RefreshItem: %v", err)
+	}
+	after, err := st.GetItem(context.Background(), season.ID)
+	if err != nil {
+		t.Fatalf("GetItem after RefreshItem: %v", err)
+	}
+	if got, want := after.Name, "From Series Root"; got != want {
+		t.Errorf("season Name = %q, want %q (fallback to series-root tvshow.nfo)", got, want)
+	}
+
+	// The season's own folder gaining a tvshow.nfo must win over the
+	// series-root one from here on.
+	writeFile(t, filepath.Join(base, "tvshow.nfo"), `<tvshow>
+  <namedseason number="1">From Season Folder</namedseason>
+</tvshow>`)
+	if err := s.RefreshItem(context.Background(), season.ID, false); err != nil {
+		t.Fatalf("RefreshItem: %v", err)
+	}
+	after, err = st.GetItem(context.Background(), season.ID)
+	if err != nil {
+		t.Fatalf("GetItem after second RefreshItem: %v", err)
+	}
+	if got, want := after.Name, "From Season Folder"; got != want {
+		t.Errorf("season Name = %q, want %q (season's own folder must win over series root)", got, want)
+	}
+}
+
+// TestRefreshItemMovieAppliesLocalNFOAndArtwork is TestRefreshItemMovie's
+// counterpart for the local (not remote-provider) re-read path: a movie's
+// own folder gaining a movie.nfo/poster.jpg must be picked up by
+// RefreshItem too, not just by a full ScanLibrary pass.
+func TestRefreshItemMovieAppliesLocalNFOAndArtwork(t *testing.T) {
+	root := t.TempDir()
+	movieDir := filepath.Join(root, "The Matrix (1999)")
+	writeFile(t, filepath.Join(movieDir, "movie.mkv"), "not a real video, just enough to exist")
+
+	st := newTestStore(t)
+	s := New(st, metadata.NoopProvider{}, Config{})
+
+	lib := storage.Library{
+		ID: "lib-movies-nfo", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
+	}
+	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("UpsertLibrary: %v", err)
+	}
+	if _, err := s.ScanLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("ScanLibrary: %v", err)
+	}
+
+	page, err := st.QueryItems(context.Background(), storage.ItemFilter{
+		LibraryID: &lib.ID, ItemTypes: []storage.ItemType{storage.ItemTypeMovie}, Limit: 10,
+	})
+	if err != nil || len(page.Items) != 1 {
+		t.Fatalf("QueryItems: err=%v, len=%d, want 1", err, len(page.Items))
+	}
+	item := page.Items[0]
+
+	writeFile(t, filepath.Join(movieDir, "movie.nfo"), `<movie>
+  <title>The Matrix</title>
+  <plot>Overview from a .nfo added after the initial scan.</plot>
+</movie>`)
+	writeFile(t, filepath.Join(movieDir, "poster.jpg"), "fake-poster-bytes")
+
+	if err := s.RefreshItem(context.Background(), item.ID, false); err != nil {
+		t.Fatalf("RefreshItem: %v", err)
+	}
+
+	after, err := st.GetItem(context.Background(), item.ID)
+	if err != nil {
+		t.Fatalf("GetItem after RefreshItem: %v", err)
+	}
+	want := "Overview from a .nfo added after the initial scan."
+	if after.Overview != want {
+		t.Errorf("Overview after RefreshItem = %q, want %q (local movie.nfo must be re-read)", after.Overview, want)
+	}
+
+	refs, err := st.GetImageRefs(context.Background(), item.ID, "Primary")
+	if err != nil {
+		t.Fatalf("GetImageRefs: %v", err)
+	}
+	if len(refs) != 1 {
+		t.Fatalf("len(image refs) = %d, want 1 (local poster.jpg picked up by RefreshItem)", len(refs))
+	}
+}
+
+// TestRefreshItemImagesRespectReplaceAllImages validates the fix for a real
+// divergence from the reference server found by reading its actual
+// ItemImageProvider source (docs/08's "Local-vs-remote precedence"
+// section): a Provider-returned image must never overwrite an image kind
+// the item already has unless the caller explicitly asked to replace it —
+// Tinyfin used to always let the Provider win regardless.
+func TestRefreshItemImagesRespectReplaceAllImages(t *testing.T) {
+	root := t.TempDir()
+	movieDir := filepath.Join(root, "The Matrix (1999)")
+	writeFile(t, filepath.Join(movieDir, "movie.mkv"), "not a real video, just enough to exist")
+	writeFile(t, filepath.Join(movieDir, "poster.jpg"), "local-poster-bytes")
+
+	imgSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("remote-poster-bytes"))
+	}))
+	defer imgSrv.Close()
+
+	st := newTestStore(t)
+	provider := &fakeProvider{imageURL: imgSrv.URL + "/poster.jpg"}
+	imageDir := t.TempDir()
+	s := New(st, provider, Config{ImageDir: imageDir})
+
+	lib := storage.Library{
+		ID: "lib-replace-images", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
+	}
+	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("UpsertLibrary: %v", err)
+	}
+	if _, err := s.ScanLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("ScanLibrary: %v", err)
+	}
+
+	page, err := st.QueryItems(context.Background(), storage.ItemFilter{
+		LibraryID: &lib.ID, ItemTypes: []storage.ItemType{storage.ItemTypeMovie}, Limit: 10,
+	})
+	if err != nil || len(page.Items) != 1 {
+		t.Fatalf("QueryItems: err=%v, len=%d, want 1", err, len(page.Items))
+	}
+	item := page.Items[0]
+
+	assertPrimaryBasename := func(want string) {
+		t.Helper()
+		refs, err := st.GetImageRefs(context.Background(), item.ID, "Primary")
+		if err != nil {
+			t.Fatalf("GetImageRefs: %v", err)
+		}
+		if len(refs) != 1 {
+			t.Fatalf("len(Primary image refs) = %d, want 1", len(refs))
+		}
+		if got := filepath.Base(refs[0].Path); got != want {
+			t.Errorf("Primary image basename = %q, want %q", got, want)
+		}
+	}
+
+	// A fresh ScanLibrary pass already seeds the local poster.jpg before
+	// enrich runs, so even a first scan must not let the Provider overwrite
+	// it (ScanLibrary always calls enrich with replaceImages=false).
+	assertPrimaryBasename("poster.jpg")
+
+	// RefreshItem(..., false) — the caller didn't ask to replace images
+	// (ReplaceAllImages=false, jellyfin-web's dashboard action's own
+	// default) — must leave the existing local image alone even though the
+	// Provider has a different one to offer.
+	if err := s.RefreshItem(context.Background(), item.ID, false); err != nil {
+		t.Fatalf("RefreshItem(replaceImages=false): %v", err)
+	}
+	assertPrimaryBasename("poster.jpg")
+
+	// RefreshItem(..., true) — an explicit ReplaceAllImages=true request —
+	// must let the Provider's image win.
+	if err := s.RefreshItem(context.Background(), item.ID, true); err != nil {
+		t.Fatalf("RefreshItem(replaceImages=true): %v", err)
+	}
+	refs, err := st.GetImageRefs(context.Background(), item.ID, "Primary")
+	if err != nil {
+		t.Fatalf("GetImageRefs: %v", err)
+	}
+	if len(refs) != 1 {
+		t.Fatalf("len(Primary image refs) = %d, want 1", len(refs))
+	}
+	if filepath.Base(refs[0].Path) == "poster.jpg" {
+		t.Error("Primary image still the local poster.jpg after RefreshItem(replaceImages=true), want the Provider's image")
+	}
+	if _, err := os.Stat(refs[0].Path); err != nil {
+		t.Errorf("downloaded provider image file missing at %s: %v", refs[0].Path, err)
+	}
+}
+
 // draw fills every pixel of img with c — image/draw would pull in another
 // import for one call this test only needs once.
 func draw(img *image.RGBA, c color.RGBA) {

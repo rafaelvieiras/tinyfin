@@ -37,12 +37,17 @@ func TestItemRefreshLibrary(t *testing.T) {
 	}
 }
 
-// TestItemRefreshItemIsHonestNoOp covers the single-item form: an existing
-// catalog item's ID returns 204 (the request is acknowledged) without
-// triggering any real metadata re-fetch — this project has no such mechanism
-// yet (item_refresh.go's doc comment). Regression guard: the item's stored
-// fields must be untouched by the call.
-func TestItemRefreshItemIsHonestNoOp(t *testing.T) {
+// TestItemRefreshItemNoProviderConfigured covers the single-item form with
+// the server's default NoopProvider (newTestServer sets no TMDBAPIKey): the
+// route now queues a real re-enrichment attempt (Server.runItemRefresh ->
+// scan.Scanner.RefreshItem, item_refresh.go), but with no provider
+// configured that attempt finds nothing — metadata.ErrNotFound, silently, by
+// the same "a provider miss is a normal outcome" convention ScanLibrary
+// itself follows — so the item's stored fields still end up unchanged.
+// Distinct from item stays unchanged because there's no mechanism at all
+// (the old, now-fixed behavior): TestRefreshItemMovie (internal/scan)
+// covers the real re-fetch path with a provider configured.
+func TestItemRefreshItemNoProviderConfigured(t *testing.T) {
 	ts, st := newTestServer(t)
 	admin := createTestAdminUser(t, st, "admin", "adminpass")
 	token := loginToken(t, ts.URL, admin.Name, "adminpass")
@@ -62,12 +67,16 @@ func TestItemRefreshItemIsHonestNoOp(t *testing.T) {
 		t.Fatalf("POST /Items/{itemId}/Refresh status = %d, want 204", resp.StatusCode)
 	}
 
+	// runItemRefresh is queued in a goroutine — give it a moment before
+	// checking the item, same pattern TestItemRefreshLibrary already uses
+	// for runScan.
+	time.Sleep(50 * time.Millisecond)
 	after, err := st.GetItem(context.Background(), itemID)
 	if err != nil {
 		t.Fatalf("GetItem after refresh: %v", err)
 	}
 	if after.Name != "Refresh Movie" {
-		t.Errorf("item.Name after refresh = %q, want unchanged %q (no-op, no real refresh mechanism exists)", after.Name, "Refresh Movie")
+		t.Errorf("item.Name after refresh = %q, want unchanged %q (NoopProvider always misses)", after.Name, "Refresh Movie")
 	}
 }
 

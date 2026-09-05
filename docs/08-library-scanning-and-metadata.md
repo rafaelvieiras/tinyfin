@@ -29,6 +29,55 @@ composes the result into the shape the API surface needs.
   in `00-decision-log.md` for the specific constraints this imposes and the estimated migration
   cost if they hold.
 
+## Local-vs-remote precedence (validated against the reference server)
+
+When both a local source (a Kodi-style sidecar `.nfo`, folder-convention artwork) and the configured
+remote Provider have data for the same item, which one wins was originally a convention this project
+adopted from Kodi's own documented `.nfo` semantics, not something checked against the reference
+server. Rafael asked for that check explicitly (an explicit request is its own sufficient reason to
+read the reference server's C# source, AGENTS.md's clean-room requirement) once a real per-item
+refresh feature made the question concrete. Findings, from `jellyfin/jellyfin`'s metadata-refresh
+pipeline (extraction only — this describes observed behavior, no code/names/structure carried over):
+
+- **Field-level metadata** (Overview, Genres, ProductionYear, ProviderIDs, ...): the reference server
+  gathers local-provider data first, then lets remote providers fill in *only whatever field the local
+  pass left empty* — a local value present for a field is never overwritten by a remote one. Whatever
+  neither source provides keeps the item's prior stored value (a refresh is never destructive by
+  omission). This is exactly for a `MetadataRefreshMode=Default, ReplaceAllMetadata=false` request —
+  precisely the query jellyfin-web's dashboard "Refresh metadata" action sends (this doc's `POST
+  /Items/{itemId}/Refresh` catalog entry, `docs/11`). **Tinyfin's existing convention (`enrich` runs
+  before the local `.nfo` overlay, so the `.nfo`'s own non-empty fields always win, and whatever
+  neither source sets is left untouched) matches this exactly** — confirmed, not a coincidence worth
+  re-deriving, no code change needed here.
+- **Images**: the reference server only lets a remote/provider image *replace* one the item already
+  has when the request's `ReplaceAllImages` (or a per-type equivalent) is true; with `ReplaceAllImages
+  =false` — again, what jellyfin-web's dashboard action actually sends — an existing image of a given
+  type is left alone and the remote provider is never even asked for that type. **Fixed to match**:
+  `internal/scan/scan.go`'s `storeProviderImage` now checks whether the item already has an `ImageRef`
+  of the Provider result's `Kind` and skips the download/overwrite unless a `replaceImages` flag is
+  set, threaded from `POST /Items/{itemId}/Refresh`'s own `ReplaceAllImages` query param
+  (`api/item_refresh.go` -> `Server.runItemRefresh` -> `scan.Scanner.RefreshItem`); every `ScanLibrary`
+  call site passes `false` (a routine/re-scan never replaces an existing image either, matching the
+  reference server's own default). Before this fix, Tinyfin always let a Provider-returned image
+  overwrite a local one (same deterministic `ImageRef` ID scheme, `seedSeasonImage`'s doc comment)
+  regardless of the flag, because the query param was never read at all — a real divergence, found by
+  this same validation pass, not a silent guess that happened to be wrong. Covered by
+  `TestRefreshItemImagesRespectReplaceAllImages` (`internal/scan/scan_test.go`).
+- **Season-level `.nfo`**: a real user library surfaced a `tvshow.nfo` living inside a `Season NN/`
+  folder instead of the series root — a distinct, narrower Kodi convention this project had never
+  read at all before. The reference server has a dedicated pair for this
+  (`SeriesNfoSeasonProvider`/`SeriesNfoSeasonParser`, extraction only): it looks for `tvshow.nfo` in
+  the *season's own folder* first, falling back to the series root if absent there, but extracts
+  only a `<namedseason number="N">Custom Name</namedseason>` element matching the season's own
+  index — every other field in that file (title, plot, cast, provider IDs, ...) is series-level and
+  is silently skipped for a Season entity. **Implemented to match**: `internal/scan/nfo.go`'s new
+  `applySeasonNFO`, wired into both a fresh scan (`walkSeasons`) and per-item refresh
+  (`RefreshItem`'s `refreshLocalNFO`, Season case) — same lookup order, same narrow `<namedseason>`-
+  only extraction (only `item.Name` is overlaid). Covered by `TestScanLibraryAppliesNamedSeason` and
+  `TestRefreshItemSeasonAppliesNamedSeason` (`internal/scan/scan_test.go`), the latter also proving
+  the season-folder-before-series-root fallback order. Before this, Tinyfin had zero season-level
+  `.nfo` support of any kind.
+
 ## Scan-time resource discipline
 
 The reference implementation has a documented failure mode here too: unbounded concurrent

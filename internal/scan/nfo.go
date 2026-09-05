@@ -244,6 +244,59 @@ func (s *Scanner) applySeriesNFO(pool *jobPool, item *storage.Item, seriesPath s
 	applyCommonNFOFields(item, n.commonNFOFields)
 }
 
+// namedSeasonEl is Kodi's <namedseason number="1">Custom Name</namedseason>
+// — a <tvshow>-root-level override for one specific season's display name.
+type namedSeasonEl struct {
+	Number int    `xml:"number,attr"`
+	Name   string `xml:",chardata"`
+}
+
+// seasonNFO is the narrow slice of a Kodi <tvshow> .nfo document this
+// scanner reads for Season items: <namedseason> only. Matches the reference
+// server's SeriesNfoSeasonProvider/SeriesNfoSeasonParser (validated,
+// docs/08's "Local-vs-remote precedence" section), which ignores every
+// other <tvshow> field for a Season entity — title/plot/cast/etc. in that
+// same file are series-level, read by applySeriesNFO instead.
+type seasonNFO struct {
+	XMLName      xml.Name        `xml:"tvshow"`
+	NamedSeasons []namedSeasonEl `xml:"namedseason"`
+}
+
+// applySeasonNFO looks for "tvshow.nfo" in seasonPath (the season's own
+// folder) first, falling back to seriesPath (the series root) if absent
+// there — the same lookup order as the reference server's
+// SeriesNfoSeasonProvider. Unlike applySeriesNFO, this deliberately extracts
+// only the <namedseason> entry whose number attribute matches seasonNum,
+// overlaying its text onto item.Name — every other field in the file
+// (title, plot, cast, ...) is series-level, not season-level, and is
+// ignored here exactly as the reference server's SeriesNfoSeasonParser
+// ignores it. A file with no matching <namedseason> (e.g. a series-root
+// tvshow.nfo with no <namedseason> tags at all) is a normal miss, not a
+// warning.
+func (s *Scanner) applySeasonNFO(pool *jobPool, item *storage.Item, seasonPath, seriesPath string, seasonNum int) {
+	data, found := readFirstExisting(
+		filepath.Join(seasonPath, "tvshow.nfo"),
+		filepath.Join(seriesPath, "tvshow.nfo"),
+	)
+	if !found {
+		return
+	}
+	var n seasonNFO
+	if err := xml.Unmarshal(data, &n); err != nil {
+		pool.addWarning(fmt.Sprintf("parsing season tvshow.nfo for %q: %v (ignored)", seasonPath, err))
+		return
+	}
+	for _, ns := range n.NamedSeasons {
+		if ns.Number != seasonNum {
+			continue
+		}
+		if name := strings.TrimSpace(ns.Name); name != "" {
+			item.Name = name
+		}
+		return
+	}
+}
+
 // applyEpisodeNFO looks for "<episode-video-basename>.nfo" next to
 // episodePath and overlays any fields it defines onto item. It reuses
 // applyCommonNFOFields (same handling <movie>/<tvshow> get), then falls
