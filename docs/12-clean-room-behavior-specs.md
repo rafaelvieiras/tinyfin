@@ -1148,3 +1148,321 @@ Confirmed against `tinyfin-staging:8096` after the fix: an authenticated
 comparison now returns `Width`/`Height` matching its primary video stream's own resolution,
 `IsHD: true`, `VideoType: "VideoFile"`, `PlayAccess: "Full"`, `CanDelete: true`,
 `CanDownload: true` for the admin test account.
+
+---
+
+## Dashboard overview — the `GET /socket` realtime channel
+
+### The gap this resolves
+
+The Dashboard overview pass (see `docs/11`'s "Dashboard — Painel" section) left one call
+unresolved: jellyfin-web opens a WebSocket to `GET /socket` on every page and keeps it open for
+the life of the session. Tinyfin doesn't implement it at all today (connection refused/404 — no
+route registered). Black-box capture (Playwright's raw frame listener against a real reference
+server, `jellyfin-real-staging:8097`) recovered the wire shapes and the client-visible timing, but
+left one real question open: two of the messages the client explicitly subscribes to
+(`SessionsStart`, `ScheduledTasksInfoStart`) never arrived during a 75-second idle window even
+though nothing else about the subscription looked wrong — was this a push-on-change design, a
+timing artifact of the capture, or something the client has to re-request periodically? Read the
+reference source (Rafael's explicit instruction) to resolve that specifically, rather than
+guessing from a longer black-box capture window.
+
+### Wire shapes and timing (black-box, `jellyfin-real-staging:8097`, no C# read needed for this part)
+
+- **Connection**: `ws://<host>/socket?api_key=<token>&deviceId=<deviceId>` — plain query-string
+  auth, same lowercase `api_key` fallback Tinyfin's own `auth.go` already recognizes for the
+  stream-URL case. No `Authorization`/`X-Emby-Authorization` header is sent on the WebSocket
+  upgrade request itself in this client's implementation, only the query string.
+- **On connect**, before anything else, the server immediately sends one frame:
+  `{"MessageId":"<uuid>","Data":60,"MessageType":"ForceKeepAlive"}`. `Data` is a keep-alive
+  timeout in seconds.
+- The client replies `{"MessageType":"KeepAlive"}` (bare, no `MessageId`, no `Data`) roughly every
+  30 seconds — this is the *client's* own heartbeat cadence (jellyfin-web), not something the wire
+  contract fixes; a different client is free to pick a different interval as long as it stays
+  under the server's timeout. The server acks each one with
+  `{"MessageId":"<uuid>","MessageType":"KeepAlive"}` (also bare `Data`).
+- Right after connecting, the client sends two subscription requests:
+  `{"MessageType":"SessionsStart","Data":"0,1500"}` and
+  `{"MessageType":"ScheduledTasksInfoStart","Data":"1000,1000"}`. `Data` is
+  `"<initialDelayMs>,<intervalMs>"`.
+- Triggering a real state change while connected (`POST /Library/Refresh`) immediately produced,
+  unprompted, both a `ScheduledTasksInfo` push (full scheduled-task list, matching the shape
+  `GET /ScheduledTasks` already returns) and a handful of `RefreshProgress` pushes
+  (`{"MessageId":"<uuid>","Data":{"ItemId":"<id>","Progress":"<0-100 string>"},"MessageType":"RefreshProgress"}`)
+  — one burst per item being refreshed, culminating in another full `ScheduledTasksInfo` push once
+  the scan task itself finished. No `Sessions` push was observed in this same window (nothing about
+  this test changed the session list), consistent with the source-derived rule below.
+- `RefreshProgress` was never explicitly subscribed to (no corresponding `...Start` message was
+  ever sent) — it just started arriving the moment the triggering action began, to whatever socket
+  happened to be connected.
+
+### Behavior, in prose (source: reference server's `BasePeriodicWebSocketListener` plus its three
+### concrete listeners for Sessions/ScheduledTasksInfo/ActivityLogEntry, and the always-on
+### keep-alive watchdog and connection-registration logic)
+
+- **There is no ticking clock driving `Sessions`/`ScheduledTasksInfo`/`ActivityLogEntry` at all.**
+  Each of the three is push-on-event, full stop — a `...Start` subscription registers interest and
+  an initial "how often, at minimum" spacing, but nothing about the subscription itself schedules
+  a future send. A send only ever happens because something else in the server called "notify
+  subscribers of this channel," triggered by a real state transition:
+  - **Sessions**: a session starting or ending, playback starting/stopping/reporting progress, a
+    client's capabilities changing, or general session-activity heartbeats (any authenticated
+    request from a session counts as activity for this purpose, not just playback-related ones).
+  - **ScheduledTasksInfo**: a task starting execution, a task completing, or a running task's own
+    progress percentage updating.
+  - **ActivityLogEntry**: a new activity-log row being recorded (login, login failure, etc. — the
+    same events Tinyfin's own `activity_log.go`/`ActivityLogStore` already records for
+    `GET /System/ActivityLog/Entries`).
+- **The registered interval is a per-connection minimum-spacing throttle, not a schedule.** Some
+  triggers are "forced" (sent to every subscribed connection immediately, ignoring the interval
+  entirely) — session start/end, capabilities change, playback start/stop, task
+  start/complete, any new activity-log entry. Others are throttled to at most once per the
+  connection's own registered interval — session activity heartbeats, and *automated* playback
+  progress reports (an explicit/manual progress report from the client is still forced; only the
+  client's own periodic automatic ones are throttled) and task-progress percentage updates. A
+  connection that registered `"0,1500"` for Sessions, for example, gets forced sends immediately
+  on any of the forced triggers, but a mere activity heartbeat for that same connection is
+  collapsed to at most one send per 1500ms even if several heartbeats land within that window.
+  This is exactly why a 75-second idle capture with nothing actually happening produced zero
+  `Sessions`/`ScheduledTasksInfo` frames: idle means no trigger ever fired, forced or throttled.
+- **A subscription lasts until an explicit stop message or the connection closing** — there is no
+  need to re-send `SessionsStart`/`ScheduledTasksInfoStart` periodically to keep receiving updates;
+  it is a one-time "start watching" registration per connection, undone only by
+  `SessionsStop`/`ScheduledTasksInfoStop` (mirroring each `...Start`) or the socket disconnecting.
+- **Session-list visibility is per-connection, not admin-gated.** Any authenticated connection
+  (including a non-admin user) may subscribe to `SessionsStart` — but a non-admin/non-API-key
+  connection's own copy of the `Sessions` payload is filtered server-side down to only the
+  sessions that connection's own user owns (or is an "additional user" on), never the full list.
+  Only `ActivityLogEntryStart` is actually rejected outright for a non-admin/non-API-key caller
+  (an authentication error, closing that specific subscription attempt). This is a **materially
+  different exposure model than Tinyfin's existing `GET /Sessions` REST route**, which this
+  project deliberately made admin-only-or-nothing (see `sessions.go`'s doc comment) rather than
+  building the reference server's own per-connection filtering — a real, intentional simplification
+  worth keeping in mind if/when `SessionsStart` over the socket is ever implemented: it should
+  filter per-connection like the reference server does, not reuse the REST route's coarser
+  admin-only gate, since a non-admin client legitimately depends on seeing its own session (e.g.
+  to know it's still alive) over this channel in the real app.
+- **`RefreshProgress` is not one of the three periodic-listener channels above** — it has no
+  `...Start`/`...Stop` message pair at all in the wire vocabulary; it is a direct, unconditional
+  broadcast tied to the underlying refresh operation itself; every currently-connected,
+  authenticated socket receives it while a refresh is in flight, with no per-connection
+  subscription state to track for it.
+- **Keep-alive is a server-driven watchdog independent of the three data channels above**: on
+  every new connection the server immediately sends one `ForceKeepAlive` (with the timeout value,
+  60 seconds observed) and starts watching that connection's "last activity" timestamp (updated
+  whenever *any* inbound frame arrives, not just `KeepAlive` ones — this is real, not incidental,
+  since the reference server's own bookkeeping records last-activity on every processed message,
+  including the `Sessions`/`ScheduledTasksInfo` subscription requests themselves). On a recurring
+  check (roughly every 12 seconds against the 60-second timeout observed), any connection that has
+  gone quiet past 75% of the timeout gets another `ForceKeepAlive` nudge; any connection that's
+  gone completely silent past the full timeout is treated as lost and the connection is torn down
+  server-side — this is what actually ends a session whose client vanished without a clean close
+  frame (killed process, network drop), not a client-side timeout.
+- **A bare inbound `KeepAlive` message is special-cased** ahead of the normal per-listener message
+  dispatch: it never reaches the Sessions/ScheduledTasksInfo/ActivityLogEntry listeners at all,
+  it's answered directly with an outbound `KeepAlive` acknowledgement (also refreshes that
+  connection's last-activity/last-keep-alive timestamp).
+- **Auth reuses the same mechanism as every other route** — the WebSocket upgrade request is
+  authenticated through the identical token-resolution path as an ordinary HTTP request (the same
+  header/`X-Emby-Token`/`api_key`-query-param precedence Tinyfin's `auth.go` already implements),
+  not a separate WebSocket-specific auth scheme; an unauthenticated upgrade attempt is rejected
+  before the socket is even accepted.
+- **The connection is tied to a session, not created standalone.** Accepting the socket resolves
+  (or creates, mirroring the same device-identification flow `POST /Sessions/Capabilities/Full`
+  already drives in Tinyfin's `sessionRegistry`) a session for the connecting client, and attaches
+  a remote-control capability to that session that lets a *different* client send it commands
+  (`POST /Sessions/{id}/Command`, `/Message`, etc.) — those command-delivery routes stay explicitly
+  out of scope here (already `❌` in `docs/11`, unrelated to the Dashboard gap this section closes)
+  since they're a separate, larger remote-control feature, not part of what the Dashboard overview
+  page itself needs.
+
+### Scope note for the implementer
+
+This section is self-contained enough to implement the three periodic channels
+(`Sessions`/`ScheduledTasksInfo`/`ActivityLogEntry`) plus `RefreshProgress` and the keep-alive
+watchdog from the prose above, reusing Tinyfin's existing data sources for each
+(`sessionRegistry` for Sessions, `scanState`/the scheduled-tasks handler's own task-list assembly
+for ScheduledTasksInfo, `ActivityLogStore` for ActivityLogEntry) plus black-box verification
+against a running reference server for exact framing/timing — without reopening the reference
+source. `GeneralCommand`/`Message`/remote-control delivery is a distinct follow-up, not covered by
+this section. This section is a survey/spec only — no Go code was written from it in this pass;
+implementation is a separate task the way every other section in this document treats it.
+
+### Known chronic issues in the reference implementation — deliberately not reproduced
+
+Same treatment as the "Candidate-series ranking must not be biased by episode count" note in this
+document's `Items/Latest` section above: a real architectural flaw found while extracting this
+spec, worth designing around from the start rather than discovering by hitting it later. This one
+is corroborated by the reference project's own public issue tracker (`jellyfin/jellyfin`, referenced
+here only as evidence of a real, multi-year, still-recurring bug class — the *idea* "don't do this"
+is what's being recorded, nothing about how the reference server's code is organized), not just a
+single reading of the source:
+
+**1. No single owner serializes writes/lifecycle for a given connection.** The keep-alive watchdog
+(a timer callback), each of the three periodic listeners, and at least one other broadcaster
+(`UserDataChangeNotifier`, seen in a crash stack trace, not otherwise read for this spec) all hold
+their own independent reference to the same connection and each may call its send method or
+dispose it, from different goroutine/thread-pool contexts, with no shared lock actually
+serializing calls into the underlying socket. `System.Net.WebSockets.WebSocket.SendAsync` only
+permits one in-flight send at a time; concurrent callers racing against a disposed/half-closed
+socket produces exactly the crash class this project's tracker shows recurring across years,
+multiple distinct code paths, and at least one PR that claimed to fix it and didn't fully
+(`jellyfin/jellyfin#5705`, `#10614`, `#13457`/`#13459` (the attempted fix) reopened by `#14974`,
+`#16511`) — server-crashing `ObjectDisposedException`/`OperationCanceledException` thrown from deep
+inside the socket's own frame-writing code, and, separately, stale references that never get
+cleaned up (`#5705`'s "de-referenced properly," `#10614`'s unbounded memory growth from the same
+root cause).
+
+**How Tinyfin avoids this by construction:** give every accepted connection exactly one owning
+goroutine that performs every write to it (reads too, naturally, since a single goroutine already
+owns the receive loop). Every other component that wants to push data to that connection — the
+keep-alive nudge, each of the three periodic channels, `RefreshProgress` — sends a message value
+into that connection's own outbound channel; only the owning goroutine ever calls the actual
+websocket write. The same owning goroutine is the only thing that ever closes the underlying
+connection, exactly once. This isn't extra ceremony for its own sake — it's the direct structural
+fix for a bug class the reference project has been unable to fully close for years by patching
+individual call sites one at a time.
+
+**2. Connection cleanup is each subsystem's own independent responsibility, not one canonical
+signal.** Because the reference architecture has N independent listeners each keeping their own
+`_activeConnections`-shaped list, "did this connection die" has to be independently detected and
+acted on N times — once per listener — rather than once. This is consistent with why a fix in one
+call path (`#13459`) left the same failure recurring in a different one (`#14974`, a different
+broadcaster than the one `#13459` patched) and with `BasePeriodicWebSocketListener`'s own shipped
+code carrying an unresolved doubt about whether its dispose path even works right (an admitted "not
+sure what this actually accomplishes" left directly in that method, not something inferred).
+
+**How Tinyfin avoids this:** one canonical "this connection is done" signal per connection (a
+`context.Context` cancellation or a closed `done` channel), fired exactly once from the owning
+goroutine's receive-loop exit or the keep-alive watchdog's lost-timeout — whichever happens first.
+Every subsystem that keeps a per-connection bookkeeping entry (the session registry, each
+subscribed channel's own "who's listening" set) tears its own entry down by watching that one
+signal, not by independently guessing from its own send failures whether the connection is still
+alive.
+
+**3. Silently-dropped sockets never ending their session** (`jellyfin/jellyfin#17078`/`#17079`,
+filed and fixed very recently against the version of the source read for this spec): a socket that
+goes quiet without a close frame (killed app, network drop, no clean TCP shutdown) used to be
+merely removed from the keep-alive watchdog's own watchlist when it timed out, without that timeout
+ever propagating to "end the session," leaving a zombie session (and, for SyncPlay specifically, a
+group stuck forever waiting on a dead participant that could never be removed). The version of
+`SessionWebSocketListener.KeepAliveSockets` read for this spec already carries the fix (disposing a
+lost socket to force its receive loop to exit and raise the normal closed-connection path) — this
+section's "Behavior, in prose" above already describes the *fixed* behavior, not the historical
+bug. Recorded here only so a future re-read of an older reference version, or a differently-sourced
+description of this feature, isn't mistaken for the current contract: **a connection declared lost
+by the keep-alive timeout must end its session**, not just stop being watched.
+
+**4. Oversized periodic payloads** (`jellyfin/jellyfin#16072`/`#16074`): an earlier version of the
+`Sessions` push embedded a session's full playback queue (`NowPlayingQueueFullItems`) in every
+single push, producing multi-megabyte frames on every playback-progress heartbeat for a client with
+a large queue loaded. Tinyfin's own `sessionInfoDto` (`sessions.go`) already keeps
+`NowPlayingQueue`/`NowPlayingQueueFullItems` as structural empty placeholders (docs/11's Dashboard
+section) — recorded here so that stays a deliberate design choice going forward, not something a
+future "let's populate this properly" pass reintroduces without remembering why the reference
+project itself had to walk it back.
+
+**5. Duplicate/reentrant session-lifecycle firing** (`jellyfin/jellyfin#16457`): a client that
+fired `SessionStarted` twice for what was really one connection lifecycle crashed the reference
+server via a lock-state mismatch on the corresponding double `SessionEnded`. The specific crash
+mechanism is a C#-locking-primitive detail, not something a Go mutex can even reproduce the same
+way, but the root trigger — a device/client that (for whatever reason) causes the "session started"
+path to run twice for one logical connection — is real and worth defending against directly:
+Tinyfin's session-registry upsert (`sessionRegistry.upsertCapabilities`/`touch`) should stay
+idempotent by device/session key the way it already is (`internal/api/sessions.go`), so a duplicate
+start event merges into the existing entry rather than creating a second one or assuming
+exactly-once delivery.
+
+**6. WebSocket-specific remote-IP resolution silently skipping proxy headers**
+(`jellyfin/jellyfin#15645`): the WebSocket upgrade handler was written as its own code path
+separate from the rest of the HTTP pipeline and initially used the raw connection's remote address
+directly, missing the `X-Forwarded-For`-aware resolution the ordinary HTTP handlers already had —
+so every session opened over a reverse-proxied WebSocket recorded the proxy's own IP instead of the
+real client's. Tinyfin must reuse whatever single remote-IP-resolution helper the rest of
+`internal/api` already uses for REST routes (`sessions.go`'s `remoteEndPoint(r)`, called from the
+same `*http.Request` the WebSocket upgrade also arrives as) for the `/socket` handler too, rather
+than writing a second, narrower one for just this route.
+
+**7. API-key authentication under-tested on the WebSocket path**
+(`jellyfin/jellyfin#13499`/`#13795`/`#13479`, three separate issues/PRs against the same gap): the
+WebSocket auth path was originally only exercised with an ordinary user session token and didn't
+correctly recognize a bare API key, needing three follow-up fixes. Tinyfin's `auth.go` already
+resolves a bare API key the same way as a user token (`LookupToken` doesn't distinguish the two),
+so this should already work for `/socket` by construction — but this history is a concrete signal
+to add an explicit API-key-authenticated WebSocket test case when implementing, rather than relying
+on "the REST routes handle this fine, so the socket surely does too."
+
+### Implementation findings
+
+Implemented in `internal/api/websocket.go`, wired into `server.go` (`GET /socket`, `requireAuth`,
+a `*wsHub` field, a background `runWSWatchdog` goroutine started in `NewServer`) and into every
+existing mutation point that now has something to notify (`sessions.go`'s
+`handleSessionsCapabilitiesFull`, `sessions_playback.go`'s `touchSession` — extended with a `force`
+parameter — `server.go`'s `runScan`, `auth_by_name.go`'s `logAuthSuccess`/`logAuthFailure`).
+
+**Library choice** — D13 (`docs/00-decision-log.md`): `github.com/coder/websocket` v1.8.15, chosen
+specifically because its documented concurrency contract ("every `*Conn` method except
+`Reader`/`Read` may be called concurrently") already satisfies chronic issue #1's underlying
+requirement without a dedicated single-writer-goroutine workaround — only chronic issue #2
+(canonical, single-sourced connection cleanup) needed a deliberate design choice on Tinyfin's side,
+via each connection's own mutex-guarded state plus the hub's single watchdog declaring a connection
+lost and closing it, which is what actually unblocks that connection's own `conn.Read` and runs its
+one cleanup path (`handleSocket`'s deferred `hub.remove`).
+
+**Chronic issue #6 (remote-IP resolution) turned out not to apply**: Tinyfin's WebSocket connection
+never independently records a remote IP at all — `handleSocket` only calls
+`sessionRegistry.touch(deviceID)` (liveness only), never `upsertCapabilities` (the only method that
+stores `remoteEndPoint`, sourced from the REST `POST /Sessions/Capabilities/Full` call every client
+already makes over ordinary HTTP before opening the socket). So there was no second, narrower IP
+resolution path to accidentally get wrong — the gap the reference project actually hit doesn't have
+a Tinyfin equivalent to reproduce.
+
+**RefreshProgress was deliberately not implemented** — flagged as a documented gap, not a silent
+omission (package doc comment, `websocket.go`): `internal/scan.Scanner` has no per-item progress
+callback today, and adding one purely to feed this one wire message would be scope creep beyond
+what black-box observation of the Dashboard page actually required.
+
+**ActivityLogEntry payload deliberately diverges from the reference server** (its own listener
+sends an empty array on every push, per the "Behavior, in prose" section above) — Tinyfin's
+`notifyActivityLog` sends the real `wsActivityLogPushLimit` (10) most recent entries instead, since
+no black-box observation ever depended on an empty payload and the real data is strictly more
+useful.
+
+**Live verification** against `tinyfin-staging` (rebuilt, restarted) with a real jellyfin-web build
+via Playwright, a fresh browser tab, capturing raw WebSocket frames:
+
+- Connection URL observed as `ws://localhost:8096/socket?ApiKey=<token>` — this particular
+  jellyfin-web build used the capital-`A` `ApiKey` query param (distinct from the lowercase
+  `api_key` observed earlier against the reference server), both already handled by `auth.go`'s
+  existing query-param fallback precedence; no code change needed, confirmed by the connection
+  succeeding.
+- `ForceKeepAlive` (`Data: 60`) received immediately on connect, matching the captured reference
+  behavior exactly.
+- Client's `SessionsStart`/`ScheduledTasksInfoStart`/`KeepAlive` sent and acked correctly.
+- Triggering a real `POST /Library/Refresh` (three configured libraries) produced a live burst of
+  `ScheduledTasksInfo` pushes — three `"State":"Running"` pushes (one per library's own
+  `scanState.begin()`) followed by `"State":"Running"` with a populated `LastExecutionResult`
+  (`"Status":"Completed"`) as each library's scan finished within the capture window — exactly the
+  push-on-event pattern this section documents, not a fixed interval.
+- No server-side error, panic, or crash in `tinyfin-staging`'s logs throughout, and the container
+  stayed healthy/running afterward — the specific outcome chronic issues #1/#2 exist to prevent.
+
+Unit/integration tests: `internal/api/websocket_test.go`, dialing real WebSocket connections
+against an `httptest.Server` via the same `coder/websocket` client library (`TestSocketRequiresAuth`,
+`TestSocketKeepAliveHandshake`, `TestSocketSessionsPushOnCapabilitiesChange`,
+`TestSocketSessionsFilteredForNonAdmin` — the per-connection-filtering rule from "Behavior, in
+prose" above, `TestSocketScheduledTasksInfoPushOnScanStateChange`,
+`TestSocketActivityLogEntryAdminOnly`, `TestParseWSInterval`).
+
+One real, pre-existing bug found and fixed as a direct consequence of writing an actual end-to-end
+test rather than a handler-level unit test: `server.go`'s `withAccessLog` middleware wraps every
+response in a `statusRecorder` that only forwards `http.ResponseWriter`'s three interface methods —
+`websocket.Accept` (via `net/http`'s `http.ResponseController`) needs to reach the underlying
+concrete writer's `Hijack` support through that wrapper and couldn't, failing every upgrade with a
+501 before any of the behavior above could be observed at all. Fixed by adding
+`func (r *statusRecorder) Unwrap() http.ResponseWriter`, the standard-library-documented mechanism
+for exactly this situation (`net/http`'s `ResponseController` deliberately looks for an `Unwrap`
+method on a wrapping type). Not something black-box observation against the reference server could
+ever have surfaced, since the reference server has no equivalent wrapping middleware to get this
+wrong — found only because this project tested its own middleware stack end-to-end instead of
+calling the handler directly.

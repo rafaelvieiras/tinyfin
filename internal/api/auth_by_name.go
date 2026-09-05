@@ -125,7 +125,9 @@ func (s *Server) logAuthFailure(r *http.Request, username string) {
 	}
 	if _, err := s.store.AppendActivityEntry(r.Context(), entry); err != nil {
 		log.Printf("api: appending activity log entry for failed login by %q: %v", username, err)
+		return
 	}
+	s.notifyActivityLog(r.Context())
 }
 
 // logAuthSuccess appends a SessionStarted activity log entry for a
@@ -151,7 +153,9 @@ func (s *Server) logAuthSuccess(r *http.Request, user storage.User, client strin
 	}
 	if _, err := s.store.AppendActivityEntry(r.Context(), entry); err != nil {
 		log.Printf("api: appending activity log entry for successful login by %q: %v", user.Name, err)
+		return
 	}
+	s.notifyActivityLog(r.Context())
 }
 
 // passwordMatches verifies a submitted plaintext password against a stored

@@ -306,6 +306,29 @@ what starting Phase 1 actually requires next.
       confirmed live end to end against a rebuilt `tinyfin-staging`. WebSocket `/socket` remains this
       page's one still-404ing call — already tracked separately as `docs/06`'s realtime session
       channel, a larger feature this REST-focused pass didn't attempt.
+- [x] WebSocket `/socket` — the realtime session channel `docs/06` scopes as its own interface,
+      closed as a follow-up to the Dashboard overview pass above. This one *did* need the C# source
+      (Rafael's explicit instruction), per the two-phase clean-room process — extracted into
+      `docs/12`'s "Dashboard overview — the `GET /socket` realtime channel" section, including a
+      review of `jellyfin/jellyfin`'s own public issue tracker for real, multi-year, recurring
+      architecture bugs in its WebSocket implementation (concurrent unsynchronized writes to a
+      connection, per-subsystem-fragmented connection cleanup, a zombie-session/SyncPlay bug,
+      oversized periodic payloads) to design around from the start rather than reproduce — the same
+      "find and don't import a chronic bug" treatment already applied to the `Items/Latest`
+      episode-count-ranking bug. Implemented in `internal/api/websocket.go` on
+      `github.com/coder/websocket` (D13, `docs/00-decision-log.md` — chosen specifically because its
+      concurrency contract already covers the write-safety half of that bug class, leaving only the
+      connection-lifecycle half needing a deliberate design choice). Three data channels
+      (`Sessions`, `ScheduledTasksInfo`, `ActivityLogEntry`) implemented as genuinely push-on-event,
+      not on a timer, reusing existing data sources (`sessionRegistry`, `scanState`,
+      `ActivityLogStore`); `RefreshProgress` (per-item scan progress) deliberately left as a
+      documented gap (`internal/scan` has no per-item progress hook yet). Confirmed live against a
+      rebuilt `tinyfin-staging` with a real jellyfin-web build: keep-alive handshake byte-for-byte,
+      and a real `POST /Library/Refresh` producing the expected live `ScheduledTasksInfo` push
+      sequence, no server error. Found and fixed one real bug along the way: `server.go`'s
+      `withAccessLog` middleware's `statusRecorder` wrapper didn't forward `http.Hijacker` support,
+      which silently 501'd every WebSocket upgrade attempt until a real end-to-end test (not just a
+      handler-level unit test) caught it.
 - [ ] TVDB provider — not implemented (see above).
 - [x] **Goal:** a freshly scanned library gets enriched metadata without Tinyfin implementing its
       own scraping. Verified via `internal/scan`'s test suite (movies and TV shows, with and

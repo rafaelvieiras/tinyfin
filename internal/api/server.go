@@ -135,6 +135,7 @@ type Server struct {
 	scanner   *scan.Scanner
 	scanState *scanTracker
 	sessions  *sessionRegistry
+	hub       *wsHub
 }
 
 // NewServer builds a Server backed by store, applying cfg defaults where
@@ -164,8 +165,10 @@ func NewServer(store storage.Store, cfg Config) *Server {
 		}),
 		scanState: &scanTracker{},
 		sessions:  newSessionRegistry(),
+		hub:       newWSHub(),
 	}
 	s.routes()
+	go s.runWSWatchdog(context.Background())
 	return s
 }
 
@@ -222,9 +225,12 @@ func (t *scanTracker) snapshot() (running bool, lastStart, lastEnd time.Time, la
 // (a background operation it can poll/observe progress on, once this
 // project has a task-progress endpoint — not yet, a known gap).
 func (s *Server) runScan(lib storage.Library) {
+	ctx := context.Background()
 	s.scanState.begin()
-	stats, err := s.scanner.ScanLibrary(context.Background(), lib)
+	s.notifyScheduledTasks(ctx, true)
+	stats, err := s.scanner.ScanLibrary(ctx, lib)
 	s.scanState.end(err)
+	s.notifyScheduledTasks(ctx, true)
 	if err != nil {
 		log.Printf("api: scanning library %q: %v", lib.Name, err)
 		return
@@ -257,6 +263,19 @@ type statusRecorder struct {
 func (r *statusRecorder) WriteHeader(status int) {
 	r.status = status
 	r.ResponseWriter.WriteHeader(status)
+}
+
+// Unwrap exposes the underlying ResponseWriter to net/http's
+// http.ResponseController — the standard-library-documented mechanism for
+// a wrapper type to stay transparent to a capability check on the
+// concrete writer it wraps (Hijack, Flush, ...). Without this,
+// websocket.Accept (websocket.go) can't upgrade the connection at all: it
+// only ever sees this wrapper, not the concrete *http.response underneath
+// that actually implements http.Hijacker, and fails the upgrade with a 501
+// — found by a real test (websocket_test.go) dialing /socket through the
+// full middleware chain, not by inspection.
+func (r *statusRecorder) Unwrap() http.ResponseWriter {
+	return r.ResponseWriter
 }
 
 // withAccessLog logs method, path+query, status, and duration for every
@@ -437,6 +456,14 @@ func (s *Server) routes() {
 	// exposing that to any authenticated non-admin user would be a real
 	// information-disclosure regression, not a scope simplification.
 	s.mux.HandleFunc("GET /Sessions", requireAdmin(s.handleSessionsList))
+	// Realtime session channel (websocket.go, docs/06, docs/12's "Dashboard
+	// overview — the GET /socket realtime channel" section). requireAuth
+	// rejects an unauthenticated upgrade attempt (401) before the socket is
+	// ever accepted, matching docs/12's "auth reuses the same mechanism as
+	// every other route" — including the api_key query-param fallback,
+	// since withAuthContext resolves that unconditionally before this
+	// handler runs.
+	s.mux.HandleFunc("GET /socket", requireAuth(s.handleSocket))
 
 	// Playstate reporting and media segments (sessions_playback.go) — found
 	// missing while mapping the whole native playback flow for coverage,

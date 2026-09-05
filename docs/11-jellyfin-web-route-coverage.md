@@ -53,11 +53,11 @@ Status legend:
 | | Count |
 |---|---|
 | Route entries catalogued below (excluding Live TV/Channels, out of scope per `docs/01` — `GET /LiveTv/Programs` is the one exception, counted here, see "Explicitly out of scope" below) — some entries group several closely-related paths on one row, so this counts table rows, not raw path-template strings | 108 |
-| ✅ Implemented | 57 |
+| ✅ Implemented | 58 |
 | ⚠️ Parcial (stub/honest-empty) | 5 |
-| ❌ Not implemented | 46 |
+| ❌ Not implemented | 45 |
 
-62 of 108 (57%) return real or honestly-empty data today. The gaps cluster heavily in a few places
+63 of 108 (58%) return real or honestly-empty data today. The gaps cluster heavily in a few places
 that matter for ordinary browsing, not just admin/edge-case features — see "Biggest real gaps" at the
 bottom. The `/dashboard/libraries` admin flow added 9 rows and initially downgraded one
 (`Library/VirtualFolders`, ✅→⚠️) in a dedicated mapping/diff pass; a follow-up implementation pass
@@ -168,9 +168,9 @@ count drifted from the table rows it was supposed to summarize.
 | `POST /Users/{userId}/PlayedItems/{itemId}` (+ `DELETE`) | ✅ | Implemented (`internal/api/userdata.go`). Confirmed live and re-audited against the reference server: `PlayCount` only advances on the unplayed→played transition and resets to 0 on unmark (both matched already). Re-audit found one real divergence, now fixed: POST didn't reset `PlaybackPositionTicks` to 0 on marking played, unlike the reference server — a stale in-progress position survived a mark-watched call and resurfaced the item in the home screen's "Continuar assistindo" row the moment it was later unmarked watched. Same fix applied to `POST /UserPlayedItems/{itemId}` (`sessions_playback.go`'s `handleUserPlayedItemsMark`), which had the identical gap. |
 | `POST /UserItems/{itemId}/Rating` | ❌ | Catalog only — star rating. |
 | `POST/GET /UserItems/{itemId}/UserData` | ❌ | Catalog only — direct playstate/favorite edit, alternate to the two routes above. |
-| WebSocket `/socket` | ❌ | Confirmed live — repeated WebSocket handshake failures (404) on every page. This is the realtime session channel `docs/06-session-and-realtime-state.md` scopes as its own interface; it isn't wired into the HTTP server at all yet. Consequence: no live "now playing on other devices," no remote control/cast-to-device, no server-push of any kind. |
-| `GET /Sessions` | ✅ | Implemented (`internal/api/sessions.go`, admin-only — see its row's own reasoning below), found via the `/dashboard` (Painel) overview pass. A small in-process session registry (docs/06's default mode), populated from exactly two existing signals: `POST /Sessions/Capabilities/Full` (previously entirely discarded) and the three playback-report routes touching an already-registered device's `LastActivityDate`. Deliberately narrow — no now-playing tracking, no expiry beyond the `activeWithinSeconds` filter itself (see "Dashboard — Painel (overview)" below). Confirmed live against `tinyfin-staging`, including a real jellyfin-web session showing up correctly in the admin Dashboard "Dispositivos" widget. |
-| `POST /Sessions/{id}/Command`, `/Message`, `/Playing`, `/Viewing`, `POST /Sessions/Logout` | ❌ | Catalog only — remote session *control* (as opposed to the listing above). Mostly moot without the WebSocket channel above, but entirely absent either way. |
+| WebSocket `/socket` | ✅ | Implemented (`internal/api/websocket.go`), per the clean-room spec in `docs/12-clean-room-behavior-specs.md`'s "Dashboard overview — the `GET /socket` realtime channel" section (behavior extraction plus a dedicated "known chronic issues, deliberately not reproduced" subsection covering real, multi-year `jellyfin/jellyfin` architecture bugs this implementation was designed around from the start). Auth/keep-alive handshake, and the three push-on-event channels (`Sessions`, `ScheduledTasksInfo`, `ActivityLogEntry`) all confirmed live against `tinyfin-staging` with a real jellyfin-web build: `ForceKeepAlive`/`KeepAlive` handshake matches byte-for-byte, and triggering a real `POST /Library/Refresh` produced the expected `ScheduledTasksInfo` pushes (Running → Completed) with no server error. `RefreshProgress` (per-item scan progress) is a documented, deliberate gap — `internal/scan` has no per-item progress callback to hook yet. Remote-control command delivery over this channel (`GeneralCommand` et al) is a separate, still out-of-scope feature — see the row below. |
+| `GET /Sessions` | ✅ | Implemented (`internal/api/sessions.go`, admin-only — see its row's own reasoning below), found via the `/dashboard` (Painel) overview pass. A small in-process session registry (docs/06's default mode), populated from exactly two existing signals: `POST /Sessions/Capabilities/Full` (previously entirely discarded) and the three playback-report routes touching an already-registered device's `LastActivityDate`. Deliberately narrow — no now-playing tracking, no expiry beyond the `activeWithinSeconds` filter itself (see "Dashboard — Painel (overview)" below). Confirmed live against `tinyfin-staging`, including a real jellyfin-web session showing up correctly in the admin Dashboard "Dispositivos" widget. Note: the WebSocket `Sessions` push channel above uses a *different*, per-connection filtering rule than this REST route's admin-only gate — see `docs/12`'s WebSocket section for why that asymmetry is deliberate, not an inconsistency. |
+| `POST /Sessions/{id}/Command`, `/Message`, `/Playing`, `/Viewing`, `POST /Sessions/Logout` | ❌ | Catalog only — remote session *control*. The transport it would ride on (`GET /socket`, above) now exists, but the command-delivery routes themselves are still entirely absent — a separate, larger feature. |
 | `POST /QuickConnect/Initiate`, `/Connect`, `/Authorize` | ❌ | Catalog only — only the capability-check route (`Enabled`) exists; the actual pairing flow can't complete even though the client believes QuickConnect is available. |
 | `GET /Devices`, `/Devices/Info`, `/Devices/Options` | ❌ | Catalog only — device management (admin). |
 | `GET/POST /Auth/Keys`, `/Auth/Keys/{key}` | ❌ | Catalog only — API key management (admin). |
@@ -305,10 +305,15 @@ a literal `+` in a base64-shaped `DeviceId` must stay a `+`, not become a space)
 against `tinyfin-staging` that the widget now reads "Jellyfin Web 12.0.0" like the reference server
 does, and covered by a new unit test (`internal/api/auth_test.go`).
 
-WebSocket `/socket` remains the one confirmed-live 404 this page still produces on every load (its
-own row above) — this pass didn't attempt it; it's a separate, larger feature (`docs/06`'s realtime
-session channel) already tracked as the project's known highest-priority remaining gap in that
-area, not something this REST-endpoint-focused pass could close incidentally.
+WebSocket `/socket` was the one confirmed-live 404 this page still produced on every load after
+this pass — closed in a follow-up pass: a black-box capture plus a reference-source read (per
+Rafael's explicit instruction) extracted the full wire protocol and push semantics into
+`docs/12-clean-room-behavior-specs.md`'s "Dashboard overview — the `GET /socket` realtime channel"
+section, including a dedicated review of `jellyfin/jellyfin`'s own public issue tracker for real,
+recurring architecture bugs in its WebSocket implementation (concurrent-write crashes, connections
+that never get cleaned up, a zombie-session/SyncPlay bug) to design around rather than reproduce.
+Implemented in `internal/api/websocket.go` and confirmed live against `tinyfin-staging` with a real
+jellyfin-web build — see this section's own `GET /socket` row above.
 
 ---
 

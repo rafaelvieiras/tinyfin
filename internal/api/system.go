@@ -142,6 +142,10 @@ func (s *Server) handleSessionsCapabilitiesFull(w http.ResponseWriter, r *http.R
 
 	if ac, ok := AuthFromContext(r.Context()); ok && ac != nil && ac.Authenticated {
 		s.sessions.upsertCapabilities(ac.DeviceID, string(ac.User.ID), ac.User.Name, ac.Client, ac.Device, ac.Version, remoteEndPoint(r), caps)
+		// Forced (docs/12): a capabilities change is one of the reference
+		// server's own always-forced Sessions triggers, not a throttled
+		// heartbeat.
+		s.notifySessions(r.Context(), true)
 	}
 
 	w.WriteHeader(http.StatusNoContent)

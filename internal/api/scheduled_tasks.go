@@ -83,6 +83,14 @@ type scheduledTaskInfo struct {
 // zero time.Time) — sending a fabricated one before any scan has run would
 // misrepresent history that doesn't exist yet.
 func (s *Server) handleScheduledTasks(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, s.scheduledTasksSnapshot())
+}
+
+// scheduledTasksSnapshot builds the same task list handleScheduledTasks
+// serves, factored out so websocket.go's notifyScheduledTasks (the
+// ScheduledTasksInfo push channel, docs/12) can push the identical shape
+// without duplicating this logic.
+func (s *Server) scheduledTasksSnapshot() []scheduledTaskInfo {
 	running, lastStart, lastEnd, lastErr := s.scanState.snapshot()
 
 	state := "Idle"
@@ -124,5 +132,5 @@ func (s *Server) handleScheduledTasks(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	writeJSON(w, http.StatusOK, []scheduledTaskInfo{task})
+	return []scheduledTaskInfo{task}
 }

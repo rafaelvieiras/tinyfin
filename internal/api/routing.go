@@ -116,6 +116,9 @@ var routePaths = []string{
 	"/Sessions",
 	"/Sessions/Playing",
 	"/Sessions/Playing/Progress",
+	// Single segment, same shape as "/Studios"/"/Users" elsewhere in this
+	// list — no collision risk at that segment count.
+	"/socket",
 	"/Sessions/Playing/Stopped",
 	"/UserPlayedItems/{itemId}",
 	"/MediaSegments/{itemId}",

@@ -41,7 +41,7 @@ type playbackReportBody struct {
 // playback has already started, on a device that's expected to have called
 // that first).
 func (s *Server) handleSessionsPlaying(w http.ResponseWriter, r *http.Request) {
-	s.touchSession(r)
+	s.touchSession(r, true)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -52,9 +52,16 @@ func (s *Server) handleSessionsPlaying(w http.ResponseWriter, r *http.Request) {
 // Shared by all three playback-report handlers below, which otherwise have
 // no reason to read AuthContext directly (reportPlaybackPosition already
 // does, for its own purposes, but doesn't expose it to its callers).
-func (s *Server) touchSession(r *http.Request) {
+//
+// force is passed straight through to notifySessions (websocket.go): a
+// playback start/stop is a real transition (forced, sent immediately to
+// every subscribed connection), a periodic progress report is throttled —
+// the same force/throttle split docs/12 documents for the reference
+// server's own equivalent listener.
+func (s *Server) touchSession(r *http.Request, force bool) {
 	if ac, ok := AuthFromContext(r.Context()); ok && ac != nil {
 		s.sessions.touch(ac.DeviceID)
+		s.notifySessions(r.Context(), force)
 	}
 }
 
@@ -77,7 +84,7 @@ func (s *Server) touchSession(r *http.Request) {
 // not-yet-finished episode be recognized as "touched" at all.
 func (s *Server) handleSessionsPlayingProgress(w http.ResponseWriter, r *http.Request) {
 	s.reportPlaybackPosition(r)
-	s.touchSession(r)
+	s.touchSession(r, false)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -99,7 +106,7 @@ func (s *Server) handleSessionsPlayingProgress(w http.ResponseWriter, r *http.Re
 // than needing to know in advance which mode was in play.
 func (s *Server) handleSessionsPlayingStopped(w http.ResponseWriter, r *http.Request) {
 	itemID := s.reportPlaybackPosition(r)
-	s.touchSession(r)
+	s.touchSession(r, true)
 	if itemID != "" {
 		s.transcode.Stop(string(itemID))
 	}

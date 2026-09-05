@@ -66,9 +66,11 @@ clean; do not blur it for convenience. See D12 in
 [`docs/00-decision-log.md`](docs/00-decision-log.md) for the full reasoning.
 
 Prefer black-box observation — real client traffic, a running reference server, published API
-docs (`docs/04`'s verification approach) — over reading the C# source at all. It's usually enough
-for wire compatibility and needs nothing further. Reach for the C# source only when black-box
-behavior alone can't resolve something. When you do, follow a strict two-phase process:
+docs (`docs/04`'s verification approach) — over reading the C# source by default. It's usually
+enough for wire compatibility and needs nothing further. Reach for the C# source when black-box
+behavior alone can't resolve something, **or whenever Rafael explicitly asks for it** — an
+explicit request is its own sufficient reason, not a fallback to second-guess or quietly
+downgrade back to black-box-only. When you do, follow a strict two-phase process:
 
 1. **Extraction.** Reading the source is allowed, but only to understand *behavior* — inputs,
    outputs, data flow, algorithm, state transitions. Write that understanding down as a
