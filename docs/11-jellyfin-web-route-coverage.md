@@ -52,12 +52,12 @@ Status legend:
 
 | | Count |
 |---|---|
-| Route entries catalogued below (excluding Live TV/Channels, out of scope per `docs/01` — `GET /LiveTv/Programs` is the one exception, counted here, see "Explicitly out of scope" below) — some entries group several closely-related paths on one row, so this counts table rows, not raw path-template strings | 108 |
-| ✅ Implemented | 58 |
+| Route entries catalogued below (excluding Live TV/Channels, out of scope per `docs/01` — `GET /LiveTv/Programs` is the one exception, counted here, see "Explicitly out of scope" below) — some entries group several closely-related paths on one row, so this counts table rows, not raw path-template strings | 109 |
+| ✅ Implemented | 59 |
 | ⚠️ Parcial (stub/honest-empty) | 5 |
 | ❌ Not implemented | 45 |
 
-63 of 108 (58%) return real or honestly-empty data today. The gaps cluster heavily in a few places
+64 of 109 (59%) return real or honestly-empty data today. The gaps cluster heavily in a few places
 that matter for ordinary browsing, not just admin/edge-case features — see "Biggest real gaps" at the
 bottom. The `/dashboard/libraries` admin flow added 9 rows and initially downgraded one
 (`Library/VirtualFolders`, ✅→⚠️) in a dedicated mapping/diff pass; a follow-up implementation pass
@@ -190,8 +190,9 @@ count drifted from the table rows it was supposed to summarize.
 | `GET /System/Logs`, `/System/Logs/Log` | ❌ | Catalog only. |
 | `POST /System/Restart`, `/System/Shutdown` | ❌ | Catalog only. |
 | `GET /System/Ping` | ❌ | Catalog only. |
-| `GET /ScheduledTasks` | ✅ | Implemented (`internal/api/scheduled_tasks.go`, admin-only), found via the `/dashboard` (Painel) overview pass. Reports exactly one entry — a library scan, the one real background operation this project has — rather than fabricating any of the reference server's ~18 built-in tasks (plugin updates, trickplay, subtitle/lyric downloads, ...) this project has no machinery for. `State` ("Running"/"Idle") and `LastExecutionResult` are live, backed by `Server.scanState` (a small tracker wrapping every `runScan` call); `Triggers` is always `[]` — no scheduling engine exists at all, a real, documented gap. See "Dashboard — Painel (overview)" below. |
-| `POST /ScheduledTasks/{taskId}`, `.../Triggers`, `.../Running/{taskId}` | ❌ | Catalog only — per-task admin actions (run now, cancel, edit triggers) on the task listed above. No scheduling engine exists to act on. |
+| `GET /ScheduledTasks` | ✅ | Implemented (`internal/api/scheduled_tasks.go`, admin-only), found via the `/dashboard` (Painel) overview pass. Reports exactly one entry — a library scan, the one real background operation this project has — rather than fabricating any of the reference server's ~18 built-in tasks (plugin updates, trickplay, subtitle/lyric downloads, ...) this project has no machinery for. `State` ("Running"/"Idle") and `LastExecutionResult` are live, backed by `Server.scanState` (a small tracker wrapping every `runScan` call); `Triggers` is always `[]` — no scheduling engine exists at all, a real, documented gap. This entry's `Id`/`Key` must be the literal `"RefreshLibrary"` — jellyfin-web's Dashboard home widget and Libraries page both locate it by filtering on `Key === 'RefreshLibrary'` (client-side JS, not the reference server's C#); shipping any other value silently broke the "Scan All Libraries" button (`isScanning` derived from a `.find()` that never matched, so the spinner never stopped) — found by the user reporting the button spinning forever, root-caused by reading jellyfin-web's own source. See "Dashboard — Painel (overview)" below. |
+| `POST /ScheduledTasks/Running/{taskId}` | ✅ | Implemented (`internal/api/scheduled_tasks.go`'s `handleScheduledTaskStart`), the route the Dashboard's "Scan All Libraries" button actually calls once it resolves the task above by Key. Validates `taskId` against the one task this project has, then runs the same `refreshAllLibraries` `POST /Library/Refresh` uses. |
+| `POST /ScheduledTasks/{taskId}`, `.../Triggers`; `DELETE .../Running/{taskId}` | ❌ | Catalog only — per-task admin actions (get single task, edit triggers, cancel a running one) on the task listed above. No scan cancellation exists, and no scheduling engine exists to act on for the rest. |
 | `GET/POST /Backup`, `/Backup/Create`, `/Backup/Restore`, `/Backup/Manifest` | ❌ | Catalog only. |
 | `GET /Plugins`, `/Plugins/{id}`, `.../Configuration`, `.../Manifest`; `GET /Packages`, `/Packages/{name}` | ❌ | Catalog only — deliberately out of scope per `docs/01`'s plugin-loading non-goal; listed for completeness, not expected to ever move to ✅. |
 | `GET /Localization/Countries`, `/Cultures`, `/Options`, `/ParentalRatings` | ❌ | Catalog only — admin setup wizard / user-creation dropdowns. |
@@ -314,6 +315,21 @@ recurring architecture bugs in its WebSocket implementation (concurrent-write cr
 that never get cleaned up, a zombie-session/SyncPlay bug) to design around rather than reproduce.
 Implemented in `internal/api/websocket.go` and confirmed live against `tinyfin-staging` with a real
 jellyfin-web build — see this section's own `GET /socket` row above.
+
+**A second, later bug on this same page**: the "Rastrear Todas as Bibliotecas" (Scan All Libraries)
+button reported by Rafael as spinning forever, click or no click. Root cause was in `GET
+/ScheduledTasks`'s response, not the button's own code: this project's one synthetic task reported
+`Id`/`Key` as an arbitrary internal string (`"library-scan"`), but jellyfin-web's Dashboard home
+widget locates that task by filtering the task list on `Key === 'RefreshLibrary'` — a value hardcoded
+client-side to match the reference server's own internal task key. With no match, the widget's
+`librariesTask` was always `undefined`, and its `isScanning` check (`librariesTask?.State !==
+'Idle'`) evaluated `true` unconditionally — the spinner had nothing to do with whether a scan was
+actually running. Root-caused by reading jellyfin-web's own source (client-side JS, not the
+reference server's C#, so outside AGENTS.md's clean-room requirement) after black-box network
+capture alone couldn't explain a click that produced no request at all. Fixed by reporting
+`"RefreshLibrary"` and implementing the route the button calls once it does find the task,
+`POST /ScheduledTasks/Running/{taskId}` (previously catalog-only) — see this section's own
+`GET /ScheduledTasks`/`POST /ScheduledTasks/Running/{taskId}` rows above.
 
 ---
 

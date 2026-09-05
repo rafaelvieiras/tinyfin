@@ -26,6 +26,12 @@ var routePaths = []string{
 	// 2 segments (including the leading empty split element) — shorter than
 	// every other entry in this list, no collision possible.
 	"/ScheduledTasks",
+	// 4 segments (including the leading empty split element) — no collision
+	// risk with any other 4-segment entry in this list: normalizePathCase
+	// checks every non-wildcard segment, and this pattern's second segment
+	// ("ScheduledTasks", a literal) is unique to it, same reasoning as every
+	// other entry in this list keyed off segment count.
+	"/ScheduledTasks/Running/{taskId}",
 	// Fully literal, no wildcard segment at all — no collision is possible
 	// regardless of any other pattern in this list.
 	"/System/ActivityLog/Entries",

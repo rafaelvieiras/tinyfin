@@ -329,6 +329,22 @@ what starting Phase 1 actually requires next.
       `withAccessLog` middleware's `statusRecorder` wrapper didn't forward `http.Hijacker` support,
       which silently 501'd every WebSocket upgrade attempt until a real end-to-end test (not just a
       handler-level unit test) caught it.
+- [x] Fixed: Dashboard's "Rastrear Todas as Bibliotecas" (Scan All Libraries) button spinning
+      forever, reported by Rafael. Root cause was in `GET /ScheduledTasks`'s response, not the
+      button itself: `internal/api/scheduled_tasks.go` reported the one synthetic task's `Id`/`Key`
+      as an arbitrary string (`"library-scan"`), but jellyfin-web's Dashboard home widget locates
+      "the library scan task" by filtering that list on `Key === 'RefreshLibrary'` — a value
+      hardcoded client-side to match the reference server's own internal task key. No match meant
+      the widget's `isScanning` check (`librariesTask?.State !== 'Idle'` on an always-`undefined`
+      task) evaluated `true` unconditionally, independent of any real scan state. Root-caused by
+      reading jellyfin-web's own source (client-side JS, not the reference server's C#, so outside
+      AGENTS.md's clean-room requirement) after black-box network capture alone couldn't explain a
+      click producing no outgoing request. Fixed by reporting `"RefreshLibrary"` and implementing
+      `POST /ScheduledTasks/Running/{taskId}` (`handleScheduledTaskStart`) — the route the button
+      actually calls once it finds the task, previously catalog-only (`docs/11`). Confirmed live
+      against a rebuilt `tinyfin-staging` with a real jellyfin-web build via Playwright: clicking the
+      button now fires `POST /ScheduledTasks/Running/RefreshLibrary` → `204`, and a real scan runs to
+      completion, no more permanent spinner.
 - [ ] TVDB provider — not implemented (see above).
 - [x] **Goal:** a freshly scanned library gets enriched metadata without Tinyfin implementing its
       own scraping. Verified via `internal/scan`'s test suite (movies and TV shows, with and

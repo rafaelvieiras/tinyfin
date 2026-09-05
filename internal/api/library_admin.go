@@ -17,6 +17,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -220,16 +221,29 @@ func (s *Server) handleRenameVirtualFolder(w http.ResponseWriter, r *http.Reques
 }
 
 // handleLibraryRefresh is POST /Library/Refresh — queues a background scan
-// for every existing library (Server.runScan), matching a dashboard's
+// for every existing library (refreshAllLibraries), matching a dashboard's
 // "Scan All Libraries" action.
 func (s *Server) handleLibraryRefresh(w http.ResponseWriter, r *http.Request) {
-	libs, err := s.store.QueryLibraries(r.Context())
-	if err != nil {
+	if err := s.refreshAllLibraries(r.Context()); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// refreshAllLibraries queues a background scan (Server.runScan) for every
+// existing library. Shared by handleLibraryRefresh above and
+// handleScheduledTaskStart (scheduled_tasks.go) — jellyfin-web's Dashboard
+// "Scan All Libraries" button drives the latter (POST /ScheduledTasks/
+// Running/{taskId}), not this package's own /Library/Refresh route, but
+// both mean the same thing: scan everything now.
+func (s *Server) refreshAllLibraries(ctx context.Context) error {
+	libs, err := s.store.QueryLibraries(ctx)
+	if err != nil {
+		return err
 	}
 	for _, lib := range libs {
 		go s.runScan(lib)
 	}
-	w.WriteHeader(http.StatusNoContent)
+	return nil
 }

@@ -21,11 +21,20 @@ import (
 	"time"
 )
 
-// scheduledTaskLibraryScanID is Tinyfin's own identifier for the one task
-// this endpoint reports — not required to match the reference server's
-// internal key for its equivalent task, since nothing in this project's
-// client-facing flow acts on Key beyond echoing it back.
-const scheduledTaskLibraryScanID = "library-scan"
+// scheduledTaskLibraryScanID doubles as this task's Id and Key. It MUST be
+// exactly "RefreshLibrary": jellyfin-web's Dashboard (both the home overview
+// widget and the Libraries page) locates "the library scan task" by
+// filtering the GET /ScheduledTasks list on Key === 'RefreshLibrary'
+// (react/src/apps/dashboard/routes/index.tsx and .../routes/libraries/
+// index.tsx in jellyfin-web — this is client-side JS, not the reference
+// server's C#, so reading it isn't subject to AGENTS.md's clean-room
+// requirement), then reads that task's Id back to call
+// POST /ScheduledTasks/Running/{taskId} (handleScheduledTaskStart below).
+// Found live: with any other value here, that .find() always returns
+// undefined, so the widget's "isScanning" check (librariesTask?.State !==
+// Idle) evaluates true forever — the Scan All Libraries button spins from
+// page load, click or no click, and never stops.
+const scheduledTaskLibraryScanID = "RefreshLibrary"
 
 // taskTriggerInfo mirrors the reference server's TaskTriggerInfo. Nothing
 // in this project ever populates one — see scheduledTaskInfo.Triggers.
@@ -133,4 +142,23 @@ func (s *Server) scheduledTasksSnapshot() []scheduledTaskInfo {
 	}
 
 	return []scheduledTaskInfo{task}
+}
+
+// handleScheduledTaskStart is POST /ScheduledTasks/Running/{taskId} — the
+// route jellyfin-web's Dashboard "Scan All Libraries" button (and the
+// Libraries page's equivalent) actually calls, once it has located the task
+// via GET /ScheduledTasks' Key === 'RefreshLibrary' (see
+// scheduledTaskLibraryScanID's doc comment). Any taskId other than that
+// constant addresses a task this project doesn't have, so it 404s rather
+// than silently starting the only scan this project knows how to run.
+func (s *Server) handleScheduledTaskStart(w http.ResponseWriter, r *http.Request) {
+	if r.PathValue("taskId") != scheduledTaskLibraryScanID {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if err := s.refreshAllLibraries(r.Context()); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

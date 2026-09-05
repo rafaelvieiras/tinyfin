@@ -36,6 +36,7 @@ func newTestServerWithScheduledTasks(t *testing.T) (*httptest.Server, *sqlite.St
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /ScheduledTasks", requireAdmin(srv.handleScheduledTasks))
+	mux.HandleFunc("POST /ScheduledTasks/Running/{taskId}", requireAdmin(srv.handleScheduledTaskStart))
 	// Auth needs its own route too since the reference AuthenticateByName
 	// flow (loginToken) goes through srv, not this local mux.
 	mux.HandleFunc("POST /Users/AuthenticateByName", srv.handleAuthenticateByName)
@@ -203,6 +204,66 @@ func TestScheduledTasksRequiresAdmin(t *testing.T) {
 	get := authedClient(t, ts.URL, token)
 
 	nonAdminResp := get(http.MethodGet, "/ScheduledTasks")
+	defer nonAdminResp.Body.Close()
+	if nonAdminResp.StatusCode != http.StatusForbidden {
+		t.Fatalf("non-admin status = %d, want 403", nonAdminResp.StatusCode)
+	}
+}
+
+// TestScheduledTaskStartWrongIdNotFound covers the reason the Dashboard's
+// "Scan All Libraries" button used to spin forever: jellyfin-web locates the
+// task by filtering GET /ScheduledTasks on Key === "RefreshLibrary", then
+// starts it by Id at this route. Any other taskId addresses a task this
+// project doesn't have.
+func TestScheduledTaskStartWrongIdNotFound(t *testing.T) {
+	ts, st, _ := newTestServerWithScheduledTasks(t)
+	admin := createTestAdminUser(t, st, "admin", "adminpass")
+	token := loginToken(t, ts.URL, admin.Name, "adminpass")
+	post := authedClient(t, ts.URL, token)
+
+	resp := post(http.MethodPost, "/ScheduledTasks/Running/some-other-task")
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", resp.StatusCode)
+	}
+}
+
+// TestScheduledTaskStartRefreshLibrary covers the fixed, working path: the
+// exact Id/Key value jellyfin-web hardcodes ("RefreshLibrary") queues a scan
+// and returns 204, same as POST /Library/Refresh.
+func TestScheduledTaskStartRefreshLibrary(t *testing.T) {
+	ts, st, _ := newTestServerWithScheduledTasks(t)
+	admin := createTestAdminUser(t, st, "admin", "adminpass")
+	token := loginToken(t, ts.URL, admin.Name, "adminpass")
+	post := authedClient(t, ts.URL, token)
+
+	resp := post(http.MethodPost, "/ScheduledTasks/Running/"+scheduledTaskLibraryScanID)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204", resp.StatusCode)
+	}
+}
+
+// TestScheduledTaskStartRequiresAdmin mirrors
+// TestScheduledTasksRequiresAdmin for this route: no session gets 401, an
+// authenticated non-admin gets 403.
+func TestScheduledTaskStartRequiresAdmin(t *testing.T) {
+	ts, st, _ := newTestServerWithScheduledTasks(t)
+
+	noAuthResp, err := http.Post(ts.URL+"/ScheduledTasks/Running/"+scheduledTaskLibraryScanID, "", nil)
+	if err != nil {
+		t.Fatalf("POST /ScheduledTasks/Running/%s (no auth): %v", scheduledTaskLibraryScanID, err)
+	}
+	defer noAuthResp.Body.Close()
+	if noAuthResp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("no-auth status = %d, want 401", noAuthResp.StatusCode)
+	}
+
+	user := createTestUser(t, st, "dave", "davepass")
+	token := loginToken(t, ts.URL, user.Name, "davepass")
+	post := authedClient(t, ts.URL, token)
+
+	nonAdminResp := post(http.MethodPost, "/ScheduledTasks/Running/"+scheduledTaskLibraryScanID)
 	defer nonAdminResp.Body.Close()
 	if nonAdminResp.StatusCode != http.StatusForbidden {
 		t.Fatalf("non-admin status = %d, want 403", nonAdminResp.StatusCode)

@@ -323,6 +323,13 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /System/Endpoint", requireAuth(s.handleSystemEndpoint))
 	s.mux.HandleFunc("GET /System/Info/Storage", requireAdmin(s.handleSystemInfoStorage))
 	s.mux.HandleFunc("GET /ScheduledTasks", requireAdmin(s.handleScheduledTasks))
+	// The Dashboard "Scan All Libraries" button's actual call (jellyfin-web
+	// resolves the task by Key first — see scheduledTaskLibraryScanID's doc
+	// comment in scheduled_tasks.go — then starts it by Id here). Cancel
+	// (DELETE on this same path) and per-task GET/Triggers stay a documented
+	// gap (docs/11) — no scan cancellation exists, and nothing today calls
+	// them for this project's one synthetic task.
+	s.mux.HandleFunc("POST /ScheduledTasks/Running/{taskId}", requireAdmin(s.handleScheduledTaskStart))
 	s.mux.HandleFunc("GET /System/ActivityLog/Entries", requireAdmin(s.handleActivityLogEntries))
 	// Dashboard overview page, called unconditionally on mount — see
 	// handleConfigurationPages' doc comment (system.go).
