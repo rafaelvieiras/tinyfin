@@ -128,6 +128,34 @@ keep their now-wrong `date_created` until independently repaired (a rescan will 
 since the row already exists and the new code path deliberately leaves an existing row's
 `date_created` alone).
 
+### A new item's `date_created` comes from the file, not the scan clock
+
+Fixing the overwrite-on-rescan bug above exposed the next layer of the same symptom: even for a
+*brand-new* row, every `scan.go` call site stamped `DateCreated: time.Now().UTC()` — the moment the
+scan's goroutine happened to reach that file, not when the file was actually placed in the library.
+Rafael asked "é assim que o C# faz?" after noticing this while re-testing the previous fix by
+deleting and rescanning a whole library from scratch: every item in that fresh scan ended up with
+nearly identical `date_created` values (all within the same second), which is exactly the
+"traversal order, not real add order" symptom this whole section is about — just moved one step
+earlier, from "every rescan" to "every fresh scan of an existing collection."
+
+Read (extraction only, no code carried over — this project's clean-room rule for
+`jellyfin/jellyfin`) confirms the reference server does not do this: a newly resolved item's
+`DateCreated` is seeded from the video file's own filesystem timestamp by default
+(`UseFileCreationTimeForDateAdded`, on by default), falling back to the scan's wall-clock time only
+when that timestamp is unavailable. **Matched, with one platform-forced substitution**:
+`internal/scan/scan.go`'s new `fileDateAdded(path)` helper stats the file/folder and uses its
+modification time, not creation time — Go's `os.Stat` cannot portably read a file's *creation* time
+on Linux (common filesystems like ext4 don't expose "birth time" via the standard stat syscall; the
+reference server has this same platform gap on Linux, per its own source). mtime is the closest
+reliably-available proxy for "when this file was added" on every platform Tinyfin runs on. Used at
+all four call sites that mint a new item (`processMovie`, `walkSeries`, `walkSeasons`,
+`processEpisode`) — harmless for an *existing* row either way, since the `UpsertItem` fix above
+already ignores whatever `DateCreated` a caller passes once a row exists. Covered by
+`TestScanLibraryMovieDateCreatedFollowsFileModTime` (`internal/scan/scan_test.go`), which writes two
+movies in the opposite order of their mtimes and asserts `date_created`-descending order follows the
+mtimes, not the filenames/traversal order.
+
 ## Scan-time resource discipline
 
 The reference implementation has a documented failure mode here too: unbounded concurrent

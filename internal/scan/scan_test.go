@@ -163,6 +163,61 @@ func TestScanLibraryMovies(t *testing.T) {
 	}
 }
 
+// TestScanLibraryMovieDateCreatedFollowsFileModTime proves a freshly
+// discovered movie's DateCreated comes from its video file's own mtime, not
+// the wall-clock moment the scan happened to reach it — otherwise a bulk
+// import of an existing collection (every file already on disk before the
+// first scan ever runs) would sort "recently added" by directory-traversal
+// order instead of by when each file actually landed on disk, which is what
+// the reference server's own default does (it seeds DateCreated from the
+// file's own filesystem timestamp, confirmed by reading jellyfin/jellyfin's
+// resolver behavior). Two movies are written newest-name-first but with
+// mtimes set to the opposite order, so a pass that only reflects scan order
+// would get this backwards.
+func TestScanLibraryMovieDateCreatedFollowsFileModTime(t *testing.T) {
+	root := t.TempDir()
+	olderPath := filepath.Join(root, "A Older Movie (2000)", "movie.mkv")
+	newerPath := filepath.Join(root, "Z Newer Movie (2020)", "movie.mkv")
+	writeFile(t, olderPath, "older")
+	writeFile(t, newerPath, "newer")
+
+	older := time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC)
+	newer := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+	if err := os.Chtimes(olderPath, older, older); err != nil {
+		t.Fatalf("Chtimes older: %v", err)
+	}
+	if err := os.Chtimes(newerPath, newer, newer); err != nil {
+		t.Fatalf("Chtimes newer: %v", err)
+	}
+
+	st := newTestStore(t)
+	s := New(st, &fakeProvider{}, Config{})
+	lib := storage.Library{
+		ID: "lib-movies-mtime", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
+	}
+	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("UpsertLibrary: %v", err)
+	}
+	if _, err := s.ScanLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("ScanLibrary: %v", err)
+	}
+
+	page, err := st.QueryItems(context.Background(), storage.ItemFilter{
+		LibraryID: &lib.ID, ItemTypes: []storage.ItemType{storage.ItemTypeMovie},
+		SortBy: []storage.SortField{{By: storage.SortByDateCreated, Descending: true}}, Limit: 10,
+	})
+	if err != nil {
+		t.Fatalf("QueryItems: %v", err)
+	}
+	if len(page.Items) != 2 {
+		t.Fatalf("len(Items) = %d, want 2", len(page.Items))
+	}
+	if page.Items[0].Name != "Z Newer Movie" || page.Items[1].Name != "A Older Movie" {
+		t.Errorf("DateCreated-descending order = [%q, %q], want [\"Z Newer Movie\", \"A Older Movie\"] (file mtime order, not alphabetical scan order)",
+			page.Items[0].Name, page.Items[1].Name)
+	}
+}
+
 func TestScanLibraryTVShows(t *testing.T) {
 	root := t.TempDir()
 	base := filepath.Join(root, "Dragon Ball (1986)", "Season 01")

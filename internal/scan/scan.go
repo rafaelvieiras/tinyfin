@@ -303,8 +303,9 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 		// invocation happened to straddle local midnight while UTC hadn't.
 		// UpsertItem's own DateCreated-defaulting already follows this
 		// convention (item.go); every DateCreated this scanner sets
-		// explicitly needs to match it.
-		DateCreated: time.Now().UTC(),
+		// explicitly needs to match it. fileDateAdded already applies
+		// .UTC() itself.
+		DateCreated: fileDateAdded(itemPath),
 	}
 	if year > 0 {
 		item.ProductionYear = &year
@@ -350,7 +351,7 @@ func (s *Scanner) walkSeries(ctx context.Context, pool *jobPool, lib storage.Lib
 
 		seriesItem := storage.Item{
 			ID: seriesID, Type: storage.ItemTypeSeries, LibraryID: lib.ID,
-			Name: seriesTitle, SortName: seriesTitle, DateCreated: time.Now().UTC(),
+			Name: seriesTitle, SortName: seriesTitle, DateCreated: fileDateAdded(seriesPath),
 		}
 		if seriesYear > 0 {
 			seriesItem.ProductionYear = &seriesYear
@@ -397,7 +398,7 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 			ID: seasonID, Type: storage.ItemTypeSeason, LibraryID: lib.ID,
 			ParentID: &seriesID, SeriesID: &seriesID,
 			Name: fmt.Sprintf("Season %d", seasonNum), SortName: fmt.Sprintf("%04d", seasonNum),
-			IndexNumber: &idx, DateCreated: time.Now().UTC(),
+			IndexNumber: &idx, DateCreated: fileDateAdded(seasonPath),
 		}
 		if err := s.store.UpsertItem(ctx, seasonItem); err != nil {
 			log.Printf("scan: upserting season %q: %v", e.Name(), err)
@@ -468,7 +469,7 @@ func (s *Scanner) processEpisode(ctx context.Context, pool *jobPool, lib storage
 		Path: episodePath, Container: videoExt(episodePath), Size: size,
 		MediaStreams: mediaStreamsFromProbe(info),
 		RunTimeTicks: runtimeTicksFromProbe(info),
-		DateCreated:  time.Now().UTC(),
+		DateCreated:  fileDateAdded(episodePath),
 	}
 
 	// Same ordering requirement as processMovie: upsert first so
@@ -977,6 +978,31 @@ func videoExt(filename string) string {
 // largestVideoFile returns the largest recognized video file directly
 // inside dir (not recursive) — the same "one file per movie folder"
 // convention devseed's throwaway helper used.
+// fileDateAdded returns path's on-disk modification time in UTC, for use as
+// a newly-discovered item's DateCreated — so a library scanned in bulk (e.g.
+// an initial import of an existing collection) sorts "recently added" by
+// when each file actually landed on disk, not by scan/traversal order.
+// Mirrors the reference server's own default of seeding a new item's "date
+// added" from the file's own filesystem timestamp rather than the scan's
+// wall-clock time (confirmed by reading jellyfin/jellyfin's resolver
+// behavior: it seeds DateCreated from the file's creation time unless that
+// value is unavailable, in which case it falls back to the scan's own
+// wall-clock time — the same fallback used here).
+//
+// Go's os.Stat cannot portably read a file's *creation* time on Linux (birth
+// time isn't exposed by the standard stat syscall on common filesystems like
+// ext4, the reference server has this same platform gap), so this uses
+// ModTime instead: for a freshly copied/downloaded file, mtime is at least
+// as good a proxy for "date added" as creation time, and is reliably
+// available on every platform Tinyfin runs on.
+func fileDateAdded(path string) time.Time {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return time.Now().UTC()
+	}
+	return fi.ModTime().UTC()
+}
+
 func largestVideoFile(dir string) (string, int64) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {

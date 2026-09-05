@@ -454,6 +454,19 @@ what starting Phase 1 actually requires next.
       (`internal/storage/sqlite/store_test.go`). Note: this only stops future corruption — items
       already miscataloged by prior rescans need an independent repair, since the fix's own logic
       means a rescan will not self-heal an existing row's wrong `date_created`.
+- [x] Fixed: a brand-new item's `date_created` came from the scan's wall-clock time
+      (`time.Now()`), not from the file itself — the same "recently added" symptom above, one layer
+      deeper, surfaced when Rafael asked "é assim que o C# faz?" after seeing a from-scratch rescan
+      cluster every item's `date_created` within the same second. Read (extraction only,
+      `jellyfin/jellyfin`'s clean-room rule) confirmed the reference server seeds a new item's
+      `DateCreated` from the video file's own filesystem timestamp by default
+      (`UseFileCreationTimeForDateAdded`), only falling back to wall-clock time when that's
+      unavailable. Matched via `internal/scan/scan.go`'s new `fileDateAdded(path)` helper, used at
+      all four call sites that mint a new item — with one platform-forced substitution: it uses the
+      file's modification time, not creation time, since Go's `os.Stat` can't portably read a
+      "birth time" on Linux (the reference server has this same gap there). See `docs/08`'s "A new
+      item's `date_created` comes from the file, not the scan clock" section. Covered by
+      `TestScanLibraryMovieDateCreatedFollowsFileModTime` (`internal/scan/scan_test.go`).
 - [ ] TVDB provider — not implemented (see above).
 - [x] **Goal:** a freshly scanned library gets enriched metadata without Tinyfin implementing its
       own scraping. Verified via `internal/scan`'s test suite (movies and TV shows, with and
