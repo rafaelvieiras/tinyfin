@@ -15,7 +15,10 @@ ADMIN_USER="${ADMIN_USER:-admin}"
 ADMIN_PASS="${ADMIN_PASS:-Conformance-Admin-1}"
 
 docker rm -f "$NAME" >/dev/null 2>&1 || true
-docker run -d --name "$NAME" --memory 1g -p "127.0.0.1:${PORT}:8096" \
+# REF_DOCKER_ARGS: extra `docker run` flags, e.g. "--dns 127.0.0.1" to keep the
+# server offline so online metadata providers cannot rename the fixtures.
+# shellcheck disable=SC2086
+docker run -d --name "$NAME" --memory 1g -p "127.0.0.1:${PORT}:8096" ${REF_DOCKER_ARGS:-} \
   --tmpfs /config:uid=1000 --tmpfs /cache:uid=1000 \
   -v "$(realpath "$MEDIA")":/media:ro "$IMAGE" >/dev/null
 

@@ -7,12 +7,14 @@
   ],
   "libraries": [
     {"key": "movies", "name": "Movies", "type": "movies", "path": "Movies"},
-    {"key": "shows", "name": "Shows", "type": "tvshows", "path": "Shows"}
+    {"key": "shows", "name": "Shows", "type": "tvshows", "path": "Shows"},
+    {"key": "long", "name": "Long", "type": "movies", "path": "Long", "lazy": true}
   ],
   "items": [
     {"key": "alpha", "type": "Movie", "path": "Movies/Alpha Movie (2015)/Alpha Movie (2015).mp4"},
     {"key": "bravo", "type": "Movie", "path": "Movies/Bravo Movie (2020)/Bravo Movie (2020).mp4"},
     {"key": "charlie", "type": "Movie", "path": "Movies/Charlie Movie (2018)/Charlie Movie (2018).mp4"},
+    {"key": "long", "type": "Movie", "library": "long", "path": "Long/Long Movie (2021)/Long Movie (2021).mp4"},
     {"key": "show", "type": "Series", "path": "Shows/Test Show (2019)"},
     {"key": "s01e01", "type": "Episode", "path": "Shows/Test Show (2019)/Season 01/Test Show (2019) S01E01.mp4"},
     {"key": "s01e02", "type": "Episode", "path": "Shows/Test Show (2019)/Season 01/Test Show (2019) S01E02.mp4"},

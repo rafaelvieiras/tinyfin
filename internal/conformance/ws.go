@@ -81,7 +81,7 @@ func (w *wsConn) waitFor(ctx context.Context, typ string, timeout time.Duration)
 	}
 }
 
-func (c *Client) wsURL(token, deviceID string) (string, error) {
+func (c *Client) wsURL(param, token, deviceID string) (string, error) {
 	u, err := url.Parse(c.BaseURL)
 	if err != nil {
 		return "", err
@@ -94,7 +94,7 @@ func (c *Client) wsURL(token, deviceID string) (string, error) {
 	}
 	u.Path = strings.TrimRight(u.Path, "/") + "/socket"
 	q := url.Values{}
-	q.Set("ApiKey", token)
+	q.Set(param, token)
 	q.Set("deviceId", deviceID)
 	u.RawQuery = q.Encode()
 	return u.String(), nil
@@ -114,13 +114,31 @@ func (c *Client) runWS(ctx context.Context, ws *WSStep, rs *runState) (*Response
 		if err != nil {
 			return nil, err
 		}
-		u, err := c.wsURL(tok, "conf-ws-"+ws.Open+c.DeviceSuffix)
+		param := ws.Param
+		if param == "" {
+			param = "ApiKey"
+		}
+		u, err := c.wsURL(param, tok, "conf-ws-"+ws.Open+c.DeviceSuffix)
 		if err != nil {
 			return nil, err
 		}
 		dctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		conn, _, err := websocket.Dial(dctx, u, nil)
+		conn, hresp, err := websocket.Dial(dctx, u, nil)
 		cancel()
+		if ws.RefuseStatus != 0 {
+			if err == nil {
+				conn.CloseNow()
+				return nil, fmt.Errorf("socket %s upgraded, want refusal with %d", ws.Open, ws.RefuseStatus)
+			}
+			if hresp == nil || hresp.StatusCode != ws.RefuseStatus {
+				got := 0
+				if hresp != nil {
+					got = hresp.StatusCode
+				}
+				return nil, fmt.Errorf("socket %s refused with %d, want %d", ws.Open, got, ws.RefuseStatus)
+			}
+			return nil, nil
+		}
 		if err != nil {
 			return nil, fmt.Errorf("open socket %s: %v", ws.Open, redactURL(err.Error(), tok))
 		}

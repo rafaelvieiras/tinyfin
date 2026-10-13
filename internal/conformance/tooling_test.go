@@ -194,6 +194,12 @@ func TestWebSocketSteps(t *testing.T) {
 	if present.Status != StatusFail {
 		t.Fatalf("want fail, got %+v", present)
 	}
+	// a refused handshake can be asserted; an accepted one fails the step
+	refused := runOne(t, c, Scenario{ID: "ws5", Steps: []Step{
+		step(WSStep{Open: "x", As: "admin", RefuseStatus: 403, Param: "api_key"}, Expect{})}})
+	if refused.Status != StatusFail {
+		t.Fatalf("stub accepts every handshake, so a refusal expectation must fail: %+v", refused)
+	}
 	noTok := runOne(t, c, Scenario{ID: "ws4", Steps: []Step{step(WSStep{Open: "a", As: "ghost"}, Expect{})}})
 	if noTok.Status != StatusBlocked {
 		t.Fatalf("want blocked, got %+v", noTok)
@@ -306,5 +312,78 @@ func TestBaselineCompare(t *testing.T) {
 	}
 	if tbl := base.ProgressTable(); !strings.Contains(tbl, "| **Total** | 5 | 3 | 1 | 1 | 0 |") {
 		t.Errorf("progress table: %s", tbl)
+	}
+}
+
+func TestLazyFixtureIsMaterializedAroundScenario(t *testing.T) {
+	var mu sync.Mutex
+	libs := map[string]bool{}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/Users/AuthenticateByName", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"AccessToken":"adm","User":{"Id":"u1"}}`))
+	})
+	mux.HandleFunc("/Users", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte(`[]`)) })
+	mux.HandleFunc("/Auth/Keys", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(500) })
+	mux.HandleFunc("/Library/Refresh", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) })
+	mux.HandleFunc("/Library/VirtualFolders", func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		name := r.URL.Query().Get("name")
+		switch r.Method {
+		case http.MethodPost:
+			libs[name] = true
+			w.WriteHeader(204)
+		case http.MethodDelete:
+			delete(libs, name)
+			w.WriteHeader(204)
+		default:
+			_, _ = w.Write([]byte(`[]`))
+		}
+	})
+	mux.HandleFunc("/Items", func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		if libs["Long"] {
+			_, _ = w.Write([]byte(`{"Items":[{"Id":"abc","Name":"Long Movie","Path":"/m/Long/x.mp4"}]}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"Items":[]}`))
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	c := NewClient(srv.URL)
+	fx := Fixtures{
+		Libraries: []FixtureLibrary{{Key: "long", Name: "Long", Type: "movies", Path: "Long", Lazy: true}},
+		Items:     []FixtureItem{{Key: "long", Type: "Movie", Library: "long", Path: "Long/x.mp4"}},
+	}
+	if _, err := c.Setup(context.Background(), "admin", "pw", "/m", fx); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	created := len(libs)
+	mu.Unlock()
+	if created != 0 || c.Available["item:long"] {
+		t.Fatalf("lazy library must not exist after setup (libs=%d avail=%v)", created, c.Available["item:long"])
+	}
+	probe := Scenario{ID: "l", Requires: []string{"item:long"}, Steps: []Step{
+		{As: "admin", Request: Request{Path: "/Items", Query: map[string]string{"x": "{{item.long.id}}"}}, Expect: Expect{Status: Ints{200}}}}}
+	if r := runOne(t, c, probe); r.Status != StatusPass {
+		t.Fatalf("%+v", r)
+	}
+	mu.Lock()
+	left := len(libs)
+	mu.Unlock()
+	if left != 0 || c.Available["item:long"] {
+		t.Errorf("lazy library must be removed after the scenario (libs=%d)", left)
+	}
+}
+
+func TestDashedTemplateModifier(t *testing.T) {
+	c := NewClient("http://x")
+	c.Vars["user.a.id"] = "0123456789abcdef0123456789abcdef"
+	got, err := c.expand("{{user.a.id|dashed}} {{user.a.id}}", nil)
+	if err != nil || got != "01234567-89ab-cdef-0123-456789abcdef 0123456789abcdef0123456789abcdef" {
+		t.Fatalf("%q %v", got, err)
 	}
 }

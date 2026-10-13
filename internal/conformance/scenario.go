@@ -84,6 +84,11 @@ type WSStep struct {
 	// fixture user key or "token:{{capture.x}}").
 	Open string `json:"open,omitempty"`
 	As   string `json:"as,omitempty"`
+	// Param is the query parameter carrying the token (default "ApiKey").
+	Param string `json:"param,omitempty"`
+	// RefuseStatus makes Open expect the handshake to be refused with this
+	// HTTP status instead of upgrading.
+	RefuseStatus int `json:"refuseStatus,omitempty"`
 	// Wait blocks until the named socket receives a message of type Type (any
 	// type when empty), within TimeoutMs (default 5000).
 	Wait string `json:"wait,omitempty"`

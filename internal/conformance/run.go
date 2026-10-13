@@ -56,6 +56,8 @@ type Client struct {
 	// implementation cannot lock the rest of the suite out.
 	IncludeRisky bool
 
+	mediaRoot string
+	lazyLibs  map[string]*lazyLibrary
 	apiKeyID  string // access token of the run's API key (for Teardown)
 	mu        sync.Mutex
 	activeRun *runState
@@ -120,17 +122,23 @@ func (c *Client) expand(s string, scratch map[string]string) (string, error) {
 	var missing []string
 	out := tmplRE.ReplaceAllStringFunc(s, func(m string) string {
 		name := tmplRE.FindStringSubmatch(m)[1]
-		if v, ok := scratch[name]; ok {
-			return v
+		// "{{x|dashed}}" renders a 32-hex id in its 8-4-4-4-12 form.
+		name, dashed := strings.CutSuffix(name, "|dashed")
+		v, ok := scratch[name]
+		if !ok {
+			v, ok = c.Vars[name]
 		}
-		if v, ok := c.Vars[name]; ok {
-			return v
+		if !ok && name == "run.suffix" {
+			v, ok = c.DeviceSuffix, true
 		}
-		if name == "run.suffix" {
-			return c.DeviceSuffix
+		if !ok {
+			missing = append(missing, name)
+			return m
 		}
-		missing = append(missing, name)
-		return m
+		if dashed && len(v) == 32 {
+			v = v[:8] + "-" + v[8:12] + "-" + v[12:16] + "-" + v[16:20] + "-" + v[20:]
+		}
+		return v
 	})
 	if len(missing) > 0 {
 		return "", &blockedError{"unresolved variable(s): " + strings.Join(missing, ", ")}
@@ -288,6 +296,18 @@ func (c *Client) runOne(ctx context.Context, s Scenario, skipDivergent bool) Res
 	if !c.IncludeRisky && hasTag(s.Tags, "risky") {
 		res.Status, res.Message = StatusSkipped, "risky: opt-in with -risky"
 		return res
+	}
+	done := map[*lazyLibrary]bool{}
+	for _, need := range s.Requires {
+		if ll := c.lazyFor(need); ll != nil && !done[ll] {
+			done[ll] = true
+			undo, err := c.materialize(ctx, ll)
+			if err != nil {
+				res.Status, res.Message = StatusBlocked, "fixture not available: "+need+": "+err.Error()
+				return res
+			}
+			defer undo()
+		}
 	}
 	for _, need := range s.Requires {
 		if !c.Available[need] {

@@ -35,6 +35,11 @@ type FixtureLibrary struct {
 	Name string `json:"name"`
 	Type string `json:"type"` // movies | tvshows | music
 	Path string `json:"path"` // relative to the media root
+	// Lazy libraries are not created during setup. A scenario that requires
+	// one of their items (or "library:<key>") gets the library created, scanned
+	// and removed around it, so the extra media never shows up in the
+	// listings other scenarios count.
+	Lazy bool `json:"lazy,omitempty"`
 }
 
 // FixtureItem resolves a library item by type and path (or name) after the
@@ -47,6 +52,8 @@ type FixtureItem struct {
 	Path        string `json:"path,omitempty"` // relative to the media root; preferred over Name
 	IndexNumber *int   `json:"indexNumber,omitempty"`
 	ParentIndex *int   `json:"parentIndexNumber,omitempty"`
+	// Library is the key of a lazy library this item lives in.
+	Library string `json:"library,omitempty"`
 }
 
 // LoadFixtures reads a fixtures file.
@@ -155,7 +162,26 @@ func (c *Client) Setup(ctx context.Context, adminUser, adminPass, mediaRoot stri
 			}
 		}
 	}
+	c.mediaRoot = mediaRoot
+	c.lazyLibs = map[string]*lazyLibrary{}
+	for i := range f.Libraries {
+		if l := f.Libraries[i]; l.Lazy {
+			c.lazyLibs[l.Key] = &lazyLibrary{lib: l}
+		}
+	}
+	var eager []FixtureItem
+	for _, it := range f.Items {
+		if ll := c.lazyLibs[it.Library]; it.Library != "" && ll != nil {
+			ll.items = append(ll.items, it)
+			continue
+		}
+		eager = append(eager, it)
+	}
+	f.Items = eager
 	for _, l := range f.Libraries {
+		if l.Lazy {
+			continue
+		}
 		path := strings.TrimRight(mediaRoot, "/") + "/" + l.Path
 		if _, ok := have[strings.ToLower(l.Name)]; !ok {
 			body := map[string]any{"LibraryOptions": map[string]any{"PathInfos": []any{map[string]any{"Path": path}}}}
@@ -311,4 +337,69 @@ func (c *Client) Teardown(ctx context.Context) error {
 		return fmt.Errorf("revoke key: %s", statusErr(r, err))
 	}
 	return nil
+}
+
+// lazyLibrary is a library (and its items) materialized only around the
+// scenarios that require it.
+type lazyLibrary struct {
+	lib   FixtureLibrary
+	items []FixtureItem
+}
+
+// lazyFor returns the lazy library a requires key refers to, or nil.
+func (c *Client) lazyFor(need string) *lazyLibrary {
+	if k, ok := strings.CutPrefix(need, "library:"); ok {
+		return c.lazyLibs[k]
+	}
+	if k, ok := strings.CutPrefix(need, "item:"); ok {
+		for _, ll := range c.lazyLibs {
+			for _, it := range ll.items {
+				if it.Key == k {
+					return ll
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// materialize creates, scans and resolves a lazy library and returns the
+// function that removes it again. The error is a fixture-availability problem
+// (the scenario becomes BLOCKED).
+func (c *Client) materialize(ctx context.Context, ll *lazyLibrary) (undo func(), err error) {
+	l := ll.lib
+	path := strings.TrimRight(c.mediaRoot, "/") + "/" + l.Path
+	body := map[string]any{"LibraryOptions": map[string]any{"PathInfos": []any{map[string]any{"Path": path}}}}
+	r, err := c.Do(ctx, "admin", "POST", "/Library/VirtualFolders",
+		map[string]string{"name": l.Name, "collectionType": l.Type, "refreshLibrary": "true"}, body, nil)
+	if err != nil || (r.Status != 204 && r.Status != 200) {
+		return nil, fmt.Errorf("create library %s: %s", l.Key, statusErr(r, err))
+	}
+	undo = func() {
+		_, _ = c.Do(ctx, "admin", "DELETE", "/Library/VirtualFolders", map[string]string{"name": l.Name}, nil, nil)
+		delete(c.Available, "library:"+l.Key)
+		for _, it := range ll.items {
+			delete(c.Available, "item:"+it.Key)
+		}
+	}
+	c.Available["library:"+l.Key] = true
+	c.Vars["library."+l.Key+".name"] = l.Name
+	_, _ = c.Do(ctx, "admin", "POST", "/Library/Refresh", nil, nil, nil)
+	deadline := time.Now().Add(60 * time.Second)
+	for _, it := range ll.items {
+		for {
+			if id, name := c.findItem(ctx, it, c.mediaRoot); id != "" {
+				c.Vars["item."+it.Key+".id"] = id
+				c.Vars["item."+it.Key+".name"] = name
+				c.Available["item:"+it.Key] = true
+				break
+			}
+			if time.Now().After(deadline) {
+				undo()
+				return nil, fmt.Errorf("item %s not found after scan", it.Key)
+			}
+			time.Sleep(time.Second)
+		}
+	}
+	return undo, nil
 }
