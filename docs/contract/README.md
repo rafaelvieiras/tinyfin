@@ -204,6 +204,6 @@ scenario that is not pending, divergent or `risky`):
 | items | 113 | 113 | 0 | 0 | 0 |
 | playstate | 103 | 103 | 0 | 0 | 0 |
 | quickconnect | 13 | 13 | 0 | 0 | 0 |
-| users | 150 | 145 | 0 | 0 | 5 |
+| users | 154 | 149 | 0 | 0 | 5 |
 | wire | 6 | 6 | 0 | 0 | 0 |
-| **Total** | 385 | 380 | 0 | 0 | 5 |
+| **Total** | 389 | 384 | 0 | 0 | 5 |

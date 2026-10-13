@@ -1,7 +1,7 @@
 {
   "version": 1,
   "counts": {
-    "pass": 380,
+    "pass": 384,
     "skipped": 5
   },
   "scenarios": {
@@ -235,6 +235,10 @@
     "quickconnect.initiate.invalid-token-ignored": "pass",
     "quickconnect.initiate.shape": "pass",
     "users.auth.access-schedule": "pass",
+    "users.auth.activity-failed-login-entry": "pass",
+    "users.auth.activity-login-entries": "pass",
+    "users.auth.activity-no-entry-for-refusals": "pass",
+    "users.auth.activity-quickconnect-entries": "pass",
     "users.auth.device-restriction": "pass",
     "users.auth.device-restriction-revokes-existing": "pass",
     "users.auth.different-devices-coexist": "pass",
