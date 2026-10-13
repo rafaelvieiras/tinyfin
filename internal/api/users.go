@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -361,8 +362,11 @@ func (s *Server) handleUsersList(w http.ResponseWriter, r *http.Request) {
 // route's registration in server.go for why creation lives there, not on
 // plain POST /Users).
 type createUserByName struct {
-	Name     string `json:"Name"`
-	Password string `json:"Password"`
+	Name string `json:"Name"`
+	// Password is a pointer: a body that carries the member (even empty)
+	// writes a UserPasswordChanged entry, one that omits it does not
+	// (users.create.R11).
+	Password *string `json:"Password"`
 }
 
 func (s *Server) handleUsersCreate(w http.ResponseWriter, r *http.Request) {
@@ -387,8 +391,8 @@ func (s *Server) handleUsersCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var hash string
-	if req.Password != "" {
-		h, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if req.Password != nil && *req.Password != "" {
+		h, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -416,6 +420,17 @@ func (s *Server) handleUsersCreate(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	// users.create.R10-R11.
+	entries := []storage.ActivityEntry{{
+		Name:     fmt.Sprintf("User %s has been created", created.Name),
+		Type:     storage.ActivityTypeUserCreated,
+		UserID:   &created.ID,
+		Severity: storage.ActivitySeverityInfo,
+	}}
+	if req.Password != nil {
+		entries = append(entries, passwordChangedEntry(created))
+	}
+	s.writeActivity(r.Context(), entries...)
 	writeJSON(w, http.StatusOK, s.userDtoCtx(r.Context(), created))
 }
 
@@ -470,7 +485,9 @@ func (s *Server) handleUsersDelete(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// users.delete.R4: tokens of the deleted account stop working.
-	if err := s.store.RevokeUserTokens(ctx, target.ID, nil); err != nil {
+	// users.delete.R8: one SessionEnded per token, then UserDeleted (which
+	// belongs to no user, so it is found by hasUserId=false).
+	if err := s.revokeUserSessions(ctx, target, nil); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -478,6 +495,11 @@ func (s *Server) handleUsersDelete(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	s.writeActivity(ctx, storage.ActivityEntry{
+		Name:     fmt.Sprintf("User %s has been deleted", target.Name),
+		Type:     storage.ActivityTypeUserDeleted,
+		Severity: storage.ActivitySeverityInfo,
+	})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -548,7 +570,7 @@ func (s *Server) handleUsersPolicy(w http.ResponseWriter, r *http.Request) {
 
 	// R8: disabling revokes every token of the account.
 	if policy.IsDisabled && !wasDisabled {
-		if err := s.store.RevokeUserTokens(ctx, target.ID, nil); err != nil {
+		if err := s.revokeUserSessions(ctx, target, nil); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -559,7 +581,7 @@ func (s *Server) handleUsersPolicy(w http.ResponseWriter, r *http.Request) {
 		for _, d := range policy.EnabledDevices {
 			keep = append(keep, storage.DeviceID(d))
 		}
-		if err := s.store.RevokeUserTokens(ctx, target.ID, keep); err != nil {
+		if err := s.revokeUserSessions(ctx, target, keep); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

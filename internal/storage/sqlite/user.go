@@ -140,30 +140,38 @@ func (s *Store) DeleteUser(ctx context.Context, id storage.UserID) error {
 // exactly one such pair, so any earlier token of the same pair is revoked
 // (users.auth.R10); tokens of other devices and other users are untouched.
 func (s *Store) IssueToken(ctx context.Context, userID storage.UserID, deviceID storage.DeviceID) (storage.AuthToken, error) {
+	return s.IssueSessionToken(ctx, userID, deviceID, "", "")
+}
+
+// IssueSessionToken is IssueToken recording the session's device name and
+// remote address on the token.
+func (s *Store) IssueSessionToken(ctx context.Context, userID storage.UserID, deviceID storage.DeviceID, deviceName, remoteAddress string) (storage.AuthToken, error) {
 	token := storage.AuthToken{
-		Token:    newToken(),
-		UserID:   userID,
-		DeviceID: deviceID,
-		IssuedAt: time.Now().UTC(),
+		Token:         newToken(),
+		UserID:        userID,
+		DeviceID:      deviceID,
+		IssuedAt:      time.Now().UTC(),
+		DeviceName:    deviceName,
+		RemoteAddress: remoteAddress,
 	}
 
 	if _, err := s.exec(ctx, `DELETE FROM auth_tokens WHERE user_id = ? AND device_id = ?`, string(userID), string(deviceID)); err != nil {
 		return storage.AuthToken{}, fmt.Errorf("sqlite: revoking previous token of user %q: %w", userID, err)
 	}
 
-	const query = `INSERT INTO auth_tokens (token, user_id, device_id, issued_at) VALUES (?, ?, ?, ?)`
-	if _, err := s.exec(ctx, query, token.Token, string(token.UserID), string(token.DeviceID), token.IssuedAt); err != nil {
+	const query = `INSERT INTO auth_tokens (token, user_id, device_id, issued_at, device_name, remote_address) VALUES (?, ?, ?, ?, ?, ?)`
+	if _, err := s.exec(ctx, query, token.Token, string(token.UserID), string(token.DeviceID), token.IssuedAt, token.DeviceName, token.RemoteAddress); err != nil {
 		return storage.AuthToken{}, fmt.Errorf("sqlite: issuing token for user %q: %w", userID, err)
 	}
 	return token, nil
 }
 
 func (s *Store) LookupToken(ctx context.Context, token string) (storage.AuthToken, error) {
-	row := s.ex.QueryRowContext(ctx, `SELECT token, user_id, device_id, issued_at FROM auth_tokens WHERE token = ?`, token)
+	row := s.ex.QueryRowContext(ctx, `SELECT token, user_id, device_id, issued_at, device_name, remote_address FROM auth_tokens WHERE token = ?`, token)
 
 	var t storage.AuthToken
 	var tok, userID, deviceID string
-	if err := row.Scan(&tok, &userID, &deviceID, &t.IssuedAt); err != nil {
+	if err := row.Scan(&tok, &userID, &deviceID, &t.IssuedAt, &t.DeviceName, &t.RemoteAddress); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return storage.AuthToken{}, fmt.Errorf("sqlite: token not found: %w", err)
 		}
@@ -176,7 +184,7 @@ func (s *Store) LookupToken(ctx context.Context, token string) (storage.AuthToke
 }
 
 func (s *Store) QueryUserTokens(ctx context.Context, userID storage.UserID) ([]storage.AuthToken, error) {
-	rows, err := s.ex.QueryContext(ctx, `SELECT token, device_id, issued_at FROM auth_tokens WHERE user_id = ? ORDER BY issued_at`, string(userID))
+	rows, err := s.ex.QueryContext(ctx, `SELECT token, device_id, issued_at, device_name, remote_address FROM auth_tokens WHERE user_id = ? ORDER BY issued_at, rowid`, string(userID))
 	if err != nil {
 		return nil, fmt.Errorf("sqlite: querying tokens of user %q: %w", userID, err)
 	}
@@ -186,7 +194,7 @@ func (s *Store) QueryUserTokens(ctx context.Context, userID storage.UserID) ([]s
 	for rows.Next() {
 		t := storage.AuthToken{UserID: userID}
 		var deviceID string
-		if err := rows.Scan(&t.Token, &deviceID, &t.IssuedAt); err != nil {
+		if err := rows.Scan(&t.Token, &deviceID, &t.IssuedAt, &t.DeviceName, &t.RemoteAddress); err != nil {
 			return nil, fmt.Errorf("sqlite: scanning token row: %w", err)
 		}
 		t.DeviceID = storage.DeviceID(deviceID)

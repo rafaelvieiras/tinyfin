@@ -113,6 +113,9 @@ type UserStore interface {
 	// token of that same pair (one live token per user and device).
 	// GetUserByName matches the name case-insensitively.
 	IssueToken(ctx context.Context, userID UserID, deviceID DeviceID) (AuthToken, error)
+	// IssueSessionToken is IssueToken that also records the device name and
+	// remote address of the session the token stands for.
+	IssueSessionToken(ctx context.Context, userID UserID, deviceID DeviceID, deviceName, remoteAddress string) (AuthToken, error)
 	// QueryUserTokens lists the user's live tokens (one per device).
 	QueryUserTokens(ctx context.Context, userID UserID) ([]AuthToken, error)
 	LookupToken(ctx context.Context, token string) (AuthToken, error)

@@ -82,16 +82,18 @@ func (s *Server) handleAuthenticateByName(w http.ResponseWriter, r *http.Request
 
 	deviceAllowed := policy.EnableAllDevices || containsString(policy.EnabledDevices, ac.DeviceID)
 	if !passwordMatches(user.PasswordHash, req.Pw) {
-		s.logAuthFailure(r, req.Username)
 		// users.auth.R14: only an otherwise permitted account counts the
 		// failure; the answer is 401 either way (a lockout that this
-		// attempt triggers shows from the next attempt on).
+		// attempt triggers shows from the next attempt on). The lockout
+		// entry it may write comes before this attempt's own
+		// AuthenticationFailed entry (users.auth.R29).
 		if scheduleAllows(policy, now) && deviceAllowed {
 			if err := s.recordLoginFailure(r, user, policy); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 		}
+		s.logAuthFailure(r, req.Username)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -157,12 +159,33 @@ func (s *Server) issueLogin(w http.ResponseWriter, r *http.Request, user storage
 		return
 	}
 
-	// IssueToken revokes the user's previous token on this DeviceId
-	// (users.auth.R10).
-	token, err := s.store.IssueToken(ctx, user.ID, storage.DeviceID(deviceID))
+	// IssueSessionToken revokes the user's previous token on this DeviceId
+	// (users.auth.R10); the replaced session is reported as ended with the
+	// device name and address it was created with (users.auth.R31-R32).
+	// The device record is read before UpsertDevice renames it.
+	var replaced *storage.AuthToken
+	if toks, err := s.store.QueryUserTokens(ctx, user.ID); err == nil {
+		for i := range toks {
+			if string(toks[i].DeviceID) == deviceID {
+				replaced = &toks[i]
+			}
+		}
+	}
+	replacedName := ""
+	if replaced != nil {
+		replacedName = s.tokenDeviceName(ctx, *replaced)
+	}
+	address := ""
+	if withAddress {
+		address = remoteEndPoint(r)
+	}
+	token, err := s.store.IssueSessionToken(ctx, user.ID, storage.DeviceID(deviceID), device, address)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+	if replaced != nil {
+		s.writeActivity(ctx, sessionEndedEntry(user.ID, user.Name, replacedName, replaced.RemoteAddress))
 	}
 
 	// users.auth.R15, R22: a success resets the failure counter and
@@ -198,7 +221,7 @@ func (s *Server) issueLogin(w http.ResponseWriter, r *http.Request, user storage
 // recordLoginFailure counts one failed password attempt on a permitted
 // account (users.auth.R13-R14): no lockout when LoginAttemptsBeforeLockout
 // is negative, 0 behaves as 3, and reaching the limit disables the
-// account and revokes its tokens.
+// account (its tokens are kept, users.auth.R30).
 func (s *Server) recordLoginFailure(r *http.Request, user storage.User, policy userPolicyDto) error {
 	limit := policy.LoginAttemptsBeforeLockout
 	if limit < 0 {
@@ -222,7 +245,15 @@ func (s *Server) recordLoginFailure(r *http.Request, user storage.User, policy u
 		return err
 	}
 	if locked {
-		return s.store.RevokeUserTokens(r.Context(), user.ID, nil)
+		// users.auth.R28, R30: the lockout is logged but revokes no token;
+		// they are refused while the account is disabled.
+		uid := user.ID
+		s.writeActivity(r.Context(), storage.ActivityEntry{
+			Name:     fmt.Sprintf("User %s has been locked out", user.Name),
+			Type:     storage.ActivityTypeUserLockedOut,
+			UserID:   &uid,
+			Severity: storage.ActivitySeverityError,
+		})
 	}
 	return nil
 }

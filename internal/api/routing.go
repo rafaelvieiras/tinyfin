@@ -130,6 +130,9 @@ var routePaths = []string{
 	"/Playback/BitrateTest",
 	"/DisplayPreferences/{displayPreferencesId}",
 	"/Sessions/Capabilities/Full",
+	// Same segment count as /Sessions/Playing and no wildcard segment:
+	// no collision possible with the entries around it.
+	"/Sessions/Logout",
 	// 2 segments (including the leading empty split element), unlike every
 	// other "/Sessions/..." entry here (3+) — no collision risk possible at
 	// a different segment count.

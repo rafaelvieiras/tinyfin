@@ -94,7 +94,8 @@ func (s *Server) handleUsersPassword(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if err := s.store.RevokeUserTokens(r.Context(), target.ID, keep); err != nil {
+	s.writeActivity(r.Context(), passwordChangedEntry(target))
+	if err := s.revokeUserSessions(r.Context(), target, keep); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -107,6 +108,7 @@ func (s *Server) storePassword(w http.ResponseWriter, r *http.Request, u storage
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	s.writeActivity(r.Context(), passwordChangedEntry(u))
 	w.WriteHeader(http.StatusNoContent)
 }
 

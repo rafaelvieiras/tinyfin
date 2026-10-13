@@ -363,7 +363,8 @@ func TestUsersListCreateDelete(t *testing.T) {
 	}
 
 	// Create a second user via POST /Users/New.
-	createBody, _ := json.Marshal(createUserByName{Name: "carol", Password: "carolpass"})
+	carolPw := "carolpass"
+	createBody, _ := json.Marshal(createUserByName{Name: "carol", Password: &carolPw})
 	createResp := authedReq(http.MethodPost, "/Users/New", createBody)
 	defer createResp.Body.Close()
 	if createResp.StatusCode != http.StatusOK {

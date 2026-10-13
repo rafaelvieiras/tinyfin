@@ -27,6 +27,14 @@ const (
 	// against a live response the way SessionStarted was.
 	ActivityTypeAuthenticationFailed ActivityType = "AuthenticationFailed"
 
+	// Account and session entries (users.auth.R28-R32, users.create.R10,
+	// users.password.R15, users.delete.R8).
+	ActivityTypeUserLockedOut       ActivityType = "UserLockedOut"
+	ActivityTypeSessionEnded        ActivityType = "SessionEnded"
+	ActivityTypeUserCreated         ActivityType = "UserCreated"
+	ActivityTypeUserPasswordChanged ActivityType = "UserPasswordChanged"
+	ActivityTypeUserDeleted         ActivityType = "UserDeleted"
+
 	// Playback entries: a start (video / audio / any other media type) and
 	// the matching stop. There is no stop entry for other media types.
 	ActivityTypeVideoPlayback        ActivityType = "VideoPlayback"

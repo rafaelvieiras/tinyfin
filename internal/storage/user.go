@@ -47,6 +47,14 @@ type AuthToken struct {
 	UserID   UserID
 	DeviceID DeviceID
 	IssuedAt time.Time
+
+	// DeviceName and RemoteAddress describe the session the token was
+	// created for: the Device of the login and the caller's address
+	// (empty for a QuickConnect exchange). They are what the activity
+	// entry of the session's end reports. Empty on tokens issued before
+	// they were recorded.
+	DeviceName    string
+	RemoteAddress string
 }
 
 // DisplayPreferences is the storage-side counterpart of the reference

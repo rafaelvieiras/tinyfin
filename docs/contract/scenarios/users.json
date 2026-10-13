@@ -14855,5 +14855,2700 @@
         }
       }
     ]
+  },
+  {
+    "id": "users.auth.activity-lockout-entry",
+    "endpoint": "POST /Users/AuthenticateByName",
+    "spec": "users.md#authenticate-by-name",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "lockout",
+      "activity-log"
+    ],
+    "covers": [
+      "users.auth.R28",
+      "users.auth.R29"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-auth-activity-lockout",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-auth-activity-lockout",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "limit 2",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "LoginAttemptsBeforeLockout": 2
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "failure 1",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-auth-activity-lockout",
+            "Pw": "w1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-activity-lockout{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "failure 2 triggers the lockout",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-auth-activity-lockout",
+            "Pw": "w2"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-activity-lockout{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "newest three entries",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "3"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "AuthenticationFailed"
+            },
+            {
+              "path": "$.Items[0].Name",
+              "op": "eq",
+              "value": "Failed login attempt from tmp-auth-activity-lockout"
+            },
+            {
+              "path": "$.Items[0].Severity",
+              "op": "eq",
+              "value": "Error"
+            },
+            {
+              "path": "$.Items[0].UserId",
+              "op": "eq",
+              "value": "00000000000000000000000000000000"
+            },
+            {
+              "path": "$.Items[0].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[0].ShortOverview",
+              "op": "matches",
+              "value": "^IP address: \\S+$"
+            },
+            {
+              "path": "$.Items[1].Type",
+              "op": "eq",
+              "value": "UserLockedOut"
+            },
+            {
+              "path": "$.Items[1].Name",
+              "op": "eq",
+              "value": "User tmp-auth-activity-lockout has been locked out"
+            },
+            {
+              "path": "$.Items[1].Severity",
+              "op": "eq",
+              "value": "Error"
+            },
+            {
+              "path": "$.Items[1].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[1].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[1].ShortOverview",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[2].Type",
+              "op": "eq",
+              "value": "AuthenticationFailed"
+            },
+            {
+              "path": "$.Items[2].Name",
+              "op": "eq",
+              "value": "Failed login attempt from tmp-auth-activity-lockout"
+            },
+            {
+              "path": "$.Items[2].Severity",
+              "op": "eq",
+              "value": "Error"
+            },
+            {
+              "path": "$.Items[2].UserId",
+              "op": "eq",
+              "value": "00000000000000000000000000000000"
+            },
+            {
+              "path": "$.Items[2].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[2].ShortOverview",
+              "op": "matches",
+              "value": "^IP address: \\S+$"
+            }
+          ]
+        }
+      },
+      {
+        "name": "correct password is refused",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-auth-activity-lockout",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-activity-lockout{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "the refusal wrote nothing",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "2"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "AuthenticationFailed"
+            },
+            {
+              "path": "$.Items[1].Type",
+              "op": "eq",
+              "value": "UserLockedOut"
+            }
+          ]
+        }
+      },
+      {
+        "name": "hasUserId=true newest is the lockout",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "1",
+            "hasUserId": "true"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "UserLockedOut"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.auth.lockout-keeps-tokens",
+    "endpoint": "POST /Users/AuthenticateByName",
+    "spec": "users.md#authenticate-by-name",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "lockout",
+      "activity-log"
+    ],
+    "covers": [
+      "users.auth.R30"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-auth-lockout-keeps-tokens",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-auth-lockout-keeps-tokens",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "limit 1",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "LoginAttemptsBeforeLockout": 1
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "login",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-auth-lockout-keeps-tokens",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-keeps-tokens{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "tok": "$.AccessToken"
+        }
+      },
+      {
+        "name": "failure triggers the lockout",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-auth-lockout-keeps-tokens",
+            "Pw": "w1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-keeps-tokens{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "token refused while disabled",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Me",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-keeps-tokens{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "admin re-enables",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "LoginAttemptsBeforeLockout": 3,
+            "IsDisabled": false,
+            "InvalidLoginAttemptCount": 0
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "same token works again",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Me",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-keeps-tokens{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "no session was ended by the lockout",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "2"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "AuthenticationFailed"
+            },
+            {
+              "path": "$.Items[1].Type",
+              "op": "eq",
+              "value": "UserLockedOut"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.auth.activity-session-ended-relogin",
+    "endpoint": "POST /Users/AuthenticateByName",
+    "spec": "users.md#authenticate-by-name",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "activity-log"
+    ],
+    "covers": [
+      "users.auth.R31",
+      "users.auth.R32"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-auth-activity-relogin",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-auth-activity-relogin",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "first login on device a",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-auth-activity-relogin",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20Phone\", DeviceId=\"sc-users-auth-activity-relogin-a{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "no session ended by a first login",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "3"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[*].Type",
+              "op": "notcontains",
+              "value": "SessionEnded"
+            }
+          ]
+        }
+      },
+      {
+        "name": "login on device b",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-auth-activity-relogin",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20Tablet\", DeviceId=\"sc-users-auth-activity-relogin-b{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "no session ended by another device",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "3"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[*].Type",
+              "op": "notcontains",
+              "value": "SessionEnded"
+            }
+          ]
+        }
+      },
+      {
+        "name": "login on device a again, other device name",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-auth-activity-relogin",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20Phone%202\", DeviceId=\"sc-users-auth-activity-relogin-a{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "newest three entries",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "3"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "AuthenticationSucceeded"
+            },
+            {
+              "path": "$.Items[0].Name",
+              "op": "eq",
+              "value": "tmp-auth-activity-relogin successfully authenticated"
+            },
+            {
+              "path": "$.Items[0].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[0].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[0].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[0].ShortOverview",
+              "op": "matches",
+              "value": "^IP address: \\S+$"
+            },
+            {
+              "path": "$.Items[1].Type",
+              "op": "eq",
+              "value": "SessionStarted"
+            },
+            {
+              "path": "$.Items[1].Name",
+              "op": "eq",
+              "value": "tmp-auth-activity-relogin is online from Conf Phone 2"
+            },
+            {
+              "path": "$.Items[1].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[1].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[1].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[1].ShortOverview",
+              "op": "matches",
+              "value": "^IP address: \\S+$"
+            },
+            {
+              "path": "$.Items[2].Type",
+              "op": "eq",
+              "value": "SessionEnded"
+            },
+            {
+              "path": "$.Items[2].Name",
+              "op": "eq",
+              "value": "tmp-auth-activity-relogin has disconnected from Conf Phone"
+            },
+            {
+              "path": "$.Items[2].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[2].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[2].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[2].ShortOverview",
+              "op": "matches",
+              "value": "^IP address: \\S+$"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.auth.activity-session-ended-address",
+    "endpoint": "POST /Users/AuthenticateWithQuickConnect",
+    "spec": "users.md#authenticate-with-quick-connect",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "quickconnect",
+      "activity-log"
+    ],
+    "covers": [
+      "users.auth.R32"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-auth-activity-session-qc",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-auth-activity-session-qc",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "login on the UI device",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-auth-activity-session-qc",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-activity-session-qc-ui{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "tokUi": "$.AccessToken"
+        }
+      },
+      {
+        "name": "first initiate",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20TV\", DeviceId=\"sc-users-auth-activity-session-qc-tv{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "secret": "$.Secret",
+          "code": "$.Code"
+        }
+      },
+      {
+        "name": "first authorize",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.code}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-activity-session-qc-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "first exchange",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateWithQuickConnect",
+          "body": {
+            "Secret": "{{capture.secret}}"
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "password login replaces the QuickConnect token",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-auth-activity-session-qc",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20TV\", DeviceId=\"sc-users-auth-activity-session-qc-tv{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "the ended session carries the empty address of the exchange",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "3"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[2].Type",
+              "op": "eq",
+              "value": "SessionEnded"
+            },
+            {
+              "path": "$.Items[2].Name",
+              "op": "eq",
+              "value": "tmp-auth-activity-session-qc has disconnected from Conf TV"
+            },
+            {
+              "path": "$.Items[2].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[2].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[2].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[2].ShortOverview",
+              "op": "eq",
+              "value": "IP address: "
+            }
+          ]
+        }
+      },
+      {
+        "name": "second initiate",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20TV\", DeviceId=\"sc-users-auth-activity-session-qc-tv{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "secret": "$.Secret",
+          "code": "$.Code"
+        }
+      },
+      {
+        "name": "second authorize",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.code}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-activity-session-qc-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "second exchange",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateWithQuickConnect",
+          "body": {
+            "Secret": "{{capture.secret}}"
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "the ended session carries the address of the password login",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "3"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "AuthenticationSucceeded"
+            },
+            {
+              "path": "$.Items[0].Name",
+              "op": "eq",
+              "value": "tmp-auth-activity-session-qc successfully authenticated"
+            },
+            {
+              "path": "$.Items[0].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[0].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[0].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[0].ShortOverview",
+              "op": "eq",
+              "value": "IP address: "
+            },
+            {
+              "path": "$.Items[1].Type",
+              "op": "eq",
+              "value": "SessionStarted"
+            },
+            {
+              "path": "$.Items[1].Name",
+              "op": "eq",
+              "value": "tmp-auth-activity-session-qc is online from Conf TV"
+            },
+            {
+              "path": "$.Items[1].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[1].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[1].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[1].ShortOverview",
+              "op": "eq",
+              "value": "IP address: "
+            },
+            {
+              "path": "$.Items[2].Type",
+              "op": "eq",
+              "value": "SessionEnded"
+            },
+            {
+              "path": "$.Items[2].Name",
+              "op": "eq",
+              "value": "tmp-auth-activity-session-qc has disconnected from Conf TV"
+            },
+            {
+              "path": "$.Items[2].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[2].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[2].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[2].ShortOverview",
+              "op": "matches",
+              "value": "^IP address: \\S+$"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.token.logout-ends-session",
+    "endpoint": "POST /Sessions/Logout",
+    "spec": "users.md#authenticated-requests",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "activity-log"
+    ],
+    "covers": [
+      "users.token.R7",
+      "users.token.R8"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-token-logout",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-token-logout",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "login on device a",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-token-logout",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20Phone\", DeviceId=\"sc-users-token-logout-a{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ta": "$.AccessToken"
+        }
+      },
+      {
+        "name": "login on device b",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-token-logout",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20Tablet\", DeviceId=\"sc-users-token-logout-b{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "tb": "$.AccessToken"
+        }
+      },
+      {
+        "name": "anonymous logout",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Logout",
+          "noAuth": true
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "logout with an unknown token",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Logout",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-logout-x{{run.suffix}}\", Version=\"1.0.0\", Token=\"00000000000000000000000000000000\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "logout device a",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Logout",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20Phone\", DeviceId=\"sc-users-token-logout-a{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.ta}}\""
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "token a is revoked",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Me",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20Phone\", DeviceId=\"sc-users-token-logout-a{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.ta}}\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "token b still works",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Me",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20Tablet\", DeviceId=\"sc-users-token-logout-b{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tb}}\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "session ended entry",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "1"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "SessionEnded"
+            },
+            {
+              "path": "$.Items[0].Name",
+              "op": "eq",
+              "value": "tmp-token-logout has disconnected from Conf Phone"
+            },
+            {
+              "path": "$.Items[0].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[0].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[0].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[0].ShortOverview",
+              "op": "matches",
+              "value": "^IP address: \\S+$"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a second logout with the revoked token",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Logout",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20Phone\", DeviceId=\"sc-users-token-logout-a{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.ta}}\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "nothing new was written",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "1"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "SessionEnded"
+            },
+            {
+              "path": "$.Items[0].Name",
+              "op": "eq",
+              "value": "tmp-token-logout has disconnected from Conf Phone"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.password.activity-entries",
+    "endpoint": "POST /Users/Password",
+    "spec": "users.md#update-password",
+    "scope": "modern",
+    "tags": [
+      "password",
+      "activity-log"
+    ],
+    "covers": [
+      "users.password.R15",
+      "users.token.R9"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-password-activity",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-password-activity",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "login device 1",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-password-activity",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20One\", DeviceId=\"sc-users-password-activity-1{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "t1": "$.AccessToken"
+        }
+      },
+      {
+        "name": "login device 2",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-password-activity",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20Two\", DeviceId=\"sc-users-password-activity-2{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "t2": "$.AccessToken"
+        }
+      },
+      {
+        "name": "login device 3",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-password-activity",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20Three\", DeviceId=\"sc-users-password-activity-3{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "t3": "$.AccessToken"
+        }
+      },
+      {
+        "name": "admin sets a new password",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Password",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "NewPw": "Tmp-Pass-2"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "password entry, then one session ended per token, oldest first",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "4"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "SessionEnded"
+            },
+            {
+              "path": "$.Items[0].Name",
+              "op": "eq",
+              "value": "tmp-password-activity has disconnected from Conf Three"
+            },
+            {
+              "path": "$.Items[0].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[0].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[0].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[0].ShortOverview",
+              "op": "matches",
+              "value": "^IP address: \\S+$"
+            },
+            {
+              "path": "$.Items[1].Type",
+              "op": "eq",
+              "value": "SessionEnded"
+            },
+            {
+              "path": "$.Items[1].Name",
+              "op": "eq",
+              "value": "tmp-password-activity has disconnected from Conf Two"
+            },
+            {
+              "path": "$.Items[1].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[1].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[1].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[1].ShortOverview",
+              "op": "matches",
+              "value": "^IP address: \\S+$"
+            },
+            {
+              "path": "$.Items[2].Type",
+              "op": "eq",
+              "value": "SessionEnded"
+            },
+            {
+              "path": "$.Items[2].Name",
+              "op": "eq",
+              "value": "tmp-password-activity has disconnected from Conf One"
+            },
+            {
+              "path": "$.Items[2].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[2].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[2].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[2].ShortOverview",
+              "op": "matches",
+              "value": "^IP address: \\S+$"
+            },
+            {
+              "path": "$.Items[3].Type",
+              "op": "eq",
+              "value": "UserPasswordChanged"
+            },
+            {
+              "path": "$.Items[3].Name",
+              "op": "eq",
+              "value": "Password has been changed for user tmp-password-activity"
+            },
+            {
+              "path": "$.Items[3].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[3].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[3].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[3].ShortOverview",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "login device 1 again",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-password-activity",
+            "Pw": "Tmp-Pass-2"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20One\", DeviceId=\"sc-users-password-activity-1{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "t1": "$.AccessToken"
+        }
+      },
+      {
+        "name": "login device 2 again",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-password-activity",
+            "Pw": "Tmp-Pass-2"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20Two\", DeviceId=\"sc-users-password-activity-2{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "t2": "$.AccessToken"
+        }
+      },
+      {
+        "name": "the user changes their own password from device 2",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Password",
+          "body": {
+            "CurrentPw": "Tmp-Pass-2",
+            "NewPw": "Tmp-Pass-3"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20Two\", DeviceId=\"sc-users-password-activity-2{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.t2}}\""
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "only the other device is ended",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "2"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "SessionEnded"
+            },
+            {
+              "path": "$.Items[0].Name",
+              "op": "eq",
+              "value": "tmp-password-activity has disconnected from Conf One"
+            },
+            {
+              "path": "$.Items[0].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[0].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[0].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[0].ShortOverview",
+              "op": "matches",
+              "value": "^IP address: \\S+$"
+            },
+            {
+              "path": "$.Items[1].Type",
+              "op": "eq",
+              "value": "UserPasswordChanged"
+            },
+            {
+              "path": "$.Items[1].Name",
+              "op": "eq",
+              "value": "Password has been changed for user tmp-password-activity"
+            },
+            {
+              "path": "$.Items[1].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[1].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[1].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[1].ShortOverview",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "wrong current password",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Password",
+          "body": {
+            "CurrentPw": "nope",
+            "NewPw": "Tmp-Pass-4"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20Two\", DeviceId=\"sc-users-password-activity-2{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.t2}}\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "the refusal wrote nothing",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "1"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "SessionEnded"
+            }
+          ]
+        }
+      },
+      {
+        "name": "admin resets the password",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Password",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "ResetPassword": true
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "reset writes the password entry and ends no session",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "2"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "UserPasswordChanged"
+            },
+            {
+              "path": "$.Items[0].Name",
+              "op": "eq",
+              "value": "Password has been changed for user tmp-password-activity"
+            },
+            {
+              "path": "$.Items[0].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[0].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[0].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[0].ShortOverview",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[1].Type",
+              "op": "eq",
+              "value": "SessionEnded"
+            }
+          ]
+        }
+      },
+      {
+        "name": "device 2 is still signed in",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Me",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20Two\", DeviceId=\"sc-users-password-activity-2{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.t2}}\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.password.wrong-current-lockout-entry",
+    "endpoint": "POST /Users/Password",
+    "spec": "users.md#update-password",
+    "scope": "modern",
+    "tags": [
+      "password",
+      "lockout",
+      "activity-log"
+    ],
+    "covers": [
+      "users.password.R16"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-password-lockout-entry",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-password-lockout-entry",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "limit 2",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "LoginAttemptsBeforeLockout": 2
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "login",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-password-lockout-entry",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-lockout-entry{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "t": "$.AccessToken"
+        }
+      },
+      {
+        "name": "wrong current password 1",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Password",
+          "body": {
+            "CurrentPw": "n1",
+            "NewPw": "x"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-lockout-entry{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.t}}\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "wrong current password 2",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Password",
+          "body": {
+            "CurrentPw": "n2",
+            "NewPw": "x"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-lockout-entry{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.t}}\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "lockout entry and no failed-login entries",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "2"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "UserLockedOut"
+            },
+            {
+              "path": "$.Items[0].Name",
+              "op": "eq",
+              "value": "User tmp-password-lockout-entry has been locked out"
+            },
+            {
+              "path": "$.Items[0].Severity",
+              "op": "eq",
+              "value": "Error"
+            },
+            {
+              "path": "$.Items[0].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[0].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[0].ShortOverview",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[1].Type",
+              "op": "eq",
+              "value": "AuthenticationSucceeded"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.policy.activity-session-ended",
+    "endpoint": "POST /Users/{userId}/Policy",
+    "spec": "users.md#update-user-policy",
+    "scope": "modern",
+    "tags": [
+      "policy",
+      "activity-log"
+    ],
+    "covers": [
+      "users.policy.R14",
+      "users.token.R9"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-policy-activity",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-policy-activity",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "login device 1",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-policy-activity",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20One\", DeviceId=\"sc-users-policy-activity-1{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "t1": "$.AccessToken"
+        }
+      },
+      {
+        "name": "login device 2",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-policy-activity",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20Two\", DeviceId=\"sc-users-policy-activity-2{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "t2": "$.AccessToken"
+        }
+      },
+      {
+        "name": "only device 2 allowed",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "EnableAllDevices": false,
+            "EnabledDevices": [
+              "sc-users-policy-activity-2{{run.suffix}}"
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "device 1 session ended",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "2"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "SessionEnded"
+            },
+            {
+              "path": "$.Items[0].Name",
+              "op": "eq",
+              "value": "tmp-policy-activity has disconnected from Conf One"
+            },
+            {
+              "path": "$.Items[0].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[0].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[0].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[0].ShortOverview",
+              "op": "matches",
+              "value": "^IP address: \\S+$"
+            },
+            {
+              "path": "$.Items[1].Type",
+              "op": "eq",
+              "value": "AuthenticationSucceeded"
+            }
+          ]
+        }
+      },
+      {
+        "name": "same policy again",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "EnableAllDevices": false,
+            "EnabledDevices": [
+              "sc-users-policy-activity-2{{run.suffix}}"
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "the policy update wrote nothing",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "1"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "SessionEnded"
+            },
+            {
+              "path": "$.Items[0].Name",
+              "op": "eq",
+              "value": "tmp-policy-activity has disconnected from Conf One"
+            }
+          ]
+        }
+      },
+      {
+        "name": "disable",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "IsDisabled": true
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "device 2 session ended",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "1"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "SessionEnded"
+            },
+            {
+              "path": "$.Items[0].Name",
+              "op": "eq",
+              "value": "tmp-policy-activity has disconnected from Conf Two"
+            },
+            {
+              "path": "$.Items[0].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[0].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[0].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[0].ShortOverview",
+              "op": "matches",
+              "value": "^IP address: \\S+$"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.create.activity-entries",
+    "endpoint": "POST /Users/New",
+    "spec": "users.md#create-user",
+    "scope": "modern",
+    "tags": [
+      "create",
+      "activity-log"
+    ],
+    "covers": [
+      "users.create.R10",
+      "users.create.R11"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-create-activity-a",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-create-activity-a",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "a": "$.Id"
+        }
+      },
+      {
+        "name": "created with a password",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "2"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "UserPasswordChanged"
+            },
+            {
+              "path": "$.Items[0].Name",
+              "op": "eq",
+              "value": "Password has been changed for user tmp-create-activity-a"
+            },
+            {
+              "path": "$.Items[0].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[0].UserId",
+              "op": "eq",
+              "value": "{{capture.a}}"
+            },
+            {
+              "path": "$.Items[0].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[0].ShortOverview",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[1].Type",
+              "op": "eq",
+              "value": "UserCreated"
+            },
+            {
+              "path": "$.Items[1].Name",
+              "op": "eq",
+              "value": "User tmp-create-activity-a has been created"
+            },
+            {
+              "path": "$.Items[1].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[1].UserId",
+              "op": "eq",
+              "value": "{{capture.a}}"
+            },
+            {
+              "path": "$.Items[1].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[1].ShortOverview",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "create tmp-create-activity-b",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-create-activity-b"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "b": "$.Id"
+        }
+      },
+      {
+        "name": "created without a password",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "2"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "UserCreated"
+            },
+            {
+              "path": "$.Items[0].Name",
+              "op": "eq",
+              "value": "User tmp-create-activity-b has been created"
+            },
+            {
+              "path": "$.Items[0].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[0].UserId",
+              "op": "eq",
+              "value": "{{capture.b}}"
+            },
+            {
+              "path": "$.Items[0].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[0].ShortOverview",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[1].Name",
+              "op": "eq",
+              "value": "Password has been changed for user tmp-create-activity-a"
+            }
+          ]
+        }
+      },
+      {
+        "name": "create tmp-create-activity-c",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-create-activity-c",
+            "Password": ""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "c": "$.Id"
+        }
+      },
+      {
+        "name": "created with an empty password",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "2"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "UserPasswordChanged"
+            },
+            {
+              "path": "$.Items[0].Name",
+              "op": "eq",
+              "value": "Password has been changed for user tmp-create-activity-c"
+            },
+            {
+              "path": "$.Items[0].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[0].UserId",
+              "op": "eq",
+              "value": "{{capture.c}}"
+            },
+            {
+              "path": "$.Items[0].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[0].ShortOverview",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[1].Type",
+              "op": "eq",
+              "value": "UserCreated"
+            },
+            {
+              "path": "$.Items[1].Name",
+              "op": "eq",
+              "value": "User tmp-create-activity-c has been created"
+            },
+            {
+              "path": "$.Items[1].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[1].UserId",
+              "op": "eq",
+              "value": "{{capture.c}}"
+            },
+            {
+              "path": "$.Items[1].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[1].ShortOverview",
+              "op": "absent"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete a",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.a}}"
+        },
+        "expect": {}
+      },
+      {
+        "name": "delete b",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.b}}"
+        },
+        "expect": {}
+      },
+      {
+        "name": "delete c",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.c}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.delete.activity-entries",
+    "endpoint": "DELETE /Users/{userId}",
+    "spec": "users.md#delete-user",
+    "scope": "modern",
+    "tags": [
+      "delete",
+      "activity-log"
+    ],
+    "covers": [
+      "users.delete.R8",
+      "users.token.R9"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-delete-activity",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-delete-activity",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "login device 1",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-delete-activity",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20One\", DeviceId=\"sc-users-delete-activity-1{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "login device 2",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-delete-activity",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20Two\", DeviceId=\"sc-users-delete-activity-2{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "delete",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "sessions ended, then the deletion",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "3"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "UserDeleted"
+            },
+            {
+              "path": "$.Items[0].Name",
+              "op": "eq",
+              "value": "User tmp-delete-activity has been deleted"
+            },
+            {
+              "path": "$.Items[0].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[0].UserId",
+              "op": "eq",
+              "value": "00000000000000000000000000000000"
+            },
+            {
+              "path": "$.Items[0].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[0].ShortOverview",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[1].Type",
+              "op": "eq",
+              "value": "SessionEnded"
+            },
+            {
+              "path": "$.Items[1].Name",
+              "op": "eq",
+              "value": "tmp-delete-activity has disconnected from Conf Two"
+            },
+            {
+              "path": "$.Items[1].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[1].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[1].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[1].ShortOverview",
+              "op": "matches",
+              "value": "^IP address: \\S+$"
+            },
+            {
+              "path": "$.Items[2].Type",
+              "op": "eq",
+              "value": "SessionEnded"
+            },
+            {
+              "path": "$.Items[2].Name",
+              "op": "eq",
+              "value": "tmp-delete-activity has disconnected from Conf One"
+            },
+            {
+              "path": "$.Items[2].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[2].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[2].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[2].ShortOverview",
+              "op": "matches",
+              "value": "^IP address: \\S+$"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": []
   }
 ]

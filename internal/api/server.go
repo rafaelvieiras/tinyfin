@@ -518,6 +518,8 @@ func (s *Server) routes() {
 	// doc comment) — called unconditionally by every official client right
 	// after sign-in.
 	s.mux.HandleFunc("POST /Sessions/Capabilities/Full", requireAuth(s.handleSessionsCapabilitiesFull))
+	// users.token.R7-R8: ends the session of the token the request carries.
+	s.mux.HandleFunc("POST /Sessions/Logout", requireAuth(s.handleSessionsLogout))
 	// requireAdmin, not requireAuth: this lists every tracked session across
 	// every user (IP address, device name, client) — the admin Dashboard
 	// "Devices" widget this implements is the only confirmed caller, and

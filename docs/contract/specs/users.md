@@ -27,6 +27,7 @@ Index of routes:
 |---|---|---|
 | `POST /Users/AuthenticateByName` | modern | [authenticate-by-name](#authenticate-by-name) |
 | (all authenticated routes) | modern | [authenticated-requests](#authenticated-requests) |
+| `POST /Sessions/Logout` | modern | [authenticated-requests](#authenticated-requests) |
 | `POST /Users/AuthenticateWithQuickConnect` | modern | [authenticate-with-quick-connect](#authenticate-with-quick-connect) |
 | `GET /Users/Public` | modern | [list-public-users](#list-public-users) |
 | `GET /Users` | modern | [list-users](#list-users) |
@@ -106,6 +107,11 @@ Index of routes:
 - **users.auth.R25** `ShortOverview` of both login entries is `IP address: <remote address>`; for a QuickConnect exchange the address part is empty (`IP address: `).
 - **users.auth.R26** A wrong password for an existing, enabled account writes one `AuthenticationFailed` entry: `Severity` `Error`, `Name` `Failed login attempt from <username>` with the username exactly as sent, `ShortOverview` as in `users.auth.R25`, and `UserId` the all-zero id (`00000000000000000000000000000000`). It is therefore returned by `hasUserId=false` and not by `hasUserId=true`.
 - **users.auth.R27** No activity entry is written for an unknown username, for a disabled account (`403`, whether or not the password is correct, including after a lockout) or for a malformed request (`400`).
+- **users.auth.R28** The failed attempt that triggers a lockout (`users.auth.R14`) also writes a `UserLockedOut` entry: `Severity` `Error`, `Name` `User <user name> has been locked out` (the account's stored name), `UserId` of the locked account (so `hasUserId=true` finds it), no `ShortOverview` and no `ItemId`. A lockout caused by a wrong `CurrentPw` on `POST /Users/Password` writes the same entry (`users.password.R16`).
+- **users.auth.R29** On a password login the lockout entry is written between the entry of the previous failure and the attempt's own `AuthenticationFailed` entry: listed newest first, `AuthenticationFailed` (this attempt), `UserLockedOut`, `AuthenticationFailed` (the earlier failure). Later attempts on the locked account (`403`) write nothing.
+- **users.auth.R30** A lockout does not revoke the account's tokens and writes no `SessionEnded` entry: the tokens answer `401` while the account is disabled (`users.token.R4`) and work again once an administrator re-enables the account.
+- **users.auth.R31** When a successful login replaces the same device's previous token (`users.auth.R10`; password login or QuickConnect exchange), a `SessionEnded` entry is written for the replaced session, just before the new login's `SessionStarted` (listed newest first: `AuthenticationSucceeded`, `SessionStarted`, `SessionEnded`). A first login on a device, or a login on another device, writes none.
+- **users.auth.R32** A `SessionEnded` entry has `Severity` `Information`, `UserId` of the session's user, no `ItemId` and `Name` `<user name> has disconnected from <device name>`, where `<device name>` is the `Device` recorded when the ended session was created (not the name of the login that replaces it). `ShortOverview` is `IP address: <address>` with the address recorded when the ended session was created: empty (`IP address: `) for a session created by a QuickConnect exchange, the caller's address for a password login.
 
 ---
 
@@ -131,6 +137,9 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 - **users.token.R4** Tokens of a disabled account stop working (`401`) even though they were valid when issued; disabling an account through its policy also revokes its tokens.
 - **users.token.R5** Deleting a user revokes all of the user's tokens (`401` afterwards).
 - **users.token.R6** Legacy channels are not honored: `X-Emby-Authorization` (login without a usable `Authorization` header answers `400`), `X-Emby-Token`, `X-MediaBrowser-Token`, `Authorization: Emby ...` and the `api_key` query parameter all behave as no credential (`401` on protected endpoints). Only `Authorization: MediaBrowser ...` and `ApiKey` are honored.
+- **users.token.R7** `POST /Sessions/Logout` with a valid user token revokes that token (and only that one) and answers `204` with an empty body; the token answers `401` afterwards and the user's tokens of other devices keep working.
+- **users.token.R8** `POST /Sessions/Logout` without a credential, or with an unknown or already revoked token, answers `401` and writes nothing. A successful logout writes a `SessionEnded` entry (`users.auth.R32`).
+- **users.token.R9** Every token that the server revokes writes one `SessionEnded` entry (`users.auth.R32`): by logout (`R7`), by a password change (`users.password.R15`), by disabling the account or restricting its devices (`users.policy.R14`) and by deleting the user (`users.delete.R8`). When one operation revokes several tokens the entries are written in token creation order (oldest token first, so a newest-first listing shows the newest token first). A lockout (`users.auth.R30`) and `ResetPassword` (`users.password.R9`) revoke nothing and write none.
 
 ---
 
@@ -272,6 +281,8 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 - **users.create.R7** Non-administrator answers `403`; anonymous or invalid token answers `401`. Nothing is created.
 - **users.create.R8** The new user appears in `GET /Users` but not in `GET /Users/Public` (hidden by default).
 - **users.create.R9** A body without `Name` (including `{}`) or one that is not JSON answers `400`.
+- **users.create.R10** A successful creation writes a `UserCreated` entry: `Severity` `Information`, `Name` `User <name> has been created`, `UserId` of the new account, no `ShortOverview`, no `ItemId`.
+- **users.create.R11** When the request body carries a `Password` member (including an empty string), a `UserPasswordChanged` entry (`users.password.R15`) is written right after `UserCreated`; a body without `Password` writes only `UserCreated`.
 
 ---
 
@@ -296,6 +307,7 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 - **users.delete.R5** The only administrator cannot be deleted (`400`). A refused deletion has no side effects: no token is revoked, in particular not the caller's.
 - **users.delete.R6** An administrator may delete another administrator, and may delete their own account when at least one other administrator exists; a self-deletion revokes the caller's own tokens.
 - **users.delete.R7** The deleted user vanishes from `GET /Users` and `GET /Users/Public`, and the name becomes available again; a re-created user with the same name is a new account (new `Id`, none of the old password).
+- **users.delete.R8** A deletion writes one `SessionEnded` entry per revoked token of the user (`users.token.R9`), then a `UserDeleted` entry (so it is the newest): `Severity` `Information`, `Name` `User <name> has been deleted`, `UserId` the all-zero id (like a failed login, `hasUserId=false` finds it), no `ShortOverview`, no `ItemId`. A refused deletion writes nothing.
 
 ---
 
@@ -328,6 +340,7 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 - **users.policy.R11** A body that is not valid JSON answers `400`.
 - **users.policy.R12** `LoginAttemptsBeforeLockout`: `-1` means no lockout, `0` means the default of `3`, a positive `n` locks the account after `n` consecutive failures (see `users.auth.R14`). `InvalidLoginAttemptCount` from the body overwrites the stored counter, which lets an administrator unlock an account.
 - **users.policy.R13** A successful policy update sends a `UserUpdated` WebSocket message to the target user's own open sockets; `Data` is the updated user object (including the new `Policy`). See *Realtime socket*.
+- **users.policy.R14** A policy update writes no activity entry of its own (no "policy updated" entry), also when it changes values. Each token it revokes (disabling the account, `users.policy.R8`; devices no longer allowed, `users.auth.R17`) writes a `SessionEnded` entry (`users.token.R9`). The same holds for `POST /Users` and `POST /Users/Configuration`: renaming or saving preferences writes no entry.
 
 ---
 
@@ -380,6 +393,8 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 **Rules**
 
 - **users.password.R14** `POST /Users/{userId}/Password` is an alias with the target id in the path and the same body and rules, with one difference: the id is always treated as explicitly given, so an administrator changing their own password through the alias must supply `CurrentPw`.
+- **users.password.R15** Every successful password change, removal or `ResetPassword` writes a `UserPasswordChanged` entry: `Severity` `Information`, `Name` `Password has been changed for user <name>`, `UserId` of the target, no `ShortOverview`, no `ItemId`. When the change revokes tokens (`users.password.R7`) the `SessionEnded` entries (`users.token.R9`) are written after it. A refused request (wrong `CurrentPw`, `403`) writes no such entry.
+- **users.password.R16** A wrong `CurrentPw` that reaches the configured threshold (`users.auth.R14`) disables the target and writes a `UserLockedOut` entry (`users.auth.R28`); no `AuthenticationFailed` entry is written for a wrong `CurrentPw`.
 
 ---
 
@@ -561,12 +576,20 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 | `users.auth.R25` | `users.auth.activity-login-entries`, `users.auth.activity-quickconnect-entries` |
 | `users.auth.R26` | `users.auth.activity-failed-login-entry` |
 | `users.auth.R27` | `users.auth.activity-no-entry-for-refusals` |
+| `users.auth.R28` | `users.auth.activity-lockout-entry` |
+| `users.auth.R29` | `users.auth.activity-lockout-entry` |
+| `users.auth.R30` | `users.auth.lockout-keeps-tokens` |
+| `users.auth.R31` | `users.auth.activity-session-ended-relogin` |
+| `users.auth.R32` | `users.auth.activity-session-ended-relogin`, `users.auth.activity-session-ended-address` |
 | `users.token.R1` | `users.auth.token-usable` |
 | `users.token.R2` | `users.token.invalid-token` |
 | `users.token.R3` | `users.token.apikey-query` |
 | `users.token.R4` | `users.token.disabled-user-token`, `users.policy.disable-revokes-tokens` |
 | `users.token.R5` | `users.token.deleted-user-token` |
 | `users.token.R6` | `users.token.legacy-xemby-authorization-login`, `users.token.legacy-xemby-token`, `users.token.legacy-api-key-query`, `users.token.legacy-emby-scheme` |
+| `users.token.R7` | `users.token.logout-ends-session` |
+| `users.token.R8` | `users.token.logout-ends-session` |
+| `users.token.R9` | `users.token.logout-ends-session`, `users.password.activity-entries`, `users.policy.activity-session-ended`, `users.delete.activity-entries` |
 | `users.public.R1` | `users.public.anonymous` |
 | `users.public.R2` | `users.public.visible-user-listed` |
 | `users.public.R3` | `users.public.disabled-user-excluded` |
@@ -604,6 +627,8 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 | `users.create.R7` | `users.create.admin-only` |
 | `users.create.R8` | `users.public.visible-user-listed`, `users.create.listed-but-hidden` |
 | `users.create.R9` | `users.create.name-missing` |
+| `users.create.R10` | `users.create.activity-entries` |
+| `users.create.R11` | `users.create.activity-entries` |
 | `users.delete.R1` | `users.delete.removes-user` |
 | `users.delete.R2` | `users.delete.admin-only` |
 | `users.delete.R3` | `users.delete.not-found` |
@@ -611,6 +636,7 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 | `users.delete.R5` | `users.delete.last-admin-refused` |
 | `users.delete.R6` | `users.delete.admin-can-delete-other-admin`, `users.delete.admin-deletes-self-with-other-admin` |
 | `users.delete.R7` | `users.delete.removes-user`, `users.delete.name-reusable` |
+| `users.delete.R8` | `users.delete.activity-entries` |
 | `users.policy.R1` | `users.policy.admin-only` |
 | `users.policy.R2` | `users.policy.not-found` |
 | `users.policy.R3` | `users.policy.roundtrip`, `users.policy.parental-rating-roundtrip` |
@@ -624,6 +650,7 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 | `users.policy.R11` | `users.policy.malformed-body` |
 | `users.policy.R12` | `users.auth.lockout-after-limit` |
 | `users.policy.R13` | `users.policy.emits-user-updated` |
+| `users.policy.R14` | `users.policy.activity-session-ended` |
 | `users.password.R1` | `users.password.change-own` |
 | `users.password.R2` | `users.password.change-own`, `users.password.wrong-current`, `users.password.set-on-passwordless` |
 | `users.password.R3` | `users.password.admin-sets-other` |
@@ -638,6 +665,8 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 | `users.password.R12` | `users.password.legacy-hash-field-ignored` |
 | `users.password.R13` | `users.password.preference-access-disabled` |
 | `users.password.R14` | `users.password-alias.change-own`, `users.password-alias.admin-sets-other`, `users.password-alias.reset`, `users.password-alias.admin-self-needs-current`, `users.password-alias.errors` |
+| `users.password.R15` | `users.password.activity-entries` |
+| `users.password.R16` | `users.password.wrong-current-lockout-entry` |
 | `users.update.R1` | `users.update.rename-and-configuration` |
 | `users.update.R2` | `users.update.rename-and-configuration` |
 | `users.update.R3` | `users.update.policy-in-body-ignored` |
@@ -687,7 +716,7 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 
 ## Open questions
 
-0. Other activity entries around authentication that the reference writes and Tinyfin does not (not specified yet): `UserLockedOut` (on the failure that triggers a lockout, written between the failed attempt's own text and its `AuthenticationFailed` entry) and `SessionEnded` (when a login replaces the same device's previous token, written just before the new `SessionStarted`).
+0. (resolved) Activity entries around authentication and account management: `UserLockedOut`, `SessionEnded`, `UserCreated`, `UserPasswordChanged` and `UserDeleted` are specified (`users.auth.R28`-`R32`, `users.token.R9`, `users.create.R10`, `users.password.R15`, `users.delete.R8`) and verified on the reference. Not written by the reference, so not specified: entries for policy updates, user renames, preference saves, `ResetPassword` revocations and lockout revocations.
 1. `EnableUserPreferenceAccess` (resolved): the policy endpoint persists it and a non-administrator without it is refused (`403`) when changing their own password or updating their own account; verified on the reference (`users.password.R13`, `users.update.R11`).
 2. Access-schedule hour semantics: `StartHour <= hour <= EndHour` is inclusive and uses the server's local time, but whether `hour` includes minutes (fractional hours) is not confirmed. Scenarios that depend on it use the 03:00 window and are tagged `time-dependent`; they would flip if run during the 03:xx hour.
 3. `LoginAttemptsBeforeLockout=0` reads back as `0` or `3`? Only the lockout behavior (`0` acts as `3`) is asserted.

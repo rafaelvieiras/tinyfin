@@ -28,7 +28,7 @@ import (
 type activityLogEntryDto struct {
 	Id            int64     `json:"Id"`
 	Name          string    `json:"Name"`
-	ShortOverview string    `json:"ShortOverview"`
+	ShortOverview string    `json:"ShortOverview,omitempty"`
 	Type          string    `json:"Type"`
 	Date          time.Time `json:"Date"`
 	ItemId        *string   `json:"ItemId,omitempty"`
