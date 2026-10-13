@@ -33,7 +33,7 @@ func TestParseEmbyAuthPercentDecodesFields(t *testing.T) {
 // percent-escaping at all) to guard against the decode step corrupting an
 // already-plain value.
 func TestParseEmbyAuthPlainValuesUnaffected(t *testing.T) {
-	header := `MediaBrowser Client="Kodi", Device="Living Room", DeviceId="abc+def/123=", Version="1.0"`
+	header := `MediaBrowser Client="Kodi", Device="Living Room", DeviceId="abc/123=", Version="1.0"`
 	client, device, deviceID, _, _ := parseEmbyAuth(header)
 
 	if client != "Kodi" {
@@ -42,10 +42,23 @@ func TestParseEmbyAuthPlainValuesUnaffected(t *testing.T) {
 	if device != "Living Room" {
 		t.Errorf("Device = %q, want %q", device, "Living Room")
 	}
-	// A literal "+" in a base64-shaped DeviceId must stay "+", not become a
-	// space — this is why parseEmbyAuth uses url.PathUnescape, not
-	// url.QueryUnescape.
-	if deviceID != "abc+def/123=" {
-		t.Errorf("DeviceId = %q, want %q", deviceID, "abc+def/123=")
+	if deviceID != "abc/123=" {
+		t.Errorf("DeviceId = %q, want %q", deviceID, "abc/123=")
+	}
+}
+
+// TestParseEmbyAuthPlusIsSpace covers users.auth.R11: "+" decodes as a
+// space, "%2B" as a literal plus, "%20" as a space.
+func TestParseEmbyAuthPlusIsSpace(t *testing.T) {
+	header := `MediaBrowser Client="My+Client", Device="Living%20Room", DeviceId="a%2Bb+c", Version="1.0"`
+	client, device, deviceID, _, _ := parseEmbyAuth(header)
+	if client != "My Client" {
+		t.Errorf("Client = %q, want %q", client, "My Client")
+	}
+	if device != "Living Room" {
+		t.Errorf("Device = %q, want %q", device, "Living Room")
+	}
+	if deviceID != "a+b c" {
+		t.Errorf("DeviceId = %q, want %q", deviceID, "a+b c")
 	}
 }

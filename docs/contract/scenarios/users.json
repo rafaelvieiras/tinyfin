@@ -1702,6 +1702,30 @@
         }
       },
       {
+        "name": "a plus sign in a value decodes as a space",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-auth-header-parsing",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"My+Tablet\", DeviceId=\"sc-users-auth-header-parsing-plus\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.SessionInfo.DeviceName",
+              "op": "eq",
+              "value": "My Tablet"
+            }
+          ]
+        }
+      },
+      {
         "name": "a quoted value may contain a comma",
         "request": {
           "method": "POST",

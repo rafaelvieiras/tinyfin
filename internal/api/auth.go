@@ -1,10 +1,13 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
 
 // withAuthContext is the single, always-applied middleware that parses the
@@ -52,6 +55,7 @@ func (s *Server) withAuthContext(next http.Handler) http.Handler {
 					ac.Authenticated = true
 					ac.AuthToken = at
 					ac.User = u
+					s.inheritDeviceFields(r.Context(), ac)
 				}
 			}
 		}
@@ -71,9 +75,9 @@ func (s *Server) withAuthContext(next http.Handler) http.Handler {
 // results rather than an error — callers treat "nothing parsed" the same
 // as "no header sent".
 //
-// Each value is percent-decoded (url.PathUnescape, not QueryUnescape — a
-// literal "+" in a device/client name must stay a "+", not become a space)
-// before use. Confirmed necessary, not optional hardening, by testing
+// Each value is decoded with url.QueryUnescape semantics before use
+// (users.auth.R11): "%20" and "+" both decode to a space; a literal plus
+// is only available as "%2B". Percent-decoding is confirmed necessary, not optional hardening, by testing
 // against a real jellyfin-web build: it sends this header's Client field as
 // literally `Client="Jellyfin%20Web"` (its own encodeURIComponent-style
 // escaping of the space), and a real Jellyfin server accepts that and
@@ -104,7 +108,7 @@ func parseEmbyAuth(header string) (client, device, deviceID, version, token stri
 			continue
 		}
 		val = strings.Trim(strings.TrimSpace(val), `"`)
-		if decoded, err := url.PathUnescape(val); err == nil {
+		if decoded, err := url.QueryUnescape(val); err == nil {
 			val = decoded
 		}
 		// Keys are case-sensitive; a repeated key's last value wins.
@@ -122,6 +126,31 @@ func parseEmbyAuth(header string) (client, device, deviceID, version, token stri
 		}
 	}
 	return client, device, deviceID, version, token
+}
+
+// inheritDeviceFields implements playstate.auth.R2: a header that carries
+// only the token (no client/device fields) takes the omitted fields from the
+// device the token was issued to. Fields the header did send are kept.
+func (s *Server) inheritDeviceFields(ctx context.Context, ac *AuthContext) {
+	if ac.DeviceID == "" {
+		ac.DeviceID = string(ac.AuthToken.DeviceID)
+	}
+	if ac.Client != "" && ac.Device != "" && ac.Version != "" {
+		return
+	}
+	d, err := s.store.GetDevice(ctx, storage.DeviceID(ac.DeviceID))
+	if err != nil {
+		return
+	}
+	if ac.Client == "" {
+		ac.Client = d.AppName
+	}
+	if ac.Device == "" {
+		ac.Device = d.Name
+	}
+	if ac.Version == "" {
+		ac.Version = d.AppVersion
+	}
 }
 
 // splitAuthPairs splits the parameter list of the Authorization header on
