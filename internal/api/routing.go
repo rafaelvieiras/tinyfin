@@ -137,7 +137,9 @@ var routePaths = []string{
 	// list — no collision risk at that segment count.
 	"/socket",
 	"/Sessions/Playing/Stopped",
+	"/Sessions/Playing/Ping",
 	"/UserPlayedItems/{itemId}",
+	"/UserFavoriteItems/{itemId}",
 	"/MediaSegments/{itemId}",
 	// No length collision with /Users/{userId}/Items/{itemId} above despite
 	// matching segment count (5, including the leading empty split

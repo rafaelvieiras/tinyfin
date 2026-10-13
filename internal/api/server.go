@@ -536,7 +536,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /UserPlayedItems/{itemId}", requireAuth(s.handleUserPlayedItemsMark))
 	// playstate.auth.R1: the remaining playstate routes answer 401 to an
 	// anonymous caller too.
-	s.mux.HandleFunc("DELETE /UserPlayedItems/{itemId}", requireAuth(s.handlePlayedItemRemove))
+	s.mux.HandleFunc("DELETE /UserPlayedItems/{itemId}", requireAuth(s.handleUserPlayedItemsUnmark))
+	s.mux.HandleFunc("POST /UserFavoriteItems/{itemId}", requireAuth(s.handleUserFavoriteItemAdd))
+	s.mux.HandleFunc("DELETE /UserFavoriteItems/{itemId}", requireAuth(s.handleUserFavoriteItemRemove))
 	s.mux.HandleFunc("POST /Sessions/Playing/Ping", requireAuth(s.handleSessionsPlayingPing))
 	s.mux.HandleFunc("GET /MediaSegments/{itemId}", requireAuth(s.handleMediaSegments))
 
@@ -547,8 +549,8 @@ func (s *Server) routes() {
 	// same simplification as GET /Users/{userId}/Items/{itemId} above.
 	s.mux.HandleFunc("POST /Users/{userId}/FavoriteItems/{itemId}", requireAuth(s.handleFavoriteItemAdd))
 	s.mux.HandleFunc("DELETE /Users/{userId}/FavoriteItems/{itemId}", requireAuth(s.handleFavoriteItemRemove))
-	s.mux.HandleFunc("POST /Users/{userId}/PlayedItems/{itemId}", requireAuth(s.handlePlayedItemAdd))
-	s.mux.HandleFunc("DELETE /Users/{userId}/PlayedItems/{itemId}", requireAuth(s.handlePlayedItemRemove))
+	s.mux.HandleFunc("POST /Users/{userId}/PlayedItems/{itemId}", requireAuth(s.handleLegacyPlayedItemAdd))
+	s.mux.HandleFunc("DELETE /Users/{userId}/PlayedItems/{itemId}", requireAuth(s.handleLegacyPlayedItemRemove))
 
 	// Library management (library_admin.go, Phase 3) — admin-only, unlike
 	// every other route above: these create/remove libraries and trigger

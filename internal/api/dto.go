@@ -391,6 +391,13 @@ func (s *Server) childCountFor(ctx context.Context, id storage.ItemID) (int, err
 // One bounded QueryItems call per item, same N+1-but-bounded-by-the-page
 // trade-off childCountFor's own doc comment already accepts.
 func (s *Server) unplayedItemCountFor(ctx context.Context, userID storage.UserID, item storage.Item) (*int, error) {
+	if isMarkFolder(item.Type) {
+		_, unplayed, err := s.store.FolderLeafCounts(ctx, userID, item.ID)
+		if err != nil {
+			return nil, err
+		}
+		return &unplayed, nil
+	}
 	played := false
 	filter := storage.ItemFilter{
 		UserID: &userID,
@@ -867,11 +874,7 @@ func (s *Server) userDataFor(ctx context.Context, userID storage.UserID, item st
 		state = storage.Playstate{}
 	}
 	dto := userItemDataFromState(state, item)
-	if childCountItemTypes[item.Type] {
-		if n, err := s.unplayedItemCountFor(ctx, userID, item); err == nil {
-			dto.UnplayedItemCount = n
-		}
-	}
+	s.applyFolderUserData(ctx, userID, item, dto)
 	return dto
 }
 

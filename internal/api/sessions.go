@@ -23,6 +23,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
 
 // sessionCapabilitiesDto covers both directions of the one real capability
@@ -48,11 +50,25 @@ type sessionCapabilitiesDto struct {
 // rather than fabricated; RepeatMode/PlaybackOrder use the reference
 // server's own "nothing playing" defaults, confirmed live.
 type sessionPlayStateDto struct {
-	CanSeek       bool   `json:"CanSeek"`
-	IsPaused      bool   `json:"IsPaused"`
-	IsMuted       bool   `json:"IsMuted"`
-	RepeatMode    string `json:"RepeatMode"`
-	PlaybackOrder string `json:"PlaybackOrder"`
+	PositionTicks       *int64 `json:"PositionTicks,omitempty"`
+	CanSeek             bool   `json:"CanSeek"`
+	IsPaused            bool   `json:"IsPaused"`
+	IsMuted             bool   `json:"IsMuted"`
+	VolumeLevel         *int   `json:"VolumeLevel,omitempty"`
+	AudioStreamIndex    *int   `json:"AudioStreamIndex,omitempty"`
+	SubtitleStreamIndex *int   `json:"SubtitleStreamIndex,omitempty"`
+	MediaSourceID       string `json:"MediaSourceId,omitempty"`
+	PlayMethod          string `json:"PlayMethod,omitempty"`
+	RepeatMode          string `json:"RepeatMode"`
+	PlaybackOrder       string `json:"PlaybackOrder"`
+	LiveStreamID        string `json:"LiveStreamId,omitempty"`
+}
+
+// nowPlayingQueueItemDto is one entry of a session's play queue
+// (QueueItem): the item id and the client's playlist entry id.
+type nowPlayingQueueItemDto struct {
+	ID             string `json:"Id"`
+	PlaylistItemID string `json:"PlaylistItemId,omitempty"`
 }
 
 // sessionInfoDto mirrors the OpenAPI schema's SessionInfo, trimmed to the
@@ -99,8 +115,12 @@ type sessionInfoDto struct {
 	// this session playing right now"; threading that through this
 	// registry is a separate, larger feature, deliberately left as a known
 	// gap rather than fabricated here.
-	NowPlayingQueue          []struct{} `json:"NowPlayingQueue"`
-	NowPlayingQueueFullItems []struct{} `json:"NowPlayingQueueFullItems"`
+	// NowPlayingItem is present only while an item is being played.
+	// NowPlayingQueue is whatever the client last stored with a stopped
+	// report (playstate.session.R7).
+	NowPlayingItem           *baseItemDto             `json:"NowPlayingItem,omitempty"`
+	NowPlayingQueue          []nowPlayingQueueItemDto `json:"NowPlayingQueue"`
+	NowPlayingQueueFullItems []struct{}               `json:"NowPlayingQueueFullItems"`
 	// HasCustomDeviceName is always false — no per-device rename feature
 	// exists (the reference server lets a user rename a device from its
 	// registered name; this project has no such store).
@@ -124,6 +144,22 @@ type trackedSession struct {
 	remoteEndPoint   string
 	capabilities     sessionCapabilitiesDto
 	lastActivityDate time.Time
+
+	// playing is the live playback state, set by a start/progress report
+	// and cleared by a stopped one. queue outlives it: only a stopped
+	// report replaces it (playstate.session.R7).
+	playing *playingState
+	queue   []nowPlayingQueueItemDto
+}
+
+// playingState is what a session reports while an item plays: the item as a
+// DTO, the mirrored player state and when it was reported (the position
+// advances from that moment while the player is not paused).
+type playingState struct {
+	item       *baseItemDto
+	state      sessionPlayStateDto
+	runtime    int64
+	reportedAt time.Time
 }
 
 // sessionRegistry is the in-process (docs/06 default mode) session
@@ -206,6 +242,42 @@ func (r *sessionRegistry) touch(deviceID string) {
 	}
 }
 
+// reportPlayback creates or refreshes the session of deviceID from a
+// playback report (identity fields come from the authorization header) and
+// lets update change its playing state under the registry lock. Unlike
+// touch, it registers a session that never sent capabilities: a client that
+// reports playback has a session, and progress reported without a start
+// creates it on the fly (playstate.progress.R8).
+func (r *sessionRegistry) reportPlayback(deviceID, userID, userName, client, deviceName, appVersion, remoteEndPoint string, update func(ts *trackedSession)) {
+	if deviceID == "" {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	ts, ok := r.byDevice[deviceID]
+	if !ok {
+		ts = &trackedSession{id: randomID(), deviceID: deviceID}
+		r.byDevice[deviceID] = ts
+	}
+	ts.userID, ts.userName, ts.client = userID, userName, client
+	ts.deviceName, ts.appVersion, ts.remoteEndPoint = deviceName, appVersion, remoteEndPoint
+	ts.lastActivityDate = time.Now().UTC()
+	update(ts)
+}
+
+// nowPlayingFor lists the item ids the user is playing in any session.
+func (r *sessionRegistry) nowPlayingFor(userID string) []storage.ItemID {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var ids []storage.ItemID
+	for _, ts := range r.byDevice {
+		if ts.userID == userID && ts.playing != nil && ts.playing.item != nil {
+			ids = append(ids, storage.ItemID(ts.playing.item.ID))
+		}
+	}
+	return ids
+}
+
 // list renders every tracked session as a sessionInfoDto, filtering to
 // those whose LastActivityDate is within the last activeWithinSeconds
 // seconds of now when hasFilter is true (GET /Sessions's optional query
@@ -231,26 +303,48 @@ func (r *sessionRegistry) list(serverID string, activeWithinSeconds int, hasFilt
 
 // dto renders the tracked session as a sessionInfoDto.
 func (ts *trackedSession) dto(serverID string) sessionInfoDto {
+	playState := sessionPlayStateDto{RepeatMode: "RepeatNone", PlaybackOrder: "Default"}
+	var nowPlaying *baseItemDto
+	var checkIn time.Time
+	if p := ts.playing; p != nil {
+		playState = p.state
+		nowPlaying = p.item
+		checkIn = p.reportedAt
+		// Automatic progress: while a started item is not paused the
+		// position advances in real time, capped at the runtime
+		// (playstate.session.R9). Computed on read; nothing is written.
+		if playState.PositionTicks != nil && !playState.IsPaused {
+			pos := *playState.PositionTicks + time.Since(p.reportedAt).Nanoseconds()/100
+			if p.runtime > 0 && pos > p.runtime {
+				pos = p.runtime
+			}
+			playState.PositionTicks = &pos
+		}
+	}
+	queue := ts.queue
+	if queue == nil {
+		queue = []nowPlayingQueueItemDto{}
+	}
 	return sessionInfoDto{
-		PlayState:          sessionPlayStateDto{RepeatMode: "RepeatNone", PlaybackOrder: "Default"},
-		AdditionalUsers:    []struct{}{},
-		Capabilities:       ts.capabilities,
-		RemoteEndPoint:     ts.remoteEndPoint,
-		PlayableMediaTypes: ts.capabilities.PlayableMediaTypes,
-		ID:                 ts.id,
-		UserID:             ts.userID,
-		UserName:           ts.userName,
-		Client:             ts.client,
-		LastActivityDate:   ts.lastActivityDate,
-		// Zero value — see sessionInfoDto's doc comment.
-		LastPlaybackCheckIn:      time.Time{},
+		PlayState:                playState,
+		NowPlayingItem:           nowPlaying,
+		LastPlaybackCheckIn:      checkIn,
+		AdditionalUsers:          []struct{}{},
+		Capabilities:             ts.capabilities,
+		RemoteEndPoint:           ts.remoteEndPoint,
+		PlayableMediaTypes:       ts.capabilities.PlayableMediaTypes,
+		ID:                       ts.id,
+		UserID:                   ts.userID,
+		UserName:                 ts.userName,
+		Client:                   ts.client,
+		LastActivityDate:         ts.lastActivityDate,
 		DeviceName:               ts.deviceName,
 		DeviceID:                 ts.deviceID,
 		ApplicationVersion:       ts.appVersion,
 		IsActive:                 true,
 		SupportsMediaControl:     ts.capabilities.SupportsMediaControl,
 		SupportsRemoteControl:    ts.capabilities.SupportsMediaControl,
-		NowPlayingQueue:          []struct{}{},
+		NowPlayingQueue:          queue,
 		NowPlayingQueueFullItems: []struct{}{},
 		HasCustomDeviceName:      false,
 		ServerID:                 serverID,
@@ -273,7 +367,18 @@ func (s *Server) handleSessionsList(w http.ResponseWriter, r *http.Request) {
 			activeWithinSeconds, hasFilter = n, true
 		}
 	}
-	writeJSON(w, http.StatusOK, s.sessions.list(s.cfg.ServerID, activeWithinSeconds, hasFilter))
+	list := s.sessions.list(s.cfg.ServerID, activeWithinSeconds, hasFilter)
+	// deviceId narrows the list to the sessions of one device id.
+	if dev := caseInsensitiveQuery(r).Get("deviceid"); dev != "" {
+		kept := list[:0]
+		for _, sess := range list {
+			if sess.DeviceID == dev {
+				kept = append(kept, sess)
+			}
+		}
+		list = kept
+	}
+	writeJSON(w, http.StatusOK, list)
 }
 
 // remoteEndPoint reports the request's TCP peer address as a bare IP string

@@ -14,150 +14,33 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
-
-	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
 
-// playbackReportBody covers the fields this project actually consumes
-// across PlaybackStartInfo/PlaybackProgressInfo/PlaybackStopInfo — all
-// three OpenAPI schemas share this shape, and every other field on them
-// (audio/subtitle stream index, bitrate, IsPaused, ...) is session/
-// transcode-negotiation detail this slice doesn't track.
-type playbackReportBody struct {
-	ItemID        string `json:"ItemId"`
-	PositionTicks *int64 `json:"PositionTicks"`
-}
-
-// handleSessionsPlaying is POST /Sessions/Playing — called once when
-// playback actually starts. The resume position at start is whatever
-// PlaybackInfo already told the client, so there's nothing to persist here
-// — but sessions.go's registry does exist now, so this at least touches the
-// caller's LastActivityDate if it already has a session registered (see
-// touchSession below); it does not itself register one (that's
-// system.go's handleSessionsCapabilitiesFull's job — this route runs after
-// playback has already started, on a device that's expected to have called
-// that first).
+// handleSessionsPlaying is POST /Sessions/Playing — the client announces
+// that playback began (playstate.start.R1-R9).
 func (s *Server) handleSessionsPlaying(w http.ResponseWriter, r *http.Request) {
-	s.touchSession(r, true)
-	w.WriteHeader(http.StatusNoContent)
+	s.handlePlaybackReport(w, r, reportStart)
 }
 
-// touchSession stamps LastActivityDate to now on the caller's tracked
-// session (sessions.go's sessionRegistry), keyed by the auth context's
-// DeviceID — a no-op if there's no auth context or no session already
-// registered for that device (sessionRegistry.touch's own doc comment).
-// Shared by all three playback-report handlers below, which otherwise have
-// no reason to read AuthContext directly (reportPlaybackPosition already
-// does, for its own purposes, but doesn't expose it to its callers).
-//
-// force is passed straight through to notifySessions (websocket.go): a
-// playback start/stop is a real transition (forced, sent immediately to
-// every subscribed connection), a periodic progress report is throttled —
-// the same force/throttle split docs/12 documents for the reference
-// server's own equivalent listener.
-func (s *Server) touchSession(r *http.Request, force bool) {
-	if ac, ok := AuthFromContext(r.Context()); ok && ac != nil {
-		s.sessions.touch(ac.DeviceID)
-		s.notifySessions(r.Context(), force)
-	}
-}
-
-// handleSessionsPlayingProgress is POST /Sessions/Playing/Progress —
-// called periodically while playback runs. Unlike handleSessionsPlaying,
-// this one does have somewhere durable to put its data:
-// storage.PlaystateStore already exists (for GetItem's future per-user
-// aggregates), so the resume position is actually persisted here rather
-// than discarded, which is what makes "continue watching" work at all.
-// Played/PlayCount/IsFavorite are read back first and preserved
-// unchanged — this route only ever reports position, never watched
-// status (that's UserPlayedItems, below).
-//
-// LastPlayedDate is stamped to now on every report — confirmed against a
-// real Jellyfin server (reference server): a Sessions/Playing/Progress call
-// reporting a nonzero position came back (via the equivalent GetItem
-// UserData) with a fresh LastPlayedDate, before the item was ever marked
-// fully watched. GET /Shows/NextUp (nextup.go) depends on this being kept
-// current — it's the only signal that lets a series with an in-progress,
-// not-yet-finished episode be recognized as "touched" at all.
+// handleSessionsPlayingProgress is POST /Sessions/Playing/Progress — the
+// periodic report where the resume position, or the finished state, is
+// saved (playstate.progress.R1-R11).
 func (s *Server) handleSessionsPlayingProgress(w http.ResponseWriter, r *http.Request) {
-	s.reportPlaybackPosition(r)
-	s.touchSession(r, false)
-	w.WriteHeader(http.StatusNoContent)
+	s.handlePlaybackReport(w, r, reportProgress)
 }
 
-// handleSessionsPlayingStopped is POST /Sessions/Playing/Stopped — called
-// once when playback ends or is abandoned, reporting the final position.
-// Same persistence as handleSessionsPlayingProgress; determining whether
-// the item counts as "watched" is deliberately not attempted here (no
-// completion-threshold config exists) — the native client itself calls
-// POST /UserPlayedItems/{itemId} separately when it reaches the end of
-// the item, which is what actually marks it played.
-//
-// Also the primary teardown path for a Phase 2 transcode job (hls.go's
-// ensureTranscodeJob doc comment): a job's context is intentionally
-// long-lived (context.Background()), not tied to any single HLS request,
-// so nothing else in this project stops the ffmpeg subprocess and removes
-// its output directory once a client is actually done with an item. A
-// Direct Play item has no such job (s.transcode.Stop is a documented
-// no-op for an unknown session ID), so this runs unconditionally rather
-// than needing to know in advance which mode was in play.
+// handleSessionsPlayingStopped is POST /Sessions/Playing/Stopped — the
+// client ends playback (playstate.stopped.R1-R11). Also the primary teardown
+// path for a Phase 2 transcode job (hls.go's ensureTranscodeJob doc
+// comment): a job's context is intentionally long-lived, so nothing else
+// stops the ffmpeg subprocess once a client is done with an item. A Direct
+// Play item has no such job (s.transcode.Stop is a documented no-op for an
+// unknown session ID).
 func (s *Server) handleSessionsPlayingStopped(w http.ResponseWriter, r *http.Request) {
-	itemID := s.reportPlaybackPosition(r)
-	s.touchSession(r, true)
-	if itemID != "" {
-		s.transcode.Stop(string(itemID))
-	}
-	w.WriteHeader(http.StatusNoContent)
+	s.handlePlaybackReport(w, r, reportStopped)
 }
-
-// reportPlaybackPosition decodes a playbackReportBody and, given a valid
-// ItemId and an authenticated user, updates just the PlaybackPositionTicks
-// field of that (user, item) pair's Playstate, returning the decoded
-// ItemId (or "" on any failure) so callers that need it — currently only
-// handleSessionsPlayingStopped, to key its transcode-job teardown — don't
-// have to decode the body a second time. Errors are otherwise swallowed
-// throughout (decode failure, missing auth, store failure) — these are
-// fire-and-forget reporting calls from the client's point of view on the
-// reference server too; failing the HTTP response for a malformed or
-// racing report would be a worse experience than silently skipping the
-// position update.
-func (s *Server) reportPlaybackPosition(r *http.Request) storage.ItemID {
-	var body playbackReportBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.ItemID == "" || body.PositionTicks == nil {
-		return ""
-	}
-	ac, ok := AuthFromContext(r.Context())
-	if !ok || ac == nil {
-		return ""
-	}
-
-	itemID := storage.ItemID(body.ItemID)
-	state, err := s.store.GetPlaystate(r.Context(), ac.User.ID, itemID)
-	if err != nil {
-		state = storage.Playstate{}
-	}
-	state.PlaybackPositionTicks = *body.PositionTicks
-	// A position below the minimum resume percentage (5% of the runtime)
-	// is not a resume position: the saved one is cleared, which drops the
-	// item from the resume list (playstate.progress.R2, playstate.resume.R3).
-	// The maximum-percentage and minimum-duration rules (progress.R3-R5)
-	// are not applied here.
-	if item, err := s.store.GetItem(r.Context(), itemID); err == nil && item.RunTimeTicks != nil && *item.RunTimeTicks > 0 &&
-		*body.PositionTicks*100 < *item.RunTimeTicks*minResumePercent {
-		state.PlaybackPositionTicks = 0
-	}
-	now := time.Now().UTC()
-	state.LastPlayedDate = &now
-	_ = s.store.SetPlaystate(r.Context(), ac.User.ID, itemID, state)
-	return itemID
-}
-
-// minResumePercent is the smallest share of the runtime, in percent, a
-// reported position must reach to be kept as a resume position.
-const minResumePercent = 5
 
 // userItemDataDto mirrors the OpenAPI schema's UserItemDataDto, trimmed to
 // the fields jellyfin-sdk-kotlin's UserItemDataDto.kt declares required
@@ -187,54 +70,6 @@ type userItemDataDto struct {
 	Rating           *float64   `json:"Rating,omitempty"`
 	Likes            *bool      `json:"Likes,omitempty"`
 	LastPlayedDate   *time.Time `json:"LastPlayedDate,omitempty"`
-}
-
-// handleUserPlayedItemsMark is POST /UserPlayedItems/{itemId} — called by
-// the native player once when it reaches the end of an item, marking it
-// watched. This is the actual "played" signal (see
-// handleSessionsPlayingStopped's doc comment above for why that route
-// doesn't try to infer it itself).
-//
-// PlaybackPositionTicks resets to 0 on the transition — confirmed against a
-// real Jellyfin server (reference server): reporting a nonzero position via
-// Sessions/Playing/Progress and then marking the item played through this
-// route comes back with position 0. Same fix, same confirmation, as
-// userdata.go's handlePlayedItemAdd (the jellyfin-web-facing sibling of
-// this route) — left stale otherwise, a watched item could resurface
-// mid-progress in the "Continue Watching" row (storage.ItemFilter.Resume,
-// sqlite/item.go) the moment it's later unmarked watched.
-//
-// LastPlayedDate is stamped to now too — same confirmation as
-// reportPlaybackPosition's doc comment above, and load-bearing for the
-// same reason: GET /Shows/NextUp (nextup.go) orders series by it and can
-// filter on nextUpDateCutoff, both of which depend on this being kept
-// current rather than left nil forever.
-func (s *Server) handleUserPlayedItemsMark(w http.ResponseWriter, r *http.Request) {
-	itemID := storage.ItemID(r.PathValue("itemId"))
-	ac, _ := AuthFromContext(r.Context())
-
-	state, err := s.store.GetPlaystate(r.Context(), ac.User.ID, itemID)
-	if err != nil {
-		state = storage.Playstate{}
-	}
-	state.Played = true
-	state.PlayCount++
-	state.PlaybackPositionTicks = 0
-	now := time.Now().UTC()
-	state.LastPlayedDate = &now
-	if err := s.store.SetPlaystate(r.Context(), ac.User.ID, itemID, state); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, http.StatusOK, userItemDataDto{
-		PlaybackPositionTicks: state.PlaybackPositionTicks,
-		PlayCount:             state.PlayCount,
-		IsFavorite:            state.IsFavorite,
-		Played:                state.Played,
-		Key:                   string(itemID),
-		ItemID:                string(itemID),
-	})
 }
 
 // handleSessionsPlayingPing is POST /Sessions/Playing/Ping — keeps a

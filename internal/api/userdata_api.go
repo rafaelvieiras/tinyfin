@@ -99,19 +99,26 @@ func libraryAccessFor(u storage.User) libraryAccess {
 // resolveUserTarget (403/404), and an unknown item or one outside the
 // target's libraries is 404. It writes the failure response itself.
 func (s *Server) resolveUserItem(w http.ResponseWriter, r *http.Request) (storage.User, storage.Item, bool) {
+	return s.resolveUserItemFor(w, r, caseInsensitiveQuery(r).Get("userid"))
+}
+
+// resolveUserItemFor is resolveUserItem with the requested user id given
+// explicitly (the legacy played aliases carry it in the path). A missing
+// item is a problem-details 404.
+func (s *Server) resolveUserItemFor(w http.ResponseWriter, r *http.Request, rawUserID string) (storage.User, storage.Item, bool) {
 	raw := r.PathValue("itemId")
 	id, ok := normalizeGUID(raw)
 	if !ok || id == zeroGUID {
 		w.WriteHeader(http.StatusBadRequest)
 		return storage.User{}, storage.Item{}, false
 	}
-	target, ok := s.resolveUserTarget(w, r, caseInsensitiveQuery(r).Get("userid"))
+	target, ok := s.resolveUserTarget(w, r, rawUserID)
 	if !ok {
 		return storage.User{}, storage.Item{}, false
 	}
 	item, err := s.store.GetItem(r.Context(), storage.ItemID(id))
 	if err != nil || !libraryAccessFor(target).allows(item.LibraryID) {
-		w.WriteHeader(http.StatusNotFound)
+		writeItemsProblem(w, http.StatusNotFound, "Not Found")
 		return storage.User{}, storage.Item{}, false
 	}
 	return target, item, true
@@ -125,7 +132,7 @@ func (s *Server) handleUserItemDataGet(w http.ResponseWriter, r *http.Request) {
 	}
 	state := s.getPlaystateOrZero(r, target.ID, item.ID)
 	dto := userItemDataFromState(state, item)
-	s.addUnplayedCount(r, target.ID, item, dto)
+	s.applyFolderUserData(r.Context(), target.ID, item, dto)
 	writeJSON(w, http.StatusOK, dto)
 }
 
@@ -177,18 +184,8 @@ func (s *Server) handleUserItemDataPost(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	dto := userItemDataFromState(state, item)
-	s.addUnplayedCount(r, target.ID, item, dto)
+	s.applyFolderUserData(r.Context(), target.ID, item, dto)
 	writeJSON(w, http.StatusOK, dto)
-}
-
-// addUnplayedCount fills UnplayedItemCount for folder-shaped items, the
-// same best-effort rule userDataFor applies in listings.
-func (s *Server) addUnplayedCount(r *http.Request, userID storage.UserID, item storage.Item, dto *userItemDataDto) {
-	if childCountItemTypes[item.Type] {
-		if n, err := s.unplayedItemCountFor(r.Context(), userID, item); err == nil {
-			dto.UnplayedItemCount = n
-		}
-	}
 }
 
 // splitCSV splits a comma-separated query value, dropping blanks.
@@ -208,9 +205,9 @@ func splitCSV(vals []string) []string {
 // watching" list: items with a saved playback position for the target
 // user, most recently played first (items.resume.R1-R11).
 //
-// ExcludeActiveSessions is accepted; no live playback tracking exists yet,
-// so there is never an item to exclude and the list is unchanged, which is
-// what the contract specifies when nothing is playing (items.resume.R11).
+// ExcludeActiveSessions=true drops the items the user is playing right now
+// in any tracked session; with nothing playing the list is unchanged
+// (items.resume.R11).
 func (s *Server) handleUserItemsResume(w http.ResponseWriter, r *http.Request) {
 	ac, ok := AuthFromContext(r.Context())
 	if !ok || ac == nil {
@@ -234,6 +231,9 @@ func (s *Server) handleUserItemsResume(w http.ResponseWriter, r *http.Request) {
 	if acc := libraryAccessFor(target); !acc.all {
 		filter.RestrictToLibraries = true
 		filter.LibraryIDs = acc.ids
+	}
+	if strings.EqualFold(q.Get("excludeactivesessions"), "true") {
+		filter.ExcludeIDs = append(filter.ExcludeIDs, s.sessions.nowPlayingFor(string(userID))...)
 	}
 
 	include := splitCSV(q["includeitemtypes"])
