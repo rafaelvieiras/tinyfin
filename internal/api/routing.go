@@ -24,6 +24,8 @@ var routePaths = []string{
 	// collision with "/System/Info" (3) or "/System/Endpoint" (3) above.
 	"/System/Info/Storage",
 	"/System/Configuration",
+	// 4 segments, like "/System/Info/Storage" above and no wildcard: no collision.
+	"/System/Configuration/network",
 	"/Auth/Keys",
 	"/Auth/Keys/{key}",
 	// 2 segments (including the leading empty split element) — shorter than

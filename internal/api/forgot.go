@@ -74,7 +74,7 @@ func (s *Server) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if user, err := s.store.GetUserByName(r.Context(), req.EnteredUsername); err == nil && fromLocalNetwork(r) {
+	if user, err := s.store.GetUserByName(r.Context(), req.EnteredUsername); err == nil && s.fromLocalNetwork(r) {
 		pin, err := newResetPin()
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)

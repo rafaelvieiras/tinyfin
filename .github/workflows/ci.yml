@@ -53,12 +53,36 @@ jobs:
       - name: Generate the synthetic media tree
         run: scripts/conformance-media.sh "$RUNNER_TEMP/media"
       - name: Start a throwaway Tinyfin
-        run: scripts/conformance-tinyfin-up.sh 18098
+        id: tf
+        # Listens on the runner's own address (not loopback) so the server can
+        # see the runner as a non-loopback peer; the data dir is where it
+        # writes the password-reset PIN files.
+        run: |
+          ip="$(hostname -I | awk '{print $1}')"
+          BIND="$ip" scripts/conformance-tinyfin-up.sh 18098 | tee "$RUNNER_TEMP/up.log"
+          echo "ip=$ip" >> "$GITHUB_OUTPUT"
+          echo "dir=$(sed -n 's/.*data-dir=\([^ ]*\).*/\1/p' "$RUNNER_TEMP/up.log")" >> "$GITHUB_OUTPUT"
       - name: Compare against the committed baseline
         # Fails only when a scenario that passes in docs/contract/baseline.json
         # no longer passes. The throwaway admin credential is the script default.
         run: |
-          go run ./cmd/conformance run -base http://127.0.0.1:18098 \
+          go run ./cmd/conformance run -base "http://${{ steps.tf.outputs.ip }}:18098" \
             -admin-user admin -admin-pass 'Conformance-Admin-1' \
             -media-root "$RUNNER_TEMP/media" \
-            -baseline docs/contract/baseline.json -skip-tags time-dependent
+            -server-data-dir "${{ steps.tf.outputs.dir }}" \
+            -baseline docs/contract/baseline.json -skip-tags time-dependent -device-suffix auto
+      - name: Start a second throwaway Tinyfin for the risky scenarios
+        id: tf2
+        run: |
+          BIND="${{ steps.tf.outputs.ip }}" scripts/conformance-tinyfin-up.sh 18099 | tee "$RUNNER_TEMP/up2.log"
+          echo "dir=$(sed -n 's/.*data-dir=\([^ ]*\).*/\1/p' "$RUNNER_TEMP/up2.log")" >> "$GITHUB_OUTPUT"
+      - name: Risky scenarios (last administrator, PIN throttle)
+        # They may delete/demote the only administrator or leave the runner's
+        # address throttled, so they get a server of their own and run alone.
+        # -strict: a BLOCKED scenario fails this step too.
+        run: |
+          go run ./cmd/conformance run -base "http://${{ steps.tf.outputs.ip }}:18099" \
+            -admin-user admin -admin-pass 'Conformance-Admin-1' \
+            -media-root "$RUNNER_TEMP/media" \
+            -server-data-dir "${{ steps.tf2.outputs.dir }}" \
+            -tags risky -risky -strict -device-suffix auto

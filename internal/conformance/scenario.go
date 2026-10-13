@@ -74,6 +74,19 @@ type Step struct {
 	// Config temporarily changes the server-wide configuration; the original
 	// is restored when the scenario ends, even on failure.
 	Config *ConfigStep `json:"config,omitempty"`
+	// ServerFile reads a file from the server's data directory (see
+	// Client.ServerDataDir / Client.ReadFileCmd). Its Expect/Capture apply to
+	// the file as if it were a response: status 200 with the content (JSON
+	// when it parses), or 404 when the file does not exist.
+	ServerFile *ServerFileStep `json:"serverFile,omitempty"`
+}
+
+// ServerFileStep names a file on the server's filesystem.
+type ServerFileStep struct {
+	// Read is an absolute path (used as is) or a bare file name resolved
+	// under the server data directory, in the Under sub-directory.
+	Read  string `json:"read"`
+	Under string `json:"under,omitempty"`
 }
 
 // WSStep is one WebSocket client action. Exactly one of Open, Wait and Close
@@ -101,9 +114,12 @@ type WSStep struct {
 	Close string `json:"close,omitempty"`
 }
 
-// ConfigStep patches top-level keys of the server configuration.
+// ConfigStep patches top-level keys of a server configuration section: the
+// main one (GET/POST /System/Configuration) or, with Section, a named one
+// (GET/POST /System/Configuration/<section>, e.g. "network").
 type ConfigStep struct {
-	Set map[string]any `json:"set"`
+	Section string         `json:"section,omitempty"`
+	Set     map[string]any `json:"set"`
 }
 
 // Request describes the HTTP request. Strings may contain {{var}} templates.

@@ -4,7 +4,8 @@
 //	conformance run  -base http://127.0.0.1:18096 -admin-user admin -admin-pass '...' \
 //	                 -media-root /media -fixtures docs/contract/fixtures.json \
 //	                 -scenarios docs/contract/scenarios [-scope modern] [-tags web-client] [-reference]
-//	                 [-risky] [-device-suffix auto|<text>] [-skip-tags a,b]
+//	                 [-risky] [-device-suffix auto|<text>] [-skip-tags a,b] [-strict]
+//	                 [-server-data-dir <dir>] [-read-file-cmd "<argv prefix>"]
 //	                 [-baseline docs/contract/baseline.json] [-write-baseline <file>] [-ref-report <json>]
 //	conformance progress [-baseline docs/contract/baseline.json]
 //	conformance lint [-dir docs/contract]
@@ -92,6 +93,9 @@ func run(args []string) int {
 	reference := fs.Bool("reference", false, "target is the reference server (skip intentional divergences)")
 	skipTags := fs.String("skip-tags", "", "comma-separated tags; scenarios with any of them are not run")
 	risky := fs.Bool("risky", false, "also run scenarios tagged risky (demote/delete the last administrator)")
+	dataDir := fs.String("server-data-dir", "", "the server's data directory as seen by the runner (or by -read-file-cmd); lets scenarios read server-side files such as password-reset PIN files")
+	readCmd := fs.String("read-file-cmd", "", "argv prefix (split on spaces, no shell) that prints a server-side file given its path, e.g. \"docker exec ref cat\"; default: read the local file system")
+	strict := fs.Bool("strict", false, "treat BLOCKED scenarios as failures (for dedicated runs that must exercise everything they select)")
 	suffix := fs.String("device-suffix", "", "suffix for generated DeviceIds ({{run.suffix}}); \"auto\" picks a random one so concurrent runs do not revoke each other's tokens")
 	baselinePath := fs.String("baseline", "", "compare against this baseline file; exit non-zero when a passing scenario regresses")
 	writeBaseline := fs.String("write-baseline", "", "write the run's per-scenario statuses to this baseline file (refresh)")
@@ -132,6 +136,8 @@ func run(args []string) int {
 	ctx := context.Background()
 	c := conformance.NewClient(*base)
 	c.IncludeRisky = *risky
+	c.ServerDataDir = *dataDir
+	c.ReadFileCmd = *readCmd
 	switch *suffix {
 	case "":
 	case "auto":
@@ -187,7 +193,7 @@ func run(args []string) int {
 		}
 	}
 	code := 0
-	if counts[conformance.StatusFail] > 0 {
+	if counts[conformance.StatusFail] > 0 || (*strict && counts[conformance.StatusBlocked] > 0) {
 		code = 1
 	}
 	if *baselinePath != "" {

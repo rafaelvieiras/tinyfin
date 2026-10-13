@@ -145,6 +145,8 @@ type Server struct {
 	// command-line default applies), 1 enabled, 2 disabled.
 	qcOverride atomic.Int32
 	pinLimit   *pinThrottle
+	// localNet is the runtime LocalNetworkSubnets setting (nil: unset).
+	localNet atomic.Pointer[localNetwork]
 }
 
 // NewServer builds a Server backed by store, applying cfg defaults where
@@ -181,6 +183,7 @@ func NewServer(store storage.Store, cfg Config) *Server {
 		pinLimit:  newPinThrottle(),
 	}
 	s.loadRuntimeSettings()
+	s.loadLocalNetwork()
 	s.routes()
 	go s.runWSWatchdog(context.Background())
 	return s
@@ -541,6 +544,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("DELETE /Auth/Keys/{key}", requireAdmin(s.handleAuthKeysRevoke))
 	s.mux.HandleFunc("GET /System/Configuration", requireAdmin(s.handleSystemConfigurationGet))
 	s.mux.HandleFunc("POST /System/Configuration", requireAdmin(s.handleSystemConfigurationPost))
+	s.mux.HandleFunc("GET /System/Configuration/network", requireAdmin(s.handleNetworkConfigurationGet))
+	s.mux.HandleFunc("POST /System/Configuration/network", requireAdmin(s.handleNetworkConfigurationPost))
 
 	// Playstate reporting and media segments (sessions_playback.go) — found
 	// missing while mapping the whole native playback flow for coverage,

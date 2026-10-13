@@ -55,6 +55,15 @@ type Client struct {
 	// or delete the last administrator); skipped by default so a buggy
 	// implementation cannot lock the rest of the suite out.
 	IncludeRisky bool
+	// ServerDataDir is the server's data directory as seen by the runner
+	// (or by ReadFileCmd). Relative names in a serverFile step resolve under
+	// it. Empty together with ReadFileCmd: serverFile steps are BLOCKED and
+	// the scenarios that require "serverfile:read" are blocked.
+	ServerDataDir string
+	// ReadFileCmd is an argv prefix (split on spaces, no shell) that prints a
+	// server-side file given its path as the last argument, e.g.
+	// "docker exec ref cat". When empty the runner reads the local file system.
+	ReadFileCmd string
 
 	mediaRoot string
 	lazyLibs  map[string]*lazyLibrary
@@ -68,7 +77,7 @@ type Client struct {
 type runState struct {
 	scratch    map[string]string
 	sockets    map[string]*wsConn
-	configOrig []byte // original server configuration, set once
+	configOrig map[string][]byte // original configuration per section, set once
 }
 
 // NewClient returns a Client with sane defaults.
@@ -276,11 +285,46 @@ func (c *Client) do(ctx context.Context, identity string, r Request, scratch map
 // skipDivergent controls whether scenarios with a Divergence are skipped
 // (true when validating against the reference server).
 func (c *Client) Run(ctx context.Context, list []Scenario, skipDivergent bool) []Result {
-	var out []Result
+	// Risky scenarios run last, in their given order: whatever one of them
+	// does to the server (last-admin checks, a throttled source) cannot
+	// affect the others.
+	ordered := make([]Scenario, 0, len(list))
 	for _, s := range list {
+		if !hasTag(s.Tags, "risky") {
+			ordered = append(ordered, s)
+		}
+	}
+	for _, s := range list {
+		if hasTag(s.Tags, "risky") {
+			ordered = append(ordered, s)
+		}
+	}
+	var out []Result
+	for _, s := range ordered {
 		out = append(out, c.runOne(ctx, s, skipDivergent))
 	}
 	return out
+}
+
+// administratorCount counts the accounts whose policy marks them administrator.
+func (c *Client) administratorCount(ctx context.Context) (int, error) {
+	r, err := c.Do(ctx, "admin", "GET", "/Users", nil, nil, nil)
+	if err != nil {
+		return 0, err
+	}
+	arr, ok := r.JSON.([]any)
+	if r.Status != 200 || !ok {
+		return 0, fmt.Errorf("list users: status %d", r.Status)
+	}
+	n := 0
+	for _, u := range arr {
+		m, _ := u.(map[string]any)
+		p, _ := m["Policy"].(map[string]any)
+		if a, _ := p["IsAdministrator"].(bool); a {
+			n++
+		}
+	}
+	return n, nil
 }
 
 func (c *Client) runOne(ctx context.Context, s Scenario, skipDivergent bool) Result {
@@ -296,6 +340,17 @@ func (c *Client) runOne(ctx context.Context, s Scenario, skipDivergent bool) Res
 	if !c.IncludeRisky && hasTag(s.Tags, "risky") {
 		res.Status, res.Message = StatusSkipped, "risky: opt-in with -risky"
 		return res
+	}
+	// A scenario tagged last-admin acts on "the only administrator". On a
+	// server that has another one it would delete or demote the runner's
+	// admin for real, so it runs only when the runner's admin is the sole one.
+	if hasTag(s.Tags, "last-admin") {
+		n, err := c.administratorCount(ctx)
+		if err != nil || n != 1 {
+			res.Status = StatusBlocked
+			res.Message = fmt.Sprintf("needs a server whose only administrator is the runner's (found %d: %v)", n, err)
+			return res
+		}
 	}
 	done := map[*lazyLibrary]bool{}
 	for _, need := range s.Requires {
@@ -379,10 +434,10 @@ func (c *Client) finish(ctx context.Context, rs *runState) {
 		w.close()
 		delete(rs.sockets, name)
 	}
-	if rs.configOrig != nil {
-		_, _ = c.do(ctx, "admin", Request{Method: "POST", Path: "/System/Configuration", BodyRaw: string(rs.configOrig),
+	for section, orig := range rs.configOrig {
+		_, _ = c.do(ctx, "admin", Request{Method: "POST", Path: configPath(section), BodyRaw: string(orig),
 			Headers: map[string]string{"Content-Type": "application/json"}}, nil)
-		rs.configOrig = nil
+		delete(rs.configOrig, section)
 	}
 }
 
@@ -411,6 +466,12 @@ func (c *Client) runStep(ctx context.Context, st Step, rs *runState) error {
 			return nil
 		}
 		resp = msg
+	case st.ServerFile != nil:
+		r, err := c.readServerFile(ctx, st.ServerFile, scratch)
+		if err != nil {
+			return err
+		}
+		resp = r
 	case st.Request.Path == "" && (st.SleepMs > 0 || st.Config != nil):
 		return nil
 	default:
@@ -427,27 +488,38 @@ func (c *Client) runStep(ctx context.Context, st Step, rs *runState) error {
 	return c.checkExpect(st, resp, scratch)
 }
 
+func configPath(section string) string {
+	if section == "" {
+		return "/System/Configuration"
+	}
+	return "/System/Configuration/" + section
+}
+
 func (c *Client) applyConfig(ctx context.Context, cs *ConfigStep, rs *runState) error {
-	r, err := c.do(ctx, "admin", Request{Method: "GET", Path: "/System/Configuration"}, nil)
+	path := configPath(cs.Section)
+	r, err := c.do(ctx, "admin", Request{Method: "GET", Path: path}, nil)
 	if err != nil {
 		return err
 	}
 	cfg, ok := r.JSON.(map[string]any)
 	if r.Status != 200 || !ok {
-		return fmt.Errorf("read configuration: status %d", r.Status)
+		return fmt.Errorf("read configuration %q: status %d", path, r.Status)
 	}
 	if rs.configOrig == nil {
-		rs.configOrig = append([]byte(nil), r.Body...)
+		rs.configOrig = map[string][]byte{}
+	}
+	if _, kept := rs.configOrig[cs.Section]; !kept {
+		rs.configOrig[cs.Section] = append([]byte(nil), r.Body...)
 	}
 	for k, v := range cs.Set {
 		cfg[k] = v
 	}
-	r, err = c.do(ctx, "admin", Request{Method: "POST", Path: "/System/Configuration", Body: cfg}, nil)
+	r, err = c.do(ctx, "admin", Request{Method: "POST", Path: path, Body: cfg}, nil)
 	if err != nil {
 		return err
 	}
 	if r.Status != 200 && r.Status != 204 {
-		return fmt.Errorf("write configuration: status %d", r.Status)
+		return fmt.Errorf("write configuration %q: status %d", path, r.Status)
 	}
 	return nil
 }

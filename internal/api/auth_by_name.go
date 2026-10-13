@@ -111,7 +111,7 @@ func (s *Server) handleAuthenticateByName(w http.ResponseWriter, r *http.Request
 func (s *Server) issueLogin(w http.ResponseWriter, r *http.Request, user storage.User, policy userPolicyDto, now time.Time, client, device, deviceID, version string, withAddress bool) {
 	ctx := r.Context()
 	// users.auth.R21: no remote access from outside the local network.
-	if !policy.EnableRemoteAccess && !fromLocalNetwork(r) {
+	if !policy.EnableRemoteAccess && !s.fromLocalNetwork(r) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -256,17 +256,6 @@ func (s *Server) recordLoginFailure(r *http.Request, user storage.User, policy u
 		})
 	}
 	return nil
-}
-
-// fromLocalNetwork reports whether the request came from the loopback or a
-// private/link-local address (same notion as system.go's
-// system-info IsInNetwork); an unparseable peer address counts as local.
-func fromLocalNetwork(r *http.Request) bool {
-	ip := remoteIP(r)
-	if ip == nil {
-		return true
-	}
-	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast()
 }
 
 func containsString(list []string, v string) bool {

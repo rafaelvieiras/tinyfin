@@ -21,6 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `GET /Sessions?deviceId=`, `ExcludeActiveSessions` on `/UserItems/Resume`, and
   the `POST|DELETE /Users/{userId}/PlayedItems/{itemId}` aliases the official
   web client still calls.
+- `GET|POST /System/Configuration/network` (administrator) with
+  `LocalNetworkSubnets`: when set, only those subnets and loopback count as the
+  local network for the remote-access login rule, the password-reset PIN file
+  and `IsInNetwork`; unset keeps the private and link-local ranges.
+- Conformance runner: server-file steps (`-server-data-dir`, `-read-file-cmd`),
+  named configuration sections, the `origin:non-loopback` capability, risky
+  scenarios ordered last behind a sole-administrator guard, and `-strict`.
 - Executable behavior contract for Jellyfin 12+ wire compatibility under
   `docs/contract/` (users, items, playstate) with a conformance runner
   (`cmd/conformance`) that runs the same scenarios against a reference server

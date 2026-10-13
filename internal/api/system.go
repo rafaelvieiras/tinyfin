@@ -185,7 +185,7 @@ type endpointInfo struct {
 func (s *Server) handleSystemEndpoint(w http.ResponseWriter, r *http.Request) {
 	ip := remoteIP(r)
 	local := ip != nil && ip.IsLoopback()
-	inNetwork := local || (ip != nil && (ip.IsPrivate() || ip.IsLinkLocalUnicast()))
+	inNetwork := local || (ip != nil && s.isLocalAddress(ip))
 	writeJSON(w, http.StatusOK, endpointInfo{IsLocal: local, IsInNetwork: inNetwork})
 }
 

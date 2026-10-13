@@ -87,6 +87,10 @@ func (c *Client) Setup(ctx context.Context, adminUser, adminPass, mediaRoot stri
 	if err := c.SetupAPIKey(ctx); err != nil {
 		warn("api key identity: %v", err)
 	}
+	c.probeOrigin(ctx)
+	if c.serverFileAvailable() {
+		c.Available["serverfile:read"] = true
+	}
 
 	// users
 	existing := map[string]string{}

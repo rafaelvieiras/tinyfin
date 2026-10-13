@@ -100,7 +100,7 @@ Index of routes:
 - **users.auth.R18** When the user has `AccessSchedules`, a login outside every allowed window answers `403` (day of week in the server's local time, `StartHour <= hour <= EndHour`). No schedule means no restriction. Unlike requests that are already authenticated, the login restriction applies to administrators too.
 - **users.auth.R19** A body that is not valid JSON answers `400`.
 - **users.auth.R20** The password field is named `Pw`. A body that sends the password under another name (for example `Password`) is treated as having no `Pw`.
-- **users.auth.R21** A user with `EnableRemoteAccess=false` is refused with `403` when the login comes from outside the local network, even with correct credentials. (Not observable from a local test runner.)
+- **users.auth.R21** A user with `EnableRemoteAccess=false` is refused with `403` when the login comes from outside the local network, even with correct credentials. "Local network" is loopback plus, when no `LocalNetworkSubnets` are configured, the private and link-local ranges; once the network configuration section (`GET`/`POST /System/Configuration/network`, administrator) lists subnets, only those and loopback are local, so a private address outside them is remote (confirmed on the reference: the runner's address, seen as a private container-gateway address, got `403` after `LocalNetworkSubnets` was set to a range not containing it; `X-Forwarded-For` has no effect). Observable from a runner whose peer address is not loopback (`users.auth.remote-access-disabled`).
 - **users.auth.R22** A successful login updates the user's `LastLoginDate` (and `LastActivityDate`).
 - **users.auth.R23** A successful login (password login or QuickConnect exchange) writes two activity-log entries, in this order: `SessionStarted`, then `AuthenticationSucceeded`. Both have `Severity` `Information`, `UserId` of the user who logged in and no `ItemId`. Listed newest first (`GET /System/ActivityLog/Entries`, administrator) the `AuthenticationSucceeded` entry is directly above the `SessionStarted` one, and both are visible before the login response is read.
 - **users.auth.R24** The entry texts are `<user name> is online from <device name>` (`SessionStarted`) and `<user name> successfully authenticated` (`AuthenticationSucceeded`). `<user name>` is the account's stored name, not the (case-insensitive) spelling sent; `<device name>` is the percent-decoded `Device` of the login (for the QuickConnect exchange, the `Device` the secret was issued to), not `Client`.
@@ -540,8 +540,8 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 
 - **users.forgot.R6** `POST /Users/ForgotPassword/Pin` is anonymous. A `Pin` that matches no pending reset answers `404`. The comparison ignores `-`.
 - **users.forgot.R7** A missing `Pin`, or a body that is not JSON, answers `400`.
-- **users.forgot.R8** A matching, unexpired `Pin` answers `200` `{Success: true, UsersReset: [<user names>]}`; the matching users' password becomes the PIN text exactly as sent; the reset request is consumed; existing tokens are not revoked and a lockout is not cleared. (Requires reading the PIN file on the server; not testable black-box.)
-- **users.forgot.R9** *Tinyfin hardening, not a reference behavior (the reference's behavior here is not specified or relied on).* The PIN has few bits and a 30 minute life, so redeem attempts are limited, and every refusal is the same uniform `404` as a wrong PIN (no distinct status, no `Retry-After`, nothing that tells a throttled attempt from a wrong one): (a) a source address that sends 5 wrong PINs is refused for 15 minutes without its PIN being evaluated, even if the PIN is right; (b) 5 wrong PINs in total, from any sources, invalidate every pending request, so the owner has to start the flow again; (c) the PIN is compared in constant time. Malformed bodies (`400`) are not counted; a successful redeem resets the total. Needs the PIN file to observe the effect on a right PIN, so the scenario is parked as pending; a wrong-PIN burst alone is indistinguishable from `users.forgot.R6` and is exercised there.
+- **users.forgot.R8** A matching, unexpired `Pin` answers `200` `{Success: true, UsersReset: [<user names>]}`; the matching users' password becomes the PIN text exactly as sent; the reset request is consumed; existing tokens are not revoked and a lockout is not cleared. (The scenario reads the PIN from the file on the server through the runner's server-file capability, see the README.)
+- **users.forgot.R9** *Tinyfin hardening, not a reference behavior (the reference's behavior here is not specified or relied on).* The PIN has few bits and a 30 minute life, so redeem attempts are limited, and every refusal is the same uniform `404` as a wrong PIN (no distinct status, no `Retry-After`, nothing that tells a throttled attempt from a wrong one): (a) a source address that sends 5 wrong PINs is refused for 15 minutes without its PIN being evaluated, even if the PIN is right; (b) 5 wrong PINs in total, from any sources, invalidate every pending request, so the owner has to start the flow again; (c) the PIN is compared in constant time. Malformed bodies (`400`) are not counted; a successful redeem resets the total. Observing the effect on a right PIN needs the PIN file (server-file capability). The scenario is `risky` (it leaves the runner's source throttled for 15 minutes) and carries a `divergence` record, so it is skipped on the reference; one source address cannot tell (a) from (b), so they are exercised together: after five wrong PINs the right one is refused, the pending request's file is gone and the source stays refused after a new flow.
 
 ---
 
@@ -569,7 +569,7 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 | `users.auth.R18` | `users.auth.access-schedule` |
 | `users.auth.R19` | `users.auth.malformed-body` |
 | `users.auth.R20` | `users.auth.password-field-name` |
-| `users.auth.R21` | `users.auth.remote-access-disabled` (pending) |
+| `users.auth.R21` | `users.auth.remote-access-disabled` |
 | `users.auth.R22` | `users.auth.last-login-recorded` |
 | `users.auth.R23` | `users.auth.activity-login-entries`, `users.auth.activity-quickconnect-entries` |
 | `users.auth.R24` | `users.auth.activity-login-entries`, `users.auth.activity-quickconnect-entries` |
@@ -692,8 +692,8 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 | `users.forgot.R5` | `users.forgot.does-not-change-password` |
 | `users.forgot.R6` | `users.forgot-pin.no-match` |
 | `users.forgot.R7` | `users.forgot-pin.pin-missing` |
-| `users.forgot.R8` | `users.forgot-pin.redeem` (pending) |
-| `users.forgot.R9` | `users.forgot-pin.throttle` (pending) |
+| `users.forgot.R8` | `users.forgot-pin.redeem` |
+| `users.forgot.R9` | `users.forgot-pin.throttle` |
 | `users.forgot.R10` | `users.forgot.pinfile-bare-name` |
 | `users.socket.R1` | `users.socket.upgrade`, `users.socket.upgrade-api-key` |
 | `users.socket.R2` | `users.socket.refused-without-credential` |
@@ -727,5 +727,5 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 8. A request whose body omits `Configuration` on `POST /Users` resets preferences to defaults (`users.update.R9`); the audit states the default but not the intent. Confirm on the reference.
 9. QuickConnect is specified in `quickconnect.md`; it is assumed enabled on the test server.
 10. Fixture `disabled` (in `fixtures.json`) is created and disabled through the policy endpoint, but the runner never logs in a user whose policy sets `IsDisabled` (login answers `403` by design), so it has no token: it is available for `{{user.disabled.id|name}}` templates and as a target, never as an `as` identity. Scenarios that need a disabled account with a token create it themselves and disable it mid-scenario.
-11. Remote-access restriction (`EnableRemoteAccess=false`) cannot be exercised from a local runner (`users.auth.R21`, pending): the runner always connects from the local network and the forwarded-address headers are only trusted from configured proxies. `users.forgot-pin.redeem` stays pending as well: the PIN is only written to a file on the server.
+11. Remote-access restriction (`EnableRemoteAccess=false`, `users.auth.R21`) is exercised by making the runner's own address remote through `LocalNetworkSubnets`; that needs a peer address that is not loopback (a published container port reaches the reference from its gateway address; Tinyfin must be reached through one of the host's own addresses). The PIN scenarios (`users.forgot-pin.redeem`, `users.forgot-pin.throttle`) read the PIN from the server's file through the runner's server-file capability; without it they are BLOCKED, not failed.
 12. Admin self-service rules differ between the modern route (no `CurrentPw` without `userId`) and the alias (always required). They are replicated as observed.

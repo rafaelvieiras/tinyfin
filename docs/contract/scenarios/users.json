@@ -7288,7 +7288,8 @@
     "scope": "modern",
     "tags": [
       "security",
-      "risky"
+      "risky",
+      "last-admin"
     ],
     "covers": [
       "users.delete.R5"
@@ -8191,7 +8192,8 @@
     "scope": "modern",
     "tags": [
       "security",
-      "risky"
+      "risky",
+      "last-admin"
     ],
     "covers": [
       "users.policy.R6"
@@ -14407,8 +14409,159 @@
     "covers": [
       "users.auth.R21"
     ],
-    "steps": [],
-    "pending": "The runner always connects from the local network; needs a request originating outside it."
+    "steps": [
+      {
+        "name": "create tmp-remote-access",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-remote-access",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "the runner's address is no longer in the local network",
+        "config": {
+          "section": "network",
+          "set": {
+            "LocalNetworkSubnets": [
+              "192.0.2.0/24"
+            ]
+          }
+        },
+        "request": {
+          "method": "",
+          "path": ""
+        },
+        "expect": {}
+      },
+      {
+        "name": "remote login is allowed while the account has remote access",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-remote-access",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-remote-access{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "turn remote access off",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "EnableRemoteAccess": false
+          }
+        },
+        "expect": {
+          "status": [
+            200,
+            204
+          ]
+        }
+      },
+      {
+        "name": "remote login is refused, correct password or not",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-remote-access",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-remote-access{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "the runner's address is back in the local network",
+        "config": {
+          "section": "network",
+          "set": {
+            "LocalNetworkSubnets": []
+          }
+        },
+        "request": {
+          "method": "",
+          "path": ""
+        },
+        "expect": {}
+      },
+      {
+        "name": "local login works again",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-remote-access",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-remote-access{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      }
+    ],
+    "tags": [
+      "auth",
+      "security"
+    ],
+    "requires": [
+      "origin:non-loopback"
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
   },
   {
     "id": "users.forgot-pin.redeem",
@@ -14418,8 +14571,193 @@
     "covers": [
       "users.forgot.R8"
     ],
-    "steps": [],
-    "pending": "The PIN is only written to a file on the server and never returned by the API; needs filesystem access to the server's data directory."
+    "steps": [
+      {
+        "name": "create tmp-forgot-redeem",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-forgot-redeem",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "log in (a token that must survive the reset)",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-forgot-redeem",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-forgot-redeem-a{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "tok": "$.AccessToken"
+        }
+      },
+      {
+        "name": "start the flow",
+        "request": {
+          "method": "POST",
+          "path": "/Users/ForgotPassword",
+          "body": {
+            "EnteredUsername": "tmp-forgot-redeem"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "pinfile": "$.PinFile"
+        }
+      },
+      {
+        "name": "read the PIN from the server's file",
+        "serverFile": {
+          "read": "{{capture.pinfile}}",
+          "under": "passwordreset"
+        },
+        "request": {
+          "method": "",
+          "path": ""
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "pin": "$.Pin"
+        }
+      },
+      {
+        "name": "redeem the PIN",
+        "request": {
+          "method": "POST",
+          "path": "/Users/ForgotPassword/Pin",
+          "body": {
+            "Pin": "{{capture.pin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Success",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.UsersReset",
+              "op": "contains",
+              "value": "tmp-forgot-redeem"
+            }
+          ]
+        }
+      },
+      {
+        "name": "the password is now the PIN text",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-forgot-redeem",
+            "Pw": "{{capture.pin}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-forgot-redeem-b{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "the old password no longer works",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-forgot-redeem",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-forgot-redeem-c{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "existing tokens are not revoked",
+        "as": "token:{{capture.tok}}",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Me"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "the request was consumed",
+        "request": {
+          "method": "POST",
+          "path": "/Users/ForgotPassword/Pin",
+          "body": {
+            "Pin": "{{capture.pin}}"
+          }
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "the PIN file is gone",
+        "serverFile": {
+          "read": "{{capture.pinfile}}",
+          "under": "passwordreset"
+        },
+        "request": {
+          "method": "",
+          "path": ""
+        },
+        "expect": {
+          "status": 404
+        }
+      }
+    ],
+    "tags": [
+      "anonymous"
+    ],
+    "requires": [
+      "serverfile:read"
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
   },
   {
     "id": "users.forgot-pin.throttle",
@@ -14429,8 +14767,253 @@
     "covers": [
       "users.forgot.R9"
     ],
-    "steps": [],
-    "pending": "Observing the throttle on a right PIN needs the PIN file on the server's filesystem; covered by Go unit tests (internal/api forgot_test.go)."
+    "steps": [
+      {
+        "name": "create tmp-forgot-throttle",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-forgot-throttle",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "start the flow",
+        "request": {
+          "method": "POST",
+          "path": "/Users/ForgotPassword",
+          "body": {
+            "EnteredUsername": "tmp-forgot-throttle"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "pinfile": "$.PinFile"
+        }
+      },
+      {
+        "name": "read the PIN from the server's file",
+        "serverFile": {
+          "read": "{{capture.pinfile}}",
+          "under": "passwordreset"
+        },
+        "request": {
+          "method": "",
+          "path": ""
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "pin": "$.Pin"
+        }
+      },
+      {
+        "name": "wrong PIN 1 of 5",
+        "request": {
+          "method": "POST",
+          "path": "/Users/ForgotPassword/Pin",
+          "body": {
+            "Pin": "ZZ-ZZ-ZZ-01"
+          }
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "wrong PIN 2 of 5",
+        "request": {
+          "method": "POST",
+          "path": "/Users/ForgotPassword/Pin",
+          "body": {
+            "Pin": "ZZ-ZZ-ZZ-02"
+          }
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "wrong PIN 3 of 5",
+        "request": {
+          "method": "POST",
+          "path": "/Users/ForgotPassword/Pin",
+          "body": {
+            "Pin": "ZZ-ZZ-ZZ-03"
+          }
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "wrong PIN 4 of 5",
+        "request": {
+          "method": "POST",
+          "path": "/Users/ForgotPassword/Pin",
+          "body": {
+            "Pin": "ZZ-ZZ-ZZ-04"
+          }
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "wrong PIN 5 of 5",
+        "request": {
+          "method": "POST",
+          "path": "/Users/ForgotPassword/Pin",
+          "body": {
+            "Pin": "ZZ-ZZ-ZZ-05"
+          }
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "the right PIN is now refused like a wrong one",
+        "request": {
+          "method": "POST",
+          "path": "/Users/ForgotPassword/Pin",
+          "body": {
+            "Pin": "{{capture.pin}}"
+          }
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "the account was not reset",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-forgot-throttle",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-forgot-throttle-a{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "the pending request was invalidated",
+        "serverFile": {
+          "read": "{{capture.pinfile}}",
+          "under": "passwordreset"
+        },
+        "request": {
+          "method": "",
+          "path": ""
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "start the flow again",
+        "request": {
+          "method": "POST",
+          "path": "/Users/ForgotPassword",
+          "body": {
+            "EnteredUsername": "tmp-forgot-throttle"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "pinfile": "$.PinFile"
+        }
+      },
+      {
+        "name": "read the new PIN",
+        "serverFile": {
+          "read": "{{capture.pinfile}}",
+          "under": "passwordreset"
+        },
+        "request": {
+          "method": "",
+          "path": ""
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "pin": "$.Pin"
+        }
+      },
+      {
+        "name": "the source is still throttled",
+        "request": {
+          "method": "POST",
+          "path": "/Users/ForgotPassword/Pin",
+          "body": {
+            "Pin": "{{capture.pin}}"
+          }
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "still not reset",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-forgot-throttle",
+            "Pw": "{{capture.pin}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-forgot-throttle-b{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      }
+    ],
+    "tags": [
+      "anonymous",
+      "security",
+      "risky"
+    ],
+    "requires": [
+      "serverfile:read"
+    ],
+    "divergence": {
+      "reason": "Tinyfin hardening: redeem attempts are rate limited per source and in total (users.forgot.R9); the reference does not throttle. Risky because it leaves the runner's source address throttled for 15 minutes, which breaks every later PIN redeem from it."
+    },
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
   },
   {
     "id": "users.socket.upgrade",

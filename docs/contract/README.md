@@ -121,9 +121,36 @@ reference source open in the same session.
 * `divergence.reason` marks an intentional difference from the reference.
 * `pending` parks a scenario that is specified but not yet verified.
 * Mutating scenarios must restore state in `cleanup` (it always runs).
-* Scenarios tagged `risky` (they try to demote or delete the last
-  administrator) are skipped unless the runner is given `-risky`, so a buggy
-  implementation cannot lock the rest of the suite out.
+* Scenarios tagged `risky` can leave the server unusable for the runner (they
+  try to demote or delete the last administrator, or leave the runner's
+  source address throttled). They are skipped unless the runner is given
+  `-risky`, and when it is they always run **after** every other selected
+  scenario, so nothing else can be affected. Run them against a dedicated
+  throwaway server (`-tags risky -risky`), never mixed into the main run.
+* The `last-admin` tag (on the two last-administrator scenarios) additionally
+  makes the runner count the administrators first: unless the runner's admin
+  is the only one the scenario is BLOCKED without sending anything, so it can
+  never delete or demote the runner's admin on a server that has another one.
+* Non-HTTP step `{"serverFile": {"read": "<name or absolute path>", "under":
+  "passwordreset"}}` reads a file from the server's filesystem (the runner
+  never writes there). Its `expect`/`capture` apply as if it were a response:
+  `200` with the content (JSON-decoded when it parses) or `404` when the file
+  does not exist. A bare name resolves to `<-server-data-dir>/<under>/<name>`,
+  an absolute path is used as is (the reference answers with one). Without
+  `-server-data-dir`/`-read-file-cmd` the step, and every scenario that
+  `requires` `serverfile:read`, is BLOCKED.
+* `{"config": {"section": "network", "set": {...}}}` patches a named
+  configuration section (`GET`/`POST /System/Configuration/<section>`); every
+  section touched is restored when the scenario ends, like the main one.
+* `requires` also takes runner-detected capabilities: `serverfile:read`
+  (above) and `origin:non-loopback`. The runner decides the latter at setup
+  from its own admin login: both servers write `IP address: <peer>` into the
+  login's activity entries, so it knows the address the server sees it from. A
+  scenario that needs a *remote* caller requires it, then makes that address
+  remote by listing subnets that exclude it in the network section
+  (`LocalNetworkSubnets`, restored afterwards). Loopback is always local on
+  every server, so a run whose base URL is reached from `127.0.0.1` BLOCKS
+  these scenarios instead of failing them.
 * A fixture library marked `"lazy": true` (with items carrying
   `"library": "<key>"`, e.g. the 330 s `item:long` movie that exercises the
   resume-position save branch) is created, scanned and removed around each
@@ -144,6 +171,23 @@ go run ./cmd/conformance run -base http://127.0.0.1:18098 -admin-user admin \
 
 Exit status is non-zero when any scenario fails. `-json out.json` writes a
 machine-readable report; `-scope`, `-tags`, `-skip-tags`, `-only` narrow the run.
+
+Server-side capabilities (all optional; the scenarios that need them are
+BLOCKED, not failed, without them):
+
+```sh
+# Tinyfin: the data dir is the directory of its database file. The runner must
+# also reach it through a non-loopback address of the host (for users.auth.R21):
+BIND=<host-address> scripts/conformance-tinyfin-up.sh 18098     # prints data-dir=...
+go run ./cmd/conformance run -base http://<host-address>:18098 ... -server-data-dir <data-dir>
+# reference in Docker: the PIN file lives inside the container, read it with a command
+# (argv prefix, no shell; the path is appended). A published port already reaches
+# the server from the container gateway, a non-loopback address.
+go run ./cmd/conformance run -base http://127.0.0.1:18096 ... -reference \
+    -read-file-cmd "docker exec tinyfin-conformance-ref cat"
+# the risky scenarios, alone, against a dedicated throwaway server (fresh admin only):
+go run ./cmd/conformance run ... -tags risky -risky -strict    # -strict: BLOCKED fails too
+```
 
 `-device-suffix auto` appends a random suffix to every DeviceId the runner and
 the scenarios use, so concurrent runs against one server do not revoke each
@@ -184,7 +228,10 @@ go run ./cmd/conformance progress
   the media tree, starts a throwaway server with
   `scripts/conformance-tinyfin-up.sh` and runs the ratchet with
   `-skip-tags time-dependent` (those scenarios assume they do not run in the
-  03:xx local hour).
+  03:xx local hour). The server listens on the runner's own (non-loopback)
+  address and the run passes `-server-data-dir`, so the remote-access and PIN
+  scenarios run; a second job step starts a fresh throwaway server and runs
+  only the `risky` scenarios with `-risky -strict`.
 
 ## Coverage accounting
 
@@ -197,7 +244,8 @@ directions for the specs that exist.
 
 Per-area status of Tinyfin at the committed baseline (generated with
 `go run ./cmd/conformance progress`; the reference server passes every
-scenario that is not pending, divergent or `risky`):
+scenario that is not pending or divergent; `risky` ones run only with
+`-risky`, see *Scenario format*):
 
 | Area | Scenarios | Pass | Fail | Blocked | Skipped |
 |---|---|---|---|---|---|
