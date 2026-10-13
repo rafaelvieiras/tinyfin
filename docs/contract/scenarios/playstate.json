@@ -4414,8 +4414,7 @@
           "status": 200
         }
       }
-    ],
-    "pending": "omitted client fields are expected to be inherited from the device registered for the token (audit-derived, not runtime-verified)"
+    ]
   },
   {
     "id": "playstate.auth.legacy-header-not-honored",

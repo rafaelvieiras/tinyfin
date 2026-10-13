@@ -348,3 +348,43 @@ func TestPlaystateRoutesRequireAuth(t *testing.T) {
 		}
 	}
 }
+
+// playstate.auth.R2: a header carrying only Token inherits the client and
+// device fields from the device the token was issued to.
+func TestTokenOnlyHeaderInheritsDeviceFields(t *testing.T) {
+	ts, st := newTestServer(t)
+	createTestAdminUser(t, st, "boss", "pw")
+	createTestUser(t, st, "alice", "pw")
+	_, res := loginAs(t, ts.URL, "alice", "pw", "dev-token-only")
+
+	req, _ := http.NewRequest(http.MethodPost, ts.URL+"/Sessions/Capabilities/Full", strings.NewReader("{}"))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", `MediaBrowser Token="`+res.AccessToken+`"`)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("capabilities: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("capabilities: %d, want 204", resp.StatusCode)
+	}
+
+	adminTok := policyLogin(t, ts.URL, "boss", "pw")
+	code, body := policyDo(t, ts.URL, adminTok, http.MethodGet, "/Sessions", "")
+	if code != http.StatusOK {
+		t.Fatalf("GET /Sessions: %d", code)
+	}
+	var list []sessionInfoDto
+	if err := json.Unmarshal(body, &list); err != nil {
+		t.Fatalf("decoding sessions: %v", err)
+	}
+	for _, s := range list {
+		if s.DeviceID == "dev-token-only" {
+			if s.Client != "C" || s.DeviceName != "D" || s.ApplicationVersion != "1" {
+				t.Errorf("session = client %q device %q version %q, want C/D/1", s.Client, s.DeviceName, s.ApplicationVersion)
+			}
+			return
+		}
+	}
+	t.Errorf("no session for device dev-token-only in %s", body)
+}

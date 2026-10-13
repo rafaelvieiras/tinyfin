@@ -146,8 +146,8 @@ Applies to mark played and mark unplayed (and the legacy aliases, where the id c
   /Sessions/Playing`, `/Progress`, `/Ping`, `/Stopped`, and the legacy aliases) returns 401 to an anonymous
   caller.
 - **playstate.auth.R2** A header carrying only `Token` (no client/device fields) is accepted for a valid user
-  token: the omitted client fields are taken from the device registered for the token. (Audit-derived; pending
-  runtime verification.)
+  token: the omitted client fields are taken from the device registered for the token. (Verified against the
+  reference server.)
 - **playstate.auth.R3** Legacy credentials are not honored on these routes: `X-Emby-Token` and the `api_key`
   query parameter yield 401 even with a valid token (scope-negative).
 
@@ -365,7 +365,7 @@ The deprecated `/PlayingItems/...` and `/Users/{userId}/PlayingItems/...` routes
 | `playstate.item.R4` | `item.hidden-from-user` |
 | `playstate.item.R5` | `item.download-permission-irrelevant` |
 | `playstate.auth.R1` | `auth.anonymous-mark-played`, `auth.anonymous-mark-unplayed`, `auth.anonymous-start`, `auth.anonymous-progress`, `auth.anonymous-ping`, `auth.anonymous-stopped` |
-| `playstate.auth.R2` | `auth.token-only-header (pending)` |
+| `playstate.auth.R2` | `auth.token-only-header` |
 | `playstate.auth.R3` | `auth.legacy-header-not-honored` |
 | `playstate.start.R1` | `start.basic` |
 | `playstate.start.R2` | `start.basic`, `start.repeat-increments-count` |
