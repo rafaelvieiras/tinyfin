@@ -83,19 +83,19 @@ type sessionInfoDto struct {
 	// PlayableMediaTypes duplicates Capabilities.PlayableMediaTypes at the
 	// top level — confirmed live, not a mistake: the reference server
 	// really does report it in both places.
-	PlayableMediaTypes []string  `json:"PlayableMediaTypes"`
-	ID                 string    `json:"Id"`
-	UserID             string    `json:"UserId"`
-	UserName           string    `json:"UserName"`
-	Client             string    `json:"Client"`
-	LastActivityDate   time.Time `json:"LastActivityDate"`
+	PlayableMediaTypes []string `json:"PlayableMediaTypes"`
+	ID                 string   `json:"Id"`
+	UserID             string   `json:"UserId"`
+	UserName           string   `json:"UserName"`
+	Client             string   `json:"Client"`
+	LastActivityDate   wireTime `json:"LastActivityDate"`
 	// LastPlaybackCheckIn is always the zero time.Time value — this
 	// registry has no now-playing tracking wired to it at all (see
 	// NowPlayingQueue below), so there is never a real check-in to report.
-	LastPlaybackCheckIn time.Time `json:"LastPlaybackCheckIn"`
-	DeviceName          string    `json:"DeviceName"`
-	DeviceID            string    `json:"DeviceId"`
-	ApplicationVersion  string    `json:"ApplicationVersion"`
+	LastPlaybackCheckIn wireTime `json:"LastPlaybackCheckIn"`
+	DeviceName          string   `json:"DeviceName"`
+	DeviceID            string   `json:"DeviceId"`
+	ApplicationVersion  string   `json:"ApplicationVersion"`
 	// IsActive is true unconditionally — no logout/expiry tracking exists
 	// beyond GET /Sessions's own activeWithinSeconds filter (this file's
 	// package doc comment).
@@ -108,8 +108,10 @@ type sessionInfoDto struct {
 	// apart.
 	SupportsMediaControl  bool `json:"SupportsMediaControl"`
 	SupportsRemoteControl bool `json:"SupportsRemoteControl"`
-	// NowPlayingQueue/NowPlayingQueueFullItems are always empty — there is
-	// no now-playing tracking wired to this registry. Playback-progress
+	// NowPlayingQueue has no NowPlayingQueueFullItems sibling: the reference
+	// never writes that member (users.shape.R7). The queue is empty unless
+	// a client stored one — there is no now-playing tracking wired to this
+	// registry beyond that. Playback-progress
 	// reporting (sessions_playback.go's handleSessionsPlaying/Progress/
 	// Stopped) updates a user's durable Playstate in storage, not "what is
 	// this session playing right now"; threading that through this
@@ -118,9 +120,8 @@ type sessionInfoDto struct {
 	// NowPlayingItem is present only while an item is being played.
 	// NowPlayingQueue is whatever the client last stored with a stopped
 	// report (playstate.session.R7).
-	NowPlayingItem           *baseItemDto             `json:"NowPlayingItem,omitempty"`
-	NowPlayingQueue          []nowPlayingQueueItemDto `json:"NowPlayingQueue"`
-	NowPlayingQueueFullItems []struct{}               `json:"NowPlayingQueueFullItems"`
+	NowPlayingItem  *baseItemDto             `json:"NowPlayingItem,omitempty"`
+	NowPlayingQueue []nowPlayingQueueItemDto `json:"NowPlayingQueue"`
 	// HasCustomDeviceName is always false — no per-device rename feature
 	// exists (the reference server lets a user rename a device from its
 	// registered name; this project has no such store).
@@ -337,29 +338,28 @@ func (ts *trackedSession) dto(serverID string) sessionInfoDto {
 		caps.SupportedCommands = []string{}
 	}
 	return sessionInfoDto{
-		PlayState:                playState,
-		NowPlayingItem:           nowPlaying,
-		LastPlaybackCheckIn:      checkIn,
-		AdditionalUsers:          []struct{}{},
-		Capabilities:             caps,
-		RemoteEndPoint:           ts.remoteEndPoint,
-		PlayableMediaTypes:       caps.PlayableMediaTypes,
-		ID:                       ts.id,
-		UserID:                   ts.userID,
-		UserName:                 ts.userName,
-		Client:                   ts.client,
-		LastActivityDate:         ts.lastActivityDate,
-		DeviceName:               ts.deviceName,
-		DeviceID:                 ts.deviceID,
-		ApplicationVersion:       ts.appVersion,
-		IsActive:                 true,
-		SupportsMediaControl:     ts.capabilities.SupportsMediaControl,
-		SupportsRemoteControl:    ts.capabilities.SupportsMediaControl,
-		NowPlayingQueue:          queue,
-		NowPlayingQueueFullItems: []struct{}{},
-		HasCustomDeviceName:      false,
-		ServerID:                 serverID,
-		SupportedCommands:        caps.SupportedCommands,
+		PlayState:             playState,
+		NowPlayingItem:        nowPlaying,
+		LastPlaybackCheckIn:   wireTime{checkIn},
+		AdditionalUsers:       []struct{}{},
+		Capabilities:          caps,
+		RemoteEndPoint:        ts.remoteEndPoint,
+		PlayableMediaTypes:    caps.PlayableMediaTypes,
+		ID:                    ts.id,
+		UserID:                ts.userID,
+		UserName:              ts.userName,
+		Client:                ts.client,
+		LastActivityDate:      wireTime{ts.lastActivityDate},
+		DeviceName:            ts.deviceName,
+		DeviceID:              ts.deviceID,
+		ApplicationVersion:    ts.appVersion,
+		IsActive:              true,
+		SupportsMediaControl:  ts.capabilities.SupportsMediaControl,
+		SupportsRemoteControl: ts.capabilities.SupportsMediaControl,
+		NowPlayingQueue:       queue,
+		HasCustomDeviceName:   false,
+		ServerID:              serverID,
+		SupportedCommands:     caps.SupportedCommands,
 	}
 }
 

@@ -15,7 +15,6 @@ package api
 
 import (
 	"net/http"
-	"time"
 )
 
 // handleSessionsPlaying is POST /Sessions/Playing — the client announces
@@ -66,10 +65,10 @@ type userItemDataDto struct {
 
 	// Optional members, present only when they have a value (set by the
 	// UserItems/{itemId}/UserData routes, userdata_api.go).
-	PlayedPercentage *float64   `json:"PlayedPercentage,omitempty"`
-	Rating           *float64   `json:"Rating,omitempty"`
-	Likes            *bool      `json:"Likes,omitempty"`
-	LastPlayedDate   *time.Time `json:"LastPlayedDate,omitempty"`
+	PlayedPercentage *float64  `json:"PlayedPercentage,omitempty"`
+	Rating           *float64  `json:"Rating,omitempty"`
+	Likes            *bool     `json:"Likes,omitempty"`
+	LastPlayedDate   *wireTime `json:"LastPlayedDate,omitempty"`
 }
 
 // handleSessionsPlayingPing is POST /Sessions/Playing/Ping — keeps a

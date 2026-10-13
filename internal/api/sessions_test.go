@@ -106,8 +106,8 @@ func TestSessionsCapabilitiesFullRegistersSession(t *testing.T) {
 	if len(got.AdditionalUsers) != 0 {
 		t.Errorf("AdditionalUsers = %+v, want empty", got.AdditionalUsers)
 	}
-	if len(got.NowPlayingQueue) != 0 || len(got.NowPlayingQueueFullItems) != 0 {
-		t.Errorf("NowPlayingQueue(FullItems) not empty: %+v / %+v", got.NowPlayingQueue, got.NowPlayingQueueFullItems)
+	if len(got.NowPlayingQueue) != 0 {
+		t.Errorf("NowPlayingQueue not empty: %+v", got.NowPlayingQueue)
 	}
 	if !got.LastPlaybackCheckIn.IsZero() {
 		t.Errorf("LastPlaybackCheckIn = %v, want zero value", got.LastPlaybackCheckIn)

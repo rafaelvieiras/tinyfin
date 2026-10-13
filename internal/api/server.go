@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -292,9 +293,11 @@ func (s *Server) runItemRefresh(itemID storage.ItemID, replaceImages bool) {
 // CORS handling (cors.go) so a browser-hosted client on another origin can
 // reach any route, auth-preflight included, with access logging outermost
 // so it sees the request exactly as the client sent it and the real final
-// status code.
+// status code. The path shape rule (one trailing slash ignored, empty
+// segments refused: wire.path.R1-R2) runs just inside CORS, before anything
+// else looks at the path.
 func (s *Server) Handler() http.Handler {
-	return withAccessLog(withCORS(withCanonicalIDs(s.withAuthContext(withCaseInsensitivePaths(s.mux)))))
+	return withAccessLog(withCORS(withTrailingSlash(withCanonicalIDs(s.withAuthContext(withCaseInsensitivePaths(s.mux))))))
 }
 
 // statusRecorder captures the status code a handler wrote, since
@@ -336,6 +339,31 @@ func withAccessLog(next http.Handler) http.Handler {
 		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(rec, r)
 		log.Printf("tinyfin: %s %s %d %s", r.Method, r.URL.RequestURI(), rec.status, time.Since(start))
+	})
+}
+
+// withTrailingSlash implements wire.path.R1-R2: a request path that ends in
+// one slash is served exactly like the same path without it, for every
+// route and method; a path with an empty segment (two slashes in a row,
+// anywhere) is a plain 404. Without the second half http.ServeMux would
+// answer such paths with a redirect to the cleaned form.
+func withTrailingSlash(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p := r.URL.Path
+		if strings.Contains(p, "//") {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		if len(p) > 1 && strings.HasSuffix(p, "/") {
+			r2 := new(http.Request)
+			*r2 = *r
+			u := *r.URL
+			u.Path = strings.TrimSuffix(p, "/")
+			u.RawPath = ""
+			r2.URL = &u
+			r = r2
+		}
+		next.ServeHTTP(w, r)
 	})
 }
 

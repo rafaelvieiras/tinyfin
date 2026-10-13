@@ -35,15 +35,17 @@ type apiKeyInfoQueryResult struct {
 }
 
 func apiKeyDto(k storage.APIKey) apiKeyInfoDto {
-	ts := k.DateCreated.UTC().Format("2006-01-02T15:04:05.0000000Z")
+	ts := formatWireTime(k.DateCreated)
 	return apiKeyInfoDto{
-		ID:               k.ID,
-		AccessToken:      k.Token,
-		AppName:          k.AppName,
-		UserID:           zeroUserIDHex,
-		IsActive:         true,
-		DateCreated:      ts,
-		DateLastActivity: ts,
+		ID:          k.ID,
+		AccessToken: k.Token,
+		AppName:     k.AppName,
+		UserID:      zeroUserIDHex,
+		IsActive:    true,
+		DateCreated: ts,
+		// A key is never "used" as far as this listing shows: the
+		// reference keeps the zero date here.
+		DateLastActivity: formatWireTime(time.Time{}),
 	}
 }
 

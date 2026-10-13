@@ -350,5 +350,842 @@
         }
       }
     ]
+  },
+  {
+    "id": "wire.path.trailing-slash-reads",
+    "endpoint": "GET /Users/",
+    "spec": "wire.md#request-paths",
+    "scope": "modern",
+    "tags": [
+      "wire",
+      "routing"
+    ],
+    "covers": [
+      "wire.path.R1",
+      "wire.path.R4"
+    ],
+    "requires": [
+      "user:alice"
+    ],
+    "steps": [
+      {
+        "name": "user list",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[*].Id",
+              "op": "hex32"
+            }
+          ]
+        }
+      },
+      {
+        "name": "user list with a query string",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/",
+          "query": {
+            "isDisabled": "false"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[*].Id",
+              "op": "hex32"
+            }
+          ]
+        }
+      },
+      {
+        "name": "public user list",
+        "as": "anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Public/"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$",
+              "op": "type",
+              "value": "array"
+            }
+          ]
+        }
+      },
+      {
+        "name": "own profile",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Me/"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Name",
+              "op": "eq",
+              "value": "{{user.alice.name}}"
+            }
+          ]
+        }
+      },
+      {
+        "name": "profile by id",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{user.alice.id}}/"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Name",
+              "op": "eq",
+              "value": "{{user.alice.name}}"
+            }
+          ]
+        }
+      },
+      {
+        "name": "public system info",
+        "as": "anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/System/Info/Public/"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.ServerName",
+              "op": "exists"
+            }
+          ]
+        }
+      },
+      {
+        "name": "items",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/Items/"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items",
+              "op": "exists"
+            },
+            {
+              "path": "$.TotalRecordCount",
+              "op": "exists"
+            }
+          ]
+        }
+      },
+      {
+        "name": "sessions",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions/"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$",
+              "op": "type",
+              "value": "array"
+            }
+          ]
+        }
+      },
+      {
+        "name": "activity log",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries/"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items",
+              "op": "exists"
+            }
+          ]
+        }
+      },
+      {
+        "name": "quick connect switch",
+        "as": "anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/QuickConnect/Enabled/"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "a POST-only route keeps its 405",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{user.alice.id}}/Policy/"
+        },
+        "expect": {
+          "status": 405
+        }
+      },
+      {
+        "name": "anonymous is still refused",
+        "as": "anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/Users/"
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "profile by id is still refused anonymously",
+        "as": "anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{user.alice.id}}/"
+        },
+        "expect": {
+          "status": 401
+        }
+      }
+    ]
+  },
+  {
+    "id": "wire.path.trailing-slash-writes",
+    "endpoint": "POST /Users/New/",
+    "spec": "wire.md#request-paths",
+    "scope": "modern",
+    "tags": [
+      "wire",
+      "routing"
+    ],
+    "covers": [
+      "wire.path.R1"
+    ],
+    "steps": [
+      {
+        "name": "create with a slash",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New/",
+          "body": {
+            "Name": "tmp-slash-writes",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "configuration with a slash",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration/",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": "Always"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read it back",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "Always"
+            }
+          ]
+        }
+      },
+      {
+        "name": "login with a slash",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName/",
+          "body": {
+            "Username": "tmp-slash-writes",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-wire-path-trailing-slash-writes{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.User.Name",
+              "op": "eq",
+              "value": "tmp-slash-writes"
+            }
+          ]
+        }
+      },
+      {
+        "name": "delete with a slash",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}/"
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "it is gone",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 404
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "wire.path.empty-segment",
+    "endpoint": "GET /Users//",
+    "spec": "wire.md#request-paths",
+    "scope": "modern",
+    "tags": [
+      "wire",
+      "routing"
+    ],
+    "covers": [
+      "wire.path.R2"
+    ],
+    "steps": [
+      {
+        "name": "double trailing slash",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users//"
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "slash after a single-segment route",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Me//"
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "empty segment in the middle",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users//Me"
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "leading empty segment",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "//Users"
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "unknown route with a slash",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/NoSuchRoute/"
+        },
+        "expect": {
+          "status": 404
+        }
+      }
+    ]
+  },
+  {
+    "id": "wire.path.case-insensitive",
+    "endpoint": "GET /users",
+    "spec": "wire.md#request-paths",
+    "scope": "modern",
+    "tags": [
+      "wire",
+      "routing"
+    ],
+    "covers": [
+      "wire.path.R3"
+    ],
+    "requires": [
+      "user:alice"
+    ],
+    "steps": [
+      {
+        "name": "lower case",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/users"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[*].Id",
+              "op": "hex32"
+            }
+          ]
+        }
+      },
+      {
+        "name": "upper case with a slash",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/USERS/ME/"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Name",
+              "op": "eq",
+              "value": "{{user.alice.name}}"
+            }
+          ]
+        }
+      },
+      {
+        "name": "mixed case anonymous",
+        "as": "anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/system/info/PUBLIC"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.ServerName",
+              "op": "exists"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "wire.date.login-dates",
+    "endpoint": "POST /Users/AuthenticateByName",
+    "spec": "wire.md#date-times",
+    "scope": "modern",
+    "tags": [
+      "wire",
+      "dates"
+    ],
+    "covers": [
+      "wire.date.R1",
+      "wire.date.R2",
+      "wire.date.R3"
+    ],
+    "requires": [
+      "user:alice"
+    ],
+    "steps": [
+      {
+        "name": "login",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "{{user.alice.name}}",
+            "Pw": "{{user.alice.password}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-wire-date-login-dates{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.User.LastLoginDate",
+              "op": "allmatch",
+              "value": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{0,6}[1-9]|\\.0000000)Z$"
+            },
+            {
+              "path": "$.User.LastActivityDate",
+              "op": "allmatch",
+              "value": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{0,6}[1-9]|\\.0000000)Z$"
+            },
+            {
+              "path": "$.SessionInfo.LastActivityDate",
+              "op": "allmatch",
+              "value": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{0,6}[1-9]|\\.0000000)Z$"
+            },
+            {
+              "path": "$.SessionInfo.LastPlaybackCheckIn",
+              "op": "eq",
+              "value": "0001-01-01T00:00:00.0000000Z"
+            }
+          ]
+        }
+      },
+      {
+        "name": "activity log",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "20"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[*].Date",
+              "op": "allmatch",
+              "value": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{0,6}[1-9]|\\.0000000)Z$"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "wire.date.other-members",
+    "endpoint": "POST /QuickConnect/Initiate",
+    "spec": "wire.md#date-times",
+    "scope": "modern",
+    "tags": [
+      "wire",
+      "dates"
+    ],
+    "covers": [
+      "wire.date.R1",
+      "wire.date.R3"
+    ],
+    "requires": [
+      "identity:apikey"
+    ],
+    "steps": [
+      {
+        "name": "quick connect request",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-wire-date-other-members{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.DateAdded",
+              "op": "allmatch",
+              "value": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{0,6}[1-9]|\\.0000000)Z$"
+            }
+          ]
+        }
+      },
+      {
+        "name": "key listing",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Auth/Keys"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[*].DateCreated",
+              "op": "allmatch",
+              "value": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{0,6}[1-9]|\\.0000000)Z$"
+            },
+            {
+              "path": "$.Items[*].DateLastActivity",
+              "op": "allmatch",
+              "value": "^0001-01-01T00:00:00\\.0000000Z$"
+            }
+          ]
+        }
+      },
+      {
+        "name": "session listing",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[*].LastActivityDate",
+              "op": "allmatch",
+              "value": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{0,6}[1-9]|\\.0000000)Z$"
+            },
+            {
+              "path": "$[*].LastPlaybackCheckIn",
+              "op": "allmatch",
+              "value": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{0,6}[1-9]|\\.0000000)Z$"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "wire.date.user-data-precision",
+    "endpoint": "POST /UserItems/{itemId}/UserData",
+    "spec": "wire.md#date-times",
+    "scope": "modern",
+    "tags": [
+      "wire",
+      "dates",
+      "depends:userdata-update"
+    ],
+    "covers": [
+      "wire.date.R2",
+      "wire.date.R4"
+    ],
+    "requires": [
+      "item:alpha",
+      "user:alice"
+    ],
+    "steps": [
+      {
+        "name": "whole seconds get seven zeros",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/UserItems/{{item.alpha.id}}/UserData",
+          "query": {
+            "userId": "{{user.alice.id}}"
+          },
+          "body": {
+            "LastPlayedDate": "2024-05-06T07:08:09Z"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.LastPlayedDate",
+              "op": "eq",
+              "value": "2024-05-06T07:08:09.0000000Z"
+            }
+          ]
+        }
+      },
+      {
+        "name": "trailing zeros are dropped",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/UserItems/{{item.alpha.id}}/UserData",
+          "query": {
+            "userId": "{{user.alice.id}}"
+          },
+          "body": {
+            "LastPlayedDate": "2024-05-06T07:08:09.1000000Z"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.LastPlayedDate",
+              "op": "eq",
+              "value": "2024-05-06T07:08:09.1Z"
+            }
+          ]
+        }
+      },
+      {
+        "name": "nine digits are truncated",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/UserItems/{{item.alpha.id}}/UserData",
+          "query": {
+            "userId": "{{user.alice.id}}"
+          },
+          "body": {
+            "LastPlayedDate": "2024-05-06T07:08:09.123456789Z"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.LastPlayedDate",
+              "op": "eq",
+              "value": "2024-05-06T07:08:09.1234567Z"
+            }
+          ]
+        }
+      },
+      {
+        "name": "an offset is converted to UTC",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/UserItems/{{item.alpha.id}}/UserData",
+          "query": {
+            "userId": "{{user.alice.id}}"
+          },
+          "body": {
+            "LastPlayedDate": "2024-05-06T07:08:09+02:00"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.LastPlayedDate",
+              "op": "eq",
+              "value": "2024-05-06T05:08:09.0000000Z"
+            }
+          ]
+        }
+      },
+      {
+        "name": "no zone is read as UTC",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/UserItems/{{item.alpha.id}}/UserData",
+          "query": {
+            "userId": "{{user.alice.id}}"
+          },
+          "body": {
+            "LastPlayedDate": "2024-05-06T07:08:09"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.LastPlayedDate",
+              "op": "eq",
+              "value": "2024-05-06T07:08:09.0000000Z"
+            }
+          ]
+        }
+      },
+      {
+        "name": "read back through the item",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.alpha.id}}",
+          "query": {
+            "userId": "{{user.alice.id}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.UserData.LastPlayedDate",
+              "op": "eq",
+              "value": "2024-05-06T07:08:09.0000000Z"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "cleanup: reset played state",
+        "as": "alice",
+        "request": {
+          "method": "DELETE",
+          "path": "/UserPlayedItems/{{item.alpha.id}}"
+        },
+        "expect": {
+          "status": 200
+        }
+      }
+    ]
   }
 ]

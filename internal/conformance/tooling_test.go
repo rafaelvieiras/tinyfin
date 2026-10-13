@@ -262,6 +262,31 @@ func TestProblemAndHex32(t *testing.T) {
 	}
 }
 
+func TestAllMatch(t *testing.T) {
+	_, srv := newToolingStub()
+	defer srv.Close()
+	c := NewClient(srv.URL)
+	re := "^[0-9a-f]{32}$"
+	good := runOne(t, c, Scenario{ID: "m", Steps: []Step{
+		{Request: Request{Path: "/ids"}, Expect: Expect{JSON: []Assert{
+			{Path: "$.Good", Op: "allmatch", Value: re}, {Path: "$.List[*]", Op: "allmatch", Value: re}}}},
+	}})
+	if good.Status != StatusPass {
+		t.Fatalf("%+v", good)
+	}
+	for name, a := range map[string]Assert{
+		"single":  {Path: "$.Dashed", Op: "allmatch", Value: re},
+		"missing": {Path: "$.Missing", Op: "allmatch", Value: re},
+		"empty":   {Path: "$.Missing[*]", Op: "allmatch", Value: re},
+		"notstr":  {Path: "$", Op: "allmatch", Value: re},
+	} {
+		st := Step{Request: Request{Path: "/ids"}, Expect: Expect{JSON: []Assert{a}}}
+		if r := runOne(t, c, Scenario{ID: name, Steps: []Step{st}}); r.Status != StatusFail {
+			t.Errorf("%s: want fail, got %+v", name, r)
+		}
+	}
+}
+
 func TestRiskyIsOptIn(t *testing.T) {
 	_, srv := newToolingStub()
 	defer srv.Close()

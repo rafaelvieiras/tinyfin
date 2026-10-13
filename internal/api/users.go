@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -304,7 +303,9 @@ func storedUserPolicy(u storage.User) userPolicyDto {
 // diagnose — a second, unrelated bug that just happened to log at the
 // same moment, found by reading the trace rather than assumed.
 type userConfigurationDto struct {
-	AudioLanguagePreference    string   `json:"AudioLanguagePreference,omitempty"`
+	// AudioLanguagePreference is a pointer: null or omitted is absent from
+	// the wire, an empty string is kept as "" (users.configuration.R6).
+	AudioLanguagePreference    *string  `json:"AudioLanguagePreference,omitempty"`
 	PlayDefaultAudioTrack      bool     `json:"PlayDefaultAudioTrack"`
 	SubtitleLanguagePreference string   `json:"SubtitleLanguagePreference"`
 	DisplayMissingEpisodes     bool     `json:"DisplayMissingEpisodes"`
@@ -323,8 +324,9 @@ type userConfigurationDto struct {
 }
 
 // userDto mirrors the OpenAPI schema's UserDto, trimmed to fields
-// storage.User actually carries (plus ServerID/ServerName, which are
-// server-level configuration, not per-user data — see server.go's Config).
+// storage.User actually carries (plus ServerID, which is server-level
+// configuration, not per-user data — see server.go's Config). There is no
+// ServerName member: the reference's user object has none (users.shape.R5).
 //
 // Deliberately omitted, rather than fabricated:
 //   - PrimaryImageTag, PrimaryImageAspectRatio: no user-image support in
@@ -336,15 +338,14 @@ type userConfigurationDto struct {
 type userDto struct {
 	Name                  string `json:"Name"`
 	ServerID              string `json:"ServerId"`
-	ServerName            string `json:"ServerName"`
 	ID                    string `json:"Id"`
 	HasPassword           bool   `json:"HasPassword"`
 	HasConfiguredPassword bool   `json:"HasConfiguredPassword"`
 	// HasConfiguredEasyPassword is always false: there is no PIN login.
 	HasConfiguredEasyPassword bool                 `json:"HasConfiguredEasyPassword"`
 	EnableAutoLogin           bool                 `json:"EnableAutoLogin"`
-	LastLoginDate             *time.Time           `json:"LastLoginDate,omitempty"`
-	LastActivityDate          *time.Time           `json:"LastActivityDate,omitempty"`
+	LastLoginDate             *wireTime            `json:"LastLoginDate,omitempty"`
+	LastActivityDate          *wireTime            `json:"LastActivityDate,omitempty"`
 	Configuration             userConfigurationDto `json:"Configuration"`
 	Policy                    userPolicyDto        `json:"Policy"`
 }
@@ -367,13 +368,12 @@ func (s *Server) userDtoCtx(ctx context.Context, u storage.User) userDto {
 	return userDto{
 		Name:                  u.Name,
 		ServerID:              s.cfg.ServerID,
-		ServerName:            s.cfg.ServerName,
 		ID:                    string(u.ID),
 		HasPassword:           u.PasswordHash != "",
 		HasConfiguredPassword: u.PasswordHash != "",
 		EnableAutoLogin:       u.EnableAutoLogin,
-		LastLoginDate:         u.LastLoginDate,
-		LastActivityDate:      u.LastActivityDate,
+		LastLoginDate:         wireTimePtr(u.LastLoginDate),
+		LastActivityDate:      wireTimePtr(u.LastActivityDate),
 		Configuration:         cfg,
 		Policy:                storedUserPolicy(u),
 	}

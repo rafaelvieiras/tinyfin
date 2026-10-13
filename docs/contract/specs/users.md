@@ -475,6 +475,7 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 **Rules**
 
 - **users.configuration.R5** `POST /Users/{userId}/Configuration` is an alias with the target in the path and identical behavior.
+- **users.configuration.R6** `AudioLanguagePreference` keeps what was posted: `""` is stored and read back as `""` (present, empty) in every user object (`GET /Users`, `GET /Users/Me`, `GET /Users/{userId}`, login and QuickConnect answers), through `POST /Users/Configuration`, its alias and the `Configuration` of `POST /Users`; `null` or an omitted member leaves it **absent** (the replace-as-a-whole rule, `users.configuration.R2`). `SubtitleLanguagePreference` is the other way round: always present, `null` becomes `""`. Every other member of `Configuration` is always present.
 
 ---
 
@@ -584,9 +585,11 @@ The user object is the one of `GET /Users/{userId}` (also inside login answers, 
 **Rules**
 
 - **users.shape.R1** `Id` is 32 lowercase hex digits, `ServerId` a 32-hex string identical to the login answer's `ServerId`. `HasPassword` and `HasConfiguredPassword` are booleans (their value is a reference defect, see `users.get.R8`). `HasConfiguredEasyPassword` is `false` and `EnableAutoLogin` is `false` for every account (there is no easy-password or auto-login feature to configure).
-- **users.shape.R2** `LastLoginDate` and `LastActivityDate` are **absent** (not `null`) for an account that never logged in. After a successful login both are the login time as an ISO-8601 UTC string ending in `Z` with up to 7 fractional digits (clients must accept any precision); the two are equal after a password login, and the value in the login answer's `User` is the one `GET /Users/{userId}` then returns.
-- **users.shape.R3** `Configuration` of a new account carries the defaults listed under *Conventions*; `SubtitleLanguagePreference` is `""` (also after a `null` is posted), `AudioLanguagePreference` is absent until set, the four list members are `[]` and never `null`.
+- **users.shape.R2** `LastLoginDate` and `LastActivityDate` are **absent** (not `null`) for an account that never logged in. After a successful login both are the login time in the wire date format (`wire.date.R1`-`R2`: UTC, `Z`, at most 7 fractional digits, trailing zeros dropped); the two are equal after a password login, and the value in the login answer's `User` is the one `GET /Users/{userId}` then returns.
+- **users.shape.R3** `Configuration` of a new account carries the defaults listed under *Conventions*; `SubtitleLanguagePreference` is `""` (also after a `null` is posted), `AudioLanguagePreference` is absent until set (see `users.configuration.R6` for the empty string), the four list members are `[]` and never `null`.
 - **users.shape.R4** The login answer's `SessionInfo` has: `Id` (32 hex), `UserId` and `UserName` of the account, `Client`, `DeviceName` (percent-decoded), `DeviceId` and `ApplicationVersion` (`Version`) exactly as sent in the header, `ServerId`, `IsActive=true`, `LastActivityDate`, `LastPlaybackCheckIn` (zero date), `PlayState` (`RepeatMode="RepeatNone"`, `PlaybackOrder="Default"`, booleans `false`), `Capabilities` (`SupportsPersistentIdentifier=true`, `SupportsMediaControl=false`, `PlayableMediaTypes=[]`, `SupportedCommands=[]`) and the top-level lists `PlayableMediaTypes`, `SupportedCommands`, `NowPlayingQueue`, `AdditionalUsers`, all `[]` (never `null`).
+- **users.shape.R5** The user object has no `ServerName` member (only `ServerId`): not in `GET /Users`, `GET /Users/Public`, `GET /Users/Me`, `GET /Users/{userId}`, `POST /Users/New`, nor in the `User` of a password or QuickConnect login answer.
+- **users.shape.R6** A session object (login answer's `SessionInfo`, `GET /Sessions`) never has a `NowPlayingQueueFullItems` member; `NowPlayingQueue` is the only queue member (an empty list when nothing is stored).
 
 ---
 
@@ -749,6 +752,7 @@ The user object is the one of `GET /Users/{userId}` (also inside login answers, 
 | `users.configuration.R3` | `users.configuration.other-user` |
 | `users.configuration.R4` | `users.configuration.errors` |
 | `users.configuration.R5` | `users.configuration-alias.update`, `users.configuration-alias.errors` |
+| `users.configuration.R6` | `users.configuration.empty-language-preference` |
 | `users.forgot.R1` | `users.forgot.known-user` |
 | `users.forgot.R2` | `users.forgot.known-user` |
 | `users.forgot.R3` | `users.forgot.unknown-user-same-answer` |
@@ -780,6 +784,8 @@ The user object is the one of `GET /Users/{userId}` (also inside login answers, 
 | `users.shape.R2` | `users.shape.user-object` |
 | `users.shape.R3` | `users.shape.configuration-defaults` |
 | `users.shape.R4` | `users.shape.login-session` |
+| `users.shape.R5` | `users.shape.no-server-name` |
+| `users.shape.R6` | `users.shape.no-queue-full-items` |
 | `users.prefs.R1` | `users.prefs.cast-receiver` |
 | `users.prefs.R2` | `users.prefs.update-keeps-cast-receiver` |
 | `users.prefs.R3` | `users.prefs.null-configuration` (divergence) |
@@ -809,9 +815,10 @@ The user object is the one of `GET /Users/{userId}` (also inside login answers, 
 4. Failure counter double counting (resolved): the failure that reaches the threshold counts twice, `n + 1` afterwards; the counter also counts when no lockout is configured (`users.lockout.R2`-`R4`).
 5. `MaxParentalRating` round trip (resolved): the value posted is read back unchanged (`users.policy.parental-rating-roundtrip`).
 6. User/session object shape (resolved): `HasConfiguredEasyPassword`/`EnableAutoLogin` are always `false`, the dates are absent until the first login, `SessionInfo` is described member by member (`users.shape.R1`-`R4`). `HasPassword`/`HasConfiguredPassword` carry no information on the reference (`users.get.R8`, divergence).
-7. Path ids that are not GUIDs (resolved): `400` on every route taking a user id, the all-zero GUID included; every GUID spelling is accepted (`users.ids.R1`-`R2`). Not covered: a trailing slash (`GET /Users/`) is served by the reference, Tinyfin answers `404`; this is a routing rule for all areas, not a users rule.
+7. Path ids that are not GUIDs (resolved): `400` on every route taking a user id, the all-zero GUID included; every GUID spelling is accepted (`users.ids.R1`-`R2`). A trailing slash (`GET /Users/`) is served like the plain path: a routing rule for all areas, specified in `wire.path.R1`-`R4`.
 8. Omitted `Configuration` on `POST /Users` (resolved): preferences reset to defaults, `CastReceiverId` kept (`users.update.R9`, `users.prefs.R2`); an explicit `null` is a reference `500` (`users.prefs.R3`).
 9. QuickConnect (resolved): enabled by default on a fresh reference server (`quickconnect.enabled.default`); scenarios that disable it restore the setting.
 10. Fixture `disabled` (in `fixtures.json`) is created and disabled through the policy endpoint, but the runner never logs in a user whose policy sets `IsDisabled` (login answers `403` by design), so it has no token: it is available for `{{user.disabled.id|name}}` templates and as a target, never as an `as` identity. Scenarios that need a disabled account with a token create it themselves and disable it mid-scenario.
 11. Remote-access restriction (`EnableRemoteAccess=false`, `users.auth.R21`) is exercised by making the runner's own address remote through `LocalNetworkSubnets`; that needs a peer address that is not loopback (a published container port reaches the reference from its gateway address; Tinyfin must be reached through one of the host's own addresses). The PIN scenarios (`users.forgot-pin.redeem`, `users.forgot-pin.throttle`) read the PIN from the server's file through the runner's server-file capability; without it they are BLOCKED, not failed.
 12. Admin self-service rules differ between the modern route (no `CurrentPw` without `userId`) and the alias (always required). They are replicated as observed.
+13. Configuration request validation (observed, not specified): on the reference a `null` for any boolean, for `SubtitleMode` or for one of the four list members answers `400`; an id that is not a GUID in a list member answers `400`; `SubtitleMode` also accepts the enum's number (`2` is `OnlyForced`) and any letter case (`always`); a number sent for `AudioLanguagePreference`/`CastReceiverId` is accepted (read as a string); a body that is the JSON literal `null` answers `400`. Tinyfin answers `204` for the nulls and the bad ids, `400` for the number forms and `204` for a `null` body. Left open until a client depends on it.

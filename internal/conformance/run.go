@@ -793,6 +793,28 @@ func (c *Client) checkAssert(r *Response, a Assert, scratch map[string]string) e
 		if !found || !re.MatchString(fmt.Sprint(got)) {
 			return fmt.Errorf("%s does not match %v", show(got), want)
 		}
+	case "allmatch":
+		// Like matches, but a wildcard path is checked value by value and an
+		// empty result fails, so a list of dates can be held to one format.
+		if !found {
+			return fmt.Errorf("not found")
+		}
+		re, err := regexp.Compile(fmt.Sprint(want))
+		if err != nil {
+			return err
+		}
+		vals := []any{got}
+		if arr, ok := got.([]any); ok {
+			if len(arr) == 0 {
+				return fmt.Errorf("no values to check")
+			}
+			vals = arr
+		}
+		for _, x := range vals {
+			if str, ok := x.(string); !ok || !re.MatchString(str) {
+				return fmt.Errorf("%s does not match %v", show(x), want)
+			}
+		}
 	case "hex32":
 		if !found {
 			return fmt.Errorf("not found")

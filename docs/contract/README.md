@@ -100,8 +100,11 @@ reference source open in the same session.
 * `expect.status` is a number or an array (any of); `expect.headers` values are
   `present`, `absent`, `/regex/` or a literal (case-insensitive); `expect.json`
   asserts on `$.path` with ops `eq ne exists absent type len gte lte contains
-  notcontains matches in hex32` (`hex32`: every value at the path is 32
-  lowercase hex digits without dashes; an empty wildcard result fails).
+  notcontains matches allmatch in hex32` (`hex32`: every value at the path is 32
+  lowercase hex digits without dashes; an empty wildcard result fails;
+  `allmatch`: every value at the path, one value or each element of a
+  wildcard, is a string matching the regular expression; an empty wildcard
+  result fails).
   `expect.problem: <status>` asserts an RFC 9110 problem document (`type`,
   `title`, `status` equal to the number).
 * Server-clock templates build time-of-day dependent state without depending

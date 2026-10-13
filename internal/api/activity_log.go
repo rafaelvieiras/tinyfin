@@ -26,14 +26,14 @@ import (
 // has no i18n system (internal/api/localization.go's scope), so English
 // text is the honest, consistent choice, not a deviation.
 type activityLogEntryDto struct {
-	Id            int64     `json:"Id"`
-	Name          string    `json:"Name"`
-	ShortOverview string    `json:"ShortOverview,omitempty"`
-	Type          string    `json:"Type"`
-	Date          time.Time `json:"Date"`
-	ItemId        *string   `json:"ItemId,omitempty"`
-	UserId        *string   `json:"UserId,omitempty"`
-	Severity      string    `json:"Severity"`
+	Id            int64    `json:"Id"`
+	Name          string   `json:"Name"`
+	ShortOverview string   `json:"ShortOverview,omitempty"`
+	Type          string   `json:"Type"`
+	Date          wireTime `json:"Date"`
+	ItemId        *string  `json:"ItemId,omitempty"`
+	UserId        *string  `json:"UserId,omitempty"`
+	Severity      string   `json:"Severity"`
 }
 
 // activityLogEntriesResult mirrors the OpenAPI schema's
@@ -124,7 +124,7 @@ func activityEntryToDto(e storage.ActivityEntry) activityLogEntryDto {
 		Name:          e.Name,
 		ShortOverview: e.ShortOverview,
 		Type:          string(e.Type),
-		Date:          e.Date,
+		Date:          wireTime{e.Date},
 		Severity:      string(e.Severity),
 	}
 	if e.UserID != nil {

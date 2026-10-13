@@ -150,7 +150,7 @@ type Expect struct {
 // Assert is one JSON-path assertion.
 type Assert struct {
 	Path  string `json:"path"`
-	Op    string `json:"op"` // eq ne exists absent type len gte lte contains notcontains matches in hex32
+	Op    string `json:"op"` // eq ne exists absent type len gte lte contains notcontains matches allmatch in hex32
 	Value any    `json:"value,omitempty"`
 }
 

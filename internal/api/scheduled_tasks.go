@@ -32,7 +32,6 @@ package api
 
 import (
 	"net/http"
-	"time"
 )
 
 // scheduledTaskLibraryScanID doubles as this task's Id and Key. It MUST be
@@ -141,13 +140,10 @@ func (s *Server) scheduledTasksSnapshot() []scheduledTaskInfo {
 			status = "Failed"
 		}
 		task.LastExecutionResult = &taskExecutionResultInfo{
-			// RFC3339Nano matches this package's other wire-visible
-			// timestamp formatting (dto.go's DateCreated etag derivation) —
-			// not separately confirmed against the reference server's own
-			// TaskExecutionResultInfo timestamp precision for this new
-			// endpoint.
-			StartTimeUtc: lastStart.Format(time.RFC3339Nano),
-			EndTimeUtc:   lastEnd.Format(time.RFC3339Nano),
+			// Wire date format (wire.date.R1-R2); the reference writes the
+			// same 7-digit form here as everywhere else.
+			StartTimeUtc: formatWireTime(lastStart),
+			EndTimeUtc:   formatWireTime(lastEnd),
 			Status:       status,
 			Name:         task.Name,
 			Key:          task.Key,

@@ -98,7 +98,7 @@ func (r *quickConnectRequest) result() quickConnectResult {
 		DeviceName:    r.DeviceName,
 		AppName:       r.AppName,
 		AppVersion:    r.AppVersion,
-		DateAdded:     r.Added.UTC().Format("2006-01-02T15:04:05.0000000Z"),
+		DateAdded:     formatWireTime(r.Added),
 	}
 }
 

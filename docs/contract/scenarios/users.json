@@ -22656,5 +22656,709 @@
         "expect": {}
       }
     ]
+  },
+  {
+    "id": "users.shape.no-server-name",
+    "endpoint": "GET /Users/{userId}",
+    "spec": "users.md#get-user",
+    "scope": "modern",
+    "tags": [
+      "users",
+      "shape",
+      "quickconnect"
+    ],
+    "covers": [
+      "users.shape.R5"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-shape-no-server-name",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-shape-no-server-name",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "login answer",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-shape-no-server-name",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-shape-no-server-name{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.User.Name",
+              "op": "eq",
+              "value": "tmp-shape-no-server-name"
+            },
+            {
+              "path": "$.User.ServerId",
+              "op": "hex32"
+            },
+            {
+              "path": "$.User.ServerName",
+              "op": "absent"
+            }
+          ]
+        },
+        "capture": {
+          "tok": "$.AccessToken"
+        }
+      },
+      {
+        "name": "own profile",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Me",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-shape-no-server-name{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Name",
+              "op": "eq",
+              "value": "tmp-shape-no-server-name"
+            },
+            {
+              "path": "$.ServerName",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "profile by id",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.ServerId",
+              "op": "hex32"
+            },
+            {
+              "path": "$.ServerName",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "user list",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].Name",
+              "op": "exists"
+            },
+            {
+              "path": "$[0].ServerName",
+              "op": "absent"
+            },
+            {
+              "path": "$[1].ServerName",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "quick connect request",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-shape-no-server-name-tv{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "secret": "$.Secret",
+          "code": "$.Code"
+        }
+      },
+      {
+        "name": "authorize",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.code}}"
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "exchange",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateWithQuickConnect",
+          "body": {
+            "Secret": "{{capture.secret}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.User.ServerId",
+              "op": "hex32"
+            },
+            {
+              "path": "$.User.ServerName",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "create answer",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-shape-no-server-name-b",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.ServerId",
+              "op": "hex32"
+            },
+            {
+              "path": "$.ServerName",
+              "op": "absent"
+            }
+          ]
+        },
+        "capture": {
+          "u2": "$.Id"
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      },
+      {
+        "name": "delete u2",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u2}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.shape.no-queue-full-items",
+    "endpoint": "POST /Users/AuthenticateByName",
+    "spec": "users.md#authenticate-by-name",
+    "scope": "modern",
+    "tags": [
+      "users",
+      "shape"
+    ],
+    "covers": [
+      "users.shape.R6"
+    ],
+    "requires": [
+      "user:alice"
+    ],
+    "steps": [
+      {
+        "name": "login answer",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "{{user.alice.name}}",
+            "Pw": "{{user.alice.password}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-shape-no-queue-full-items{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.SessionInfo.NowPlayingQueue",
+              "op": "len",
+              "value": 0
+            },
+            {
+              "path": "$.SessionInfo.NowPlayingQueueFullItems",
+              "op": "absent"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "users.configuration.empty-language-preference",
+    "endpoint": "POST /Users/Configuration",
+    "spec": "users.md#update-user-configuration",
+    "scope": "modern",
+    "tags": [
+      "users",
+      "configuration"
+    ],
+    "covers": [
+      "users.configuration.R6"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-configuration-empty-language",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-configuration-empty-language",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.AudioLanguagePreference",
+              "op": "absent"
+            }
+          ]
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "empty string is kept",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "AudioLanguagePreference": ""
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read after: empty string is kept",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.AudioLanguagePreference",
+              "op": "eq",
+              "value": ""
+            },
+            {
+              "path": "$.Configuration.SubtitleLanguagePreference",
+              "op": "exists"
+            }
+          ]
+        }
+      },
+      {
+        "name": "the user's own login answer",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-configuration-empty-language",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-configuration-empty-language{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.User.Configuration.AudioLanguagePreference",
+              "op": "eq",
+              "value": ""
+            }
+          ]
+        }
+      },
+      {
+        "name": "a value",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "AudioLanguagePreference": "eng"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read after: a value",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.AudioLanguagePreference",
+              "op": "eq",
+              "value": "eng"
+            },
+            {
+              "path": "$.Configuration.SubtitleLanguagePreference",
+              "op": "exists"
+            }
+          ]
+        }
+      },
+      {
+        "name": "null clears it",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "AudioLanguagePreference": null
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read after: null clears it",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.AudioLanguagePreference",
+              "op": "absent"
+            },
+            {
+              "path": "$.Configuration.SubtitleLanguagePreference",
+              "op": "exists"
+            }
+          ]
+        }
+      },
+      {
+        "name": "empty string again",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "AudioLanguagePreference": ""
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read after: empty string again",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.AudioLanguagePreference",
+              "op": "eq",
+              "value": ""
+            },
+            {
+              "path": "$.Configuration.SubtitleLanguagePreference",
+              "op": "exists"
+            }
+          ]
+        }
+      },
+      {
+        "name": "an omitted member clears it",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": "Always"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read after: an omitted member clears it",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.AudioLanguagePreference",
+              "op": "absent"
+            },
+            {
+              "path": "$.Configuration.SubtitleLanguagePreference",
+              "op": "exists"
+            }
+          ]
+        }
+      },
+      {
+        "name": "empty string through the alias",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "AudioLanguagePreference": ""
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read after: empty string through the alias",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.AudioLanguagePreference",
+              "op": "eq",
+              "value": ""
+            },
+            {
+              "path": "$.Configuration.SubtitleLanguagePreference",
+              "op": "exists"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a value again",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "AudioLanguagePreference": "por"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read after: a value again",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.AudioLanguagePreference",
+              "op": "eq",
+              "value": "por"
+            },
+            {
+              "path": "$.Configuration.SubtitleLanguagePreference",
+              "op": "exists"
+            }
+          ]
+        }
+      },
+      {
+        "name": "empty string through the user update",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "Name": "tmp-configuration-empty-language",
+            "Configuration": {
+              "AudioLanguagePreference": ""
+            },
+            "Policy": {
+              "AuthenticationProviderId": "{{capture.ap}}",
+              "PasswordResetProviderId": "{{capture.rp}}"
+            }
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read after: empty string through the user update",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.AudioLanguagePreference",
+              "op": "eq",
+              "value": ""
+            },
+            {
+              "path": "$.Configuration.SubtitleLanguagePreference",
+              "op": "eq",
+              "value": ""
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
   }
 ]

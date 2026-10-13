@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
@@ -27,13 +26,13 @@ import (
 // PlayedPercentage and UnplayedItemCount are accepted by the wire shape but
 // ignored, so they are simply not declared here.
 type userDataBody struct {
-	Played                *bool      `json:"Played"`
-	IsFavorite            *bool      `json:"IsFavorite"`
-	PlaybackPositionTicks *int64     `json:"PlaybackPositionTicks"`
-	PlayCount             *int       `json:"PlayCount"`
-	LastPlayedDate        *time.Time `json:"LastPlayedDate"`
-	Rating                *float64   `json:"Rating"`
-	Likes                 *bool      `json:"Likes"`
+	Played                *bool        `json:"Played"`
+	IsFavorite            *bool        `json:"IsFavorite"`
+	PlaybackPositionTicks *int64       `json:"PlaybackPositionTicks"`
+	PlayCount             *int         `json:"PlayCount"`
+	LastPlayedDate        *requestTime `json:"LastPlayedDate"`
+	Rating                *float64     `json:"Rating"`
+	Likes                 *bool        `json:"Likes"`
 }
 
 // userItemDataFromState builds the user data object for item from a stored
@@ -49,7 +48,7 @@ func userItemDataFromState(state storage.Playstate, item storage.Item) *userItem
 		ItemID:                string(item.ID),
 		Rating:                state.Rating,
 		Likes:                 state.Likes,
-		LastPlayedDate:        state.LastPlayedDate,
+		LastPlayedDate:        wireTimePtr(state.LastPlayedDate),
 	}
 	if item.RunTimeTicks != nil && *item.RunTimeTicks > 0 && state.PlaybackPositionTicks > 0 {
 		p := float64(state.PlaybackPositionTicks) * 100 / float64(*item.RunTimeTicks)
@@ -141,7 +140,7 @@ func (s *Server) handleUserItemDataPost(w http.ResponseWriter, r *http.Request) 
 		state.PlayCount = *body.PlayCount
 	}
 	if body.LastPlayedDate != nil {
-		t := body.LastPlayedDate.UTC()
+		t := body.LastPlayedDate.Time.UTC()
 		state.LastPlayedDate = &t
 	}
 	if body.Rating != nil {

@@ -167,7 +167,7 @@ func TestUserUpdate(t *testing.T) {
 		t.Fatalf("self update: %d", code)
 	}
 	u := getUser(t, ts.URL, adminTok, aid)
-	if u.Name != "alice2" || u.Configuration.SubtitleMode != "Always" || u.Configuration.AudioLanguagePreference != "por" ||
+	if u.Name != "alice2" || u.Configuration.SubtitleMode != "Always" || derefStr(u.Configuration.AudioLanguagePreference) != "por" ||
 		u.Configuration.PlayDefaultAudioTrack || u.Policy.IsAdministrator || !u.HasPassword {
 		t.Errorf("after self update: %+v", u)
 	}
@@ -283,7 +283,7 @@ func TestUserConfiguration(t *testing.T) {
 	var me userDto
 	_ = json.Unmarshal(body, &me)
 	c = me.Configuration
-	if c.SubtitleMode != "OnlyForced" || c.AudioLanguagePreference != "jpn" || c.SubtitleLanguagePreference != "eng" ||
+	if c.SubtitleMode != "OnlyForced" || derefStr(c.AudioLanguagePreference) != "jpn" || c.SubtitleLanguagePreference != "eng" ||
 		c.PlayDefaultAudioTrack || c.HidePlayedInLatest || !c.DisplayMissingEpisodes || !c.DisplayCollectionsView ||
 		c.EnableNextEpisodeAutoPlay || c.RememberAudioSelections || c.RememberSubtitleSelections || !c.EnableLocalPassword ||
 		len(c.OrderedViews) != 1 || len(c.GroupedFolders) != 1 || len(c.MyMediaExcludes) != 1 || len(c.LatestItemsExcludes) != 1 {
@@ -298,7 +298,7 @@ func TestUserConfiguration(t *testing.T) {
 		t.Fatalf("replace: %d", code)
 	}
 	c = getUser(t, ts.URL, adminTok, aid).Configuration
-	if c.SubtitleMode != "None" || c.AudioLanguagePreference != "" || c.DisplayMissingEpisodes || !c.PlayDefaultAudioTrack || len(c.OrderedViews) != 0 {
+	if c.SubtitleMode != "None" || c.AudioLanguagePreference != nil || c.DisplayMissingEpisodes || !c.PlayDefaultAudioTrack || len(c.OrderedViews) != 0 {
 		t.Errorf("not replaced as a whole: %+v", c)
 	}
 

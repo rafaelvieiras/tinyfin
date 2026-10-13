@@ -18,15 +18,15 @@ import (
 // all out of scope for this slice (see the package doc comments on
 // library.go/playback.go for exactly what's deferred and why).
 type baseItemDto struct {
-	Name         string     `json:"Name"`
-	ServerID     string     `json:"ServerId"`
-	ID           string     `json:"Id"`
-	DateCreated  time.Time  `json:"DateCreated"`
-	Container    string     `json:"Container,omitempty"`
-	SortName     string     `json:"SortName,omitempty"`
-	PremiereDate *time.Time `json:"PremiereDate,omitempty"`
-	EndDate      *time.Time `json:"EndDate,omitempty"`
-	Path         string     `json:"Path,omitempty"`
+	Name         string    `json:"Name"`
+	ServerID     string    `json:"ServerId"`
+	ID           string    `json:"Id"`
+	DateCreated  wireTime  `json:"DateCreated"`
+	Container    string    `json:"Container,omitempty"`
+	SortName     string    `json:"SortName,omitempty"`
+	PremiereDate *wireTime `json:"PremiereDate,omitempty"`
+	EndDate      *wireTime `json:"EndDate,omitempty"`
+	Path         string    `json:"Path,omitempty"`
 
 	OfficialRating  string   `json:"OfficialRating,omitempty"`
 	OriginalTitle   string   `json:"OriginalTitle,omitempty"`
@@ -882,11 +882,11 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		Name:                    item.Name,
 		ServerID:                s.cfg.ServerID,
 		ID:                      string(item.ID),
-		DateCreated:             item.DateCreated,
+		DateCreated:             wireTime{item.DateCreated},
 		Container:               item.Container,
 		SortName:                item.SortName,
-		PremiereDate:            item.PremiereDate,
-		EndDate:                 item.EndDate,
+		PremiereDate:            wireTimePtr(item.PremiereDate),
+		EndDate:                 wireTimePtr(item.EndDate),
 		Path:                    item.Path,
 		OfficialRating:          item.OfficialRating,
 		OriginalTitle:           item.OriginalTitle,

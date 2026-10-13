@@ -88,7 +88,7 @@ func (s *Server) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, forgotPasswordResult{
 		Action:            "PinCode",
 		PinFile:           name,
-		PinExpirationDate: expires.Format("2006-01-02T15:04:05.0000000Z"),
+		PinExpirationDate: formatWireTime(expires),
 	})
 }
 
