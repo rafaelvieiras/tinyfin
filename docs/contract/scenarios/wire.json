@@ -1,0 +1,354 @@
+[
+  {
+    "id": "wire.id.user-objects",
+    "endpoint": "GET /Users",
+    "spec": "wire.md#id",
+    "scope": "modern",
+    "covers": [
+      "wire.id.R1"
+    ],
+    "requires": [
+      "user:alice"
+    ],
+    "steps": [
+      {
+        "name": "login result",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "{{user.alice.name}}",
+            "Pw": "{{user.alice.password}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-wire-id-user-objects{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.User.Id",
+              "op": "hex32"
+            },
+            {
+              "path": "$.User.ServerId",
+              "op": "hex32"
+            },
+            {
+              "path": "$.ServerId",
+              "op": "hex32"
+            },
+            {
+              "path": "$.SessionInfo.UserId",
+              "op": "hex32"
+            }
+          ]
+        }
+      },
+      {
+        "name": "user list",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[*].Id",
+              "op": "hex32"
+            },
+            {
+              "path": "$[*].ServerId",
+              "op": "hex32"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "wire.id.item-objects",
+    "endpoint": "GET /Items",
+    "spec": "wire.md#id",
+    "scope": "modern",
+    "covers": [
+      "wire.id.R1"
+    ],
+    "requires": [
+      "item:alpha"
+    ],
+    "steps": [
+      {
+        "name": "library views",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items",
+          "query": {
+            "userId": "{{user.admin.id}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[*].Id",
+              "op": "hex32"
+            },
+            {
+              "path": "$.Items[*].ServerId",
+              "op": "hex32"
+            }
+          ]
+        }
+      },
+      {
+        "name": "movies",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items",
+          "query": {
+            "Recursive": "true",
+            "IncludeItemTypes": "Movie",
+            "userId": "{{user.admin.id}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[*].Id",
+              "op": "hex32"
+            },
+            {
+              "path": "$.Items[*].ServerId",
+              "op": "hex32"
+            }
+          ]
+        }
+      },
+      {
+        "name": "one item",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.alpha.id}}",
+          "query": {
+            "userId": "{{user.admin.id}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Id",
+              "op": "hex32"
+            },
+            {
+              "path": "$.ServerId",
+              "op": "hex32"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "wire.id.dashed-input-accepted",
+    "endpoint": "GET /Users/{userId}",
+    "spec": "wire.md#id",
+    "scope": "modern",
+    "covers": [
+      "wire.id.R2"
+    ],
+    "requires": [
+      "item:alpha"
+    ],
+    "steps": [
+      {
+        "name": "dashed user id",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{user.admin.id|dashed}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Id",
+              "op": "eq",
+              "value": "{{user.admin.id}}"
+            }
+          ]
+        }
+      },
+      {
+        "name": "dashed item id",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.alpha.id|dashed}}",
+          "query": {
+            "userId": "{{user.admin.id}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Id",
+              "op": "eq",
+              "value": "{{item.alpha.id}}"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "wire.problem.not-found",
+    "endpoint": "GET /Items/{itemId}",
+    "spec": "wire.md#problem",
+    "scope": "modern",
+    "covers": [
+      "wire.problem.R1"
+    ],
+    "steps": [
+      {
+        "name": "unknown item",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/11111111111111111111111111111111",
+          "query": {
+            "userId": "{{user.admin.id}}"
+          }
+        },
+        "expect": {
+          "status": 404,
+          "problem": 404,
+          "json": [
+            {
+              "path": "$.title",
+              "op": "eq",
+              "value": "Not Found"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "wire.problem.validation",
+    "endpoint": "GET /Users/{userId}",
+    "spec": "wire.md#problem",
+    "scope": "modern",
+    "covers": [
+      "wire.problem.R2"
+    ],
+    "steps": [
+      {
+        "name": "malformed id in the path",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/not-a-guid"
+        },
+        "expect": {
+          "status": 400,
+          "problem": 400,
+          "json": [
+            {
+              "path": "$.errors",
+              "op": "type",
+              "value": "object"
+            }
+          ]
+        }
+      },
+      {
+        "name": "malformed item id in the path",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/not-a-guid"
+        },
+        "expect": {
+          "status": 400,
+          "problem": 400,
+          "json": [
+            {
+              "path": "$.errors",
+              "op": "type",
+              "value": "object"
+            }
+          ]
+        }
+      },
+      {
+        "name": "body that is not JSON",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "bodyRaw": "{bad",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400,
+          "problem": 400,
+          "json": [
+            {
+              "path": "$.errors",
+              "op": "type",
+              "value": "object"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "wire.problem.api-key-is-not-a-user",
+    "endpoint": "GET /Users/Me",
+    "spec": "wire.md#problem",
+    "scope": "modern",
+    "tags": [
+      "api-key"
+    ],
+    "covers": [
+      "wire.problem.R3"
+    ],
+    "requires": [
+      "identity:apikey"
+    ],
+    "steps": [
+      {
+        "name": "API key on a user route",
+        "as": "apikey",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Me"
+        },
+        "expect": {
+          "status": 400,
+          "problem": 400,
+          "json": [
+            {
+              "path": "$.title",
+              "op": "eq",
+              "value": "Bad Request"
+            }
+          ]
+        }
+      }
+    ]
+  }
+]

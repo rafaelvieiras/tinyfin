@@ -43,6 +43,7 @@ Index of routes:
 | `POST /Users/{userId}/Configuration` | legacy-web-required | [update-user-configuration-legacy-alias](#update-user-configuration-legacy-alias) |
 | `POST /Users/ForgotPassword` | modern | [forgot-password](#forgot-password) |
 | `POST /Users/ForgotPassword/Pin` | modern | [forgot-password-pin](#forgot-password-pin) |
+| `GET /socket` (WebSocket) | modern | [realtime-socket](#realtime-socket) |
 
 ---
 
@@ -153,7 +154,7 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 - **users.quickconnect.R5** When an administrator authorizes with another `userId`, the issued token belongs to that user; a non-administrator naming another user answers `403` at the authorize step.
 - **users.quickconnect.R6** Issuing the token revokes any earlier token of the same user on the same `DeviceId`, exactly like a password login.
 - **users.quickconnect.R7** A secret can be exchanged once: a second exchange answers `404`.
-- **users.quickconnect.R8** When QuickConnect is disabled on the server every QuickConnect step answers `401`. (Needs server configuration; not covered.)
+- **users.quickconnect.R8** When QuickConnect is disabled on the server every QuickConnect step answers `401`. 
 
 ---
 
@@ -204,6 +205,7 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 - **users.list.R5** The list is ordered by `Name` ascending.
 - **users.list.R6** Each entry is a full user object including `Policy` and `Configuration`.
 - **users.list.R7** For a non-administrator who is outside an `AccessSchedule` window the request is refused with `403`.
+- **users.list.R8** An API key (a credential that belongs to no user) is accepted as an administrator credential: the list is returned.
 
 ---
 
@@ -332,6 +334,7 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 - **users.policy.R10** An administrator can demote themselves when another administrator exists.
 - **users.policy.R11** A body that is not valid JSON answers `400`.
 - **users.policy.R12** `LoginAttemptsBeforeLockout`: `-1` means no lockout, `0` means the default of `3`, a positive `n` locks the account after `n` consecutive failures (see `users.auth.R14`). `InvalidLoginAttemptCount` from the body overwrites the stored counter, which lets an administrator unlock an account.
+- **users.policy.R13** A successful policy update sends a `UserUpdated` WebSocket message to the target user's own open sockets; `Data` is the updated user object (including the new `Policy`). See *Realtime socket*.
 
 ---
 
@@ -417,6 +420,7 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 - **users.update.R8** An unknown user answers `404`; a body that is not valid JSON answers `400`.
 - **users.update.R9** A body without `Configuration` resets the user's preferences to their defaults.
 - **users.update.R12** Body validation runs before the user lookup and the authorization check: a body without a `Policy` member (or with a `Policy` lacking `AuthenticationProviderId` or `PasswordResetProviderId`) answers `400` with a validation-problem body naming `Policy.AuthenticationProviderId` / `Policy.PasswordResetProviderId`, even for an unknown or foreign target. A body with `"Policy": null` is accepted. The minimal valid body is `{"Name":..., "Configuration":{...}, "Policy":{"AuthenticationProviderId":"...","PasswordResetProviderId":"..."}}`; a `userId` that is not a GUID or is all zeros answers `400`.
+- **users.update.R13** A successful `POST /Users` sends a `UserUpdated` WebSocket message to the target user's own open sockets (`Data` is the updated user object, with the new `Name`); sockets of other users receive none. See *Realtime socket*.
 - **users.update.R11** A non-administrator whose `EnableUserPreferenceAccess` policy flag is `false` is refused (`403`) when updating themselves.
 
 ---
@@ -463,6 +467,27 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 **Rules**
 
 - **users.configuration.R5** `POST /Users/{userId}/Configuration` is an alias with the target in the path and identical behavior.
+
+---
+
+<a id="realtime-socket"></a>
+## GET /socket (WebSocket)
+
+**Purpose.** The realtime channel clients keep open for server-pushed messages.
+
+**Auth.** The credential travels in the `ApiKey` query parameter (a user token or an API key), or in the `Authorization` header. `DeviceId` may be given as a `deviceId` query parameter. The `api_key` parameter is not honored (`users.token.R6`).
+
+**Messages.** Text frames, each a JSON object `{"MessageType": "...", "Data": ..., "MessageId": "..."}`.
+
+
+**Rules**
+
+- **users.socket.R1** With a valid user token or API key in `ApiKey` the handshake upgrades (`101`).
+- **users.socket.R2** An unknown, malformed or missing credential is refused before the upgrade with `403`.
+- **users.socket.R3** Right after the upgrade the server sends `{"MessageType": "ForceKeepAlive", "Data": <seconds>}`; `Data` is a number (the keep-alive interval clients must honor).
+- **users.socket.R4** The legacy `api_key` query parameter is not a credential here either: a valid token sent that way is refused with `403`.
+
+Messages pushed to the sockets of the affected user: `UserUpdated` on rename and policy change (`users.update.R13`, `users.policy.R13`). A user-configuration update (`POST /Users/Configuration`) sends none.
 
 ---
 
@@ -555,6 +580,7 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 | `users.list.R5` | `users.list.sorted-by-name` |
 | `users.list.R6` | `users.list.admin` |
 | `users.list.R7` | `users.me.outside-schedule` |
+| `users.list.R8` | `users.list.api-key` |
 | `users.get.R1` | `users.get.own-profile` |
 | `users.get.R2` | `users.get.other-user-readable` |
 | `users.get.R3` | `users.get.not-found` |
@@ -567,7 +593,7 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 | `users.me.R1` | `users.me.returns-caller` |
 | `users.me.R2` | `users.me.anonymous` |
 | `users.me.R3` | `users.token.apikey-query` |
-| `users.me.R4` | `users.me.api-key-has-no-user` (pending) |
+| `users.me.R4` | `users.me.api-key-has-no-user` |
 | `users.me.R5` | `users.me.outside-schedule` |
 | `users.create.R1` | `users.create.defaults` |
 | `users.create.R2` | `users.create.password-set` |
@@ -587,7 +613,7 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 | `users.delete.R7` | `users.delete.removes-user`, `users.delete.name-reusable` |
 | `users.policy.R1` | `users.policy.admin-only` |
 | `users.policy.R2` | `users.policy.not-found` |
-| `users.policy.R3` | `users.policy.roundtrip`, `users.policy.parental-rating-roundtrip` (pending) |
+| `users.policy.R3` | `users.policy.roundtrip`, `users.policy.parental-rating-roundtrip` |
 | `users.policy.R4` | `users.policy.replaces-whole-policy` |
 | `users.policy.R5` | `users.policy.provider-ids-required` |
 | `users.policy.R6` | `users.policy.last-admin-cannot-be-demoted` |
@@ -597,6 +623,7 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 | `users.policy.R10` | `users.policy.self-demotion` |
 | `users.policy.R11` | `users.policy.malformed-body` |
 | `users.policy.R12` | `users.auth.lockout-after-limit` |
+| `users.policy.R13` | `users.policy.emits-user-updated` |
 | `users.password.R1` | `users.password.change-own` |
 | `users.password.R2` | `users.password.change-own`, `users.password.wrong-current`, `users.password.set-on-passwordless` |
 | `users.password.R3` | `users.password.admin-sets-other` |
@@ -609,7 +636,7 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 | `users.password.R10` | `users.password.unknown-user` |
 | `users.password.R11` | `users.password.anonymous` |
 | `users.password.R12` | `users.password.legacy-hash-field-ignored` |
-| `users.password.R13` | `users.password.preference-access-disabled` (pending) |
+| `users.password.R13` | `users.password.preference-access-disabled` |
 | `users.password.R14` | `users.password-alias.change-own`, `users.password-alias.admin-sets-other`, `users.password-alias.reset`, `users.password-alias.admin-self-needs-current`, `users.password-alias.errors` |
 | `users.update.R1` | `users.update.rename-and-configuration` |
 | `users.update.R2` | `users.update.rename-and-configuration` |
@@ -621,7 +648,8 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 | `users.update.R8` | `users.update.not-found-and-bad-body` |
 | `users.update.R9` | `users.update.omitted-configuration-resets` |
 | `users.update.R10` | `users.update-alias.self`, `users.update-alias.admin-and-errors` |
-| `users.update.R11` | `users.update.preference-access-disabled` (pending) |
+| `users.update.R11` | `users.update.preference-access-disabled` |
+| `users.update.R13` | `users.update.emits-user-updated` |
 | `users.update.R12` | `users.update.not-found-and-bad-body` |
 | `users.configuration.R1` | `users.configuration.update-own` |
 | `users.configuration.R2` | `users.configuration.replaces-all` |
@@ -643,7 +671,11 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 | `users.quickconnect.R5` | `users.quickconnect.admin-authorizes-other-user` |
 | `users.quickconnect.R6` | `users.quickconnect.exchange-revokes-device-token` |
 | `users.quickconnect.R7` | `users.quickconnect.secret-single-use` |
-| `users.quickconnect.R8` | `users.quickconnect.disabled` (pending) |
+| `users.quickconnect.R8` | `users.quickconnect.disabled` |
+| `users.socket.R1` | `users.socket.upgrade`, `users.socket.upgrade-api-key` |
+| `users.socket.R2` | `users.socket.refused-without-credential` |
+| `users.socket.R3` | `users.socket.upgrade` |
+| `users.socket.R4` | `users.socket.legacy-api-key-param-refused` |
 
 
 ## Divergences from the reference
@@ -662,15 +694,15 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 
 ## Open questions
 
-1. `EnableUserPreferenceAccess`: the audit says a non-administrator without it cannot update their own account/password (`403`), but it is not among the persisted permission flags in the audit; whether the policy endpoint stores it and what its default is were not confirmed. Rules `users.password.R13` and `users.update.R11` have pending scenarios.
+1. `EnableUserPreferenceAccess` (resolved): the policy endpoint persists it and a non-administrator without it is refused (`403`) when changing their own password or updating their own account; verified on the reference (`users.password.R13`, `users.update.R11`).
 2. Access-schedule hour semantics: `StartHour <= hour <= EndHour` is inclusive and uses the server's local time, but whether `hour` includes minutes (fractional hours) is not confirmed. Scenarios that depend on it use the 03:00 window and are tagged `time-dependent`; they would flip if run during the 03:xx hour.
 3. `LoginAttemptsBeforeLockout=0` reads back as `0` or `3`? Only the lockout behavior (`0` acts as `3`) is asserted.
 4. Failure counter double counting: the reference may increment the persisted counter twice on the failure that triggers a lockout. Only the externally visible lockout threshold is specified.
-5. `MaxParentalRating` round trip through the internal score mapping is unconfirmed (pending scenario).
+5. `MaxParentalRating` round trip (resolved): the value posted is read back unchanged (`users.policy.parental-rating-roundtrip`).
 6. `HasPassword`, `HasConfiguredPassword`, `LastLoginDate` and `SessionInfo.{UserId,DeviceId,Client,DeviceName}` are part of the observed user/session objects but are not described field by field in the audit; they come from the shape of the official clients' use and must be confirmed against the reference.
 7. Path ids that are not GUIDs (`400`) follow from request binding and are not separately documented in the audit.
 8. A request whose body omits `Configuration` on `POST /Users` resets preferences to defaults (`users.update.R9`); the audit states the default but not the intent. Confirm on the reference.
-9. QuickConnect is assumed enabled on the test server; it is a server setting, and the disabled case is not covered.
-10. Fixture `disabled` (in `fixtures.json`) cannot be logged in by the fixture setup (login answers `403` by design), so `user:disabled` is never available; scenarios create their own disabled accounts instead.
-11. Remote-access restriction (`EnableRemoteAccess=false`) cannot be exercised from a local runner (`users.auth.R21`, pending).
+9. QuickConnect is assumed enabled on the test server; the disabled case is covered by `users.quickconnect.disabled`, which switches it off through `POST /System/Configuration` and always restores the setting afterwards.
+10. Fixture `disabled` (in `fixtures.json`) is created and disabled through the policy endpoint, but the runner never logs in a user whose policy sets `IsDisabled` (login answers `403` by design), so it has no token: it is available for `{{user.disabled.id|name}}` templates and as a target, never as an `as` identity. Scenarios that need a disabled account with a token create it themselves and disable it mid-scenario.
+11. Remote-access restriction (`EnableRemoteAccess=false`) cannot be exercised from a local runner (`users.auth.R21`, pending): the runner always connects from the local network and the forwarded-address headers are only trusted from configured proxies. `users.forgot-pin.redeem` stays pending as well: the PIN is only written to a file on the server.
 12. Admin self-service rules differ between the modern route (no `CurrentPw` without `userId`) and the alias (always required). They are replicated as observed.

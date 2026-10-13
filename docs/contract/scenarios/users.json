@@ -7835,8 +7835,7 @@
         },
         "expect": {}
       }
-    ],
-    "pending": "Round trip of MaxParentalRating through the internal score mapping has not been confirmed against the reference at runtime."
+    ]
   },
   {
     "id": "users.policy.replaces-whole-policy",
@@ -10663,8 +10662,7 @@
         },
         "expect": {}
       }
-    ],
-    "pending": "Whether EnableUserPreferenceAccess is persisted by the policy endpoint (and its default) is not confirmed at runtime."
+    ]
   },
   {
     "id": "users.password-alias.change-own",
@@ -14185,32 +14183,23 @@
     ],
     "steps": [
       {
-        "name": "create an API key",
-        "as": "admin",
-        "request": {
-          "method": "POST",
-          "path": "/Auth/Keys",
-          "query": {
-            "app": "sc-users-me-apikey"
-          }
-        },
-        "expect": {
-          "status": 204
-        }
-      },
-      {
-        "name": "list keys",
-        "as": "admin",
+        "name": "an API key is not a user",
+        "as": "apikey",
         "request": {
           "method": "GET",
-          "path": "/Auth/Keys"
+          "path": "/Users/Me"
         },
         "expect": {
-          "status": 200
+          "status": 400
         }
       }
     ],
-    "pending": "Needs the access token of a freshly created API key; the order of the key listing is unspecified so it cannot be captured reliably yet. Expected: GET /Users/Me with that key answers 400."
+    "requires": [
+      "identity:apikey"
+    ],
+    "tags": [
+      "api-key"
+    ]
   },
   {
     "id": "users.update.preference-access-disabled",
@@ -14220,8 +14209,113 @@
     "covers": [
       "users.update.R11"
     ],
-    "steps": [],
-    "pending": "Whether EnableUserPreferenceAccess is persisted by the policy endpoint (and its default) is not confirmed at runtime. Expected: a user with the flag false gets 403 on POST /Users for themselves."
+    "steps": [
+      {
+        "name": "read the provider ids of the default policy",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{user.admin.id}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "create tmp-update-preference-access-disabled",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-update-preference-access-disabled",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "login tmp-update-preference-access-disabled",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-update-preference-access-disabled",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-preference-access-disabled{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "tok": "$.AccessToken"
+        }
+      },
+      {
+        "name": "turn the preference-access flag off",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "EnableUserPreferenceAccess": false
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "the user may not update themselves",
+        "request": {
+          "method": "POST",
+          "path": "/Users",
+          "body": {
+            "Name": "tmp-update-preference-access-disabled",
+            "Configuration": {},
+            "Policy": {
+              "AuthenticationProviderId": "{{capture.ap}}",
+              "PasswordResetProviderId": "{{capture.rp}}"
+            }
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-preference-access-disabled{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      }
+    ],
+    "tags": [
+      "web-client"
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
   },
   {
     "id": "users.auth.remote-access-disabled",
@@ -14253,7 +14347,488 @@
     "covers": [
       "users.quickconnect.R8"
     ],
-    "steps": [],
-    "pending": "Needs the server-wide QuickConnect switch turned off (POST /System/Configuration), which the contract runner must not do on the shared server."
+    "steps": [
+      {
+        "name": "turn QuickConnect off",
+        "config": {
+          "set": {
+            "QuickConnectAvailable": false
+          }
+        }
+      },
+      {
+        "name": "availability probe",
+        "request": {
+          "method": "GET",
+          "path": "/QuickConnect/Enabled"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "initiate is refused",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-disabled{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "exchange is refused",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateWithQuickConnect",
+          "body": {
+            "Secret": "0123456789abcdef"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-disabled{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      }
+    ],
+    "tags": [
+      "config-toggle"
+    ]
+  },
+  {
+    "id": "users.socket.upgrade",
+    "endpoint": "GET /socket",
+    "spec": "users.md#realtime-socket",
+    "scope": "modern",
+    "tags": [
+      "websocket"
+    ],
+    "covers": [
+      "users.socket.R1",
+      "users.socket.R3"
+    ],
+    "steps": [
+      {
+        "name": "user token",
+        "as": "admin",
+        "ws": {
+          "open": "a",
+          "as": "admin"
+        }
+      },
+      {
+        "name": "greeting",
+        "ws": {
+          "wait": "a",
+          "type": "ForceKeepAlive"
+        },
+        "expect": {
+          "json": [
+            {
+              "path": "$.Data",
+              "op": "type",
+              "value": "number"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "users.socket.upgrade-api-key",
+    "endpoint": "GET /socket",
+    "spec": "users.md#realtime-socket",
+    "scope": "modern",
+    "tags": [
+      "websocket",
+      "api-key"
+    ],
+    "covers": [
+      "users.socket.R1"
+    ],
+    "requires": [
+      "identity:apikey"
+    ],
+    "steps": [
+      {
+        "name": "API key",
+        "ws": {
+          "open": "k",
+          "as": "apikey"
+        }
+      },
+      {
+        "name": "greeting",
+        "ws": {
+          "wait": "k",
+          "type": "ForceKeepAlive"
+        }
+      }
+    ]
+  },
+  {
+    "id": "users.socket.refused-without-credential",
+    "endpoint": "GET /socket",
+    "spec": "users.md#realtime-socket",
+    "scope": "modern",
+    "tags": [
+      "websocket"
+    ],
+    "covers": [
+      "users.socket.R2"
+    ],
+    "steps": [
+      {
+        "name": "bogus token",
+        "ws": {
+          "open": "x",
+          "as": "token:0123456789abcdef0123456789abcdef",
+          "refuseStatus": 403
+        }
+      }
+    ]
+  },
+  {
+    "id": "users.socket.legacy-api-key-param-refused",
+    "endpoint": "GET /socket",
+    "spec": "users.md#realtime-socket",
+    "scope": "scope-negative",
+    "tags": [
+      "websocket"
+    ],
+    "covers": [
+      "users.socket.R4"
+    ],
+    "steps": [
+      {
+        "name": "valid token in the legacy parameter",
+        "as": "admin",
+        "ws": {
+          "open": "x",
+          "as": "admin",
+          "param": "api_key",
+          "refuseStatus": 403
+        }
+      }
+    ]
+  },
+  {
+    "id": "users.update.emits-user-updated",
+    "endpoint": "POST /Users",
+    "spec": "users.md#update-user",
+    "scope": "modern",
+    "tags": [
+      "websocket"
+    ],
+    "covers": [
+      "users.update.R13"
+    ],
+    "steps": [
+      {
+        "name": "read the provider ids of the default policy",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{user.admin.id}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "create tmp-update-emits-user-updated",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-update-emits-user-updated",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "login tmp-update-emits-user-updated",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-update-emits-user-updated",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-emits-user-updated{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "tok": "$.AccessToken"
+        }
+      },
+      {
+        "name": "the user's own socket",
+        "ws": {
+          "open": "own",
+          "as": "token:{{capture.tok}}"
+        }
+      },
+      {
+        "name": "another user's socket",
+        "ws": {
+          "open": "other",
+          "as": "admin"
+        }
+      },
+      {
+        "name": "rename",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "Name": "tmp-update-emits-user-updated-renamed",
+            "Configuration": {},
+            "Policy": {
+              "AuthenticationProviderId": "{{capture.ap}}",
+              "PasswordResetProviderId": "{{capture.rp}}"
+            }
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "own socket is told",
+        "ws": {
+          "wait": "own",
+          "type": "UserUpdated"
+        },
+        "expect": {
+          "json": [
+            {
+              "path": "$.Data.Id",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Data.Name",
+              "op": "eq",
+              "value": "tmp-update-emits-user-updated-renamed"
+            }
+          ]
+        }
+      },
+      {
+        "name": "other sockets are not",
+        "ws": {
+          "wait": "other",
+          "type": "UserUpdated",
+          "absent": true,
+          "timeoutMs": 1500
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.policy.emits-user-updated",
+    "endpoint": "POST /Users/{userId}/Policy",
+    "spec": "users.md#update-user-policy",
+    "scope": "modern",
+    "tags": [
+      "websocket"
+    ],
+    "covers": [
+      "users.policy.R13"
+    ],
+    "steps": [
+      {
+        "name": "read the provider ids of the default policy",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{user.admin.id}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "create tmp-policy-emits-user-updated",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-policy-emits-user-updated",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "login tmp-policy-emits-user-updated",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-policy-emits-user-updated",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-emits-user-updated{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "tok": "$.AccessToken"
+        }
+      },
+      {
+        "name": "the user's own socket",
+        "ws": {
+          "open": "own",
+          "as": "token:{{capture.tok}}"
+        }
+      },
+      {
+        "name": "hide the user",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "IsHidden": false
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "own socket is told",
+        "ws": {
+          "wait": "own",
+          "type": "UserUpdated"
+        },
+        "expect": {
+          "json": [
+            {
+              "path": "$.Data.Id",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Data.Policy.IsHidden",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.list.api-key",
+    "endpoint": "GET /Users",
+    "spec": "users.md#list-users",
+    "scope": "modern",
+    "tags": [
+      "api-key"
+    ],
+    "covers": [
+      "users.list.R8"
+    ],
+    "requires": [
+      "identity:apikey"
+    ],
+    "steps": [
+      {
+        "name": "list as an API key",
+        "as": "apikey",
+        "request": {
+          "method": "GET",
+          "path": "/Users"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$",
+              "op": "type",
+              "value": "array"
+            },
+            {
+              "path": "$[0].Id",
+              "op": "exists"
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
