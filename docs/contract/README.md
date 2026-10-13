@@ -201,8 +201,9 @@ scenario that is not pending, divergent or `risky`):
 
 | Area | Scenarios | Pass | Fail | Blocked | Skipped |
 |---|---|---|---|---|---|
-| items | 105 | 105 | 0 | 0 | 0 |
-| playstate | 101 | 27 | 67 | 0 | 7 |
-| users | 148 | 137 | 4 | 3 | 4 |
-| wire | 6 | 2 | 3 | 1 | 0 |
-| **Total** | 360 | 271 | 74 | 4 | 11 |
+| items | 113 | 113 | 0 | 0 | 0 |
+| playstate | 103 | 103 | 0 | 0 | 0 |
+| quickconnect | 13 | 13 | 0 | 0 | 0 |
+| users | 150 | 145 | 0 | 0 | 5 |
+| wire | 6 | 6 | 0 | 0 | 0 |
+| **Total** | 385 | 380 | 0 | 0 | 5 |

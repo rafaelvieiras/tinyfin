@@ -5165,7 +5165,7 @@
           "method": "GET",
           "path": "/Sessions",
           "query": {
-            "deviceId": "conf-alice"
+            "deviceId": "{{device.alice}}"
           }
         },
         "expect": {
@@ -8405,7 +8405,7 @@
           "method": "GET",
           "path": "/Sessions",
           "query": {
-            "deviceId": "conf-alice"
+            "deviceId": "{{device.alice}}"
           }
         },
         "expect": {
@@ -8470,7 +8470,7 @@
           "method": "GET",
           "path": "/Sessions",
           "query": {
-            "deviceId": "conf-alice"
+            "deviceId": "{{device.alice}}"
           }
         },
         "expect": {
@@ -8596,7 +8596,7 @@
           "method": "GET",
           "path": "/Sessions",
           "query": {
-            "deviceId": "conf-alice"
+            "deviceId": "{{device.alice}}"
           }
         },
         "expect": {
@@ -8698,7 +8698,7 @@
           "method": "GET",
           "path": "/Sessions",
           "query": {
-            "deviceId": "conf-alice"
+            "deviceId": "{{device.alice}}"
           }
         },
         "expect": {
@@ -8736,7 +8736,7 @@
           "method": "GET",
           "path": "/Sessions",
           "query": {
-            "deviceId": "conf-alice"
+            "deviceId": "{{device.alice}}"
           }
         },
         "expect": {
@@ -8823,7 +8823,7 @@
           "method": "GET",
           "path": "/Sessions",
           "query": {
-            "deviceId": "conf-alice"
+            "deviceId": "{{device.alice}}"
           }
         },
         "expect": {
@@ -8936,7 +8936,7 @@
           "method": "GET",
           "path": "/Sessions",
           "query": {
-            "deviceId": "conf-alice"
+            "deviceId": "{{device.alice}}"
           }
         },
         "expect": {
@@ -9052,7 +9052,7 @@
           "method": "GET",
           "path": "/Sessions",
           "query": {
-            "deviceId": "conf-alice"
+            "deviceId": "{{device.alice}}"
           }
         },
         "expect": {
@@ -9138,7 +9138,7 @@
           "method": "GET",
           "path": "/Sessions",
           "query": {
-            "deviceId": "conf-alice"
+            "deviceId": "{{device.alice}}"
           }
         },
         "expect": {
@@ -9176,7 +9176,7 @@
           "method": "GET",
           "path": "/Sessions",
           "query": {
-            "deviceId": "conf-alice"
+            "deviceId": "{{device.alice}}"
           }
         },
         "expect": {
@@ -9290,7 +9290,7 @@
           "method": "GET",
           "path": "/Sessions",
           "query": {
-            "deviceId": "conf-alice"
+            "deviceId": "{{device.alice}}"
           }
         },
         "expect": {
@@ -9334,7 +9334,7 @@
           "method": "GET",
           "path": "/Sessions",
           "query": {
-            "deviceId": "conf-alice"
+            "deviceId": "{{device.alice}}"
           }
         },
         "expect": {
