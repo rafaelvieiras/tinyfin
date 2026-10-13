@@ -171,6 +171,25 @@ func (r *sessionRegistry) upsertCapabilities(deviceID, userID, userName, client,
 	ts.lastActivityDate = time.Now().UTC()
 }
 
+// loginSession renders the session a login creates (users.auth.R12)
+// without registering it: the registry only tracks sessions that reported
+// capabilities (this file's package doc comment). An already-registered
+// session of the same device keeps its id and capabilities.
+func (r *sessionRegistry) loginSession(serverID, deviceID, userID, userName, client, deviceName, appVersion, remoteEndPoint string) sessionInfoDto {
+	ts := trackedSession{id: randomID()}
+	r.mu.Lock()
+	if cur, ok := r.byDevice[deviceID]; ok {
+		ts.id = cur.id
+		ts.capabilities = cur.capabilities
+	}
+	r.mu.Unlock()
+	ts.userID, ts.userName, ts.client = userID, userName, client
+	ts.deviceName, ts.deviceID, ts.appVersion = deviceName, deviceID, appVersion
+	ts.remoteEndPoint = remoteEndPoint
+	ts.lastActivityDate = time.Now().UTC()
+	return ts.dto(serverID)
+}
+
 // touch stamps LastActivityDate to now for an already-registered session,
 // keyed by deviceID. A no-op if no session has ever registered capabilities
 // for that device — this file's package doc comment's deliberately narrow
@@ -205,33 +224,38 @@ func (r *sessionRegistry) list(serverID string, activeWithinSeconds int, hasFilt
 		if hasFilter && now.Sub(ts.lastActivityDate) > time.Duration(activeWithinSeconds)*time.Second {
 			continue
 		}
-		out = append(out, sessionInfoDto{
-			PlayState:          sessionPlayStateDto{RepeatMode: "RepeatNone", PlaybackOrder: "Default"},
-			AdditionalUsers:    []struct{}{},
-			Capabilities:       ts.capabilities,
-			RemoteEndPoint:     ts.remoteEndPoint,
-			PlayableMediaTypes: ts.capabilities.PlayableMediaTypes,
-			ID:                 ts.id,
-			UserID:             ts.userID,
-			UserName:           ts.userName,
-			Client:             ts.client,
-			LastActivityDate:   ts.lastActivityDate,
-			// Zero value — see sessionInfoDto's doc comment.
-			LastPlaybackCheckIn:      time.Time{},
-			DeviceName:               ts.deviceName,
-			DeviceID:                 ts.deviceID,
-			ApplicationVersion:       ts.appVersion,
-			IsActive:                 true,
-			SupportsMediaControl:     ts.capabilities.SupportsMediaControl,
-			SupportsRemoteControl:    ts.capabilities.SupportsMediaControl,
-			NowPlayingQueue:          []struct{}{},
-			NowPlayingQueueFullItems: []struct{}{},
-			HasCustomDeviceName:      false,
-			ServerID:                 serverID,
-			SupportedCommands:        ts.capabilities.SupportedCommands,
-		})
+		out = append(out, ts.dto(serverID))
 	}
 	return out
+}
+
+// dto renders the tracked session as a sessionInfoDto.
+func (ts *trackedSession) dto(serverID string) sessionInfoDto {
+	return sessionInfoDto{
+		PlayState:          sessionPlayStateDto{RepeatMode: "RepeatNone", PlaybackOrder: "Default"},
+		AdditionalUsers:    []struct{}{},
+		Capabilities:       ts.capabilities,
+		RemoteEndPoint:     ts.remoteEndPoint,
+		PlayableMediaTypes: ts.capabilities.PlayableMediaTypes,
+		ID:                 ts.id,
+		UserID:             ts.userID,
+		UserName:           ts.userName,
+		Client:             ts.client,
+		LastActivityDate:   ts.lastActivityDate,
+		// Zero value — see sessionInfoDto's doc comment.
+		LastPlaybackCheckIn:      time.Time{},
+		DeviceName:               ts.deviceName,
+		DeviceID:                 ts.deviceID,
+		ApplicationVersion:       ts.appVersion,
+		IsActive:                 true,
+		SupportsMediaControl:     ts.capabilities.SupportsMediaControl,
+		SupportsRemoteControl:    ts.capabilities.SupportsMediaControl,
+		NowPlayingQueue:          []struct{}{},
+		NowPlayingQueueFullItems: []struct{}{},
+		HasCustomDeviceName:      false,
+		ServerID:                 serverID,
+		SupportedCommands:        ts.capabilities.SupportedCommands,
+	}
 }
 
 // handleSessionsList is GET /Sessions, called by jellyfin-web's admin

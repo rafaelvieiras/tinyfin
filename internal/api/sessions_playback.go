@@ -217,6 +217,18 @@ func (s *Server) handleUserPlayedItemsMark(w http.ResponseWriter, r *http.Reques
 	})
 }
 
+// handleSessionsPlayingPing is POST /Sessions/Playing/Ping — keeps a
+// transcode alive without progress. Tinyfin tracks no transcode by play
+// session here, so it only validates the parameter (playstate.ping.R1-R3):
+// 204 for a non-empty playSessionId, 400 otherwise, no state touched.
+func (s *Server) handleSessionsPlayingPing(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Query().Get("playSessionId") == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // mediaSegmentDtoQueryResult mirrors the OpenAPI schema's
 // MediaSegmentDtoQueryResult — same envelope shape as
 // baseItemDtoQueryResult (dto.go), kept as its own type since its Items

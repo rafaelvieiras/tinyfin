@@ -508,6 +508,10 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /Sessions/Playing/Progress", requireAuth(s.handleSessionsPlayingProgress))
 	s.mux.HandleFunc("POST /Sessions/Playing/Stopped", requireAuth(s.handleSessionsPlayingStopped))
 	s.mux.HandleFunc("POST /UserPlayedItems/{itemId}", requireAuth(s.handleUserPlayedItemsMark))
+	// playstate.auth.R1: the remaining playstate routes answer 401 to an
+	// anonymous caller too.
+	s.mux.HandleFunc("DELETE /UserPlayedItems/{itemId}", requireAuth(s.handlePlayedItemRemove))
+	s.mux.HandleFunc("POST /Sessions/Playing/Ping", requireAuth(s.handleSessionsPlayingPing))
 	s.mux.HandleFunc("GET /MediaSegments/{itemId}", requireAuth(s.handleMediaSegments))
 
 	// Legacy per-user favorite/watched routes (userdata.go) — the actual

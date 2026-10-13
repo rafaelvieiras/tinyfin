@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 // withAuthContext is the single, always-applied middleware that parses the
@@ -46,7 +47,8 @@ func (s *Server) withAuthContext(next http.Handler) http.Handler {
 
 		if ac.Token != "" {
 			if at, err := s.store.LookupToken(r.Context(), ac.Token); err == nil {
-				if u, err := s.store.GetUser(r.Context(), at.UserID); err == nil {
+				// users.token.R4: a disabled account's tokens are rejected.
+				if u, err := s.store.GetUser(r.Context(), at.UserID); err == nil && !u.IsDisabled {
 					ac.Authenticated = true
 					ac.AuthToken = at
 					ac.User = u
@@ -86,12 +88,17 @@ func parseEmbyAuth(header string) (client, device, deviceID, version, token stri
 	const scheme = "MediaBrowser"
 
 	fields := strings.TrimSpace(header)
-	if !strings.HasPrefix(fields, scheme) {
+	// The scheme name is matched case-insensitively and must be followed
+	// by whitespace (or nothing).
+	if len(fields) < len(scheme) || !strings.EqualFold(fields[:len(scheme)], scheme) {
 		return "", "", "", "", ""
 	}
-	fields = strings.TrimSpace(fields[len(scheme):])
+	fields = fields[len(scheme):]
+	if fields != "" && fields[0] != ' ' && fields[0] != '\t' {
+		return "", "", "", "", ""
+	}
 
-	for _, part := range strings.Split(fields, ",") {
+	for _, part := range splitAuthPairs(fields) {
 		key, val, found := strings.Cut(strings.TrimSpace(part), "=")
 		if !found {
 			continue
@@ -100,6 +107,7 @@ func parseEmbyAuth(header string) (client, device, deviceID, version, token stri
 		if decoded, err := url.PathUnescape(val); err == nil {
 			val = decoded
 		}
+		// Keys are case-sensitive; a repeated key's last value wins.
 		switch strings.TrimSpace(key) {
 		case "Client":
 			client = val
@@ -116,6 +124,26 @@ func parseEmbyAuth(header string) (client, device, deviceID, version, token stri
 	return client, device, deviceID, version, token
 }
 
+// splitAuthPairs splits the parameter list of the Authorization header on
+// commas that are not inside a double-quoted value.
+func splitAuthPairs(s string) []string {
+	var parts []string
+	inQuotes := false
+	start := 0
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case '"':
+			inQuotes = !inQuotes
+		case ',':
+			if !inQuotes {
+				parts = append(parts, s[start:i])
+				start = i + 1
+			}
+		}
+	}
+	return append(parts, s[start:])
+}
+
 // requireAuth wraps a handler that must not run unless the request resolved
 // to a valid token (AuthContext.Authenticated). Applied per-route in
 // Server.routes, not globally — see withAuthContext's doc comment for why
@@ -127,8 +155,49 @@ func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
+		// users.me.R5, users.list.R7: a non-administrator outside an
+		// access-schedule window is refused. Reading the own profile by id
+		// is exempt (users.get.R7).
+		if !ac.User.IsAdministrator && !scheduleAllows(storedUserPolicy(ac.User), time.Now()) &&
+			!(r.Method == http.MethodGet && strings.EqualFold(r.URL.Path, "/Users/"+string(ac.User.ID))) {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
 		next(w, r)
 	}
+}
+
+// scheduleAllows reports whether the policy's access schedules permit the
+// given local time (users.auth.R18): no schedule means no restriction,
+// otherwise the time must fall in some entry's day and
+// StartHour <= hour <= EndHour, where hour includes the fraction of the
+// current hour. DayOfWeek also accepts Everyday, Weekday and Weekend.
+func scheduleAllows(p userPolicyDto, now time.Time) bool {
+	if len(p.AccessSchedules) == 0 {
+		return true
+	}
+	hour := float64(now.Hour()) + float64(now.Minute())/60 + float64(now.Second())/3600
+	for _, sc := range p.AccessSchedules {
+		if !scheduleDayMatches(sc.DayOfWeek, now.Weekday()) {
+			continue
+		}
+		if sc.StartHour <= hour && hour <= sc.EndHour {
+			return true
+		}
+	}
+	return false
+}
+
+func scheduleDayMatches(day string, wd time.Weekday) bool {
+	switch strings.ToLower(day) {
+	case "everyday":
+		return true
+	case "weekday":
+		return wd != time.Saturday && wd != time.Sunday
+	case "weekend":
+		return wd == time.Saturday || wd == time.Sunday
+	}
+	return strings.EqualFold(day, wd.String())
 }
 
 // requireAdmin wraps a handler that must not run unless the request

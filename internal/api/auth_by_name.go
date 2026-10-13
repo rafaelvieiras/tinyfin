@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -21,98 +22,217 @@ type authenticateUserByName struct {
 	Pw       string `json:"Pw"`
 }
 
-// authenticationResult mirrors the OpenAPI schema's AuthenticationResult.
-// SessionInfo is omitted (nullable): building an honest SessionInfoDto
-// requires session/realtime state (docs/06), which is out of scope for
-// this slice — omitting it rather than fabricating session data a client
-// might otherwise trust.
+// authenticationResult mirrors the OpenAPI schema's AuthenticationResult
+// (users.auth.R1).
 type authenticationResult struct {
-	User        userDto `json:"User"`
-	AccessToken string  `json:"AccessToken"`
-	ServerID    string  `json:"ServerId"`
+	User        userDto        `json:"User"`
+	SessionInfo sessionInfoDto `json:"SessionInfo"`
+	AccessToken string         `json:"AccessToken"`
+	ServerID    string         `json:"ServerId"`
 }
 
+// defaultLockoutAttempts is what LoginAttemptsBeforeLockout=0 stands for
+// (users.auth.R14).
+const defaultLockoutAttempts = 3
+
 // handleAuthenticateByName is the login route (docs/04): no token required
-// coming in, since it's how a client obtains one.
+// coming in, since it's how a client obtains one. Order of checks
+// (users.md): header fields (400) -> username (400) -> account and
+// password (401) -> disabled / remote access / schedule (403) -> device
+// allow-list and session limit (403) -> token issued.
 func (s *Server) handleAuthenticateByName(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// users.auth.R6: the header must carry all four client fields, even
+	// when the credentials are wrong; checked before the body is read.
+	ac, _ := AuthFromContext(ctx)
+	if ac == nil || ac.Client == "" || ac.Device == "" || ac.DeviceID == "" || ac.Version == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	var req authenticateUserByName
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	if strings.TrimSpace(req.Username) == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
-	user, err := s.store.GetUserByName(r.Context(), req.Username)
+	user, err := s.store.GetUserByName(ctx, req.Username)
 	if err != nil {
 		// Same response for "no such user" and "wrong password" (below) —
 		// distinguishing them in the response would let a client enumerate
-		// valid usernames.
+		// valid usernames. No failure counter exists for an unknown user.
 		s.logAuthFailure(r, req.Username)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
+	policy := storedUserPolicy(user)
+	now := time.Now()
 
 	// users.auth.R8: a disabled account is refused with 403 whether or not
-	// the password is correct, and the refusal is not a failed attempt
-	// (no activity-log failure entry, no lockout counting). Lockout
-	// counting, device allow-list and schedules are separate rules.
+	// the password is correct, and the refusal is not a failed attempt.
 	if user.IsDisabled {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
+	deviceAllowed := policy.EnableAllDevices || containsString(policy.EnabledDevices, ac.DeviceID)
 	if !passwordMatches(user.PasswordHash, req.Pw) {
 		s.logAuthFailure(r, req.Username)
+		// users.auth.R14: only an otherwise permitted account counts the
+		// failure; the answer is 401 either way (a lockout that this
+		// attempt triggers shows from the next attempt on).
+		if scheduleAllows(policy, now) && deviceAllowed {
+			if err := s.recordLoginFailure(r, user, policy); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+		}
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
-	// AuthenticateByName is called before any token exists, so the
-	// Client/Device/DeviceId/Version fields come off this specific
-	// request's header (parsed unconditionally by withAuthContext even
-	// though it carried no valid — or any — token).
-	ac, _ := AuthFromContext(r.Context())
-	if ac.DeviceID == "" {
-		// Nothing to attach the new token to. The real header format
-		// (docs/04) always includes DeviceId; a client that omits it is
-		// sending a malformed request, not a "no device" edge case.
-		w.WriteHeader(http.StatusBadRequest)
+	// users.auth.R21: no remote access from outside the local network.
+	if !policy.EnableRemoteAccess && !fromLocalNetwork(r) {
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
+	// users.auth.R18: applies to administrators too.
+	if !scheduleAllows(policy, now) {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	// users.auth.R17.
+	if !deviceAllowed {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	// users.auth.R16: a login that replaces the same device's token does
+	// not add a session.
+	if policy.MaxActiveSessions > 0 {
+		toks, err := s.store.QueryUserTokens(ctx, user.ID)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		active := 0
+		for _, t := range toks {
+			if string(t.DeviceID) != ac.DeviceID {
+				active++
+			}
+		}
+		if active >= policy.MaxActiveSessions {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+	}
 
-	now := time.Now().UTC()
-	if err := s.store.UpsertDevice(r.Context(), storage.Device{
+	nowUTC := now.UTC()
+	if err := s.store.UpsertDevice(ctx, storage.Device{
 		ID:               storage.DeviceID(ac.DeviceID),
 		Name:             ac.Device,
 		AppName:          ac.Client,
 		AppVersion:       ac.Version,
 		LastUserID:       user.ID,
 		LastUserName:     user.Name,
-		DateLastActivity: now,
+		DateLastActivity: nowUTC,
 	}); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	token, err := s.store.IssueToken(r.Context(), user.ID, storage.DeviceID(ac.DeviceID))
+	// IssueToken revokes the user's previous token on this DeviceId
+	// (users.auth.R10).
+	token, err := s.store.IssueToken(ctx, user.ID, storage.DeviceID(ac.DeviceID))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	user.LastLoginDate = &now
-	user.LastActivityDate = &now
-	if err := s.store.UpdateUser(r.Context(), user); err != nil {
+	// users.auth.R15, R22: a success resets the failure counter and
+	// records the login time.
+	user.LastLoginDate = &nowUTC
+	user.LastActivityDate = &nowUTC
+	if policy.InvalidLoginAttemptCount != 0 {
+		policy.InvalidLoginAttemptCount = 0
+		raw, err := json.Marshal(policy)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		user.Policy = string(raw)
+	}
+	if err := s.store.UpdateUser(ctx, user); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	session := s.sessions.loginSession(s.cfg.ServerID, ac.DeviceID, string(user.ID), user.Name, ac.Client, ac.Device, ac.Version, remoteEndPoint(r))
 
 	s.logAuthSuccess(r, user, ac.Client)
 
 	writeJSON(w, http.StatusOK, authenticationResult{
 		User:        s.userDto(user),
+		SessionInfo: session,
 		AccessToken: token.Token,
 		ServerID:    s.cfg.ServerID,
 	})
+}
+
+// recordLoginFailure counts one failed password attempt on a permitted
+// account (users.auth.R13-R14): no lockout when LoginAttemptsBeforeLockout
+// is negative, 0 behaves as 3, and reaching the limit disables the
+// account and revokes its tokens.
+func (s *Server) recordLoginFailure(r *http.Request, user storage.User, policy userPolicyDto) error {
+	limit := policy.LoginAttemptsBeforeLockout
+	if limit < 0 {
+		return nil
+	}
+	if limit == 0 {
+		limit = defaultLockoutAttempts
+	}
+	policy.InvalidLoginAttemptCount++
+	locked := policy.InvalidLoginAttemptCount >= limit
+	if locked {
+		policy.IsDisabled = true
+		user.IsDisabled = true
+	}
+	raw, err := json.Marshal(policy)
+	if err != nil {
+		return err
+	}
+	user.Policy = string(raw)
+	if err := s.store.UpdateUser(r.Context(), user); err != nil {
+		return err
+	}
+	if locked {
+		return s.store.RevokeUserTokens(r.Context(), user.ID, nil)
+	}
+	return nil
+}
+
+// fromLocalNetwork reports whether the request came from the loopback or a
+// private/link-local address (same notion as system.go's
+// system-info IsInNetwork); an unparseable peer address counts as local.
+func fromLocalNetwork(r *http.Request) bool {
+	ip := remoteIP(r)
+	if ip == nil {
+		return true
+	}
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast()
+}
+
+func containsString(list []string, v string) bool {
+	for _, x := range list {
+		if x == v {
+			return true
+		}
+	}
+	return false
 }
 
 // logAuthFailure appends an AuthenticationFailed activity log entry
