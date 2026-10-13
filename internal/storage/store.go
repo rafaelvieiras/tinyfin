@@ -151,6 +151,11 @@ type DeviceStore interface {
 type PlaystateStore interface {
 	GetPlaystate(ctx context.Context, userID UserID, itemID ItemID) (Playstate, error)
 	SetPlaystate(ctx context.Context, userID UserID, itemID ItemID, state Playstate) error
+	// FolderLeafCounts reports how many leaf items (non-folder descendants)
+	// the folder has and how many of them are unplayed for the user, where a
+	// leaf's played state is its own unless an ancestor folder was marked
+	// more recently than the leaf was last changed.
+	FolderLeafCounts(ctx context.Context, userID UserID, folderID ItemID) (total, unplayed int, err error)
 }
 
 // ImageStore covers references to item/branding images (04). Image bytes

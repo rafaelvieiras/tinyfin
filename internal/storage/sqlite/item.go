@@ -741,12 +741,14 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 		joinArgs = append(joinArgs, string(*filter.UserID))
 		if filter.Played != nil {
 			// A folder (series, season) is played only when it has at
-			// least one leaf and every leaf below it is played.
+			// least one leaf and every leaf below it is played, where a
+			// leaf is seen through its ancestors' folder marks.
 			leaf := "SELECT 1 FROM item_ancestors fa JOIN items fl ON fl.id = fa.item_id WHERE fa.ancestor_id = items.id AND fl.type NOT IN " + folderTypeSQL()
 			played := "CASE WHEN items.type IN " + folderTypeSQL() + " THEN (EXISTS (" + leaf + ") AND NOT EXISTS (" + leaf +
-				" AND NOT EXISTS (SELECT 1 FROM playstates fp WHERE fp.item_id = fl.id AND fp.user_id = ? AND fp.played = 1)))" +
+				" AND " + effectivePlayedSQL("fl.id") + " = 0))" +
 				" ELSE COALESCE(ps.played, 0) = 1 END"
-			addWhere("("+played+") = ?", string(*filter.UserID), boolToInt(*filter.Played))
+			uid := string(*filter.UserID)
+			addWhere("("+played+") = ?", uid, uid, uid, boolToInt(*filter.Played))
 		}
 		if filter.Favorite != nil {
 			addWhere("COALESCE(ps.is_favorite, 0) = ?", boolToInt(*filter.Favorite))

@@ -20,4 +20,16 @@ type Playstate struct {
 	// flag; nil means never set.
 	Rating *float64
 	Likes  *bool
+	// FolderMarkedAt is the UnixNano time of the last played/unplayed mark
+	// applied to this item as a folder (a series or season); zero when it
+	// was never marked. A folder mark is a state of the folder itself: it
+	// never writes to the leaves below it, and a leaf whose own state was
+	// last changed before the mark is reported through the folder as
+	// carrying the mark's played flag (FolderLeafCounts).
+	FolderMarkedAt int64
+	// Touch is a write-only hint: when set, SetPlaystate treats the write as
+	// a deliberate change of the played state even if every played-related
+	// value is already at its zero value (an explicit unmark of a leaf that
+	// never had a row), so an earlier folder mark no longer applies to it.
+	Touch bool
 }
