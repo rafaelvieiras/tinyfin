@@ -707,6 +707,28 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 			addWhere("NOT (" + expr + ")")
 		}
 	}
+	if filter.ParentalMax != nil || filter.RatingMax != nil || filter.RatingMin != nil || len(filter.BlockUnratedTypes) > 0 {
+		// The effective rating of an item is its own, else its series'
+		// (episodes and seasons carry series_id). NULL means unrated.
+		joins = append(joins, "LEFT JOIN items rating_series ON rating_series.id = items.series_id")
+		eff := "COALESCE(parental_score(items.official_rating), parental_score(rating_series.official_rating))"
+		if filter.ParentalMax != nil {
+			addWhere("("+eff+" IS NULL OR "+eff+" <= ?)", ratingScoreInt(*filter.ParentalMax))
+		}
+		if filter.RatingMax != nil {
+			addWhere("("+eff+" IS NULL OR "+eff+" <= ?)", ratingScoreInt(*filter.RatingMax))
+		}
+		if filter.RatingMin != nil {
+			addWhere("("+eff+" IS NULL OR "+eff+" >= ?)", ratingScoreInt(*filter.RatingMin))
+		}
+		if len(filter.BlockUnratedTypes) > 0 {
+			args := make([]any, len(filter.BlockUnratedTypes))
+			for i, t := range filter.BlockUnratedTypes {
+				args[i] = string(t)
+			}
+			addWhere("NOT (items.type IN ("+sqlPlaceholders(len(args))+") AND "+eff+" IS NULL)", args...)
+		}
+	}
 	if filter.HasParentalRating != nil {
 		if *filter.HasParentalRating {
 			addWhere("items.official_rating <> ''")

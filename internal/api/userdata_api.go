@@ -58,41 +58,6 @@ func userItemDataFromState(state storage.Playstate, item storage.Item) *userItem
 	return dto
 }
 
-// libraryAccess describes which libraries a user may see.
-type libraryAccess struct {
-	all bool
-	ids []storage.LibraryID
-}
-
-func (a libraryAccess) allows(lib storage.LibraryID) bool {
-	if a.all {
-		return true
-	}
-	for _, id := range a.ids {
-		if id == lib {
-			return true
-		}
-	}
-	return false
-}
-
-// libraryAccessFor reads the library restriction from a user's policy:
-// EnableAllFolders=false limits the user to EnabledFolders.
-func libraryAccessFor(u storage.User) libraryAccess {
-	p := storedUserPolicy(u)
-	if p.EnableAllFolders {
-		return libraryAccess{all: true}
-	}
-	acc := libraryAccess{ids: []storage.LibraryID{}}
-	for _, f := range p.EnabledFolders {
-		if n, ok := normalizeGUID(f); ok {
-			acc.ids = append(acc.ids, storage.LibraryID(n))
-		}
-		acc.ids = append(acc.ids, storage.LibraryID(f))
-	}
-	return acc
-}
-
 // resolveUserItem applies the shared item rules of both user data routes
 // and resolves the target user: the path item id must be a GUID (400, and
 // the all-zero id is invalid), the target user follows
@@ -117,7 +82,13 @@ func (s *Server) resolveUserItemFor(w http.ResponseWriter, r *http.Request, rawU
 		return storage.User{}, storage.Item{}, false
 	}
 	item, err := s.store.GetItem(r.Context(), storage.ItemID(id))
-	if err != nil || !libraryAccessFor(target).allows(item.LibraryID) {
+	if err != nil {
+		writeItemsProblem(w, http.StatusNotFound, "Not Found")
+		return storage.User{}, storage.Item{}, false
+	}
+	// The target user's own scope applies (library, tags, parental rules).
+	sc, err := s.itemsScopeFor(r.Context(), target)
+	if err != nil || !s.itemReadable(r.Context(), sc, item) {
 		writeItemsProblem(w, http.StatusNotFound, "Not Found")
 		return storage.User{}, storage.Item{}, false
 	}
@@ -225,12 +196,12 @@ func (s *Server) handleUserItemsResume(w http.ResponseWriter, r *http.Request) {
 		UserID:     &userID,
 		Resume:     true,
 		Recursive:  true,
-		Limit:      defaultItemsLimit,
+		Limit:      unboundedLimit,
 		SearchText: q.Get("searchterm"),
 	}
-	if acc := libraryAccessFor(target); !acc.all {
-		filter.RestrictToLibraries = true
-		filter.LibraryIDs = acc.ids
+	if err := s.scopedFilter(r.Context(), target, &filter); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 	if strings.EqualFold(q.Get("excludeactivesessions"), "true") {
 		filter.ExcludeIDs = append(filter.ExcludeIDs, s.sessions.nowPlayingFor(string(userID))...)

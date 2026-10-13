@@ -80,7 +80,7 @@ func (s *Server) handleThemeMedia(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	itemID := storage.ItemID(r.PathValue("itemId"))
 	item, err := s.store.GetItem(ctx, itemID)
-	if err != nil {
+	if err != nil || !s.itemReadableByCaller(r, item) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}

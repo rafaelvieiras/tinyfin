@@ -99,7 +99,7 @@ func (s *Server) resolveTranscodeDecision(r *http.Request, item storage.Item) pl
 func (s *Server) handleHLSMaster(w http.ResponseWriter, r *http.Request) {
 	itemID := storage.ItemID(r.PathValue("itemId"))
 	item, err := s.store.GetItem(r.Context(), itemID)
-	if err != nil {
+	if err != nil || !s.itemReadableByCaller(r, item) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -135,7 +135,7 @@ func (s *Server) handleHLSMaster(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleHLSPlaylist(w http.ResponseWriter, r *http.Request) {
 	itemID := storage.ItemID(r.PathValue("itemId"))
 	item, err := s.store.GetItem(r.Context(), itemID)
-	if err != nil {
+	if err != nil || !s.itemReadableByCaller(r, item) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}

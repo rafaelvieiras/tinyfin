@@ -253,12 +253,19 @@ func TestMarkPlayedHiddenItem(t *testing.T) {
 	tok := loginToken(t, e.ts.URL, "locked", "lockedpass")
 	code, _ := e.do(tok, http.MethodPost, "/UserPlayedItems/"+string(e.movie), "")
 	wantStatus(t, code, 404, "hidden mark")
-	// reports are accepted but write nothing
+	// A report is accepted and, as on the reference, writes the user data of
+	// the hidden item (playstate.start.R6).
 	code, _ = e.do(tok, http.MethodPost, "/Sessions/Playing", `{"ItemId":"`+string(e.movie)+`"}`)
 	wantStatus(t, code, 204, "hidden start")
 	st, _ := e.st.GetPlaystate(context.Background(), u.ID, e.movie)
-	if st.PlayCount != 0 {
-		t.Fatalf("hidden item data written: %+v", st)
+	if st.PlayCount != 1 {
+		t.Fatalf("hidden item data not written: %+v", st)
+	}
+	// ...but the hidden item is never exposed as now playing.
+	code, b := e.do(e.adminTok, http.MethodGet, "/Sessions", "")
+	wantStatus(t, code, 200, "sessions")
+	if strings.Contains(string(b), string(e.movie)) {
+		t.Fatalf("hidden item shown as now playing: %s", b)
 	}
 }
 

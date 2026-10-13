@@ -153,7 +153,7 @@ func baseMediaSourceInfo(item storage.Item, container string) mediaSourceInfoDto
 func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 	itemID := storage.ItemID(r.PathValue("itemId"))
 	item, err := s.store.GetItem(r.Context(), itemID)
-	if err != nil {
+	if err != nil || !s.itemReadableByCaller(r, item) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -266,7 +266,7 @@ func (s *Server) handleVideoStream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	item, err := s.store.GetItem(r.Context(), itemID)
-	if err != nil {
+	if err != nil || !s.itemReadableByCaller(r, item) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}

@@ -328,19 +328,25 @@ func (s *Server) handlePlaybackReport(w http.ResponseWriter, r *http.Request, ki
 		return
 	}
 
-	// An unknown or all-zero item is not an error. An item the user cannot
-	// see is accepted the same way (start.R6, stopped.R8) but is treated as
-	// unknown: nothing is recorded for it.
+	// An unknown or all-zero item is not an error and records nothing. An
+	// item the caller cannot see is accepted too (start.R6, stopped.R8) and,
+	// as on the reference, its user data IS written; the session never
+	// shows it as now playing, so the report leaks nothing back.
 	var item *storage.Item
+	visible := false
 	if rep.ItemID != "" {
-		if it, err := s.store.GetItem(r.Context(), storage.ItemID(rep.ItemID)); err == nil && libraryAccessFor(ac.User).allows(it.LibraryID) {
+		if it, err := s.store.GetItem(r.Context(), storage.ItemID(rep.ItemID)); err == nil {
 			item = &it
+			visible = s.itemReadableByCaller(r, it)
 		}
 	}
 
 	now := time.Now().UTC()
 	if item != nil {
 		s.recordPlaybackUserData(r.Context(), ac.User.ID, *item, rep, kind, now)
+	}
+	if !visible {
+		item = nil
 	}
 	s.updatePlaybackSession(r, ac, item, rep, kind, now)
 

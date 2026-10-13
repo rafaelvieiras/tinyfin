@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rafaelvieiras/tinyfin/internal/rating"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
 
@@ -199,6 +200,11 @@ type itemsScope struct {
 	libIDs      map[storage.LibraryID]bool
 	blockedTags []string
 	allowedTags []string
+	// maxRating is the policy's MaxParentalRating (+ sub rating); nil means
+	// no limit. blockUnrated holds the item types whose unrated items the
+	// policy's BlockUnratedItems hides.
+	maxRating    *rating.Score
+	blockUnrated []storage.ItemType
 }
 
 func (s *Server) itemsScopeFor(ctx context.Context, u storage.User) (itemsScope, error) {
@@ -208,6 +214,14 @@ func (s *Server) itemsScopeFor(ctx context.Context, u storage.User) (itemsScope,
 	}
 	p := storedUserPolicy(u)
 	sc := itemsScope{libIDs: map[storage.LibraryID]bool{}, blockedTags: p.BlockedTags, allowedTags: p.AllowedTags}
+	if p.MaxParentalRating != nil {
+		m := rating.Score{Value: *p.MaxParentalRating}
+		if p.MaxParentalSubRating != nil {
+			m.Sub = *p.MaxParentalSubRating
+		}
+		sc.maxRating = &m
+	}
+	sc.blockUnrated = unratedBlockTypes(p.BlockUnratedItems)
 	enabled := map[string]bool{}
 	for _, id := range p.EnabledFolders {
 		enabled[strings.ToLower(id)] = true
@@ -238,6 +252,131 @@ func (sc itemsScope) libraryIDs() []storage.LibraryID {
 		out = append(out, l.ID)
 	}
 	return out
+}
+
+// apply narrows a query to what the scope lets the user see: accessible
+// libraries, tag restrictions and the parental limits. Every item read path
+// builds its filter through this, so the restrictions stay in one place.
+func (sc itemsScope) apply(f *storage.ItemFilter) {
+	f.RestrictToLibraries = true
+	f.LibraryIDs = sc.libraryIDs()
+	f.BlockedTags = sc.blockedTags
+	f.AllowedTags = sc.allowedTags
+	f.ParentalMax = sc.maxRating
+	f.BlockUnratedTypes = sc.blockUnrated
+}
+
+// scopedFilter applies user's scope to f.
+func (s *Server) scopedFilter(ctx context.Context, u storage.User, f *storage.ItemFilter) error {
+	sc, err := s.itemsScopeFor(ctx, u)
+	if err != nil {
+		return err
+	}
+	sc.apply(f)
+	return nil
+}
+
+// unratedBlockTypes expands the policy's BlockUnratedItems groups into item
+// types. Movie covers movies; Series covers series, seasons and episodes;
+// Trailer, Music and Other likewise (Other is every type not named by
+// another group).
+func unratedBlockTypes(groups []string) []storage.ItemType {
+	var out []storage.ItemType
+	seen := map[storage.ItemType]bool{}
+	add := func(ts ...storage.ItemType) {
+		for _, t := range ts {
+			if !seen[t] {
+				seen[t] = true
+				out = append(out, t)
+			}
+		}
+	}
+	for _, g := range groups {
+		switch strings.ToLower(g) {
+		case "movie":
+			add(storage.ItemTypeMovie)
+		case "series":
+			add(storage.ItemTypeSeries, storage.ItemTypeSeason, storage.ItemTypeEpisode)
+		case "trailer":
+			add(storage.ItemTypeTrailer)
+		case "music":
+			add(storage.ItemTypeMusicArtist, storage.ItemTypeMusicAlbum, storage.ItemTypeAudio)
+		case "other":
+			add(storage.ItemTypeBoxSet, storage.ItemTypePlaylist, storage.ItemTypePerson, storage.ItemTypeGenre,
+				storage.ItemTypeMusicGenre, storage.ItemTypeStudio, storage.ItemTypeYear, storage.ItemTypeFolder,
+				storage.ItemTypeCollectionFolder, storage.ItemTypeUserView)
+		}
+	}
+	return out
+}
+
+// callerScope is the scope of the authenticated caller (an API key has no
+// user and so no restrictions).
+func (s *Server) callerScope(ctx context.Context) (itemsScope, error) {
+	var u storage.User
+	if ac, ok := AuthFromContext(ctx); ok && ac != nil {
+		u = ac.User
+	}
+	return s.itemsScopeFor(ctx, u)
+}
+
+// requireReadable answers 404 and reports false when the caller may not read
+// item (library, tag and parental rules); the answer is the same as for a
+// missing item.
+func (s *Server) requireReadable(w http.ResponseWriter, r *http.Request, item storage.Item) bool {
+	sc, err := s.callerScope(r.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return false
+	}
+	if !s.itemReadable(r.Context(), sc, item) {
+		w.WriteHeader(http.StatusNotFound)
+		return false
+	}
+	return true
+}
+
+// itemReadable is the single-item gate: the library and tag rules of
+// itemVisible plus the parental rules. Unlike the listing filter it compares
+// the rating value only (the sub rating is ignored), also requires the
+// series' own rating to fit, and does not apply the unrated block to
+// folder-like items (items.rating.R9).
+func (s *Server) itemReadable(ctx context.Context, sc itemsScope, item storage.Item) bool {
+	if !sc.itemVisible(item) {
+		return false
+	}
+	own, ownOK := rating.Parse(item.OfficialRating)
+	eff, effOK := own, ownOK
+	var ser rating.Score
+	serOK := false
+	if item.SeriesID != nil {
+		if parent, err := s.store.GetItem(ctx, *item.SeriesID); err == nil {
+			ser, serOK = rating.Parse(parent.OfficialRating)
+		}
+		if !effOK {
+			eff, effOK = ser, serOK
+		}
+	}
+	if sc.maxRating != nil {
+		if effOK && eff.ExceedsValue(*sc.maxRating) {
+			return false
+		}
+		if serOK && ser.ExceedsValue(*sc.maxRating) {
+			return false
+		}
+	}
+	if !effOK {
+		switch item.Type {
+		case storage.ItemTypeMovie, storage.ItemTypeSeries, storage.ItemTypeSeason, storage.ItemTypeEpisode,
+			storage.ItemTypeTrailer, storage.ItemTypeMusicArtist, storage.ItemTypeMusicAlbum, storage.ItemTypeAudio:
+			for _, t := range sc.blockUnrated {
+				if t == item.Type {
+					return false
+				}
+			}
+		}
+	}
+	return true
 }
 
 // itemVisible reports whether item is inside an accessible library and
@@ -305,7 +444,7 @@ func parseItemsQuery(q url.Values, legacy bool) (itemsQuery, error) {
 	if err != nil {
 		return iq, err
 	}
-	iq.limit = defaultItemsLimit
+	iq.limit = unboundedLimit
 	if limit != nil && *limit >= 0 {
 		iq.limit, iq.limitGiven = *limit, true
 	}
@@ -433,6 +572,13 @@ func parseItemsQuery(q url.Values, legacy bool) (itemsQuery, error) {
 	f.Genres = itemsListParam(q, "genres")
 	f.Tags = itemsListParam(q, "tags")
 	f.OfficialRatings = itemsListParam(q, "officialratings")
+	// Rating bounds: unrecognized or "Unrated" values filter nothing.
+	if sc, ok := rating.Parse(q.Get("maxofficialrating")); ok {
+		f.RatingMax = &sc
+	}
+	if sc, ok := rating.Parse(q.Get("minofficialrating")); ok {
+		f.RatingMin = &sc
+	}
 	f.PersonName = strings.TrimSpace(q.Get("person"))
 	for key, dst := range map[string]**bool{
 		"hasoverview": &f.HasOverview, "hassubtitles": &f.HasSubtitles, "hasimdbid": &f.HasImdbID,
@@ -615,10 +761,7 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filter := iq.filter
-	filter.RestrictToLibraries = true
-	filter.LibraryIDs = scope.libraryIDs()
-	filter.BlockedTags = scope.blockedTags
-	filter.AllowedTags = scope.allowedTags
+	scope.apply(&filter)
 	if filter.Played != nil || filter.Favorite != nil || filter.Resumable {
 		uid := user.ID
 		filter.UserID = &uid
@@ -890,7 +1033,7 @@ func (s *Server) handleItemGet(w http.ResponseWriter, r *http.Request) {
 		notFound()
 		return
 	}
-	if !scope.itemVisible(item) {
+	if !s.itemReadable(ctx, scope, item) {
 		notFound()
 		return
 	}

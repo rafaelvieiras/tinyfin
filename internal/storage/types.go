@@ -1,6 +1,10 @@
 package storage
 
-import "time"
+import (
+	"time"
+
+	"github.com/rafaelvieiras/tinyfin/internal/rating"
+)
 
 // Identifier types referenced throughout the Store interfaces (docs/05,
 // O3). All are string-backed: SQLite mode stores them as TEXT primary
@@ -151,6 +155,18 @@ type ItemFilter struct {
 	// case-insensitive.
 	BlockedTags []string
 	AllowedTags []string
+
+	// Parental limits. An item's rating is its own OfficialRating text or,
+	// when that has no value, its series' (rating.Parse; items.rating.*).
+	// ParentalMax is the user's policy maximum and RatingMax/RatingMin the
+	// MaxOfficialRating/MinOfficialRating query bounds: a rated item is
+	// hidden when it exceeds a maximum (value, then sub rating) or falls
+	// below the minimum; unrated items always pass them.
+	// BlockUnratedTypes hides items of those types that have no rating.
+	ParentalMax       *rating.Score
+	RatingMax         *rating.Score
+	RatingMin         *rating.Score
+	BlockUnratedTypes []ItemType
 
 	// AdjacentTo narrows the (otherwise ordered) result to the named item
 	// and its immediate previous/next neighbours.

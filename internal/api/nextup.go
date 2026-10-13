@@ -163,18 +163,27 @@ func (s *Server) handleShowsNextUp(w http.ResponseWriter, r *http.Request) {
 	// product, and a client that only ever sends ids it got from this same
 	// server (the real, intended use) never observes the difference
 	// anyway.
+	scope, err := s.callerScope(r.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	var seriesIDs []storage.ItemID
 	if v := q.Get("seriesid"); v != "" {
-		if _, err := s.store.GetItem(r.Context(), storage.ItemID(v)); err == nil {
+		// A series the caller may not read counts as unresolved (the
+		// all-series fallback below), so it never confirms it exists.
+		if it, err := s.store.GetItem(r.Context(), storage.ItemID(v)); err == nil && s.itemReadable(r.Context(), scope, it) {
 			seriesIDs = []storage.ItemID{storage.ItemID(v)}
 		}
 	}
 	if seriesIDs == nil {
-		page, err := s.store.QueryItems(r.Context(), storage.ItemFilter{
+		seriesFilter := storage.ItemFilter{
 			ItemTypes: []storage.ItemType{storage.ItemTypeSeries},
 			Recursive: true,
 			Limit:     nextUpSeriesScanLimit,
-		})
+		}
+		scope.apply(&seriesFilter)
+		page, err := s.store.QueryItems(r.Context(), seriesFilter)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -187,7 +196,7 @@ func (s *Server) handleShowsNextUp(w http.ResponseWriter, r *http.Request) {
 
 	candidates := make([]nextUpCandidate, 0, len(seriesIDs))
 	for _, sid := range seriesIDs {
-		c, err := s.nextUpCandidateForSeries(r.Context(), userID, sid, enableResumable, enableRewatching)
+		c, err := s.nextUpCandidateForSeries(r.Context(), scope, userID, sid, enableResumable, enableRewatching)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -299,13 +308,15 @@ func nextUpTotalRecordCount(enableParam string, realTotal int) int {
 //     completely watched through its last episode) -> no candidate, unless
 //     enableRewatching selects episode 1 instead (see its doc comment on
 //     the caller for what this project confirmed and didn't).
-func (s *Server) nextUpCandidateForSeries(ctx context.Context, userID storage.UserID, seriesID storage.ItemID, enableResumable, enableRewatching bool) (*nextUpCandidate, error) {
-	page, err := s.store.QueryItems(ctx, storage.ItemFilter{
+func (s *Server) nextUpCandidateForSeries(ctx context.Context, scope itemsScope, userID storage.UserID, seriesID storage.ItemID, enableResumable, enableRewatching bool) (*nextUpCandidate, error) {
+	epFilter := storage.ItemFilter{
 		ItemTypes: []storage.ItemType{storage.ItemTypeEpisode},
 		SeriesID:  &seriesID,
 		SortBy:    []storage.SortField{{By: storage.SortByParentIndexNumber}, {By: storage.SortByIndexNumber}},
 		Limit:     nextUpEpisodeScanLimit,
-	})
+	}
+	scope.apply(&epFilter)
+	page, err := s.store.QueryItems(ctx, epFilter)
 	if err != nil {
 		return nil, err
 	}

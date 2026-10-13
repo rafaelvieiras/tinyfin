@@ -31,13 +31,17 @@ import (
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
 
-// defaultItemsLimit bounds GET /Items when the client doesn't specify its
-// own limit. storage.ItemFilter.Limit is required and rejected if <= 0
-// (docs/05, item.go) specifically so no caller can accidentally
-// materialize a full catalog — this is where that "never pass an
-// unbounded limit through" rule gets enforced on the HTTP side (AGENTS.md
-// principle 1).
+// defaultItemsLimit bounds the listings the reference does cap (seasons,
+// next up). storage.ItemFilter.Limit is required and rejected if <= 0
+// (docs/05, item.go) so no caller materializes a catalog by accident; the
+// two listings the reference leaves uncapped pass unboundedLimit on
+// purpose (below).
 const defaultItemsLimit = 100
+
+// unboundedLimit is the page size of a listing the reference does not cap
+// (GET /Items and GET /UserItems/Resume without Limit return every match,
+// verified against it, items.list.R20). Paging, when asked for, still wins.
+const unboundedLimit = 1<<31 - 1
 
 // unboundedEpisodesLimit stands in for "no limit" on GET
 // /Shows/{seriesId}/Episodes when the client's request carries neither
@@ -207,6 +211,16 @@ func (s *Server) handleItemsLatest(w http.ResponseWriter, r *http.Request) {
 		ExcludeItemTypes: []storage.ItemType{storage.ItemTypeFolder},
 	}
 	s.applyParentID(r, &filter)
+	scope, err := s.callerScope(ctx)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	scope.apply(&filter)
+	if filter.LibraryID != nil && !scope.libIDs[*filter.LibraryID] {
+		writeJSON(w, http.StatusOK, []baseItemDto{})
+		return
+	}
 
 	if v := q.Get("limit"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
@@ -229,7 +243,14 @@ func (s *Server) handleItemsLatest(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-			items = grp
+			// The grouped cards bypass QueryItems, so apply the rules here.
+			vis := []storage.Item{}
+			for _, g := range grp {
+				if s.itemReadable(ctx, scope, g) {
+					vis = append(vis, g)
+				}
+			}
+			items = vis
 		}
 	}
 
@@ -327,6 +348,9 @@ func (s *Server) handleShowSeasons(w http.ResponseWriter, r *http.Request) {
 		SortBy:    []storage.SortField{{By: storage.SortByIndexNumber}},
 		Limit:     defaultItemsLimit,
 	}
+	if !s.seriesReadable(w, r, seriesID, &filter) {
+		return
+	}
 	page, err := s.store.QueryItems(r.Context(), filter)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -382,6 +406,9 @@ func (s *Server) handleShowEpisodes(w http.ResponseWriter, r *http.Request) {
 	} else {
 		filter.SeriesID = &seriesID
 	}
+	if !s.seriesReadable(w, r, seriesID, &filter) {
+		return
+	}
 
 	// Same explicit-limit/startIndex handling as handleItemsList — a client
 	// that does send these (e.g. a future paged episode view) is honored
@@ -431,6 +458,10 @@ func (s *Server) handleItemAncestors(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !s.requireReadable(w, r, item) {
+		return
+	}
+
 	ancestors := []baseItemDto{}
 	for item.ParentID != nil {
 		parent, err := s.store.GetItem(r.Context(), *item.ParentID)
@@ -456,6 +487,11 @@ func (s *Server) handleItemAncestors(w http.ResponseWriter, r *http.Request) {
 // leaves a permanently-empty visible section instead of a cleanly-hidden
 // one. An honest empty QueryResult lets the client hide it itself.
 func (s *Server) handleItemSimilar(w http.ResponseWriter, r *http.Request) {
+	item, err := s.store.GetItem(r.Context(), storage.ItemID(r.PathValue("itemId")))
+	if err != nil || !s.itemReadableByCaller(r, item) {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{Items: []baseItemDto{}})
 }
 
@@ -572,4 +608,28 @@ func (s *Server) handleItemImage(w http.ResponseWriter, r *http.Request) {
 	// playback.go. No request-supplied path fragment is ever joined into
 	// a filesystem path here.
 	http.ServeFile(w, r, ref.Path)
+}
+
+// itemReadableByCaller is itemReadable for the authenticated caller.
+func (s *Server) itemReadableByCaller(r *http.Request, item storage.Item) bool {
+	sc, err := s.callerScope(r.Context())
+	return err == nil && s.itemReadable(r.Context(), sc, item)
+}
+
+// seriesReadable resolves seriesID for a season/episode listing: an unknown
+// series or one the caller may not read answers 404, otherwise the caller's
+// scope is applied to filter.
+func (s *Server) seriesReadable(w http.ResponseWriter, r *http.Request, seriesID storage.ItemID, filter *storage.ItemFilter) bool {
+	sc, err := s.callerScope(r.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return false
+	}
+	series, err := s.store.GetItem(r.Context(), seriesID)
+	if err != nil || !s.itemReadable(r.Context(), sc, series) {
+		w.WriteHeader(http.StatusNotFound)
+		return false
+	}
+	sc.apply(filter)
+	return true
 }

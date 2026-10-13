@@ -55,11 +55,13 @@ type itemCounts struct {
 // no-full-catalog-materialization discipline AGENTS.md principle 1
 // requires of every read in this project, applied to a handler whose only
 // job is a number.
-func countItemsByType(ctx context.Context, store storage.ItemStore, t storage.ItemType) (int, error) {
-	page, err := store.QueryItems(ctx, storage.ItemFilter{
+func countItemsByType(ctx context.Context, store storage.ItemStore, sc itemsScope, t storage.ItemType) (int, error) {
+	f := storage.ItemFilter{
 		ItemTypes: []storage.ItemType{t},
 		Limit:     1,
-	})
+	}
+	sc.apply(&f)
+	page, err := store.QueryItems(ctx, f)
 	if err != nil {
 		return 0, err
 	}
@@ -76,18 +78,23 @@ func countItemsByType(ctx context.Context, store storage.ItemStore, t storage.It
 // up front.
 func (s *Server) handleItemsCounts(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	scope, err := s.callerScope(ctx)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
-	movies, err := countItemsByType(ctx, s.store, storage.ItemTypeMovie)
+	movies, err := countItemsByType(ctx, s.store, scope, storage.ItemTypeMovie)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	series, err := countItemsByType(ctx, s.store, storage.ItemTypeSeries)
+	series, err := countItemsByType(ctx, s.store, scope, storage.ItemTypeSeries)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	episodes, err := countItemsByType(ctx, s.store, storage.ItemTypeEpisode)
+	episodes, err := countItemsByType(ctx, s.store, scope, storage.ItemTypeEpisode)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
