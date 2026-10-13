@@ -3,6 +3,7 @@ name: CI
 # Builds, vets and tests every push and pull request. The end-to-end browser
 # suite (e2e/) and the conformance run against a reference server need a
 # running server and real media, so they are run by hand (see AGENTS.md).
+# The conformance ratchet against a throwaway Tinyfin runs here (job below).
 on:
   push:
     branches: [main]
@@ -35,3 +36,29 @@ jobs:
         run: go test ./...
       - name: Contract clean-room lint
         run: go run ./cmd/conformance lint
+
+  conformance:
+    name: Conformance ratchet
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Generate the synthetic media tree
+        run: scripts/conformance-media.sh "$RUNNER_TEMP/media"
+      - name: Start a throwaway Tinyfin
+        run: scripts/conformance-tinyfin-up.sh 18098
+      - name: Compare against the committed baseline
+        # Fails only when a scenario that passes in docs/contract/baseline.json
+        # no longer passes. The throwaway admin credential is the script default.
+        run: |
+          go run ./cmd/conformance run -base http://127.0.0.1:18098 \
+            -admin-user admin -admin-pass 'Conformance-Admin-1' \
+            -media-root "$RUNNER_TEMP/media" \
+            -baseline docs/contract/baseline.json -skip-tags time-dependent

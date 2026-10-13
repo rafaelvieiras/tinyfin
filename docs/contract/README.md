@@ -50,9 +50,10 @@ reference source open in the same session.
 
 | Path | Content |
 |---|---|
-| `specs/<area>.md` | Behavior specs: rules with stable IDs (`users.auth.R3`), prose, scenario index |
+| `specs/<area>.md` | Behavior specs: rules with stable IDs (`users.auth.R3`), prose, scenario index. `specs/wire.md` holds the cross-cutting rules (id format, failure bodies) |
 | `scenarios/<area>.json` | Executable scenarios (array per file) |
 | `fixtures.json` | Declarative server state (users, libraries, items) applied via the public API |
+| `baseline.json` | Committed per-scenario status of Tinyfin (the ratchet, see *Baseline and ratchet*); never edited by hand |
 | `scope-excluded.md` | Legacy routes excluded from the contract, with their replacement |
 | `../../internal/conformance` | Runner, assertions, fixtures, clean-room lint |
 | `../../cmd/conformance` | CLI |
@@ -86,20 +87,48 @@ reference source open in the same session.
 }
 ```
 
-* `as`: `anonymous` (default), `admin`, or a fixture user key. The runner adds
-  the identity's `Authorization` header unless `request.noAuth` is true.
+* `as`: `anonymous` (default), `admin`, a fixture user key, `apikey` (a
+  run-specific API key that belongs to no user; the scenario `requires`
+  `identity:apikey`) or `token:{{capture.x}}` (a token captured earlier in the
+  scenario). The runner adds the identity's `Authorization` header unless
+  `request.noAuth` is true.
 * Templates: `{{user.<key>.id|name|password}}`, `{{item.<key>.id|name}}`,
   `{{library.<key>.name}}`, `{{capture.<name>}}`, `{{server.mediaroot}}`.
+* `{{x|dashed}}` renders a 32-hex id in its 8-4-4-4-12 form;
+  `{{device.<identity>}}` is the DeviceId the runner uses for an identity and
+  `{{run.suffix}}` the per-run DeviceId suffix (see *Running*).
 * `expect.status` is a number or an array (any of); `expect.headers` values are
   `present`, `absent`, `/regex/` or a literal (case-insensitive); `expect.json`
   asserts on `$.path` with ops `eq ne exists absent type len gte lte contains
-  notcontains matches in`.
+  notcontains matches in hex32` (`hex32`: every value at the path is 32
+  lowercase hex digits without dashes; an empty wildcard result fails).
+  `expect.problem: <status>` asserts an RFC 9110 problem document (`type`,
+  `title`, `status` equal to the number).
 * `capture` stores a value (`$.json.path` or `header:Name`) for later steps.
+* Non-HTTP steps: `{"sleepMs": 1500}` pauses (time-based rules);
+  `{"config": {"set": {"QuickConnectAvailable": false}}}` patches the
+  server-wide configuration and the original is **always restored** when the
+  scenario ends (also when it fails, and on Ctrl-C); a `ws` step drives a
+  WebSocket client: `{"ws": {"open": "a", "as": "admin"}}` connects
+  `/socket?ApiKey=<token>` (optionally `refuseStatus` to expect a refused
+  handshake, `param` to send the token under another name),
+  `{"ws": {"wait": "a", "type": "UserUpdated", "timeoutMs": 5000}}` blocks for
+  a message of that type and applies the step's `expect.json`/`capture` to it
+  (`absent: true` asserts that none arrives), `{"ws": {"close": "a"}}`
+  disconnects (sockets also close when the scenario ends).
 * `requires` lists fixture keys; a missing fixture makes the scenario
   **BLOCKED**, not failed (the server cannot even set the state up yet).
 * `divergence.reason` marks an intentional difference from the reference.
 * `pending` parks a scenario that is specified but not yet verified.
 * Mutating scenarios must restore state in `cleanup` (it always runs).
+* Scenarios tagged `risky` (they try to demote or delete the last
+  administrator) are skipped unless the runner is given `-risky`, so a buggy
+  implementation cannot lock the rest of the suite out.
+* A fixture library marked `"lazy": true` (with items carrying
+  `"library": "<key>"`, e.g. the 330 s `item:long` movie that exercises the
+  resume-position save branch) is created, scanned and removed around each
+  scenario that `requires` it, so its media never shows up in the listings
+  other scenarios count.
 
 ## Running
 
@@ -114,7 +143,48 @@ go run ./cmd/conformance run -base http://127.0.0.1:18098 -admin-user admin \
 ```
 
 Exit status is non-zero when any scenario fails. `-json out.json` writes a
-machine-readable report; `-scope`, `-tags`, `-only` narrow the run.
+machine-readable report; `-scope`, `-tags`, `-skip-tags`, `-only` narrow the run.
+
+`-device-suffix auto` appends a random suffix to every DeviceId the runner and
+the scenarios use, so concurrent runs against one server do not revoke each
+other's tokens (a login on a DeviceId revokes that device's previous token).
+It is off by default because a few scenarios address a device by its literal
+runner-generated id; those use `{{device.<identity>}}` instead.
+`scripts/conformance-ref-up.sh` honors `REF_NAME` (parallel containers) and
+`REF_DOCKER_ARGS="--dns 127.0.0.1"` (keeps the reference offline so online
+metadata providers cannot rename the fixture titles).
+
+## Baseline and ratchet
+
+`baseline.json` records the per-scenario status (`pass`/`fail`/`blocked`/
+`skipped`) of Tinyfin and, once, the counts of the manual reference-server run
+the scenarios were validated against. It turns the suite into a ratchet:
+scenarios may only move from not-passing to passing.
+
+```sh
+# compare (what CI runs): exit 1 when a scenario that passed in the baseline no longer passes
+go run ./cmd/conformance run -base ... -admin-user admin -admin-pass '...' -media-root ... \
+    -baseline docs/contract/baseline.json
+# refresh after an intentional improvement (never edit baseline.json by hand)
+go run ./cmd/conformance run -base ... -admin-user admin -admin-pass '...' -media-root ... \
+    -write-baseline docs/contract/baseline.json [-ref-report ref.json]
+# per-area progress table
+go run ./cmd/conformance progress
+```
+
+* Regressions fail the run; `IMPROVED` and `NEW` scenarios are listed so the
+  baseline can be refreshed in the same change that fixed (or added) them.
+* Refresh when a change flips scenarios to passing or adds scenarios; commit
+  the new file with the change. A refresh that lowers a count needs a reason
+  in the commit message.
+* `-ref-report` takes the `-json` report of a `-reference` run to record its
+  counts. The reference validation itself stays manual (it needs the 12.x
+  image); a scenario must pass there before it enters the baseline as a goal.
+* CI (`.github/workflows/ci.yml`, job `conformance`) builds Tinyfin, generates
+  the media tree, starts a throwaway server with
+  `scripts/conformance-tinyfin-up.sh` and runs the ratchet with
+  `-skip-tags time-dependent` (those scenarios assume they do not run in the
+  03:xx local hour).
 
 ## Coverage accounting
 
@@ -122,3 +192,17 @@ Every spec rule has an ID; scenarios list the rules they exercise in
 `covers`. A rule with no scenario is a hole in the contract, and a scenario
 with no rule is unexplained. `go test ./internal/conformance` checks both
 directions for the specs that exist.
+
+## Progress
+
+Per-area status of Tinyfin at the committed baseline (generated with
+`go run ./cmd/conformance progress`; the reference server passes every
+scenario that is not pending, divergent or `risky`):
+
+| Area | Scenarios | Pass | Fail | Blocked | Skipped |
+|---|---|---|---|---|---|
+| items | 105 | 105 | 0 | 0 | 0 |
+| playstate | 101 | 27 | 67 | 0 | 7 |
+| users | 148 | 137 | 4 | 3 | 4 |
+| wire | 6 | 2 | 3 | 1 | 0 |
+| **Total** | 360 | 271 | 74 | 4 | 11 |
