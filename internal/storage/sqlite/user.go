@@ -268,3 +268,24 @@ func (s *Store) SetDisplayPreferences(ctx context.Context, userID storage.UserID
 	}
 	return nil
 }
+
+func (s *Store) GetUserConfiguration(ctx context.Context, userID storage.UserID) (string, error) {
+	var doc string
+	err := s.ex.QueryRowContext(ctx, `SELECT json FROM user_configuration WHERE user_id = ?`, string(userID)).Scan(&doc)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("sqlite: getting configuration of user %q: %w", userID, err)
+	}
+	return doc, nil
+}
+
+func (s *Store) SetUserConfiguration(ctx context.Context, userID storage.UserID, configuration string) error {
+	const query = `INSERT INTO user_configuration (user_id, json) VALUES (?, ?)
+		ON CONFLICT(user_id) DO UPDATE SET json = excluded.json`
+	if _, err := s.exec(ctx, query, string(userID), configuration); err != nil {
+		return fmt.Errorf("sqlite: setting configuration of user %q: %w", userID, err)
+	}
+	return nil
+}

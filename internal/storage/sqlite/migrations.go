@@ -54,9 +54,11 @@ func loadMigrations() ([]migration, error) {
 	}
 
 	sort.Slice(migs, func(i, j int) bool { return migs[i].version < migs[j].version })
-	for i, m := range migs {
-		if m.version != i+1 {
-			return nil, fmt.Errorf("sqlite: migrations must be a contiguous 1-based sequence, got version %d at position %d", m.version, i+1)
+	// Versions only have to be unique and increasing: independent branches
+	// reserve their numbers up front, so a gap is legitimate until they merge.
+	for i := 1; i < len(migs); i++ {
+		if migs[i].version == migs[i-1].version {
+			return nil, fmt.Errorf("sqlite: duplicate migration version %d (%s, %s)", migs[i].version, migs[i-1].name, migs[i].name)
 		}
 	}
 	return migs, nil

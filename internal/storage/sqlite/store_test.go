@@ -36,8 +36,8 @@ func TestOpenAndMigrate(t *testing.T) {
 	if err := st.db.QueryRow(`SELECT MAX(version) FROM schema_migrations`).Scan(&version); err != nil {
 		t.Fatalf("reading schema_migrations: %v", err)
 	}
-	if version != 6 {
-		t.Fatalf("expected schema version 6, got %d", version)
+	if version != 8 {
+		t.Fatalf("expected schema version 8, got %d", version)
 	}
 
 	// Reopening an already-migrated database must be a no-op, not an error.
@@ -605,5 +605,44 @@ func TestConcurrentUpsertItem(t *testing.T) {
 	close(errs)
 	for err := range errs {
 		t.Errorf("concurrent UpsertItem: %v", err)
+	}
+}
+
+func TestUserConfigurationRoundTripAndCascade(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+	id, err := st.CreateUser(ctx, storage.User{Name: "cfg"})
+	if err != nil {
+		t.Fatalf("CreateUser: %v", err)
+	}
+	if got, err := st.GetUserConfiguration(ctx, id); err != nil || got != "" {
+		t.Fatalf("unset configuration = %q, %v; want empty", got, err)
+	}
+	for _, doc := range []string{`{"SubtitleMode":"Always"}`, `{"SubtitleMode":"None"}`} {
+		if err := st.SetUserConfiguration(ctx, id, doc); err != nil {
+			t.Fatalf("SetUserConfiguration: %v", err)
+		}
+		if got, _ := st.GetUserConfiguration(ctx, id); got != doc {
+			t.Fatalf("configuration = %q, want %q", got, doc)
+		}
+	}
+	if err := st.DeleteUser(ctx, id); err != nil {
+		t.Fatalf("DeleteUser: %v", err)
+	}
+	if got, _ := st.GetUserConfiguration(ctx, id); got != "" {
+		t.Errorf("configuration survived account deletion: %q", got)
+	}
+}
+
+func TestGetUserByNameIsCaseInsensitive(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+	id, err := st.CreateUser(ctx, storage.User{Name: "MixedCase"})
+	if err != nil {
+		t.Fatalf("CreateUser: %v", err)
+	}
+	got, err := st.GetUserByName(ctx, "MIXEDcase")
+	if err != nil || got.ID != id || got.Name != "MixedCase" {
+		t.Fatalf("GetUserByName = %+v, %v; want the account stored as MixedCase", got, err)
 	}
 }

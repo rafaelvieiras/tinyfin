@@ -125,6 +125,14 @@ type UserStore interface {
 	// belongs here rather than in session state (06).
 	GetDisplayPreferences(ctx context.Context, userID UserID, client string) (DisplayPreferences, error)
 	SetDisplayPreferences(ctx context.Context, userID UserID, client string, prefs DisplayPreferences) error
+
+	// GetUserConfiguration/SetUserConfiguration cover the per-account
+	// preferences document (subtitle mode, language preferences, home
+	// screen ordering, ...). The document is opaque to storage, like
+	// User.Policy; an account that never saved one reads back "". The
+	// document is removed together with the account.
+	GetUserConfiguration(ctx context.Context, userID UserID) (string, error)
+	SetUserConfiguration(ctx context.Context, userID UserID, configuration string) error
 }
 
 // DeviceStore covers registered devices (the DeviceId a client sends on
