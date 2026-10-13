@@ -426,54 +426,6 @@ func mediaTypesFilter(q []string) []storage.ItemType {
 	return types
 }
 
-// handleUserItemsResume serves GET /UserItems/Resume — the home screen's
-// "Continue Watching" row, and the same query jellyfin-web's item-detail
-// resume check ultimately depends on being non-empty. Requires the caller's
-// own playstate (storage.ItemFilter.Resume, sqlite/item.go), so unlike
-// handleItemsList this always sets UserID from the authenticated caller
-// rather than accepting one as a query param — resume state is never
-// meaningful for anyone but the requester.
-func (s *Server) handleUserItemsResume(w http.ResponseWriter, r *http.Request) {
-	ac, ok := AuthFromContext(r.Context())
-	if !ok || ac == nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
-	q := r.URL.Query()
-	userID := ac.User.ID
-	filter := storage.ItemFilter{
-		UserID:    &userID,
-		Resume:    true,
-		Recursive: true,
-		Limit:     defaultItemsLimit,
-		ItemTypes: mediaTypesFilter(q["mediaTypes"]),
-	}
-	s.applyParentID(r, &filter)
-
-	if v := q.Get("limit"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			filter.Limit = n
-		}
-	}
-
-	page, err := s.store.QueryItems(r.Context(), filter)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	items := make([]baseItemDto, 0, len(page.Items))
-	for _, it := range page.Items {
-		items = append(items, s.baseItemDto(r.Context(), it))
-	}
-	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{
-		Items:            items,
-		TotalRecordCount: resolveTotalRecordCount(q.Get("enableTotalRecordCount"), len(items), page.TotalCount),
-		StartIndex:       page.Offset,
-	})
-}
-
 // applyParentID resolves a request's parentId query param the same way
 // handleItemsList does (a library root ID vs. an ordinary item ID) — pulled
 // out since handleItemsLatest and handleUserItemsResume both need the exact

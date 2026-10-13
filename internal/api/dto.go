@@ -866,14 +866,7 @@ func (s *Server) userDataFor(ctx context.Context, userID storage.UserID, item st
 	if err != nil {
 		state = storage.Playstate{}
 	}
-	dto := &userItemDataDto{
-		PlaybackPositionTicks: state.PlaybackPositionTicks,
-		PlayCount:             state.PlayCount,
-		IsFavorite:            state.IsFavorite,
-		Played:                state.Played,
-		Key:                   string(item.ID),
-		ItemID:                string(item.ID),
-	}
+	dto := userItemDataFromState(state, item)
 	if childCountItemTypes[item.Type] {
 		if n, err := s.unplayedItemCountFor(ctx, userID, item); err == nil {
 			dto.UnplayedItemCount = n

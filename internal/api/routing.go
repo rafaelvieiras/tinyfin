@@ -76,6 +76,7 @@ var routePaths = []string{
 	// further down this list.
 	"/Items/{itemId}/ThemeMedia",
 	"/UserItems/Resume",
+	"/UserItems/{itemId}/UserData",
 	"/Shows/{seriesId}/Seasons",
 	"/Shows/{seriesId}/Episodes",
 	// No length collision with the two entries above (3 segments here vs.

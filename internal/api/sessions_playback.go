@@ -140,11 +140,24 @@ func (s *Server) reportPlaybackPosition(r *http.Request) storage.ItemID {
 		state = storage.Playstate{}
 	}
 	state.PlaybackPositionTicks = *body.PositionTicks
+	// A position below the minimum resume percentage (5% of the runtime)
+	// is not a resume position: the saved one is cleared, which drops the
+	// item from the resume list (playstate.progress.R2, playstate.resume.R3).
+	// The maximum-percentage and minimum-duration rules (progress.R3-R5)
+	// are not applied here.
+	if item, err := s.store.GetItem(r.Context(), itemID); err == nil && item.RunTimeTicks != nil && *item.RunTimeTicks > 0 &&
+		*body.PositionTicks*100 < *item.RunTimeTicks*minResumePercent {
+		state.PlaybackPositionTicks = 0
+	}
 	now := time.Now().UTC()
 	state.LastPlayedDate = &now
 	_ = s.store.SetPlaystate(r.Context(), ac.User.ID, itemID, state)
 	return itemID
 }
+
+// minResumePercent is the smallest share of the runtime, in percent, a
+// reported position must reach to be kept as a resume position.
+const minResumePercent = 5
 
 // userItemDataDto mirrors the OpenAPI schema's UserItemDataDto, trimmed to
 // the fields jellyfin-sdk-kotlin's UserItemDataDto.kt declares required
@@ -167,6 +180,13 @@ type userItemDataDto struct {
 	// items). See dto.go's unplayedItemCountFor and docs/12's
 	// "Season/Series/BoxSet UserData — UnplayedItemCount".
 	UnplayedItemCount *int `json:"UnplayedItemCount,omitempty"`
+
+	// Optional members, present only when they have a value (set by the
+	// UserItems/{itemId}/UserData routes, userdata_api.go).
+	PlayedPercentage *float64   `json:"PlayedPercentage,omitempty"`
+	Rating           *float64   `json:"Rating,omitempty"`
+	Likes            *bool      `json:"Likes,omitempty"`
+	LastPlayedDate   *time.Time `json:"LastPlayedDate,omitempty"`
 }
 
 // handleUserPlayedItemsMark is POST /UserPlayedItems/{itemId} — called by
