@@ -276,6 +276,17 @@ type Item struct {
 	DateCreated time.Time
 }
 
+// HasMediaFile reports whether Path names a playable file of the item's own.
+// A Series or Season stores its folder as Path (matching the reference
+// server, which reports the directory there) but has no file to play,
+// probe or stream.
+func (i Item) HasMediaFile() bool {
+	if i.Path == "" {
+		return false
+	}
+	return i.Type != ItemTypeSeries && i.Type != ItemTypeSeason
+}
+
 // SeriesActivity is one entry of QuerySeriesLatestActivity's result: a
 // series' own most recent Episode/Season DateCreated within that query's
 // scope. Backs GET /Items/Latest's per-series ranking (internal/api's

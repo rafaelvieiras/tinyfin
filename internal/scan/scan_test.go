@@ -268,6 +268,11 @@ func TestScanLibraryTVShows(t *testing.T) {
 	if series.EndDate == nil {
 		t.Error("series.EndDate is nil, want enrich() to overlay Result.EndDate")
 	}
+	// Series and Season carry their own folder as Path (the reference server
+	// reports the directory there; the conformance fixtures match on it).
+	if want := filepath.Join(root, "Example Show (1986)"); series.Path != want {
+		t.Errorf("series.Path = %q, want %q", series.Path, want)
+	}
 
 	seasonPage, err := st.QueryItems(context.Background(), storage.ItemFilter{
 		LibraryID: &lib.ID, ParentID: &series.ID, ItemTypes: []storage.ItemType{storage.ItemTypeSeason}, Limit: 10,
@@ -278,6 +283,9 @@ func TestScanLibraryTVShows(t *testing.T) {
 	season := seasonPage.Items[0]
 	if season.IndexNumber == nil || *season.IndexNumber != 1 {
 		t.Errorf("season.IndexNumber = %v, want 1", season.IndexNumber)
+	}
+	if season.Path != base {
+		t.Errorf("season.Path = %q, want %q", season.Path, base)
 	}
 	if season.Name != "Saiyan Saga" {
 		t.Errorf("season.Name = %q, want %q (provider enrichment applied, not the generic \"Season 1\" fallback)", season.Name, "Saiyan Saga")

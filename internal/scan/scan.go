@@ -352,6 +352,7 @@ func (s *Scanner) walkSeries(ctx context.Context, pool *jobPool, lib storage.Lib
 		seriesItem := storage.Item{
 			ID: seriesID, Type: storage.ItemTypeSeries, LibraryID: lib.ID,
 			Name: seriesTitle, SortName: seriesTitle, DateCreated: fileDateAdded(seriesPath),
+			Path: seriesPath, // the series directory, as the reference server reports it
 		}
 		if seriesYear > 0 {
 			seriesItem.ProductionYear = &seriesYear
@@ -399,6 +400,7 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 			ParentID: &seriesID, SeriesID: &seriesID,
 			Name: fmt.Sprintf("Season %d", seasonNum), SortName: fmt.Sprintf("%04d", seasonNum),
 			IndexNumber: &idx, DateCreated: fileDateAdded(seasonPath),
+			Path: seasonPath,
 		}
 		if err := s.store.UpsertItem(ctx, seasonItem); err != nil {
 			log.Printf("scan: upserting season %q: %v", e.Name(), err)
@@ -629,9 +631,10 @@ func (s *Scanner) RefreshItem(ctx context.Context, itemID storage.ItemID, replac
 // store their own video file's Path directly (storage.Item.Path); Episode
 // has no local-artwork convention of its own in this scanner (processEpisode
 // never calls seedFolderImages either, so neither does this) and Series/
-// Season never store a Path at all (they have no single "file" of their
-// own) — for those, seriesFolder/seasonFolder derive the folder from one
-// child episode's Path instead. A series/season with no episode rows yet
+// Season store their folder as Path since the scanner started recording
+// it, but rows cataloged by an older version have none until rescanned — so
+// seriesFolder/seasonFolder keep deriving the folder from one child
+// episode's Path instead. A series/season with no episode rows yet
 // has nothing to derive a folder from, so this step is silently skipped —
 // RefreshItem's remote-provider step below still runs regardless.
 func (s *Scanner) refreshLocalImages(ctx context.Context, item *storage.Item) {
@@ -695,8 +698,8 @@ func (s *Scanner) refreshLocalNFO(ctx context.Context, pool *jobPool, item *stor
 }
 
 // seriesFolder derives a series item's own root folder from one of its
-// episodes' stored Path — Series rows never store a Path of their own (see
-// RefreshItem's doc comment) — by walking up two levels from an episode
+// episodes' stored Path — older Series rows have no Path of their own until
+// rescanned (see refreshLocalImages' doc comment) — by walking up two levels from an episode
 // file (.../SeriesFolder/Season NN/episode.ext), the same Kodi/Jellyfin
 // layout ScanLibrary's own walkSeries/walkSeasons/walkEpisodes already
 // assume throughout. ok is false if the series has no episode rows yet to

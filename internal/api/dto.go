@@ -419,7 +419,7 @@ func (s *Server) unplayedItemCountFor(ctx context.Context, userID storage.UserID
 // Series/Season/BoxSet), matching PlaybackInfo's own 404 for such an item
 // (nothing to describe).
 func mediaSourcesFor(item storage.Item) []mediaSourceInfoDto {
-	if item.Path == "" {
+	if !item.HasMediaFile() {
 		return nil
 	}
 	source := baseMediaSourceInfo(item, item.Container)

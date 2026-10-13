@@ -130,7 +130,12 @@ func (s *Server) localThemeMedia(item storage.Item) (songs, videos []baseItemDto
 	if item.Path == "" {
 		return songs, videos
 	}
+	// A Series/Season's Path is already its folder; a file item's own
+	// folder is its parent directory.
 	folder := filepath.Dir(item.Path)
+	if !item.HasMediaFile() {
+		folder = item.Path
+	}
 
 	entries, err := os.ReadDir(folder)
 	if err == nil {

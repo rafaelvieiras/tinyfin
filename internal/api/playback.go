@@ -270,7 +270,7 @@ func (s *Server) handleVideoStream(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	if item.Path == "" {
+	if !item.HasMediaFile() {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}

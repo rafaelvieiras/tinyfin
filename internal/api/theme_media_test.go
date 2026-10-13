@@ -152,3 +152,61 @@ func TestThemeMediaUnknownItem404s(t *testing.T) {
 		t.Errorf("GET /Items/{itemId}/ThemeMedia (unknown item) status = %d, want 404", resp.StatusCode)
 	}
 }
+
+// TestFolderShapedItemWithPathHasNoFileBehavior guards the scanner storing a
+// Series' own folder as Path (the reference server reports the series
+// directory there): the folder must not be treated as a playable file
+// (no MediaSources, no stream), and theme media is looked up inside the
+// folder itself rather than its parent.
+func TestFolderShapedItemWithPathHasNoFileBehavior(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "kim", "kimpass")
+	token := loginToken(t, ts.URL, user.Name, "kimpass")
+	get := authedClient(t, ts.URL, token)
+
+	root := t.TempDir()
+	seriesDir := filepath.Join(root, "Folder Show (2019)")
+	if err := os.MkdirAll(seriesDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(seriesDir, "theme.mp3"), []byte("theme"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	libID := createTestLibrary(t, st, "FolderShowLib", storage.CollectionTypeTVShows)
+	if err := st.UpsertItem(context.Background(), storage.Item{
+		Type: storage.ItemTypeSeries, LibraryID: libID, Name: "Folder Show", Path: seriesDir,
+	}); err != nil {
+		t.Fatalf("UpsertItem: %v", err)
+	}
+	itemID := mustFindItemByName(t, st, libID, "Folder Show")
+
+	resp := get(http.MethodGet, "/Items/"+string(itemID))
+	defer resp.Body.Close()
+	var dto baseItemDto
+	if err := json.NewDecoder(resp.Body).Decode(&dto); err != nil {
+		t.Fatalf("decoding item: %v", err)
+	}
+	if dto.Path != seriesDir {
+		t.Errorf("Path = %q, want %q", dto.Path, seriesDir)
+	}
+	if len(dto.MediaSources) != 0 {
+		t.Errorf("MediaSources = %+v, want none for a folder-shaped item", dto.MediaSources)
+	}
+
+	stream := get(http.MethodGet, "/Videos/"+string(itemID)+"/stream")
+	defer stream.Body.Close()
+	if stream.StatusCode != http.StatusNotFound {
+		t.Errorf("stream status = %d, want 404 for a folder-shaped item", stream.StatusCode)
+	}
+
+	theme := get(http.MethodGet, "/Items/"+string(itemID)+"/ThemeMedia")
+	defer theme.Body.Close()
+	var result themeMediaResponse
+	if err := json.NewDecoder(theme.Body).Decode(&result); err != nil {
+		t.Fatalf("decoding ThemeMedia: %v", err)
+	}
+	if got := result.ThemeSongsResult.TotalRecordCount; got != 1 {
+		t.Errorf("ThemeSongsResult.TotalRecordCount = %d, want 1 (theme.mp3 inside the series folder)", got)
+	}
+}
