@@ -5,12 +5,12 @@
 # HTTP endpoint, nothing from it is read as source.
 #
 #   scripts/conformance-ref-up.sh <media-root> [port]      # start
-#   docker rm -f tinyfin-conformance-ref                    # stop
+#   docker rm -f "${REF_NAME:-tinyfin-conformance-ref}"     # stop (REF_NAME isolates parallel runs)
 set -euo pipefail
 MEDIA="${1:?usage: conformance-ref-up.sh <media-root> [port]}"
 PORT="${2:-18096}"
 IMAGE="${REF_IMAGE:-jellyfin/jellyfin:12.2}"
-NAME=tinyfin-conformance-ref
+NAME="${REF_NAME:-tinyfin-conformance-ref}"
 ADMIN_USER="${ADMIN_USER:-admin}"
 ADMIN_PASS="${ADMIN_PASS:-Conformance-Admin-1}"
 

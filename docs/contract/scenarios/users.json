@@ -41,7 +41,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-success-shape\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-success-shape{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -84,7 +84,7 @@
             {
               "path": "$.SessionInfo.DeviceId",
               "op": "eq",
-              "value": "sc-users-auth-success-shape"
+              "value": "sc-users-auth-success-shape{{run.suffix}}"
             },
             {
               "path": "$.SessionInfo.Client",
@@ -150,7 +150,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-username-case-insensitive\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-username-case-insensitive{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -174,7 +174,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-username-case-insensitive\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-username-case-insensitive{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -242,7 +242,7 @@
             "Pw": "definitely-wrong"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-wrong-password\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-wrong-password{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -259,7 +259,7 @@
             "Pw": ""
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-wrong-password\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-wrong-password{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -275,7 +275,7 @@
             "Username": "tmp-auth-wrong-password"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-wrong-password\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-wrong-password{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -317,7 +317,7 @@
             "Pw": "whatever"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-unknown-user\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-unknown-user{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -366,7 +366,7 @@
             "Pw": "wrong"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-unknown-and-wrong-look-alike\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-unknown-and-wrong-look-alike{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -383,7 +383,7 @@
             "Pw": "wrong"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-unknown-and-wrong-look-alike\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-unknown-and-wrong-look-alike{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -424,7 +424,7 @@
             "Pw": "x"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-username-missing\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-username-missing{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -441,7 +441,7 @@
             "Pw": "x"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-username-missing\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-username-missing{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -458,7 +458,7 @@
             "Pw": "x"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-username-missing\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-username-missing{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -486,7 +486,7 @@
           "path": "/Users/AuthenticateByName",
           "bodyRaw": "this is not json",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-malformed-body\", Version=\"1.0.0\"",
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-malformed-body{{run.suffix}}\", Version=\"1.0.0\"",
             "Content-Type": "application/json"
           }
         },
@@ -536,7 +536,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Device=\"Conformance\", DeviceId=\"sc-users-auth-header-missing-client\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Device=\"Conformance\", DeviceId=\"sc-users-auth-header-missing-client{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -596,7 +596,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", DeviceId=\"sc-users-auth-header-missing-device\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", DeviceId=\"sc-users-auth-header-missing-device{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -716,7 +716,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-header-missing-version\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-header-missing-version{{run.suffix}}\""
           }
         },
         "expect": {
@@ -863,7 +863,7 @@
             "Pw": ""
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-passwordless-account\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-passwordless-account{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -886,7 +886,7 @@
             "Username": "tmp-auth-passwordless-account"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-passwordless-account\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-passwordless-account{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -903,7 +903,7 @@
             "Pw": "anything"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-passwordless-account\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-passwordless-account{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -963,7 +963,7 @@
             "Password": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-password-field-name\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-password-field-name{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -980,7 +980,7 @@
             "PasswordSha1": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-password-field-name\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-password-field-name{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1073,7 +1073,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-disabled-account\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-disabled-account{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1090,7 +1090,7 @@
             "Pw": "wrong"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-disabled-account\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-disabled-account{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1124,7 +1124,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-disabled-account\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-disabled-account{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1186,7 +1186,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-token-usable\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-token-usable{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1202,7 +1202,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-token-usable\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-token-usable{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -1275,7 +1275,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-relogin-same-device-revokes\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-relogin-same-device-revokes{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1291,7 +1291,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-relogin-same-device-revokes\", Version=\"1.0.0\", Token=\"{{capture.tok1}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-relogin-same-device-revokes{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok1}}\""
           }
         },
         "expect": {
@@ -1308,7 +1308,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-relogin-same-device-revokes\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-relogin-same-device-revokes{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1331,7 +1331,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-relogin-same-device-revokes\", Version=\"1.0.0\", Token=\"{{capture.tok1}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-relogin-same-device-revokes{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok1}}\""
           }
         },
         "expect": {
@@ -1344,7 +1344,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-relogin-same-device-revokes\", Version=\"1.0.0\", Token=\"{{capture.tok2}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-relogin-same-device-revokes{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok2}}\""
           }
         },
         "expect": {
@@ -1404,7 +1404,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-different-devices-coexist-a\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-different-devices-coexist-a{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1424,7 +1424,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-different-devices-coexist-b\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-different-devices-coexist-b{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1440,7 +1440,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-different-devices-coexist-a\", Version=\"1.0.0\", Token=\"{{capture.tokA}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-different-devices-coexist-a{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokA}}\""
           }
         },
         "expect": {
@@ -1453,7 +1453,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-different-devices-coexist-b\", Version=\"1.0.0\", Token=\"{{capture.tokB}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-different-devices-coexist-b{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokB}}\""
           }
         },
         "expect": {
@@ -1531,7 +1531,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-relogin-other-user-same-device\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-relogin-other-user-same-device{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1551,7 +1551,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-relogin-other-user-same-device\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-relogin-other-user-same-device{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1567,7 +1567,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-relogin-other-user-same-device\", Version=\"1.0.0\", Token=\"{{capture.tok1}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-relogin-other-user-same-device{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok1}}\""
           }
         },
         "expect": {
@@ -1587,7 +1587,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-relogin-other-user-same-device\", Version=\"1.0.0\", Token=\"{{capture.tok2}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-relogin-other-user-same-device{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok2}}\""
           }
         },
         "expect": {
@@ -1663,7 +1663,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "mediabrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-header-parsing-1\", Version=\"1.0.0\""
+            "Authorization": "mediabrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-header-parsing-1{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1672,7 +1672,7 @@
             {
               "path": "$.SessionInfo.DeviceId",
               "op": "eq",
-              "value": "sc-users-auth-header-parsing-1"
+              "value": "sc-users-auth-header-parsing-1{{run.suffix}}"
             }
           ]
         }
@@ -1687,7 +1687,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"My%20Phone\", DeviceId=\"sc-users-auth-header-parsing-2\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"My%20Phone\", DeviceId=\"sc-users-auth-header-parsing-2{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1711,7 +1711,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"My+Tablet\", DeviceId=\"sc-users-auth-header-parsing-plus\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"My+Tablet\", DeviceId=\"sc-users-auth-header-parsing-plus{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1735,7 +1735,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Phone, Kitchen\", DeviceId=\"sc-users-auth-header-parsing-3\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Phone, Kitchen\", DeviceId=\"sc-users-auth-header-parsing-3{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1759,7 +1759,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-header-parsing-first\", DeviceId=\"sc-users-auth-header-parsing-4\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-header-parsing-first{{run.suffix}}\", DeviceId=\"sc-users-auth-header-parsing-4{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1768,7 +1768,7 @@
             {
               "path": "$.SessionInfo.DeviceId",
               "op": "eq",
-              "value": "sc-users-auth-header-parsing-4"
+              "value": "sc-users-auth-header-parsing-4{{run.suffix}}"
             }
           ]
         }
@@ -1783,7 +1783,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", deviceid=\"sc-users-auth-header-parsing-5\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", deviceid=\"sc-users-auth-header-parsing-5{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1844,7 +1844,7 @@
             "Pw": "wrong-0"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-no-default-lockout\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-no-default-lockout{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1861,7 +1861,7 @@
             "Pw": "wrong-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-no-default-lockout\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-no-default-lockout{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1878,7 +1878,7 @@
             "Pw": "wrong-2"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-no-default-lockout\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-no-default-lockout{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1895,7 +1895,7 @@
             "Pw": "wrong-3"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-no-default-lockout\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-no-default-lockout{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1912,7 +1912,7 @@
             "Pw": "wrong-4"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-no-default-lockout\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-no-default-lockout{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1929,7 +1929,7 @@
             "Pw": "wrong-5"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-no-default-lockout\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-no-default-lockout{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -1946,7 +1946,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-no-default-lockout\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-no-default-lockout{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2058,7 +2058,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-after-limit\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-after-limit{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2078,7 +2078,7 @@
             "Pw": "w1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-after-limit\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-after-limit{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2095,7 +2095,7 @@
             "Pw": "w2"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-after-limit\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-after-limit{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2112,7 +2112,7 @@
             "Pw": "w3"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-after-limit\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-after-limit{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2129,7 +2129,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-after-limit\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-after-limit{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2160,7 +2160,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-after-limit\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-after-limit{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -2196,7 +2196,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-after-limit\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-after-limit{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2289,7 +2289,7 @@
             "Pw": "w"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-counter-reset-on-success\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-counter-reset-on-success{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2306,7 +2306,7 @@
             "Pw": "w"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-counter-reset-on-success\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-counter-reset-on-success{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2323,7 +2323,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-counter-reset-on-success\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-counter-reset-on-success{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2340,7 +2340,7 @@
             "Pw": "w"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-counter-reset-on-success\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-counter-reset-on-success{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2357,7 +2357,7 @@
             "Pw": "w"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-counter-reset-on-success\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-counter-reset-on-success{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2374,7 +2374,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-counter-reset-on-success\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-counter-reset-on-success{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2467,7 +2467,7 @@
             "Pw": "w"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-zero-means-three\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-zero-means-three{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2484,7 +2484,7 @@
             "Pw": "w"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-zero-means-three\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-zero-means-three{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2501,7 +2501,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-zero-means-three\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-zero-means-three{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2518,7 +2518,7 @@
             "Pw": "w"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-zero-means-three\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-zero-means-three{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2535,7 +2535,7 @@
             "Pw": "w"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-zero-means-three\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-zero-means-three{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2552,7 +2552,7 @@
             "Pw": "w"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-zero-means-three\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-zero-means-three{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2569,7 +2569,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-zero-means-three\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-lockout-zero-means-three{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2661,7 +2661,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-max-active-sessions-a\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-max-active-sessions-a{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2681,7 +2681,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-max-active-sessions-b\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-max-active-sessions-b{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2715,7 +2715,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-max-active-sessions-b\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-max-active-sessions-b{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2808,7 +2808,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-device-restriction\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-device-restriction{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2842,7 +2842,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-device-restriction\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-device-restriction{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2917,7 +2917,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-device-restriction-revokes-existing\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-device-restriction-revokes-existing{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -2933,7 +2933,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-device-restriction-revokes-existing\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-device-restriction-revokes-existing{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -2964,7 +2964,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-device-restriction-revokes-existing\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-device-restriction-revokes-existing{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -3093,7 +3093,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-access-schedule\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-access-schedule{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -3127,7 +3127,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-access-schedule\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-access-schedule{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -3165,7 +3165,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-invalid-token\", Version=\"1.0.0\", Token=\"0123456789abcdef0123456789abcdef\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-invalid-token{{run.suffix}}\", Version=\"1.0.0\", Token=\"0123456789abcdef0123456789abcdef\""
           }
         },
         "expect": {
@@ -3178,7 +3178,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-invalid-token\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-invalid-token{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -3201,7 +3201,7 @@
           "method": "GET",
           "path": "/Users/Public",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-invalid-token\", Version=\"1.0.0\", Token=\"0123456789abcdef0123456789abcdef\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-invalid-token{{run.suffix}}\", Version=\"1.0.0\", Token=\"0123456789abcdef0123456789abcdef\""
           }
         },
         "expect": {
@@ -3266,7 +3266,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-disabled-user-token\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-disabled-user-token{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -3282,7 +3282,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-disabled-user-token\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-disabled-user-token{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -3312,7 +3312,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-disabled-user-token\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-disabled-user-token{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -3373,7 +3373,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-deleted-user-token\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-deleted-user-token{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -3389,7 +3389,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-deleted-user-token\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-deleted-user-token{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -3413,7 +3413,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-deleted-user-token\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-deleted-user-token{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -3430,7 +3430,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-deleted-user-token\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-deleted-user-token{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -3491,7 +3491,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-apikey-query\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-apikey-query{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -3573,7 +3573,7 @@
             "Pw": "{{user.alice.password}}"
           },
           "headers": {
-            "X-Emby-Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-legacy-xemby-authorization-login\", Version=\"1.0.0\""
+            "X-Emby-Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-legacy-xemby-authorization-login{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -3623,7 +3623,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-legacy-xemby-token\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-legacy-xemby-token{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -3665,7 +3665,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-legacy-xemby-token\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-legacy-xemby-token{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -3726,7 +3726,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-legacy-api-key-query\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-legacy-api-key-query{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -3803,7 +3803,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-legacy-emby-scheme\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-legacy-emby-scheme{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -3819,7 +3819,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "Emby Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-legacy-emby-scheme\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "Emby Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-token-legacy-emby-scheme{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -4366,7 +4366,7 @@
           "method": "GET",
           "path": "/Users",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-list-requires-auth\", Version=\"1.0.0\", Token=\"0123456789abcdef0123456789abcdef\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-list-requires-auth{{run.suffix}}\", Version=\"1.0.0\", Token=\"0123456789abcdef0123456789abcdef\""
           }
         },
         "expect": {
@@ -5078,7 +5078,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-get-own-profile\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-get-own-profile{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -5094,7 +5094,7 @@
           "method": "GET",
           "path": "/Users/{{capture.u}}",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-get-own-profile\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-get-own-profile{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -5644,7 +5644,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-me-outside-schedule\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-me-outside-schedule{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -5713,7 +5713,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-me-outside-schedule\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-me-outside-schedule{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -5726,7 +5726,7 @@
           "method": "GET",
           "path": "/Users",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-me-outside-schedule\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-me-outside-schedule{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -5739,7 +5739,7 @@
           "method": "GET",
           "path": "/Users/{{capture.u}}",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-me-outside-schedule\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-me-outside-schedule{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -5980,7 +5980,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-create-password-set\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-create-password-set{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -6004,7 +6004,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-create-password-set\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-create-password-set{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -6021,7 +6021,7 @@
             "Pw": "wrong"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-create-password-set\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-create-password-set{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -6113,7 +6113,7 @@
             "Pw": ""
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-create-no-password\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-create-no-password{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -6910,7 +6910,7 @@
             "Pw": "Old-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-delete-name-reusable\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-delete-name-reusable{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -6927,7 +6927,7 @@
             "Pw": ""
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-delete-name-reusable\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-delete-name-reusable{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -7221,7 +7221,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-delete-admin-deletes-self-with-other-admin\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-delete-admin-deletes-self-with-other-admin{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -7237,7 +7237,7 @@
           "method": "DELETE",
           "path": "/Users/{{capture.u}}",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-delete-admin-deletes-self-with-other-admin\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-delete-admin-deletes-self-with-other-admin{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -7250,7 +7250,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-delete-admin-deletes-self-with-other-admin\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-delete-admin-deletes-self-with-other-admin{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -7387,7 +7387,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-admin-only\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-admin-only{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -7424,7 +7424,7 @@
             "EnableContentDeletion": true
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-admin-only\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-admin-only{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -8437,7 +8437,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-disable-revokes-tokens-a\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-disable-revokes-tokens-a{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -8457,7 +8457,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-disable-revokes-tokens-b\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-disable-revokes-tokens-b{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -8490,7 +8490,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-disable-revokes-tokens-a\", Version=\"1.0.0\", Token=\"{{capture.tokA}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-disable-revokes-tokens-a{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokA}}\""
           }
         },
         "expect": {
@@ -8503,7 +8503,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-disable-revokes-tokens-b\", Version=\"1.0.0\", Token=\"{{capture.tokB}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-disable-revokes-tokens-b{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokB}}\""
           }
         },
         "expect": {
@@ -8520,7 +8520,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-disable-revokes-tokens-a\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-disable-revokes-tokens-a{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -8554,7 +8554,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-disable-revokes-tokens-a\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-disable-revokes-tokens-a{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -8570,7 +8570,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-disable-revokes-tokens-a\", Version=\"1.0.0\", Token=\"{{capture.tokC}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-disable-revokes-tokens-a{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokC}}\""
           }
         },
         "expect": {
@@ -8645,7 +8645,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-promote-and-demote\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-promote-and-demote{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -8664,7 +8664,7 @@
             "Name": "tmp-policy-promote-and-demote-x"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-promote-and-demote\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-promote-and-demote{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -8697,7 +8697,7 @@
             "Name": "tmp-policy-promote-and-demote-x"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-promote-and-demote\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-promote-and-demote{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -8733,7 +8733,7 @@
             "Name": "tmp-policy-promote-and-demote-y"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-promote-and-demote\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-promote-and-demote{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -8834,7 +8834,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-self-demotion\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-self-demotion{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -8870,7 +8870,7 @@
             "IsAdministrator": false
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-self-demotion\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-self-demotion{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -8887,7 +8887,7 @@
             "Name": "tmp-policy-self-demotion-x"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-self-demotion\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-policy-self-demotion{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -8948,7 +8948,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-change-own\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-change-own{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -8968,7 +8968,7 @@
             "NewPw": "Tmp-Pass-2"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-change-own\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-change-own{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -8986,7 +8986,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-change-own-2\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-change-own-2{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -9003,7 +9003,7 @@
             "Pw": "Tmp-Pass-2"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-change-own-2\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-change-own-2{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -9063,7 +9063,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-wrong-current\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-wrong-current{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -9083,7 +9083,7 @@
             "NewPw": "Tmp-Pass-2"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-wrong-current\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-wrong-current{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -9099,7 +9099,7 @@
             "NewPw": "Tmp-Pass-2"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-wrong-current\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-wrong-current{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -9116,7 +9116,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-wrong-current-2\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-wrong-current-2{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -9173,7 +9173,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-legacy-hash-field-ignored\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-legacy-hash-field-ignored{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -9193,7 +9193,7 @@
             "NewPw": "Tmp-Pass-2"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-legacy-hash-field-ignored\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-legacy-hash-field-ignored{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -9210,7 +9210,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-legacy-hash-field-ignored-2\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-legacy-hash-field-ignored-2{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -9291,7 +9291,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-other-user-non-admin\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-other-user-non-admin{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -9352,7 +9352,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-sets-other-a\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-sets-other-a{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -9386,7 +9386,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-sets-other-a\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-sets-other-a{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -9403,7 +9403,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-sets-other-b\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-sets-other-b{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -9420,7 +9420,7 @@
             "Pw": "Tmp-Pass-2"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-sets-other-b\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-sets-other-b{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -9480,7 +9480,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-keeps-current-token-a\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-keeps-current-token-a{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -9500,7 +9500,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-keeps-current-token-b\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-keeps-current-token-b{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -9520,7 +9520,7 @@
             "NewPw": "Tmp-Pass-2"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-keeps-current-token-a\", Version=\"1.0.0\", Token=\"{{capture.tokA}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-keeps-current-token-a{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokA}}\""
           }
         },
         "expect": {
@@ -9534,7 +9534,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-keeps-current-token-a\", Version=\"1.0.0\", Token=\"{{capture.tokA}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-keeps-current-token-a{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokA}}\""
           }
         },
         "expect": {
@@ -9547,7 +9547,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-keeps-current-token-b\", Version=\"1.0.0\", Token=\"{{capture.tokB}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-keeps-current-token-b{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokB}}\""
           }
         },
         "expect": {
@@ -9604,7 +9604,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-remove-own\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-remove-own{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -9624,7 +9624,7 @@
             "NewPw": ""
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-remove-own\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-remove-own{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -9642,7 +9642,7 @@
             "Pw": ""
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-remove-own-2\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-remove-own-2{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -9659,7 +9659,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-remove-own-3\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-remove-own-3{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -9715,7 +9715,7 @@
             "Pw": ""
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-set-on-passwordless\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-set-on-passwordless{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -9734,7 +9734,7 @@
             "NewPw": "Tmp-Pass-9"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-set-on-passwordless\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-set-on-passwordless{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -9770,7 +9770,7 @@
             "Pw": "Tmp-Pass-9"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-set-on-passwordless-2\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-set-on-passwordless-2{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -9830,7 +9830,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-reset-own\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-reset-own{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -9849,7 +9849,7 @@
             "ResetPassword": true
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-reset-own\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-reset-own{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -9863,7 +9863,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-reset-own\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-reset-own{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -9880,7 +9880,7 @@
             "Pw": ""
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-reset-own-2\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-reset-own-2{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -9937,7 +9937,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-reset-by-admin\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-reset-by-admin{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -9975,7 +9975,7 @@
             "Pw": ""
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-reset-by-admin-2\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-reset-by-admin-2{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -10289,7 +10289,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-self-without-user-id\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-self-without-user-id{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -10308,7 +10308,7 @@
             "NewPw": "Tmp-Pass-2"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-self-without-user-id\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-self-without-user-id{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -10326,7 +10326,7 @@
             "Pw": "Tmp-Pass-2"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-self-without-user-id-2\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-self-without-user-id-2{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -10415,7 +10415,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-self-with-user-id\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-self-with-user-id{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -10437,7 +10437,7 @@
             "NewPw": "Tmp-Pass-2"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-self-with-user-id\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-self-with-user-id{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -10457,7 +10457,7 @@
             "NewPw": "Tmp-Pass-2"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-self-with-user-id\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-self-with-user-id{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -10475,7 +10475,7 @@
             "Pw": "Tmp-Pass-2"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-self-with-user-id-2\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-admin-self-with-user-id-2{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -10608,7 +10608,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-preference-access-disabled\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-preference-access-disabled{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -10645,7 +10645,7 @@
             "NewPw": "Tmp-Pass-2"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-preference-access-disabled\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-preference-access-disabled{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -10706,7 +10706,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-change-own\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-change-own{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -10726,7 +10726,7 @@
             "NewPw": "Tmp-Pass-2"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-change-own\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-change-own{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -10744,7 +10744,7 @@
             "Pw": "Tmp-Pass-2"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-change-own-2\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-change-own-2{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -10819,7 +10819,7 @@
             "Pw": "Tmp-Pass-2"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-admin-sets-other\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-admin-sets-other{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -10880,7 +10880,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-reset\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-reset{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -10899,7 +10899,7 @@
             "ResetPassword": true
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-reset\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-reset{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -10913,7 +10913,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-reset\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-reset{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -10930,7 +10930,7 @@
             "Pw": ""
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-reset-2\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-reset-2{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -11019,7 +11019,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-admin-self-needs-current\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-admin-self-needs-current{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -11038,7 +11038,7 @@
             "NewPw": "Tmp-Pass-2"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-admin-self-needs-current\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-admin-self-needs-current{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -11055,7 +11055,7 @@
             "NewPw": "Tmp-Pass-2"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-admin-self-needs-current\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-password-alias-admin-self-needs-current{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -11188,7 +11188,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-rename-and-configuration\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-rename-and-configuration{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -11217,7 +11217,7 @@
             }
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-rename-and-configuration\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-rename-and-configuration{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -11273,7 +11273,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-rename-and-configuration-2\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-rename-and-configuration-2{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -11290,7 +11290,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-rename-and-configuration-3\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-rename-and-configuration-3{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -11350,7 +11350,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-policy-in-body-ignored\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-policy-in-body-ignored{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -11378,7 +11378,7 @@
             "HasPassword": false
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-policy-in-body-ignored\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-policy-in-body-ignored{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -11429,7 +11429,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-policy-in-body-ignored-2\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-policy-in-body-ignored-2{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -12300,7 +12300,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-alias-self\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-alias-self{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -12326,7 +12326,7 @@
             }
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-alias-self\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-update-alias-self{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -12538,7 +12538,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-configuration-update-own\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-configuration-update-own{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -12567,7 +12567,7 @@
             "EnableLocalPassword": true
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-configuration-update-own\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-configuration-update-own{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -12581,7 +12581,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-configuration-update-own\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-configuration-update-own{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -13021,7 +13021,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-configuration-alias-update\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-configuration-alias-update{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -13040,7 +13040,7 @@
             "SubtitleMode": "Smart"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-configuration-alias-update\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-configuration-alias-update{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
           }
         },
         "expect": {
@@ -13350,7 +13350,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-forgot-does-not-change-password\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-forgot-does-not-change-password{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -13495,7 +13495,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-ui\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-ui{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -13511,7 +13511,7 @@
           "method": "POST",
           "path": "/QuickConnect/Initiate",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-tv\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-tv{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -13544,7 +13544,7 @@
             "code": "{{capture.code}}"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-ui\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
           }
         },
         "expect": {
@@ -13586,7 +13586,7 @@
             {
               "path": "$.SessionInfo.DeviceId",
               "op": "eq",
-              "value": "sc-users-quickconnect-exchange-tv"
+              "value": "sc-users-quickconnect-exchange-tv{{run.suffix}}"
             }
           ]
         },
@@ -13600,7 +13600,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-tv\", Version=\"1.0.0\", Token=\"{{capture.tvTok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-tv{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tvTok}}\""
           }
         },
         "expect": {
@@ -13733,7 +13733,7 @@
           "method": "POST",
           "path": "/QuickConnect/Initiate",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-admin-authorizes-other-user-tv\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-admin-authorizes-other-user-tv{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -13833,7 +13833,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-tv\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-tv{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -13853,7 +13853,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-ui\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-ui{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -13869,7 +13869,7 @@
           "method": "POST",
           "path": "/QuickConnect/Initiate",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-tv\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-tv{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -13889,7 +13889,7 @@
             "code": "{{capture.code}}"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-ui\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
           }
         },
         "expect": {
@@ -13918,7 +13918,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-tv\", Version=\"1.0.0\", Token=\"{{capture.oldTok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-tv{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.oldTok}}\""
           }
         },
         "expect": {
@@ -13931,7 +13931,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-tv\", Version=\"1.0.0\", Token=\"{{capture.newTok}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-tv{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.newTok}}\""
           }
         },
         "expect": {
@@ -13944,7 +13944,7 @@
           "method": "GET",
           "path": "/Users/Me",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-ui\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
           }
         },
         "expect": {
@@ -14005,7 +14005,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-secret-single-use-ui\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-secret-single-use-ui{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -14021,7 +14021,7 @@
           "method": "POST",
           "path": "/QuickConnect/Initiate",
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-secret-single-use-tv\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-secret-single-use-tv{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {
@@ -14041,7 +14041,7 @@
             "code": "{{capture.code}}"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-secret-single-use-ui\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-secret-single-use-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
           }
         },
         "expect": {
@@ -14130,7 +14130,7 @@
             "Pw": "Tmp-Pass-1"
           },
           "headers": {
-            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-last-login-recorded\", Version=\"1.0.0\""
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-last-login-recorded{{run.suffix}}\", Version=\"1.0.0\""
           }
         },
         "expect": {

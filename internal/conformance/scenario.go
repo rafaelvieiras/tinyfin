@@ -66,6 +66,39 @@ type Step struct {
 	Request Request           `json:"request"`
 	Expect  Expect            `json:"expect"`
 	Capture map[string]string `json:"capture,omitempty"` // variable -> "$.json.path" or "header:Name"
+	// SleepMs pauses before the step's request (time-based rules). A step may
+	// consist of only a sleep, a WS action or a Config change.
+	SleepMs int `json:"sleepMs,omitempty"`
+	// WS drives a WebSocket client instead of an HTTP request.
+	WS *WSStep `json:"ws,omitempty"`
+	// Config temporarily changes the server-wide configuration; the original
+	// is restored when the scenario ends, even on failure.
+	Config *ConfigStep `json:"config,omitempty"`
+}
+
+// WSStep is one WebSocket client action. Exactly one of Open, Wait and Close
+// is set. Message assertions use the step's Expect.JSON and Capture, evaluated
+// against the received message object ({"MessageType": ..., "Data": ...}).
+type WSStep struct {
+	// Open connects a named socket as the identity in As (admin, apikey, a
+	// fixture user key or "token:{{capture.x}}").
+	Open string `json:"open,omitempty"`
+	As   string `json:"as,omitempty"`
+	// Wait blocks until the named socket receives a message of type Type (any
+	// type when empty), within TimeoutMs (default 5000).
+	Wait string `json:"wait,omitempty"`
+	Type string `json:"type,omitempty"`
+	// Absent inverts Wait: no such message may arrive within TimeoutMs.
+	Absent    bool `json:"absent,omitempty"`
+	TimeoutMs int  `json:"timeoutMs,omitempty"`
+	// Close disconnects the named socket (sockets are also closed when the
+	// scenario ends).
+	Close string `json:"close,omitempty"`
+}
+
+// ConfigStep patches top-level keys of the server configuration.
+type ConfigStep struct {
+	Set map[string]any `json:"set"`
 }
 
 // Request describes the HTTP request. Strings may contain {{var}} templates.
@@ -88,12 +121,15 @@ type Expect struct {
 	JSON    []Assert          `json:"json,omitempty"`
 	// Empty asserts a zero-length body.
 	Empty bool `json:"empty,omitempty"`
+	// Problem asserts the body is an RFC 9110 problem document for this status
+	// (type, title and status members); 0 disables the check.
+	Problem int `json:"problem,omitempty"`
 }
 
 // Assert is one JSON-path assertion.
 type Assert struct {
 	Path  string `json:"path"`
-	Op    string `json:"op"` // eq ne exists absent type len gte lte contains notcontains matches in
+	Op    string `json:"op"` // eq ne exists absent type len gte lte contains notcontains matches in hex32
 	Value any    `json:"value,omitempty"`
 }
 

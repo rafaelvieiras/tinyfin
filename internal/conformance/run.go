@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -45,6 +46,27 @@ type Client struct {
 	Tokens map[string]string
 	// Available is the set of fixture keys that exist ("user:alice", "item:movie").
 	Available map[string]bool
+	// DeviceSuffix is appended to every DeviceId the runner generates and is
+	// exposed to scenarios as {{run.suffix}}, so concurrent runs against one
+	// server do not revoke each other's tokens (a new login on a DeviceId
+	// revokes the previous token of that device).
+	DeviceSuffix string
+	// IncludeRisky enables scenarios tagged "risky" (those that try to demote
+	// or delete the last administrator); skipped by default so a buggy
+	// implementation cannot lock the rest of the suite out.
+	IncludeRisky bool
+
+	apiKeyID  string // access token of the run's API key (for Teardown)
+	mu        sync.Mutex
+	activeRun *runState
+}
+
+// runState is the per-scenario mutable state: captured variables, open
+// sockets and the configuration to restore.
+type runState struct {
+	scratch    map[string]string
+	sockets    map[string]*wsConn
+	configOrig []byte // original server configuration, set once
 }
 
 // NewClient returns a Client with sane defaults.
@@ -59,6 +81,24 @@ func NewClient(base string) *Client {
 		Tokens:    map[string]string{},
 		Available: map[string]bool{},
 	}
+}
+
+// resolveToken maps an identity to its access token: "admin", a fixture user
+// key, "apikey" (the run's API key) or "token:<value>" for a token captured
+// during the scenario.
+func (c *Client) resolveToken(identity string, scratch map[string]string) (string, error) {
+	if raw, ok := strings.CutPrefix(identity, "token:"); ok {
+		v, err := c.expand(raw, scratch)
+		if err != nil {
+			return "", err
+		}
+		return v, nil
+	}
+	tok, ok := c.Tokens[identity]
+	if !ok {
+		return "", &blockedError{"no token for identity " + identity}
+	}
+	return tok, nil
 }
 
 // authHeader builds the 12+ authorization header for an identity.
@@ -85,6 +125,9 @@ func (c *Client) expand(s string, scratch map[string]string) (string, error) {
 		}
 		if v, ok := c.Vars[name]; ok {
 			return v
+		}
+		if name == "run.suffix" {
+			return c.DeviceSuffix
 		}
 		missing = append(missing, name)
 		return m
@@ -184,11 +227,15 @@ func (c *Client) do(ctx context.Context, identity string, r Request, scratch map
 		req.Header.Set("Content-Type", ctype)
 	}
 	if !r.NoAuth && identity != "" && identity != "anonymous" {
-		tok, ok := c.Tokens[identity]
-		if !ok {
-			return nil, &blockedError{"no token for identity " + identity}
+		tok, err := c.resolveToken(identity, scratch)
+		if err != nil {
+			return nil, err
 		}
-		req.Header.Set("Authorization", authHeader("conf-"+identity, tok))
+		dev := "conf-" + identity
+		if strings.HasPrefix(identity, "token:") {
+			dev = "conf-token"
+		}
+		req.Header.Set("Authorization", authHeader(dev+c.DeviceSuffix, tok))
 	}
 	for k, v := range r.Headers {
 		ev, err := c.expand(v, scratch)
@@ -238,16 +285,22 @@ func (c *Client) runOne(ctx context.Context, s Scenario, skipDivergent bool) Res
 		res.Status, res.Message = StatusSkipped, "intentional divergence: "+s.Divergence.Reason
 		return res
 	}
+	if !c.IncludeRisky && hasTag(s.Tags, "risky") {
+		res.Status, res.Message = StatusSkipped, "risky: opt-in with -risky"
+		return res
+	}
 	for _, need := range s.Requires {
 		if !c.Available[need] {
 			res.Status, res.Message = StatusBlocked, "fixture not available: "+need
 			return res
 		}
 	}
-	scratch := map[string]string{}
+	rs := &runState{scratch: map[string]string{}, sockets: map[string]*wsConn{}}
+	c.setActive(rs)
+	defer c.setActive(nil)
 	status, msg := StatusPass, ""
 	for i, st := range s.Steps {
-		if err := c.runStep(ctx, st, scratch); err != nil {
+		if err := c.runStep(ctx, st, rs); err != nil {
 			var be *blockedError
 			if asBlocked(err, &be) {
 				status, msg = StatusBlocked, fmt.Sprintf("step %d (%s): %v", i+1, st.Name, err)
@@ -258,8 +311,9 @@ func (c *Client) runOne(ctx context.Context, s Scenario, skipDivergent bool) Res
 		}
 	}
 	for _, st := range s.Cleanup {
-		_ = c.runStep(ctx, st, scratch)
+		_ = c.runStep(ctx, st, rs)
 	}
+	c.finish(ctx, rs)
 	res.Status, res.Message = status, msg
 	return res
 }
@@ -272,15 +326,113 @@ func asBlocked(err error, target **blockedError) bool {
 	return false
 }
 
-func (c *Client) runStep(ctx context.Context, st Step, scratch map[string]string) error {
-	as := st.As
-	if as == "" {
-		as = "anonymous"
+func hasTag(tags []string, want string) bool {
+	for _, t := range tags {
+		if t == want {
+			return true
+		}
 	}
-	resp, err := c.do(ctx, as, st.Request, scratch)
+	return false
+}
+
+func (c *Client) setActive(rs *runState) {
+	c.mu.Lock()
+	c.activeRun = rs
+	c.mu.Unlock()
+}
+
+// Restore undoes any server-wide change the running scenario made. The CLI
+// calls it from its interrupt handler so an aborted run does not leave the
+// server reconfigured.
+func (c *Client) Restore(ctx context.Context) {
+	c.mu.Lock()
+	rs := c.activeRun
+	c.mu.Unlock()
+	if rs != nil {
+		c.finish(ctx, rs)
+	}
+}
+
+// finish closes sockets and restores the server configuration (once).
+func (c *Client) finish(ctx context.Context, rs *runState) {
+	for name, w := range rs.sockets {
+		w.close()
+		delete(rs.sockets, name)
+	}
+	if rs.configOrig != nil {
+		_, _ = c.do(ctx, "admin", Request{Method: "POST", Path: "/System/Configuration", BodyRaw: string(rs.configOrig),
+			Headers: map[string]string{"Content-Type": "application/json"}}, nil)
+		rs.configOrig = nil
+	}
+}
+
+func (c *Client) runStep(ctx context.Context, st Step, rs *runState) error {
+	scratch := rs.scratch
+	if st.SleepMs > 0 {
+		select {
+		case <-time.After(time.Duration(st.SleepMs) * time.Millisecond):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	if st.Config != nil {
+		if err := c.applyConfig(ctx, st.Config, rs); err != nil {
+			return err
+		}
+	}
+	var resp *Response
+	switch {
+	case st.WS != nil:
+		msg, err := c.runWS(ctx, st.WS, rs)
+		if err != nil {
+			return err
+		}
+		if msg == nil {
+			return nil
+		}
+		resp = msg
+	case st.Request.Path == "" && (st.SleepMs > 0 || st.Config != nil):
+		return nil
+	default:
+		as := st.As
+		if as == "" {
+			as = "anonymous"
+		}
+		r, err := c.do(ctx, as, st.Request, scratch)
+		if err != nil {
+			return err
+		}
+		resp = r
+	}
+	return c.checkExpect(st, resp, scratch)
+}
+
+func (c *Client) applyConfig(ctx context.Context, cs *ConfigStep, rs *runState) error {
+	r, err := c.do(ctx, "admin", Request{Method: "GET", Path: "/System/Configuration"}, nil)
 	if err != nil {
 		return err
 	}
+	cfg, ok := r.JSON.(map[string]any)
+	if r.Status != 200 || !ok {
+		return fmt.Errorf("read configuration: status %d", r.Status)
+	}
+	if rs.configOrig == nil {
+		rs.configOrig = append([]byte(nil), r.Body...)
+	}
+	for k, v := range cs.Set {
+		cfg[k] = v
+	}
+	r, err = c.do(ctx, "admin", Request{Method: "POST", Path: "/System/Configuration", Body: cfg}, nil)
+	if err != nil {
+		return err
+	}
+	if r.Status != 200 && r.Status != 204 {
+		return fmt.Errorf("write configuration: status %d", r.Status)
+	}
+	return nil
+}
+
+func (c *Client) checkExpect(st Step, resp *Response, scratch map[string]string) error {
 	if len(st.Expect.Status) > 0 {
 		ok := false
 		for _, want := range st.Expect.Status {
@@ -305,6 +457,11 @@ func (c *Client) runStep(ctx context.Context, st Step, scratch map[string]string
 			return err
 		}
 	}
+	if st.Expect.Problem != 0 {
+		if err := checkProblem(resp, st.Expect.Problem); err != nil {
+			return fmt.Errorf("problem document: %w%s", err, snippet(resp))
+		}
+	}
 	for _, a := range st.Expect.JSON {
 		if err := c.checkAssert(resp, a, scratch); err != nil {
 			return fmt.Errorf("%s %s: %w%s", a.Path, a.Op, err, snippet(resp))
@@ -317,6 +474,45 @@ func (c *Client) runStep(ctx context.Context, st Step, scratch map[string]string
 		}
 		scratch[name] = v
 		c.Vars["capture."+name] = v
+	}
+	return nil
+}
+
+// checkProblem asserts an RFC 9110 problem document: an object with a string
+// type and title and a status member equal to want.
+func checkProblem(r *Response, want int) error {
+	m, ok := r.JSON.(map[string]any)
+	if !ok {
+		return fmt.Errorf("body is not a JSON object")
+	}
+	for _, k := range []string{"type", "title"} {
+		if s, ok := m[k].(string); !ok || s == "" {
+			return fmt.Errorf("member %q missing or not a string", k)
+		}
+	}
+	if st, ok := toFloat(m["status"]); !ok || int(st) != want {
+		return fmt.Errorf("status member %v, want %d", m["status"], want)
+	}
+	return nil
+}
+
+var hex32RE = regexp.MustCompile(`^[0-9a-f]{32}$`)
+
+// checkHex32 asserts every value (a string, or each element of an array) is 32
+// lowercase hexadecimal digits with no dashes.
+func checkHex32(v any) error {
+	vals := []any{v}
+	if arr, ok := v.([]any); ok {
+		if len(arr) == 0 {
+			return fmt.Errorf("no values to check")
+		}
+		vals = arr
+	}
+	for _, x := range vals {
+		s, ok := x.(string)
+		if !ok || !hex32RE.MatchString(s) {
+			return fmt.Errorf("%s is not 32 lowercase hex digits", show(x))
+		}
 	}
 	return nil
 }
@@ -464,6 +660,11 @@ func (c *Client) checkAssert(r *Response, a Assert, scratch map[string]string) e
 		if !found || !re.MatchString(fmt.Sprint(got)) {
 			return fmt.Errorf("%s does not match %v", show(got), want)
 		}
+	case "hex32":
+		if !found {
+			return fmt.Errorf("not found")
+		}
+		return checkHex32(got)
 	case "in":
 		arr, _ := want.([]any)
 		for _, x := range arr {

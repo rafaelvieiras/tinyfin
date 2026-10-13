@@ -2,6 +2,8 @@ package conformance
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -74,6 +76,10 @@ func (c *Client) Setup(ctx context.Context, adminUser, adminPass, mediaRoot stri
 	c.Vars["user.admin.password"] = adminPass
 	c.Available["user:admin"] = true
 	c.Vars["server.mediaroot"] = mediaRoot
+	c.Vars["device.admin"] = "conf-admin" + c.DeviceSuffix
+	if err := c.SetupAPIKey(ctx); err != nil {
+		warn("api key identity: %v", err)
+	}
 
 	// users
 	existing := map[string]string{}
@@ -134,6 +140,7 @@ func (c *Client) Setup(ctx context.Context, adminUser, adminPass, mediaRoot stri
 		c.Vars["user."+u.Key+".id"] = id
 		c.Vars["user."+u.Key+".name"] = u.Name
 		c.Vars["user."+u.Key+".password"] = u.Password
+		c.Vars["device."+u.Key] = "conf-" + u.Key + c.DeviceSuffix
 		c.Available["user:"+u.Key] = true
 	}
 
@@ -258,4 +265,50 @@ func (c *Client) findItem(ctx context.Context, it FixtureItem, mediaRoot string)
 func toInt(v any) int {
 	f, _ := toFloat(v)
 	return int(f)
+}
+
+// SetupAPIKey creates a run-specific API key and registers it as the "apikey"
+// identity (a credential that belongs to no user). The key's app name carries
+// the run's device suffix and a random part so concurrent runs find their own
+// key regardless of the order of the listing.
+func (c *Client) SetupAPIKey(ctx context.Context) error {
+	var rnd [6]byte
+	_, _ = rand.Read(rnd[:])
+	app := "conformance-" + hex.EncodeToString(rnd[:])
+	r, err := c.Do(ctx, "admin", "POST", "/Auth/Keys", map[string]string{"app": app}, nil, nil)
+	if err != nil || (r.Status != 204 && r.Status != 200) {
+		return fmt.Errorf("create key: %s", statusErr(r, err))
+	}
+	r, err = c.Do(ctx, "admin", "GET", "/Auth/Keys", nil, nil, nil)
+	if err != nil || r.Status != 200 {
+		return fmt.Errorf("list keys: %s", statusErr(r, err))
+	}
+	m, _ := r.JSON.(map[string]any)
+	items, _ := m["Items"].([]any)
+	for _, it := range items {
+		o, _ := it.(map[string]any)
+		if o["AppName"] == app {
+			if tok, _ := o["AccessToken"].(string); tok != "" {
+				c.Tokens["apikey"] = tok
+				c.apiKeyID = tok
+				c.Available["identity:apikey"] = true
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("created key %q not found in the listing", app)
+}
+
+// Teardown revokes the run's API key.
+func (c *Client) Teardown(ctx context.Context) error {
+	if c.apiKeyID == "" {
+		return nil
+	}
+	r, err := c.Do(ctx, "admin", "DELETE", "/Auth/Keys/"+c.apiKeyID, nil, nil, nil)
+	c.apiKeyID = ""
+	delete(c.Tokens, "apikey")
+	if err != nil || (r.Status != 204 && r.Status != 200) {
+		return fmt.Errorf("revoke key: %s", statusErr(r, err))
+	}
+	return nil
 }
