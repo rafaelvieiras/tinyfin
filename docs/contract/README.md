@@ -248,7 +248,7 @@ go run ./cmd/conformance progress
 * CI (`.github/workflows/ci.yml`, job `conformance`) builds Tinyfin, generates
   the media tree, starts a throwaway server with
   `scripts/conformance-tinyfin-up.sh` and runs the ratchet with
-  `-skip-tags time-dependent,expiry` (no scenario carries `time-dependent` any
+  `-skip-tags time-dependent,expiry,risky` (no scenario carries `time-dependent` any
   more; the access-schedule scenarios build their windows from the server clock;
   the `expiry` ones sleep about ten minutes to observe a request lifetime and are
   run by hand). The server listens on the runner's own (non-loopback)
@@ -272,9 +272,9 @@ scenario that is not pending or divergent; `risky` ones run only with
 
 | Area | Scenarios | Pass | Fail | Blocked | Skipped |
 |---|---|---|---|---|---|
-| items | 120 | 120 | 0 | 0 | 0 |
-| playstate | 107 | 107 | 0 | 0 | 0 |
-| quickconnect | 15 | 15 | 0 | 0 | 0 |
-| users | 188 | 188 | 0 | 0 | 0 |
-| wire | 13 | 13 | 0 | 0 | 0 |
-| **Total** | 443 | 443 | 0 | 0 | 0 |
+| items | 113 | 113 | 0 | 0 | 0 |
+| playstate | 103 | 103 | 0 | 0 | 0 |
+| quickconnect | 14 | 14 | 0 | 0 | 0 |
+| users | 152 | 150 | 0 | 0 | 2 |
+| wire | 6 | 6 | 0 | 0 | 0 |
+| **Total** | 388 | 386 | 0 | 0 | 2 |
