@@ -61,7 +61,9 @@ what starting Phase 1 actually requires next.
       hyphens — the app's post-login WebView credential check parses `User.Id` as a UUID and
       silently treats a non-UUID value as "no user" even with a valid token present, so every ID
       is now formatted as a canonical UUID. Confirmed end to end: the app reaches the logged-in
-      library view.
+      library view. (Superseded by the wire contract, `wire.id.R1`: ids are now emitted as 32
+      lowercase hex digits without dashes, which is also what the reference server writes;
+      dashed input stays accepted everywhere.)
 - [x] Real-client verification (native Android, playback flow coverage pass): after two more
       individual native-only playback crashes surfaced one at a time (`DisplayPreferencesDto`'s
       `ScrollDirection`/`SortOrder` `MissingFieldException`, then a second failure past that

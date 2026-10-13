@@ -479,9 +479,9 @@ Both shapes from the spec above are now live-confirmed, not just the empty one:
 - One minor formatting note found during the live comparison, not a functional divergence:
   the reference server's own IDs (including `SoundtrackSongsResult.OwnerId`, `"N"`-format, no
   dashes) are formatted without hyphens on this particular reference-server instance, while Tinyfin
-  formats every ID with the canonical dashed UUID form throughout the whole project (existing,
-  pre-this-task convention — `formatUUID`). Not something this task's `ThemeMedia` work introduced or
-  should special-case; noted only so a future byte-for-byte ID-format audit isn't surprised by it.
+  used to format every ID with the dashed UUID form. That convention is gone: every ID is now minted,
+  stored and emitted as 32 lowercase hex digits (`internal/guid`, `wire.id.R1`), and dashed or
+  upper-case input is folded to that form on the way in (`wire.id.R2`).
 
 ### C# source cross-check (Phase 1, done after the fact on the maintainer's explicit request — this
 ### section was originally written from `jellyfin.org`'s public docs alone; re-verified against the

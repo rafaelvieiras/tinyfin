@@ -14,19 +14,18 @@ package api
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/rafaelvieiras/tinyfin/internal/guid"
 	"github.com/rafaelvieiras/tinyfin/internal/rating"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
 
-const zeroGUID = "00000000-0000-0000-0000-000000000000"
+const zeroGUID = guid.Zero
 
 // itemsKnownKinds is the set of item kind names accepted in
 // IncludeItemTypes/ExcludeItemTypes; tokens outside it are dropped.
@@ -77,11 +76,7 @@ var itemsListFilterParams = map[string]bool{
 // synthetic folders: the user's root and the Playlists folder shown beside
 // the libraries.
 var userRootItemID, playlistsFolderItemID = func() (string, string) {
-	mk := func(seed string) string {
-		sum := sha256.Sum256([]byte(seed))
-		return formatUUID(hex.EncodeToString(sum[:16]))
-	}
-	return mk("tinyfin-user-root"), mk("tinyfin-playlists-folder")
+	return guid.Derive("tinyfin-user-root"), guid.Derive("tinyfin-playlists-folder")
 }()
 
 // writeItemsProblem writes an RFC 9457 style problem document (the body
@@ -94,29 +89,9 @@ func writeItemsProblem(w http.ResponseWriter, status int, title string) {
 	writeProblemDoc(w, status, typ, title, nil)
 }
 
-// normalizeGUID returns s in canonical dashed lower-case form, or false
-// when s is not a GUID (dashed or 32 hex digits).
-func normalizeGUID(s string) (string, bool) {
-	s = strings.ToLower(strings.TrimSpace(s))
-	if len(s) == 32 {
-		s = s[0:8] + "-" + s[8:12] + "-" + s[12:16] + "-" + s[16:20] + "-" + s[20:]
-	}
-	if len(s) != 36 {
-		return "", false
-	}
-	for i, c := range s {
-		switch {
-		case i == 8 || i == 13 || i == 18 || i == 23:
-			if c != '-' {
-				return "", false
-			}
-		case (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'):
-		default:
-			return "", false
-		}
-	}
-	return s, true
-}
+// normalizeGUID returns s in the canonical wire form (32 lowercase hex
+// digits), or false when s is not a GUID in either spelling.
+func normalizeGUID(s string) (string, bool) { return guid.Normalize(s) }
 
 // itemsListParam collects every value of key (repeated keys and
 // comma-separated values alike), trimmed, empty tokens removed.

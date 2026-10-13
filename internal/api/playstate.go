@@ -255,6 +255,12 @@ func decodePlaybackReport(w http.ResponseWriter, r *http.Request) (playbackRepor
 			rep.ItemID = ""
 		}
 	}
+	if rep.MediaSourceID != nil {
+		// Echoed back in session state: an id is written canonically.
+		if n, ok := normalizeGUID(*rep.MediaSourceID); ok {
+			rep.MediaSourceID = &n
+		}
+	}
 	enums := []struct {
 		field   **string
 		allowed []string

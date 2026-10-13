@@ -9,6 +9,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/rafaelvieiras/tinyfin/internal/guid"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
 
@@ -137,6 +138,26 @@ func (p *userPolicyDto) normalize() {
 	if p.AccessSchedules == nil {
 		p.AccessSchedules = []accessScheduleDto{}
 	}
+	// Folder and channel ids are identifiers: always written canonically
+	// (wire.id.R1), whichever spelling the client posted or an older
+	// database row holds.
+	for _, l := range []*[]string{&p.EnabledFolders, &p.EnabledChannels, &p.BlockedMediaFolders,
+		&p.BlockedChannels, &p.EnableContentDeletionFromFolders} {
+		*l = canonicalIDs(*l)
+	}
+}
+
+// canonicalIDs returns ids with every GUID-shaped member folded to the
+// canonical form; other members are left untouched.
+func canonicalIDs(ids []string) []string {
+	out := make([]string, len(ids))
+	for i, id := range ids {
+		if n, ok := guid.Normalize(id); ok {
+			id = n
+		}
+		out[i] = id
+	}
+	return out
 }
 
 // storedUserPolicy decodes the policy persisted for u. A user without a

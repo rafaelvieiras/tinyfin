@@ -80,7 +80,7 @@ func newItemsFixture(t *testing.T) *itemsFixture {
 // gid derives a stable GUID-shaped item id from a short fixture name.
 func gid(name string) storage.ItemID {
 	sum := sha256.Sum256([]byte("items-query-test-" + name))
-	return storage.ItemID(formatUUID(hex.EncodeToString(sum[:16])))
+	return storage.ItemID(hex.EncodeToString(sum[:16]))
 }
 
 var fixtureNameRE = regexp.MustCompile(`\b(folder-movies|alpha|bravo|charlie|show|season1|season2|e11|e12|e21)\b`)

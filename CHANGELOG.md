@@ -28,5 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Identifiers are written as 32 lowercase hex digits without dashes in every
+  response (`wire.id.R1`); ids in dashed or upper-case form are still accepted
+  in paths, query parameters and bodies (`wire.id.R2`). Existing databases are
+  migrated in place (migration 0013) and a persisted dashed server id is
+  folded on startup, so clients see a one-time `ServerId` spelling change.
 - Compatibility scope is Jellyfin 12+ only: pre-12 legacy routes and legacy
   authentication channels are not part of the contract (decision D14).

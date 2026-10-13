@@ -14,8 +14,6 @@ package api
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -23,6 +21,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/rafaelvieiras/tinyfin/internal/guid"
 	"github.com/rafaelvieiras/tinyfin/internal/metadata"
 	"github.com/rafaelvieiras/tinyfin/internal/scan"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
@@ -157,6 +156,8 @@ func NewServer(store storage.Store, cfg Config) *Server {
 	}
 	if cfg.ServerID == "" {
 		cfg.ServerID = randomID()
+	} else if n, ok := guid.Normalize(cfg.ServerID); ok {
+		cfg.ServerID = n
 	}
 
 	var provider metadata.Provider = metadata.NoopProvider{}
@@ -290,7 +291,7 @@ func (s *Server) runItemRefresh(itemID storage.ItemID, replaceImages bool) {
 // so it sees the request exactly as the client sent it and the real final
 // status code.
 func (s *Server) Handler() http.Handler {
-	return withAccessLog(withCORS(s.withAuthContext(withCaseInsensitivePaths(s.mux))))
+	return withAccessLog(withCORS(withCanonicalIDs(s.withAuthContext(withCaseInsensitivePaths(s.mux)))))
 }
 
 // statusRecorder captures the status code a handler wrote, since
@@ -605,25 +606,6 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
-// randomID mints an opaque identifier formatted as a canonical UUID
-// (formatUUID — see internal/storage/sqlite/id.go's copy of the same
-// helper for why the format itself matters, not just uniqueness).
-// Stdlib-only (crypto/rand), same approach as
-// internal/storage/sqlite's newID/newToken, kept as a separate copy here
-// rather than an import since this package must not depend on sqlite
-// specifically (it depends only on the storage interface).
-func randomID() string {
-	var b [16]byte
-	if _, err := rand.Read(b[:]); err != nil {
-		panic("api: reading random bytes for ID generation: " + err.Error())
-	}
-	return formatUUID(hex.EncodeToString(b[:]))
-}
-
-// formatUUID inserts hyphens into a 32-character hex string at the
-// canonical UUID positions (8-4-4-4-12) — see
-// internal/storage/sqlite/id.go's copy of this same helper for why real
-// Jellyfin clients require it.
-func formatUUID(hex32 string) string {
-	return hex32[0:8] + "-" + hex32[8:12] + "-" + hex32[12:16] + "-" + hex32[16:20] + "-" + hex32[20:32]
-}
+// randomID mints an opaque identifier in the canonical wire form: 32
+// lowercase hex digits (internal/guid).
+func randomID() string { return guid.New() }

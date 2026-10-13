@@ -80,7 +80,7 @@ pipeline (extraction only — this describes observed behavior, no code/names/st
 
 ## Item IDs are scoped per library
 
-`internal/scan/id.go`'s `deterministicID` hashes a stable seed into a UUID-shaped item ID so that
+`internal/scan/id.go`'s `deterministicID` hashes a stable seed into a 32-hex item ID so that
 re-scanning the same file upserts the same row instead of duplicating it. Every seed (movie, series,
 season, episode — the four call sites in `scan.go`) now includes the scanning library's own ID, not
 just the file's path.

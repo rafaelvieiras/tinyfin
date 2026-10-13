@@ -5,8 +5,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"flag"
 	"log"
@@ -18,6 +16,7 @@ import (
 	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/api"
+	"github.com/rafaelvieiras/tinyfin/internal/guid"
 	"github.com/rafaelvieiras/tinyfin/internal/storage/sqlite"
 )
 
@@ -173,16 +172,17 @@ func loadOrCreateServerID(dataPath string) (string, error) {
 	idPath := dataPath + ".server-id"
 
 	if b, err := os.ReadFile(idPath); err == nil {
+		// An id persisted in the older dashed form is folded to the
+		// canonical 32-hex wire form (wire.id.R1).
+		if n, ok := guid.Normalize(string(b)); ok {
+			return n, nil
+		}
 		return string(b), nil
 	} else if !os.IsNotExist(err) {
 		return "", err
 	}
 
-	var raw [16]byte
-	if _, err := rand.Read(raw[:]); err != nil {
-		return "", err
-	}
-	id := formatUUID(hex.EncodeToString(raw[:]))
+	id := guid.New()
 
 	if dir := filepath.Dir(idPath); dir != "." {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -193,12 +193,4 @@ func loadOrCreateServerID(dataPath string) (string, error) {
 		return "", err
 	}
 	return id, nil
-}
-
-// formatUUID inserts hyphens into a 32-character hex string at the
-// canonical UUID positions (8-4-4-4-12) — see
-// internal/storage/sqlite/id.go's copy of this same helper for why real
-// Jellyfin clients require it.
-func formatUUID(hex32 string) string {
-	return hex32[0:8] + "-" + hex32[8:12] + "-" + hex32[12:16] + "-" + hex32[16:20] + "-" + hex32[20:32]
 }

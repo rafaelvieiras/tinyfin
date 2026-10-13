@@ -17,13 +17,12 @@
 package api
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/rafaelvieiras/tinyfin/internal/guid"
 	"github.com/rafaelvieiras/tinyfin/internal/scan"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
@@ -200,7 +199,7 @@ func (s *Server) localMediaItemDto(path, mediaType string) baseItemDto {
 	}
 }
 
-// themeMediaItemID mints a stable, canonical-UUID-formatted ID for a local
+// themeMediaItemID mints a stable, canonical 32-hex ID for a local
 // theme media file from its filesystem path — deterministic (same
 // technique as internal/scan/id.go's deterministicID, duplicated rather
 // than imported per that file's own doc comment on why each package that
@@ -209,6 +208,5 @@ func (s *Server) localMediaItemDto(path, mediaType string) baseItemDto {
 // which would otherwise make a client's own per-item caching/UserData
 // tracking for theme media meaningless.
 func themeMediaItemID(path string) string {
-	sum := sha256.Sum256([]byte("theme-media-" + path))
-	return formatUUID(hex.EncodeToString(sum[:16]))
+	return guid.Derive("theme-media-" + path)
 }

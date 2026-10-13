@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"time"
 
+	"github.com/rafaelvieiras/tinyfin/internal/guid"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
 
@@ -265,14 +266,13 @@ type nameIDPairDto struct {
 	ID   string `json:"Id"`
 }
 
-// genreID mints a stable, canonical-UUID-formatted Id for a genre name —
-// same sha256+formatUUID technique as personID/themeMediaItemID above, each
+// genreID mints a stable, canonical 32-hex Id for a genre name —
+// same guid.Derive technique as personID/themeMediaItemID above, each
 // kept as its own small copy per those functions' doc comments on why: a
 // genre appearing on more than one item needs to resolve to the same Id
 // every time, not a fresh one per response.
 func genreID(name string) string {
-	sum := sha256.Sum256([]byte("genre-" + name))
-	return formatUUID(hex.EncodeToString(sum[:16]))
+	return guid.Derive("genre-" + name)
 }
 
 // genreItemsFor builds BaseItemDto.GenreItems from the same genre names
@@ -288,13 +288,12 @@ func genreItemsFor(genres []string) []nameIDPairDto {
 	return items
 }
 
-// studioID mints a stable, canonical-UUID-formatted Id for a studio name —
-// same sha256+formatUUID technique as genreID above, with its own "studio-"
+// studioID mints a stable, canonical 32-hex Id for a studio name —
+// same guid.Derive technique as genreID above, with its own "studio-"
 // prefix so a studio and a genre that happen to share a name don't collide
 // on the same Id.
 func studioID(name string) string {
-	sum := sha256.Sum256([]byte("studio-" + name))
-	return formatUUID(hex.EncodeToString(sum[:16]))
+	return guid.Derive("studio-" + name)
 }
 
 // studioItemsFor builds BaseItemDto.Studios from the same studio names
@@ -455,16 +454,15 @@ type baseItemPersonDto struct {
 	Type string `json:"Type"`
 }
 
-// personID mints a stable, canonical-UUID-formatted Id for a cast/crew
-// credit from its name — deterministic (same sha256+formatUUID technique
+// personID mints a stable, canonical 32-hex Id for a cast/crew
+// credit from its name — deterministic (same guid.Derive technique
 // as internal/scan/id.go's deterministicID and this package's own
 // themeMediaItemID, each package keeping its own small copy per those
 // files' doc comments on why) so the same actor/director appearing across
 // different items, or across a re-scan, always gets the same Id instead of
 // a fresh one per response.
 func personID(name string) string {
-	sum := sha256.Sum256([]byte("person-" + name))
-	return formatUUID(hex.EncodeToString(sum[:16]))
+	return guid.Derive("person-" + name)
 }
 
 func peopleDtos(people []storage.Person) []baseItemPersonDto {

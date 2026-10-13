@@ -9,38 +9,22 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/rafaelvieiras/tinyfin/internal/guid"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
 
 // zeroUserGUID is the empty GUID, which is never a valid account id.
-const zeroUserGUID = "00000000-0000-0000-0000-000000000000"
+const zeroUserGUID = guid.Zero
 
 // parseUserGUID validates s as a GUID (dashed or 32 hex digits, any case)
-// and returns it in the canonical dashed lower-case form accounts are
+// and returns it in the canonical 32-hex form accounts are
 // stored under. The empty GUID is rejected (users.get.R4, users.update.R12).
 func parseUserGUID(s string) (storage.UserID, bool) {
-	s = strings.ToLower(strings.TrimSpace(s))
-	if len(s) == 32 {
-		s = s[0:8] + "-" + s[8:12] + "-" + s[12:16] + "-" + s[16:20] + "-" + s[20:]
-	}
-	if len(s) != 36 {
+	n, ok := guid.Normalize(s)
+	if !ok || n == zeroUserGUID {
 		return "", false
 	}
-	for i, c := range s {
-		switch {
-		case i == 8 || i == 13 || i == 18 || i == 23:
-			if c != '-' {
-				return "", false
-			}
-		case (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'):
-		default:
-			return "", false
-		}
-	}
-	if s == zeroUserGUID {
-		return "", false
-	}
-	return storage.UserID(s), true
+	return storage.UserID(n), true
 }
 
 // validUserName implements users.create.R5: letters (any script), marks,
@@ -101,6 +85,7 @@ func (c *userConfigurationDto) normalize() {
 		if *l == nil {
 			*l = []string{}
 		}
+		*l = canonicalIDs(*l)
 	}
 }
 

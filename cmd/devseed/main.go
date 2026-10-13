@@ -8,8 +8,6 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -24,34 +22,14 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/rafaelvieiras/tinyfin/internal/guid"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 	"github.com/rafaelvieiras/tinyfin/internal/storage/sqlite"
 )
 
-// deterministicID derives a canonical-UUID-formatted id from seed via a
-// hash rather than crypto/rand — devseed needs the *same* folder to
-// produce the *same* item id across repeated runs (so re-seeding upserts
-// instead of duplicating), which sqlite.newID()'s random+time scheme can't
-// give it. Real Jellyfin clients require ID fields to actually parse as
-// UUIDs, not just be unique strings: confirmed by reading
-// jellyfin-sdk-kotlin's BaseItemDto.kt (id: UUID, no default) and its
-// UUIDSerializer (UUID.fromString, throwing IllegalArgumentException —
-// NOT a kotlinx.serialization.SerializationException, so it isn't even
-// caught by the ApiClientException handling every native call site
-// wraps itself in). The old "item-<slug>" ids this file used to mint
-// worked fine through jellyfin-web's WebView-driven JS (which never
-// parses ids as anything but opaque strings) but would crash the native
-// player's own jellyfin-sdk-kotlin parsing the moment it touched any
-// item — found while mapping the whole native playback flow for
-// coverage, not by testing this specific path against a device yet.
-func deterministicID(seed string) string {
-	sum := sha256.Sum256([]byte(seed))
-	return formatUUID(hex.EncodeToString(sum[:16]))
-}
-
-func formatUUID(hex32 string) string {
-	return hex32[0:8] + "-" + hex32[8:12] + "-" + hex32[12:16] + "-" + hex32[16:20] + "-" + hex32[20:32]
-}
+// deterministicID derives a stable id from seed so re-seeding the same
+// folder upserts instead of duplicating.
+func deterministicID(seed string) string { return guid.Derive(seed) }
 
 type ffprobeOutput struct {
 	Streams []struct {
