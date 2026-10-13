@@ -184,8 +184,10 @@ func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, 
 	for _, root := range lib.Paths {
 		switch lib.CollectionType {
 		case storage.CollectionTypeMovies:
+			s.recordRootFolder(ctx, lib, root)
 			s.walkMovies(ctx, pool, lib, root)
 		case storage.CollectionTypeTVShows:
+			s.recordRootFolder(ctx, lib, root)
 			s.walkSeries(ctx, pool, lib, root)
 		default:
 			// Music/BoxSets/Mixed aren't in this scanner's scope yet — a
@@ -205,6 +207,26 @@ func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, 
 		return stats, fmt.Errorf("scan: persisting LastScannedAt for library %q: %w", lib.Name, err)
 	}
 	return stats, nil
+}
+
+// recordRootFolder catalogs a library path as a plain Folder item named
+// after its directory. It has no parent: a library's direct children are
+// the parentless items that are not Folders, while a recursive listing of
+// the library includes the folder (items.list.R7).
+func (s *Scanner) recordRootFolder(ctx context.Context, lib storage.Library, root string) {
+	name := filepath.Base(filepath.Clean(root))
+	item := storage.Item{
+		ID:          storage.ItemID(deterministicID("item-folder-" + string(lib.ID) + "-" + root)),
+		Type:        storage.ItemTypeFolder,
+		LibraryID:   lib.ID,
+		Name:        name,
+		SortName:    name,
+		Path:        root,
+		DateCreated: fileDateAdded(root),
+	}
+	if err := s.store.UpsertItem(ctx, item); err != nil {
+		log.Printf("scan: recording root folder %s: %v", root, err)
+	}
 }
 
 // walkMovies handles a CollectionTypeMovies path: one top-level directory

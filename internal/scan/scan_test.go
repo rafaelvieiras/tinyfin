@@ -386,7 +386,7 @@ func TestScanLibraryFolderJPGDetected(t *testing.T) {
 		t.Fatalf("ScanLibrary: %v", err)
 	}
 
-	page, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &lib.ID, Limit: 10})
+	page, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &lib.ID, ExcludeItemTypes: []storage.ItemType{storage.ItemTypeFolder}, Limit: 10})
 	if err != nil || len(page.Items) != 1 {
 		t.Fatalf("QueryItems: err=%v, len=%d, want 1", err, len(page.Items))
 	}
@@ -444,7 +444,7 @@ func TestScanLibraryMovieAppliesPeopleFromProvider(t *testing.T) {
 		t.Fatalf("ScanLibrary: %v", err)
 	}
 
-	page, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &lib.ID, Limit: 10})
+	page, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &lib.ID, ExcludeItemTypes: []storage.ItemType{storage.ItemTypeFolder}, Limit: 10})
 	if err != nil || len(page.Items) != 1 {
 		t.Fatalf("QueryItems: err=%v, len=%d, want 1", err, len(page.Items))
 	}
@@ -484,7 +484,7 @@ func TestScanLibraryLogoAndBannerDetected(t *testing.T) {
 		t.Fatalf("ScanLibrary: %v", err)
 	}
 
-	page, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &lib.ID, Limit: 10})
+	page, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &lib.ID, ExcludeItemTypes: []storage.ItemType{storage.ItemTypeFolder}, Limit: 10})
 	if err != nil || len(page.Items) != 1 {
 		t.Fatalf("QueryItems: err=%v, len=%d, want 1", err, len(page.Items))
 	}
@@ -581,7 +581,7 @@ func TestScanLibraryNoProviderStillCatalogs(t *testing.T) {
 		t.Fatalf("ItemsEnriched = %d, want 0 (no provider configured)", stats.ItemsEnriched)
 	}
 
-	page, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &lib.ID, Limit: 10})
+	page, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &lib.ID, ExcludeItemTypes: []storage.ItemType{storage.ItemTypeFolder}, Limit: 10})
 	if err != nil {
 		t.Fatalf("QueryItems: %v", err)
 	}
@@ -691,7 +691,7 @@ func TestScanLibraryReconcilesLegacyItemIDByPath(t *testing.T) {
 		t.Fatalf("ScanLibrary: %v", err)
 	}
 
-	page, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &lib.ID, Limit: 10})
+	page, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &lib.ID, ExcludeItemTypes: []storage.ItemType{storage.ItemTypeFolder}, Limit: 10})
 	if err != nil {
 		t.Fatalf("QueryItems: %v", err)
 	}
@@ -747,7 +747,7 @@ func TestScanLibraryOverlappingPathsDoNotCollide(t *testing.T) {
 		t.Fatalf("ScanLibrary(libB): %v", err)
 	}
 
-	pageA, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &libA.ID, Limit: 10})
+	pageA, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &libA.ID, ItemTypes: []storage.ItemType{storage.ItemTypeMovie}, Limit: 10})
 	if err != nil {
 		t.Fatalf("QueryItems(libA): %v", err)
 	}
@@ -755,7 +755,7 @@ func TestScanLibraryOverlappingPathsDoNotCollide(t *testing.T) {
 		t.Fatalf("len(libA.Items) = %d, want 1 (scanning libB over the same path must not steal libA's item)", len(pageA.Items))
 	}
 
-	pageB, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &libB.ID, Limit: 10})
+	pageB, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &libB.ID, ItemTypes: []storage.ItemType{storage.ItemTypeMovie}, Limit: 10})
 	if err != nil {
 		t.Fatalf("QueryItems(libB): %v", err)
 	}
@@ -1228,5 +1228,55 @@ func draw(img *image.RGBA, c color.RGBA) {
 		for x := b.Min.X; x < b.Max.X; x++ {
 			img.Set(x, y, c)
 		}
+	}
+}
+
+// TestScanLibraryRecordsRootFolder proves each scanned library path is
+// cataloged as a plain Folder item named after its directory: a recursive
+// listing of the library includes it (items.list.R7), while the library's
+// direct children (parentless, non-Folder items) do not. A rescan keeps the
+// same item.
+func TestScanLibraryRecordsRootFolder(t *testing.T) {
+	parent := t.TempDir()
+	root := filepath.Join(parent, "Films")
+	writeFile(t, filepath.Join(root, "The Matrix (1999)", "movie.mkv"), "x")
+
+	st := newTestStore(t)
+	s := New(st, metadata.NoopProvider{}, Config{ImageDir: t.TempDir()})
+	lib := storage.Library{ID: "lib-movies", Name: "Movies", CollectionType: storage.CollectionTypeMovies, Paths: []string{root}}
+	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
+		t.Fatalf("UpsertLibrary: %v", err)
+	}
+
+	folders := func() []storage.Item {
+		t.Helper()
+		page, err := st.QueryItems(context.Background(), storage.ItemFilter{
+			LibraryID: &lib.ID, ItemTypes: []storage.ItemType{storage.ItemTypeFolder}, Limit: 10,
+		})
+		if err != nil {
+			t.Fatalf("QueryItems: %v", err)
+		}
+		return page.Items
+	}
+
+	for pass := 0; pass < 2; pass++ {
+		if _, err := s.ScanLibrary(context.Background(), lib); err != nil {
+			t.Fatalf("ScanLibrary: %v", err)
+		}
+		got := folders()
+		if len(got) != 1 {
+			t.Fatalf("pass %d: %d Folder items, want 1", pass, len(got))
+		}
+		if got[0].Name != "Films" || got[0].Path != root || got[0].ParentID != nil {
+			t.Errorf("pass %d: folder = %+v, want Name Films, Path %s, no parent", pass, got[0], root)
+		}
+	}
+
+	top, err := st.QueryItems(context.Background(), storage.ItemFilter{LibraryID: &lib.ID, TopLevelOnly: true, Limit: 10})
+	if err != nil {
+		t.Fatalf("QueryItems: %v", err)
+	}
+	if len(top.Items) != 1 || top.Items[0].Type != storage.ItemTypeMovie {
+		t.Errorf("top-level items = %+v, want just the movie", top.Items)
 	}
 }
