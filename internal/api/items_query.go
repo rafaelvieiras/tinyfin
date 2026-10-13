@@ -893,6 +893,9 @@ func shapeListItem(d baseItemDto, iq itemsQuery) baseItemDto {
 	if !has("path") {
 		d.Path = ""
 	}
+	if !has("sortname") {
+		d.SortName = ""
+	}
 	if !has("overview") {
 		d.Overview = ""
 	}

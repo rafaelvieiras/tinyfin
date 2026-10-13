@@ -243,8 +243,10 @@ go run ./cmd/conformance progress
 * CI (`.github/workflows/ci.yml`, job `conformance`) builds Tinyfin, generates
   the media tree, starts a throwaway server with
   `scripts/conformance-tinyfin-up.sh` and runs the ratchet with
-  `-skip-tags time-dependent` (no scenario carries that tag any more; the
-  access-schedule scenarios build their windows from the server clock). The server listens on the runner's own (non-loopback)
+  `-skip-tags time-dependent,expiry` (no scenario carries `time-dependent` any
+  more; the access-schedule scenarios build their windows from the server clock;
+  the `expiry` ones sleep about ten minutes to observe a request lifetime and are
+  run by hand). The server listens on the runner's own (non-loopback)
   address and the run passes `-server-data-dir`, so the remote-access and PIN
   scenarios run; a second job step starts a fresh throwaway server and runs
   only the `risky` scenarios with `-risky -strict`.

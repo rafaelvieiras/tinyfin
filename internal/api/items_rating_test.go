@@ -209,7 +209,7 @@ func TestRatingSingleItemGate(t *testing.T) {
 		}
 	}
 	// ...yet the list filter looks at the item's own rating only.
-	r := f.get(t, f.aliceTok, "/Items?Recursive=true&IncludeItemTypes=Episode&NameStartsWith=Own")
+	r := f.get(t, f.aliceTok, "/Items?Recursive=true&IncludeItemTypes=Episode&NameStartsWith=001%20-%200002%20-%20Own") // episode sort names are season - episode - title (items.sort.R8)
 	if len(r.Items) != 1 {
 		t.Errorf("own-rated episode in the listing at max 10: %d", len(r.Items))
 	}

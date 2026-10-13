@@ -13,6 +13,7 @@ Index of routes:
 | `GET /QuickConnect/Connect` | [connect](#connect) |
 | `POST /QuickConnect/Authorize` | [authorize](#authorize) |
 | `POST /Users/AuthenticateWithQuickConnect` | [exchange](#exchange) |
+| (request lifetime) | [expiry](#expiry) |
 | (server setting off) | [disabled](#disabled) |
 
 Vocabulary used below. The *result object* returned by `Initiate` and `Connect` is `{Authenticated (boolean), Secret (string), Code (string), DeviceId, DeviceName, AppName, AppVersion (strings), DateAdded (ISO-8601)}`. `Secret` is an opaque string clients only echo back; the reference uses 64 upper-case hex digits and Tinyfin does not copy that format. A pending request lives about 10 minutes.
@@ -47,6 +48,7 @@ Vocabulary used below. The *result object* returned by `Initiate` and `Connect` 
 
 - **quickconnect.connect.R1** For a pending request `200` with its result object: the same `Secret`, `Code` and device fields as `Initiate`, and `Authenticated` `false` until the request is authorized, `true` afterwards.
 - **quickconnect.connect.R2** A secret that matches no request (never issued, expired, or differing in case) answers `404`; a missing `secret` answers `400`.
+- **quickconnect.connect.R3** Polling never changes `DateAdded`: while the request is pending it is the value `Initiate` returned. Authorizing moves it forward: afterwards `Connect` reports a `DateAdded` one minute past the moment of the authorization (so about a minute and the elapsed time later than at `Initiate`). Clients do not use it; the movement matters because the lifetime is counted from it (`quickconnect.expiry.R2`).
 
 ---
 
@@ -62,6 +64,7 @@ Vocabulary used below. The *result object* returned by `Initiate` and `Connect` 
 - **quickconnect.authorize.R5** A non-administrator naming an account other than their own answers `403`; naming themselves is allowed.
 - **quickconnect.authorize.R6** A `userId` that is not a user id answers `400`.
 - **quickconnect.authorize.R7** A well-formed `userId` that names no account answers `400` and authorizes nothing. The all-zero id is treated as if `userId` were not given (the login belongs to the authorizing user).
+- **quickconnect.authorize.R8** Authorizing a code that is already authorized answers `500` with the plain-text body `Error processing request.` (an unhandled error in the reference, reproduced for wire compatibility), whoever calls and whatever `userId` is named. Nothing changes: the request stays authorized for the first authorization's user and can still be exchanged.
 
 ---
 
@@ -77,6 +80,18 @@ Vocabulary used below. The *result object* returned by `Initiate` and `Connect` 
 - **quickconnect.exchange.R5** Issuing the token revokes any earlier token of the same user on the same `DeviceId`, exactly like a password login.
 - **quickconnect.exchange.R6** *Security divergence (finding S9).* A secret can be exchanged once: a second exchange answers `404`. The reference lets an authorized secret be exchanged repeatedly for about ten minutes, returning a working login result each time, and keeps answering `Connect` for it; the scenario `users.quickconnect.secret-single-use` carries a `divergence` record and is skipped on the reference.
 - **quickconnect.exchange.R7** *Security divergence.* An account that has been disabled between the authorization and the exchange is refused with `403`, as on a password login (`users.auth.R8`). The reference issues a login result anyway; the scenario carries a `divergence` record.
+
+---
+
+<a id="expiry"></a>
+## Request lifetime
+
+A request is held in memory only for a short time; the rules below were measured by polling `Connect` every 20 s.
+
+- **quickconnect.expiry.R1** A pending request is redeemable for 10 minutes after `Initiate`: it is still there at 9 minutes and gone at 10 (between 580 s and 600 s). Afterwards `Connect` and the exchange answer `404` for its secret and `Authorize` answers `404` for its code.
+- **quickconnect.expiry.R2** An authorized request has two windows. `Connect` keeps reporting it until 10 minutes after its `DateAdded`, which authorization moved forward (`connect.R3`): about 11 minutes after the authorization (alive at 640 s, gone at 660 s). The exchange is possible for 10 minutes after the authorization only, counted from the authorization and not from `Initiate`: a request authorized at once is refused with `404` from 10 minutes on while `Connect` still shows it, and one authorized five minutes after `Initiate` can still be exchanged at 10 minutes 15 seconds after `Initiate`.
+
+The scenario for these rules sleeps 615 s in total and carries the tags `slow` and `expiry`; run without `-skip-tags expiry` to include it.
 
 ---
 
@@ -98,6 +113,7 @@ Vocabulary used below. The *result object* returned by `Initiate` and `Connect` 
 | `quickconnect.initiate.R4` | `quickconnect.initiate.shape` |
 | `quickconnect.connect.R1` | `quickconnect.connect.poll` |
 | `quickconnect.connect.R2` | `quickconnect.connect.unknown-or-missing-secret` |
+| `quickconnect.connect.R3` | `quickconnect.connect.date-added-advances` |
 | `quickconnect.authorize.R1` | `users.quickconnect.exchange` |
 | `quickconnect.authorize.R2` | `quickconnect.authorize.anonymous-refused` |
 | `quickconnect.authorize.R3` | `quickconnect.authorize.unknown-or-missing-code` |
@@ -105,6 +121,7 @@ Vocabulary used below. The *result object* returned by `Initiate` and `Connect` 
 | `quickconnect.authorize.R5` | `quickconnect.authorize.non-admin-other-user-forbidden` |
 | `quickconnect.authorize.R6` | `quickconnect.authorize.invalid-user-id` |
 | `quickconnect.authorize.R7` | `quickconnect.authorize.unknown-user-id` |
+| `quickconnect.authorize.R8` | `quickconnect.authorize.already-authorized` |
 | `quickconnect.exchange.R1` | `users.quickconnect.exchange` |
 | `quickconnect.exchange.R2` | `users.quickconnect.exchange` |
 | `quickconnect.exchange.R3` | `users.quickconnect.unknown-secret` |
@@ -112,6 +129,8 @@ Vocabulary used below. The *result object* returned by `Initiate` and `Connect` 
 | `quickconnect.exchange.R5` | `users.quickconnect.exchange-revokes-device-token` |
 | `quickconnect.exchange.R6` | `users.quickconnect.secret-single-use` |
 | `quickconnect.exchange.R7` | `quickconnect.exchange.disabled-account` |
+| `quickconnect.expiry.R1` | `quickconnect.expiry.pending-and-authorized` |
+| `quickconnect.expiry.R2` | `quickconnect.expiry.pending-and-authorized` |
 | `quickconnect.disabled.R1` | `users.quickconnect.disabled`, `quickconnect.disabled.parameters-and-authorize` |
 
 The pre-existing scenario ids `users.quickconnect.*` are kept so the committed baseline keeps matching them.
@@ -123,8 +142,10 @@ The pre-existing scenario ids `users.quickconnect.*` are kept so the committed b
 | `users.quickconnect.secret-single-use` | An authorized secret can be exchanged repeatedly for ~10 minutes, returning the same token (finding S9). | Exchangeable once; the second attempt answers `404`. |
 | `quickconnect.exchange.disabled-account` | A disabled account still gets a login result. | `403`. |
 
-## Open questions
+## Resolved questions
 
-1. Authorizing a code that is already authorized: the reference answers `500` (an unhandled error). Tinyfin answers `200` again and keeps the request authorized for the same user; not specified.
-2. The `DateAdded` of an authorized request on `Connect` differs from the value `Initiate` returned in the reference (observed one minute later); clients do not use it and it is not specified.
-3. Expiry of a pending request (about 10 minutes) is not exercised by a scenario.
+Settled by probing the 12.2 reference:
+
+1. Authorizing a code that is already authorized: `500`, `authorize.R8`. (Tinyfin answered `200` before.)
+2. `DateAdded` after authorization: moved one minute past the authorization, `connect.R3`.
+3. Expiry of a pending request: 10 minutes after `Initiate`, `expiry.R1`; exercised by `quickconnect.expiry.pending-and-authorized` (tagged `slow`, `expiry`).

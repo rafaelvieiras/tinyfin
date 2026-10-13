@@ -38,6 +38,7 @@ import (
 type commonNFOFields struct {
 	Title         string       `xml:"title"`
 	OriginalTitle string       `xml:"originaltitle"`
+	SortTitle     string       `xml:"sorttitle"`
 	Plot          string       `xml:"plot"`
 	Year          int          `xml:"year"`
 	Premiered     string       `xml:"premiered"`
@@ -173,6 +174,9 @@ func applyCommonNFOFields(item *storage.Item, n commonNFOFields) {
 	if n.Title != "" {
 		item.Name = n.Title
 		item.SortName = n.Title
+	}
+	if n.SortTitle != "" {
+		item.SortName = n.SortTitle
 	}
 	if n.OriginalTitle != "" {
 		item.OriginalTitle = n.OriginalTitle

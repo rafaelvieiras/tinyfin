@@ -5442,6 +5442,31 @@
         }
       },
       {
+        "name": "let the start settle",
+        "sleepMs": 500
+      },
+      {
+        "name": "read user data after the start",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.bravo.id}}",
+          "query": {
+            "userId": "{{user.alice.id}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.UserData.PlayCount",
+              "op": "eq",
+              "value": 1
+            }
+          ]
+        }
+      },
+      {
         "name": "progress",
         "as": "alice",
         "request": {
@@ -10017,6 +10042,950 @@
           "path": "/Users/{{capture.u}}"
         },
         "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "playstate.percent.leaf",
+    "endpoint": "GET /UserItems/{itemId}/UserData",
+    "spec": "playstate.md#played-percentage",
+    "scope": "modern",
+    "tags": [
+      "playstate"
+    ],
+    "covers": [
+      "playstate.percent.R1"
+    ],
+    "requires": [
+      "item:long",
+      "library:long",
+      "user:alice"
+    ],
+    "steps": [
+      {
+        "name": "fresh: no percentage",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/UserItems/{{item.long.id}}/UserData"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.PlayedPercentage",
+              "op": "absent"
+            },
+            {
+              "path": "$.PlaybackPositionTicks",
+              "op": "eq",
+              "value": 0
+            }
+          ]
+        }
+      },
+      {
+        "name": "progress to 60 s of a 330 s movie",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Progress",
+          "body": {
+            "ItemId": "{{item.long.id}}",
+            "PositionTicks": 600000000
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "percentage is position over runtime",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/UserItems/{{item.long.id}}/UserData"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.PlaybackPositionTicks",
+              "op": "eq",
+              "value": 600000000
+            },
+            {
+              "path": "$.PlayedPercentage",
+              "op": "gte",
+              "value": 18.1
+            },
+            {
+              "path": "$.PlayedPercentage",
+              "op": "lte",
+              "value": 18.2
+            },
+            {
+              "path": "$.Played",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "same value in the item",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.long.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.UserData.PlayedPercentage",
+              "op": "gte",
+              "value": 18.1
+            },
+            {
+              "path": "$.UserData.PlayedPercentage",
+              "op": "lte",
+              "value": 18.2
+            }
+          ]
+        }
+      },
+      {
+        "name": "finish it",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.long.id}}"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "played: no percentage, no position",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/UserItems/{{item.long.id}}/UserData"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Played",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.PlaybackPositionTicks",
+              "op": "eq",
+              "value": 0
+            },
+            {
+              "path": "$.PlayedPercentage",
+              "op": "absent"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "unmark long",
+        "as": "alice",
+        "request": {
+          "method": "DELETE",
+          "path": "/UserPlayedItems/{{item.long.id}}"
+        },
+        "expect": {
+          "status": 200
+        }
+      }
+    ]
+  },
+  {
+    "id": "playstate.percent.folder",
+    "endpoint": "GET /Items/{itemId}",
+    "spec": "playstate.md#played-percentage",
+    "scope": "modern",
+    "tags": [
+      "playstate"
+    ],
+    "covers": [
+      "playstate.percent.R2"
+    ],
+    "requires": [
+      "item:show",
+      "item:s01e01",
+      "item:s01e02",
+      "item:s02e01",
+      "library:shows",
+      "user:alice"
+    ],
+    "steps": [
+      {
+        "name": "series, nothing played",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.show.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.UserData.PlayedPercentage",
+              "op": "eq",
+              "value": 0
+            },
+            {
+              "path": "$.UserData.UnplayedItemCount",
+              "op": "eq",
+              "value": 3
+            }
+          ]
+        }
+      },
+      {
+        "name": "find season 1",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/Items",
+          "query": {
+            "ParentId": "{{item.show.id}}",
+            "IncludeItemTypes": "Season",
+            "SortBy": "SortName"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.TotalRecordCount",
+              "op": "eq",
+              "value": 2
+            }
+          ]
+        },
+        "capture": {
+          "s1": "$.Items[0].Id"
+        }
+      },
+      {
+        "name": "mark S01E01 played",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/UserPlayedItems/{{item.s01e01.id}}"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "series: one of three",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.show.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.UserData.PlayedPercentage",
+              "op": "gte",
+              "value": 33.3
+            },
+            {
+              "path": "$.UserData.PlayedPercentage",
+              "op": "lte",
+              "value": 33.4
+            },
+            {
+              "path": "$.UserData.UnplayedItemCount",
+              "op": "eq",
+              "value": 2
+            },
+            {
+              "path": "$.UserData.Played",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "season 1: one of two",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{capture.s1}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.UserData.PlayedPercentage",
+              "op": "eq",
+              "value": 50
+            },
+            {
+              "path": "$.UserData.UnplayedItemCount",
+              "op": "eq",
+              "value": 1
+            },
+            {
+              "path": "$.UserData.Played",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "mark S01E02 played",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/UserPlayedItems/{{item.s01e02.id}}"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "season 1: all played",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{capture.s1}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.UserData.PlayedPercentage",
+              "op": "eq",
+              "value": 100
+            },
+            {
+              "path": "$.UserData.Played",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "series: two of three",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.show.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.UserData.PlayedPercentage",
+              "op": "gte",
+              "value": 66.6
+            },
+            {
+              "path": "$.UserData.PlayedPercentage",
+              "op": "lte",
+              "value": 66.7
+            },
+            {
+              "path": "$.UserData.UnplayedItemCount",
+              "op": "eq",
+              "value": 1
+            }
+          ]
+        }
+      },
+      {
+        "name": "mark S02E01 played",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/UserPlayedItems/{{item.s02e01.id}}"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "series: all played",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.show.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.UserData.PlayedPercentage",
+              "op": "eq",
+              "value": 100
+            },
+            {
+              "path": "$.UserData.Played",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "unmark s01e01",
+        "as": "alice",
+        "request": {
+          "method": "DELETE",
+          "path": "/UserPlayedItems/{{item.s01e01.id}}"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "unmark s01e02",
+        "as": "alice",
+        "request": {
+          "method": "DELETE",
+          "path": "/UserPlayedItems/{{item.s01e02.id}}"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "unmark s02e01",
+        "as": "alice",
+        "request": {
+          "method": "DELETE",
+          "path": "/UserPlayedItems/{{item.s02e01.id}}"
+        },
+        "expect": {
+          "status": 200
+        }
+      }
+    ]
+  },
+  {
+    "id": "playstate.progress.below-minimum-keeps-date",
+    "endpoint": "POST /Sessions/Playing/Progress",
+    "spec": "playstate.md#playback-progress",
+    "scope": "modern",
+    "tags": [
+      "playstate"
+    ],
+    "covers": [
+      "playstate.progress.R12",
+      "playstate.stopped.R13"
+    ],
+    "requires": [
+      "item:alpha",
+      "item:bravo",
+      "item:charlie",
+      "library:movies",
+      "user:alice"
+    ],
+    "steps": [
+      {
+        "name": "progress below the minimum on a fresh item",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Progress",
+          "body": {
+            "ItemId": "{{item.alpha.id}}",
+            "PositionTicks": 100000
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "no date, no position",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/UserItems/{{item.alpha.id}}/UserData"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.LastPlayedDate",
+              "op": "absent"
+            },
+            {
+              "path": "$.PlaybackPositionTicks",
+              "op": "eq",
+              "value": 0
+            },
+            {
+              "path": "$.Played",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "progress at zero",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Progress",
+          "body": {
+            "ItemId": "{{item.alpha.id}}",
+            "PositionTicks": 0
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "still no date",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/UserItems/{{item.alpha.id}}/UserData"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.LastPlayedDate",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "stopped below the minimum",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.alpha.id}}",
+            "PositionTicks": 100000
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "still no date after a stop",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/UserItems/{{item.alpha.id}}/UserData"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.LastPlayedDate",
+              "op": "absent"
+            },
+            {
+              "path": "$.Played",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$.PlayCount",
+              "op": "eq",
+              "value": 0
+            }
+          ]
+        }
+      },
+      {
+        "name": "start",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing",
+          "body": {
+            "ItemId": "{{item.alpha.id}}"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "let the start settle",
+        "sleepMs": 500
+      },
+      {
+        "name": "read the date a start sets",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/UserItems/{{item.alpha.id}}/UserData"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.LastPlayedDate",
+              "op": "exists"
+            }
+          ]
+        },
+        "capture": {
+          "lpd": "$.LastPlayedDate"
+        }
+      },
+      {
+        "name": "progress below the minimum again",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Progress",
+          "body": {
+            "ItemId": "{{item.alpha.id}}",
+            "PositionTicks": 100000
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "the date is untouched",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/UserItems/{{item.alpha.id}}/UserData"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.LastPlayedDate",
+              "op": "eq",
+              "value": "{{capture.lpd}}"
+            },
+            {
+              "path": "$.PlayCount",
+              "op": "eq",
+              "value": 1
+            }
+          ]
+        }
+      },
+      {
+        "name": "stopped below the minimum again",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.alpha.id}}",
+            "PositionTicks": 100000
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "the date is untouched after a stop",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/UserItems/{{item.alpha.id}}/UserData"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.LastPlayedDate",
+              "op": "eq",
+              "value": "{{capture.lpd}}"
+            },
+            {
+              "path": "$.PlayCount",
+              "op": "eq",
+              "value": 1
+            },
+            {
+              "path": "$.Played",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "cleanup: close playback (a real stop; the item is reset right after)",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.alpha.id}}"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "unmark alpha",
+        "as": "alice",
+        "request": {
+          "method": "DELETE",
+          "path": "/UserPlayedItems/{{item.alpha.id}}"
+        },
+        "expect": {
+          "status": 200
+        }
+      }
+    ]
+  },
+  {
+    "id": "playstate.progress.negative-position",
+    "endpoint": "POST /Sessions/Playing/Progress",
+    "spec": "playstate.md#playback-progress",
+    "scope": "modern",
+    "tags": [
+      "playstate"
+    ],
+    "covers": [
+      "playstate.progress.R13"
+    ],
+    "requires": [
+      "item:alpha",
+      "item:bravo",
+      "item:charlie",
+      "library:movies",
+      "user:alice"
+    ],
+    "steps": [
+      {
+        "name": "negative progress is accepted",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Progress",
+          "body": {
+            "ItemId": "{{item.alpha.id}}",
+            "PositionTicks": -5
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "stored as given, nothing else changes",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/UserItems/{{item.alpha.id}}/UserData"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.PlaybackPositionTicks",
+              "op": "eq",
+              "value": -5
+            },
+            {
+              "path": "$.Played",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$.LastPlayedDate",
+              "op": "absent"
+            },
+            {
+              "path": "$.PlayedPercentage",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "not resumable",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/UserItems/Resume"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[*].Id",
+              "op": "notcontains",
+              "value": "{{item.alpha.id}}"
+            }
+          ]
+        }
+      },
+      {
+        "name": "start with a negative position",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing",
+          "body": {
+            "ItemId": "{{item.alpha.id}}",
+            "PositionTicks": -5
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "let the start settle",
+        "sleepMs": 500
+      },
+      {
+        "name": "a start does not persist the position",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/UserItems/{{item.alpha.id}}/UserData"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.PlaybackPositionTicks",
+              "op": "eq",
+              "value": -5
+            },
+            {
+              "path": "$.PlayCount",
+              "op": "eq",
+              "value": 1
+            }
+          ]
+        }
+      },
+      {
+        "name": "a stopped report with one is refused",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.alpha.id}}",
+            "PositionTicks": -5
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "and changes nothing",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/UserItems/{{item.alpha.id}}/UserData"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.PlaybackPositionTicks",
+              "op": "eq",
+              "value": -5
+            }
+          ]
+        }
+      },
+      {
+        "name": "an in-range progress overwrites it",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Progress",
+          "body": {
+            "ItemId": "{{item.alpha.id}}",
+            "PositionTicks": 100000
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "position is back to zero",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/UserItems/{{item.alpha.id}}/UserData"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.PlaybackPositionTicks",
+              "op": "eq",
+              "value": 0
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "cleanup: close playback (a real stop; the item is reset right after)",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.alpha.id}}"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "unmark alpha",
+        "as": "alice",
+        "request": {
+          "method": "DELETE",
+          "path": "/UserPlayedItems/{{item.alpha.id}}"
+        },
+        "expect": {
+          "status": 200
+        }
       }
     ]
   }

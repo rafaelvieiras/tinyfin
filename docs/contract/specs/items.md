@@ -166,7 +166,7 @@ the 12.2 reference with fixture items whose rating comes from a sidecar `.nfo` (
 - **items.filter.R14** `Filters=IsResumable` keeps items with a saved playback position for the user (position greater than zero).
 - **items.filter.R15** For a folder (a series, a season), the played state is aggregate: it is played only when every leaf below it is played; it is unplayed otherwise.
 - **items.filter.R16** `AdjacentTo` returns the given item and its immediate neighbours (previous and next) in the requested order, at most three items; `TotalRecordCount` counts these; an anchor that is not in the candidate set yields an empty result.
-- **items.filter.R17** Dimension filters work on the video stream: `IsHd=false` matches width below 1200 (SD), `IsHd=true` width of 1200 or more, `Is4K=true` width of 3800 or more or height of 2100 or more; `Is4K=false` without `IsHd` matches nothing (empty result); `MinWidth`/`MinHeight` keep items at least that large; `MaxWidth`/`MaxHeight` keep items at most that large.
+- **items.filter.R17** Dimension filters work on the video stream. `IsHd` and `Is4K` pick resolution buckets and the picked buckets are united: `IsHd=false` is the SD bucket (width below 1200), `IsHd=true` the HD bucket (width of 1200 or more that is **not** 4K, so a 3840-wide item is not matched by `IsHd=true`), `Is4K=true` the 4K bucket (width of 3800 or more, or height of 2100 or more). `Is4K=false` picks no bucket: alone it matches nothing (empty result), together with `IsHd` it changes nothing. A narrow, tall item (for example 100x2100) is in both the SD and the 4K bucket. `MinWidth`/`MinHeight` keep items at least that large; `MaxWidth`/`MaxHeight` keep items at most that large (inclusive bounds). Observed on the reference with 320x240, 1280x720, 3840x2160 and edge-size clips (1198x100, 1200x100, 3800x100, 100x2100, 1300x2200); `scripts/conformance-media.sh` generates them.
 - **items.filter.R18** Metadata filters that nothing in the fixtures satisfies return an empty result with status 200: `Genres`, `Tags`, `OfficialRatings`, `Person`, `HasSubtitles=true`, `HasOverview=true`, `HasImdbId=true`, `HasTmdbId=true`, `MinCommunityRating`, `MinPremiereDate`, `ImageTypes` for types nothing has (`Backdrop`, `Logo`, `Banner`), `IsLocked=true`, `VideoTypes`, `Is3D=true`; `HasOverview=false` keeps items without an overview.
 - **items.filter.R19** Parental parameters on unrated items: `MaxOfficialRating` (known or unknown value), `HasParentalRating=false`, `MinOfficialRating` and `CollapseBoxSetItems=true` (no box sets exist) all leave unrated movies in the result.
 
@@ -187,11 +187,14 @@ the 12.2 reference with fixture items whose rating comes from a sidecar `.nfo` (
 
 - **items.sort.R1** Without `SortBy` results are ordered by sort name ascending.
 - **items.sort.R2** `SortBy=SortName` (or `Name`) orders by sort name; `SortOrder=Ascending` (default) / `Descending` sets the direction. `SortOrder` omitted means ascending.
-- **items.sort.R3** `SortBy=ProductionYear` orders by production year; `SortBy=PremiereDate` orders by premiere date, falling back to the production year when no premiere date is known.
+- **items.sort.R3** `SortBy=ProductionYear` orders by production year (the premiere date plays no part: an item with year 2005 and premiere date 2019 sorts at 2005; ties follow R6). `SortBy=PremiereDate` orders by premiere date; an item with no premiere date is ordered as if it premiered on January 1st of its production year (a year-only 2012 item precedes a 2012-06-15 premiere and follows a 2011 one).
 - **items.sort.R4** `SortBy` and `SortOrder` are comma-separated lists aligned by position: `SortOrder[i]` applies to `SortBy[i]`; a key without a counterpart takes `SortOrder[0]` (ascending when `SortOrder` is empty); a `SortOrder` list with more values than there are `SortBy` keys is rejected with **400** (including one key with two order values); if `SortBy` is absent or yields no usable key the order list is not validated (**200**, default order). `ParentIndexNumber` and `IndexNumber` order episodes by season then episode.
 - **items.sort.R5** `SortOrder` without a usable `SortBy` (absent, or only unknown tokens) has no effect; the default order applies.
 - **items.sort.R6** Ties on the sort key are broken by sort name ascending.
 - **items.sort.R7** `SortBy=Random` returns the same set (count and `TotalRecordCount` unchanged) in an unspecified order.
+- **items.sort.R8** The sort name of an item (what `SortName` carries when requested, what `SortBy=SortName`/`Name`, the default order and the tie-break use, and what `NameStartsWith`, `NameStartsWithOrGreater` and `NameLessThan` compare against) is derived from its title, or from an explicit sort title in its metadata, in this order: (1) a single leading article, `the`, `a` or `an` in any case followed by a space, is removed (`The Matrix` gives `matrix`, `An Apple` gives `apple`); a title that is only the article is kept (`The` gives `the`), and the check happens before the next step, so `The-Thing` and `A-Team` do not lose an article; (2) the characters `,` `&` `-` `{` `}` `'` are deleted and `.` `+` `%` become a space (`Dr. Who` gives `dr  who`, `Rock-n-Roll` gives `rocknroll`); (3) the text is lower-cased and letters outside ASCII are transliterated (accents fold: `Éclair` gives `eclair`, `Ångström` gives `angstrom`; `ß` gives `ss`, `Æ` `ae`, `Œ` `oe`, `Ø` `o`, `Ł` `l`, `Þ` `th`); (4) every run of ASCII digits shorter than ten digits is left-padded with zeros to ten (`Movie 2` gives `movie 0000000002`, so 2 orders before 10; `Movie 1.5` gives `movie 0000000001 0000000005`); longer runs are unchanged. Every other character (`!`, `#`, `(`, `_`, `~`, quotes, ...) is kept. Sort names compare as plain code points, ascending, with no locale collation. The reference also transliterates Greek, Cyrillic and CJK to Latin (`Привет` gives `privet`); Tinyfin folds Latin-script letters only and leaves other scripts as written (they order by code point).
+- **items.sort.R9** Seasons and episodes have a structural sort name: a season's is its number padded to four digits (`0001`); an episode's is `<season, 3 digits> - <episode, 4 digits> - <title>` with the title exactly as written (`001 - 0002 - Second Chapter`; no article removal, case kept). Episodes therefore order by season, then episode number, then title, and `NameStartsWith` on episodes is compared with this composite. A series follows R8 (`The Sort Show` gives `sort show`).
+- **items.sort.R10** An explicit sort title in the item's metadata (`<sorttitle>` of a Kodi `.nfo`) replaces the title as the input of R8 without renaming the item: title `Zebra Sort` with sort title `An Aardvark Sort` has `Name` `Zebra Sort` and sort name `aardvark sort` (the article rule and the other steps apply to the sort title too).
 
 ### Rules: paging
 
@@ -208,6 +211,7 @@ the 12.2 reference with fixture items whose rating comes from a sidecar `.nfo` (
 - **items.fields.R2** Optional fields are returned only when requested through `Fields` (comma-separated); `Path` is absent by default and present with `Fields=Path`; unknown field names are dropped silently.
 - **items.fields.R3** `UserData` is included by default for a user context; `EnableUserData=false` omits it. It carries `Played`, `IsFavorite`, `PlayCount`, `PlaybackPositionTicks` for the context user.
 - **items.fields.R4** `EnableImages`, `ImageTypeLimit` and `EnableImageTypes` shape image information only; they are accepted in any combination and never change which items match.
+- **items.fields.R5** `SortName` is an optional field like `Path`: listing items carry it only when `Fields` contains `SortName`; a single read (`GET /Items/{itemId}`) always carries it.
 
 ---
 
@@ -286,6 +290,7 @@ Errors: **400** all-zero item id / malformed body, **401** anonymous, **403** ot
 - **items.get.R7** `UserId` query: omitted, own or all-zero id acts as the token user; another user's id is **403** for non-administrators and gives the target user's visibility and user data for administrators; unknown id is **404** for an administrator and **403** for a non-administrator.
 - **items.get.R8** `UserData` reflects the context user's own data: another user's favorites/played state are not shown.
 - **items.get.R9** List-shaping parameters (`Fields`, `EnableUserData`, ...) do not apply to a single read; the item is always returned in full.
+- **items.get.R10** An item id in the path that is not a GUID (`/Items/not-a-guid`, `/Items/12345`) answers **400** with a problem document (`wire.problem.R2`, `errors` names `itemId`), not 404; the same holds on every route that takes an item id in its path (`GET`/`POST /UserItems/{itemId}/UserData`, the legacy alias). Authentication is checked first: an anonymous caller gets 401.
 
 ---
 
@@ -304,6 +309,8 @@ of the modern ones; drop them when the client stops using them.
 - **items.legacy.R3** The legacy route does not take `IndexNumber`: it is ignored there (all episodes match) while `GET /Items` honors it. `AudioLanguages` and `SubtitleLanguages` are likewise not accepted.
 - **items.legacy.R4** `GET /Users/{userId}/Items/{itemId}` is an alias of `GET /Items/{itemId}` with `UserId` from the path: same body, 404 for unknown/hidden items, root folder for the all-zero item id.
 - **items.legacy.R5** Same user rules on the single-item alias: anonymous **401**; non-administrator with another user in the path **403**; administrator allowed; unknown user in the path **404**.
+- **items.legacy.R6** The all-zero `userId` in the path (plain or dashed), on either alias, is not an error: it acts as the caller (the token user), as an omitted `UserId` does on the modern route (`items.user.R3`); the item's `UserData` is the caller's own.
+- **items.legacy.R7** A path user id or item id that is not a GUID answers **400** with a problem document (`wire.problem.R2`) naming `userId` or `itemId`.
 
 ---
 
@@ -333,19 +340,17 @@ special library views (`UserView` types such as latest, next-up, genres), remote
 API-key (no user) access. Naming a studio or an artist in a query also creates the by-name entity as a side effect in the
 reference; that is deliberately left unexercised.
 
-## Open questions
+## Resolved questions
 
-* **Library restriction on `Ids` (items.scope.R3).** Confirmed at runtime on the reference: the restriction is
-  not applied (security defect). Recorded as a divergence in the scenario; it belongs in the security findings.
-* **Dimension filters (items.filter.R17)** assume the media files in the fixtures are 320x240; the values come from the
-  media generation script, not from the reference.
-* **`PremiereDate` ordering fallback (items.sort.R3)** is taken from the audit's description of the order mapping;
-  verify against the reference.
-* **`UserId` all-zero on the legacy single-item alias.** The audit notes both "falls back to the token user"
-  (shared helper) and "400" (legacy note); no scenario asserts it.
-* **Non-GUID item id in a route** (`/Items/not-a-guid`): the framework's binding result (400 vs 404) is not pinned
-  by the audit; not asserted.
-* **Sort name of items with leading articles** and non-ASCII names: not observable with the fixtures.
+Every question that was open in earlier revisions has been settled by probing the 12.2 reference:
+
+* **Library restriction on `Ids` (items.scope.R3).** The reference does not apply the restriction (security defect); recorded as a divergence in the scenario.
+* **Dimension filters (items.filter.R17).** The fixture media is 320x240 (read back from the reference's stream info); the bucket semantics, including the union of `IsHd` and `Is4K`, are observed in `items.filter.dimension-buckets`.
+* **`PremiereDate` ordering fallback (items.sort.R3).** January 1st of the production year; see `items.sort.premiere-date-fallback`.
+* **`UserId` all-zero on the legacy single-item alias.** Falls back to the caller (items.legacy.R6).
+* **Non-GUID item id in a route.** 400 with a problem document, never 404 (items.get.R10, items.legacy.R7).
+* **Sort name of items with leading articles and non-ASCII names.** items.sort.R8 and R9. Not implemented by Tinyfin: transliteration of non-Latin scripts.
+* **`SortName` in listings.** Only with `Fields=SortName` (items.fields.R5).
 
 ---
 
@@ -388,7 +393,7 @@ reference; that is deliberately left unexercised.
 | `items.filter.R14` | `items.filter.resumable` |
 | `items.filter.R15` | `items.filter.folder-played-aggregate` |
 | `items.filter.R16` | `items.filter.adjacent-to` |
-| `items.filter.R17` | `items.filter.dimensions` |
+| `items.filter.R17` | `items.filter.dimensions` |, `items.filter.dimension-buckets`
 | `items.filter.R18` | `items.filter.metadata-absent` |
 | `items.filter.R19` | `items.filter.parental-neutral` |
 | `items.ids.R1` | `items.ids.by-id` |
@@ -400,11 +405,14 @@ reference; that is deliberately left unexercised.
 | `items.search.R3` | `items.search.scoped` |
 | `items.sort.R1` | `items.sort.default-order` |
 | `items.sort.R2` | `items.sort.sort-name` |
-| `items.sort.R3` | `items.sort.production-year` |
+| `items.sort.R3` | `items.sort.production-year` |, `items.sort.premiere-date-fallback`
 | `items.sort.R4` | `items.sort.multi-key` |
 | `items.sort.R5` | `items.sort.order-without-key` |
 | `items.sort.R6` | `items.sort.tie-break` |
 | `items.sort.R7` | `items.sort.random` |
+| `items.sort.R8` | `items.sort.sort-name-rules`, `items.sort.series-and-episode-sort-names` |
+| `items.sort.R9` | `items.sort.series-and-episode-sort-names` |
+| `items.sort.R10` | `items.sort.sort-name-rules` |
 | `items.paging.R1` | `items.paging.limit` |
 | `items.paging.R2` | `items.paging.start-index` |
 | `items.paging.R3` | `items.paging.limit-zero` |
@@ -423,6 +431,7 @@ reference; that is deliberately left unexercised.
 | `items.fields.R2` | `items.fields.path-on-request` |
 | `items.fields.R3` | `items.fields.enable-user-data`, `items.userdata.reflected-in-listing` |
 | `items.fields.R4` | `items.fields.image-options-accepted` |
+| `items.fields.R5` | `items.fields.sortname-optional` |
 | `items.resume.R1` | `items.resume.anonymous` |
 | `items.resume.R2` | `items.resume.empty` |
 | `items.resume.R3` | `items.resume.lists-in-progress`, `items.resume.played-and-completed-excluded` |
@@ -456,8 +465,11 @@ reference; that is deliberately left unexercised.
 | `items.get.R7` | `items.get.user-id` |
 | `items.get.R8` | `items.get.user-data-per-user` |
 | `items.get.R9` | `items.get.full-dto-ignores-list-options` |
+| `items.get.R10` | `items.get.non-guid-item-id` |
 | `items.legacy.R1` | `items.legacy.items-alias` |
 | `items.legacy.R2` | `items.legacy.items-user-rules` |
 | `items.legacy.R3` | `items.legacy.items-no-indexnumber` |
 | `items.legacy.R4` | `items.legacy.item-alias` |
 | `items.legacy.R5` | `items.legacy.item-user-rules` |
+| `items.legacy.R6` | `items.legacy.item-alias-path-ids` |
+| `items.legacy.R7` | `items.legacy.item-alias-path-ids` |

@@ -111,6 +111,13 @@ The folder reports a derived view in which leaves that were never individually t
 - **playstate.folder.R7** After a folder mark played, unmarking one leaf makes its ancestors `Played=false`
   with `UnplayedItemCount=1` (only that leaf; leaves not individually touched stay counted as played).
 
+## PlayedPercentage
+
+`PlayedPercentage` is a member of the user data (`UserData` of an item, `GET /UserItems/{itemId}/UserData`, listings).
+
+- **playstate.percent.R1** On a leaf item (movie, episode) it is present only while the item has a saved position greater than zero, and then equals `PlaybackPositionTicks` / runtime x 100 (60 s into a 330 s movie: 18.18...). It is absent for an item never touched, played, or whose position was cleared, and a negative stored position (`progress.R13`) produces none.
+- **playstate.percent.R2** On a folder (Series, Season) it is always present: the share of the leaves below it that are played, in percent, as a double (1 of 3 is 33.33..., 2 of 3 is 66.66...; assertions use a tolerance). It is `0` when nothing is played and `100` when everything is, in particular after a folder mark played (`folder.R2`) or unplayed (`folder.R3`). A season counts its own episodes, a series all of its episodes, in step with `UnplayedItemCount`.
+
 ## Acting user
 
 Applies to mark played and mark unplayed (and the legacy aliases, where the id comes from the path).
@@ -223,6 +230,8 @@ finished state) is saved. Same body as start; same auth; 204 empty on success; 4
   (the item leaves the resume list).
 - **playstate.progress.R10** Missing, all-zero or unknown `ItemId`: 204, no user data touched.
 - **playstate.progress.R11** Malformed `ItemId`, wrong field types or malformed JSON: 400.
+- **playstate.progress.R12** A position below the minimum resume percentage (including 0) clears the saved position (`R2`, `R9`) and leaves `LastPlayedDate` exactly as it was: a never-played item still has none, an item with a date keeps it. The report is otherwise a no-op; only a position that is saved, or finishes the item, sets the date to now (`R3`, `R5`). The same holds for a stopped report (`stopped.R13`).
+- **playstate.progress.R13** A negative `PositionTicks` on a progress report is accepted (204) and stored as given: `PlaybackPositionTicks` becomes the negative value (the reference keeps it verbatim, a quirk), `Played`, `PlayCount` and `LastPlayedDate` are unchanged, no `PlayedPercentage` is produced and the item is not listed as resumable. A later in-range progress or stop overwrites it. (A negative position on a stopped report is refused, `stopped.R6`; a start ignores the position, `start.R4`.)
 
 ## Playback stopped
 
@@ -259,6 +268,7 @@ Responses: 204 empty; 400 (negative `PositionTicks`, malformed body); 401 anonym
 - **playstate.stopped.R10** A stop without a preceding start is valid and updates user data as above (no
   `PlayCount` from the missing start).
 - **playstate.stopped.R11** Malformed `ItemId`, wrong field types or malformed JSON: 400.
+- **playstate.stopped.R13** A stop with a position below the minimum resume percentage (including 0) leaves `LastPlayedDate` untouched, as a progress report does (`progress.R12`).
 
 ## Resume
 
@@ -321,25 +331,21 @@ modern routes; the difference is that the user id is a path segment and is requi
 The deprecated `/PlayingItems/...` and `/Users/{userId}/PlayingItems/...` routes (see
 [`scope-excluded.md`](../scope-excluded.md)) and the compact `yyyyMMddHHmmss` `datePlayed` format.
 
-## Open questions
+## Resolved questions
 
-1. Resolved (reference probe): reports for items the user cannot see are accepted with 204 and write user data
-   for the hidden item (`start.R6`, `stopped.R8`, `stopped.R12`); Tinyfin matches. The data does not appear in
-   `GET /UserItems/Resume` or `GET /UserItems/{id}/UserData` while the item is hidden (404), including for an
-   administrator acting on that user. Rejecting such reports with 404 would be a hardening and a divergence; it
-   is not done.
-2. `PlayedPercentage` for leaf items and its exact value for folders is not asserted (audit unresolved).
-3. Resolved (reference probe): `LastPlayedDate` is omitted from the JSON (not `null`) when the item was never
-   played, in both the mark response and `UserData`.
-4. Resolved (reference probe): a stop with a position, with or without a preceding start, never changes
-   `PlayCount` (start then stop with a position leaves 1; stop with a position alone leaves 0).
-5. Position `PositionTicks` negative on progress is unspecified.
-6. Multi-user sessions (additional users) and live-TV stream handling are not observable black-box and are not
-   specified.
+Settled by probing the 12.2 reference:
+
+1. Reports for items the user cannot see are accepted with 204 and write user data for the hidden item (`start.R6`, `stopped.R8`, `stopped.R12`); Tinyfin matches. The data does not appear in `GET /UserItems/Resume` or `GET /UserItems/{id}/UserData` while the item is hidden (404), including for an administrator acting on that user. Rejecting such reports with 404 would be a hardening and a divergence; it is not done.
+2. `PlayedPercentage` for leaf items and folders: `percent.R1`, `percent.R2`.
+3. `LastPlayedDate` is omitted from the JSON (not `null`) when the item was never played, in both the mark response and `UserData`.
+4. A stop with a position, with or without a preceding start, never changes `PlayCount` (start then stop with a position leaves 1; stop with a position alone leaves 0).
+5. Negative `PositionTicks` on progress: stored as given, `progress.R13`. A below-minimum position does not touch `LastPlayedDate`: `progress.R12`, `stopped.R13`.
+6. Out of contract, not observable black-box: additional users on one session, live-TV stream handling, a session removed mid-request, and the 404 "session not found" of start/stopped (the token and the session are created and revoked together, so no request reaches the handler without one).
 7. API-key scenarios (`user.R7`, `user.R8`) use the runner's `apikey` identity (a key created through `/Auth/Keys`).
-8. A user whose session was removed mid-request, and the 404 "session not found" of start/stopped, cannot be
-   triggered black-box.
-9. Reports from a restricted user leave a hidden user-data row that scenarios cannot clean up.
+8. Reports from a restricted user leave a hidden user-data row that scenarios cannot clean up.
+9. Reference timing quirk: a start immediately followed by a progress report (no other request in between) intermittently loses the start's `PlayCount` increment on the reference (about one run in four of `playstate.progress.below-minimum`); Tinyfin is deterministic and the contract requires the increment (`start.R2`, `progress.R7`). Scenarios that assert `PlayCount` after a start followed by a progress report (`progress.below-minimum`, `progress.below-minimum-keeps-date`, `progress.negative-position`) wait 500 ms after the start (`sleepMs`).
+
+---
 
 ## Rule to scenarios
 
@@ -361,6 +367,8 @@ The deprecated `/PlayingItems/...` and `/Users/{userId}/PlayingItems/...` routes
 | `playstate.folder.R5` | `folder.season-mark-played`, `folder.leaf-updates-ancestor` |
 | `playstate.folder.R6` | `folder.keeps-leaf-positions` |
 | `playstate.folder.R7` | `folder.leaf-unmarked-after-folder-played` |
+| `playstate.percent.R1` | `percent.leaf` |
+| `playstate.percent.R2` | `percent.folder`, `folder.series-mark-played`, `folder.series-mark-unplayed` |
 | `playstate.user.R1` | `mark-played.basic`, `start.basic` |
 | `playstate.user.R2` | `user.explicit-own-id` |
 | `playstate.user.R3` | `user.admin-on-behalf-mark`, `user.admin-on-behalf-unmark` |
@@ -400,6 +408,8 @@ The deprecated `/PlayingItems/...` and `/Users/{userId}/PlayingItems/...` routes
 | `playstate.progress.R9` | `progress.below-minimum-clears-position` |
 | `playstate.progress.R10` | `progress.no-item` |
 | `playstate.progress.R11` | `progress.invalid-body` |
+| `playstate.progress.R12` | `progress.below-minimum-keeps-date` |
+| `playstate.progress.R13` | `progress.negative-position` |
 | `playstate.stopped.R1` | `stopped.no-position-is-complete` |
 | `playstate.stopped.R2` | `stopped.no-position-is-complete`, `stopped.start-then-no-position` |
 | `playstate.stopped.R3` | `stopped.below-minimum`, `stopped.mid-short-video`, `stopped.above-maximum`, `stopped.beyond-runtime` |
@@ -412,6 +422,7 @@ The deprecated `/PlayingItems/...` and `/Users/{userId}/PlayingItems/...` routes
 | `playstate.stopped.R9` | `stopped.below-minimum`, `stopped.mid-short-video` |
 | `playstate.stopped.R10` | `stopped.no-position-is-complete`, `stopped.without-start` |
 | `playstate.stopped.R11` | `stopped.invalid-body` |
+| `playstate.stopped.R13` | `progress.below-minimum-keeps-date` |
 | `playstate.resume.R1` | `resume.saved-position-listed-until-played`, `resume.long-runtime-listed` |
 | `playstate.resume.R2` | `resume.saved-position-listed-until-played` |
 | `playstate.resume.R3` | `resume.below-minimum-removes-entry` |

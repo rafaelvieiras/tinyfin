@@ -15,9 +15,16 @@ import (
 )
 
 const (
-	// quickConnectTTL is how long a request stays redeemable, authorized
-	// or not.
+	// quickConnectTTL is how long a request stays visible to Connect,
+	// counted from its DateAdded: ten minutes after Initiate while pending
+	// and, because authorizing moves DateAdded forward by
+	// quickConnectAuthorizeBump, eleven minutes after the authorization once
+	// authorized. The exchange window is ten minutes from the authorization
+	// itself (quickconnect.expiry.R2).
 	quickConnectTTL = 10 * time.Minute
+	// quickConnectAuthorizeBump is how far past the authorization time
+	// DateAdded is set when a request is authorized (quickconnect.connect.R3).
+	quickConnectAuthorizeBump = time.Minute
 	// quickConnectMaxPending bounds the in-memory table: the Initiate
 	// route is anonymous, so an unbounded table would be a memory lever.
 	quickConnectMaxPending = 500
@@ -37,6 +44,8 @@ type quickConnectRequest struct {
 
 	Authorized bool
 	UserID     storage.UserID
+	// AuthorizedAt starts the exchange window (quickconnect.expiry.R2).
+	AuthorizedAt time.Time
 }
 
 // quickConnectState holds pending requests. They are short-lived and
@@ -45,10 +54,12 @@ type quickConnectRequest struct {
 type quickConnectState struct {
 	mu       sync.Mutex
 	bySecret map[string]*quickConnectRequest
+	// now is the clock; tests replace it to cross the ten-minute lifetimes.
+	now func() time.Time
 }
 
 func newQuickConnectState() *quickConnectState {
-	return &quickConnectState{bySecret: map[string]*quickConnectRequest{}}
+	return &quickConnectState{bySecret: map[string]*quickConnectRequest{}, now: time.Now}
 }
 
 // sweepLocked drops expired requests. Callers hold q.mu.
@@ -120,8 +131,8 @@ func (s *Server) handleQuickConnectInitiate(w http.ResponseWriter, r *http.Reque
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	now := time.Now()
 	q := s.quick
+	now := q.now()
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	q.sweepLocked(now)
@@ -174,7 +185,7 @@ func (s *Server) handleQuickConnectConnect(w http.ResponseWriter, r *http.Reques
 	q := s.quick
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	q.sweepLocked(time.Now())
+	q.sweepLocked(q.now())
 	req, ok := q.bySecret[secret]
 	if !ok || secret == "" {
 		w.WriteHeader(http.StatusNotFound)
@@ -220,14 +231,25 @@ func (s *Server) handleQuickConnectAuthorize(w http.ResponseWriter, r *http.Requ
 	q := s.quick
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	q.sweepLocked(time.Now())
+	now := q.now()
+	q.sweepLocked(now)
 	req := q.byCodeLocked(code)
 	if req == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+	if req.Authorized {
+		// quickconnect.authorize.R8: an already authorized code is refused
+		// with the reference's opaque 500; the first authorization stands.
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte("Error processing request."))
+		return
+	}
 	req.Authorized = true
 	req.UserID = target
+	req.AuthorizedAt = now
+	req.Added = now.Add(quickConnectAuthorizeBump)
 	writeJSON(w, http.StatusOK, true)
 }
 
@@ -250,9 +272,10 @@ func (s *Server) handleAuthenticateWithQuickConnect(w http.ResponseWriter, r *ht
 	}
 	q := s.quick
 	q.mu.Lock()
-	q.sweepLocked(time.Now())
+	now := q.now()
+	q.sweepLocked(now)
 	req, ok := q.bySecret[body.Secret]
-	if !ok || !req.Authorized {
+	if !ok || !req.Authorized || now.Sub(req.AuthorizedAt) > quickConnectTTL {
 		q.mu.Unlock()
 		w.WriteHeader(http.StatusNotFound)
 		return

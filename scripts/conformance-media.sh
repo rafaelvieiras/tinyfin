@@ -8,10 +8,10 @@ set -euo pipefail
 ROOT="${1:?usage: conformance-media.sh <media-root>}"
 FFMPEG="${FFMPEG:-ffmpeg}"
 
-clip() { # <out> <seconds> <tone-hz> [fps]
+clip() { # <out> <seconds> <tone-hz> [fps] [WxH]
   mkdir -p "$(dirname "$1")"
   [ -f "$1" ] && return 0
-  "$FFMPEG" -v error -y -f lavfi -i "testsrc=duration=$2:size=320x240:rate=${4:-24}" \
+  "$FFMPEG" -v error -y -f lavfi -i "testsrc=duration=$2:size=${5:-320x240}:rate=${4:-24}" \
     -f lavfi -i "sine=frequency=$3:duration=$2" -c:v libx264 -preset ultrafast -pix_fmt yuv420p \
     -c:a aac -shortest "$1"
 }
@@ -50,6 +50,58 @@ clip "$RS/Season 01/Rated Show (2020) S01E01.mp4" 2 330 6
 clip "$RS/Season 01/Rated Show (2020) S01E02.mp4" 2 392 6
 printf '<tvshow><title>Rated Show</title><mpaa>TV-MA</mpaa></tvshow>\n' >"$RS/tvshow.nfo"
 printf '<episodedetails><title>Rated Episode Two</title><season>1</season><episode>2</episode><mpaa>TV-Y</mpaa></episodedetails>\n' >"$RS/Season 01/Rated Show (2020) S01E02.nfo"
+
+# Sort-name and premiere-date movies (own library "Sorting", lazy): leading
+# articles, non-ASCII names, digit runs, punctuation and premiere dates that
+# disagree with the folder year.
+sorting() { # <folder title> <year> [nfo title] [premiered] [sort title]
+  local dir="$ROOT/Sorting/$1 ($2)" file="$ROOT/Sorting/$1 ($2)/$1 ($2).mp4"
+  clip "$file" 1 210 4
+  # Always carry a title in an .nfo so the item name is explicit (the
+  # servers differ in whether a folder's "(Year)" stays in the name).
+  {
+    printf '<movie><title>%s</title><year>%s</year>' "${3:-$1}" "$2"
+    [ -n "${4:-}" ] && printf '<premiered>%s</premiered>' "$4"
+    [ -n "${5:-}" ] && printf '<sorttitle>%s</sorttitle>' "$5"
+    printf '</movie>\n'
+  } >"$dir/$1 ($2).nfo"
+}
+sorting "The Zeta Sort" 2012
+sorting "A Yankee Sort" 2013
+sorting "An Xray Sort" 2014
+sorting "Éclair Sort" 2015
+sorting "Ångström Sort" 2016
+sorting "Zulu Sort" 2017
+sorting "Apple Sort" 2011
+sorting "Theater Sort" 2018
+sorting "Number Ten Sort" 2021 "Number 10 Sort"
+sorting "Number Two Sort" 2022 "Number 2 Sort"
+sorting "Punct Sort" 2023 "Mr. Hyphen-Ated's Sort"
+sorting "Sort Title Sort" 2024 "Zebra Sort" "" "An Aardvark Sort"
+sorting "Premiere Early" 2020 "" "2001-03-04"
+sorting "Premiere Late" 2005 "" "2019-07-08"
+sorting "Premiere Mid" 2012 "" "2012-06-15"
+
+# A series whose names exercise the sort-name rules (own library "SortShows", lazy): leading
+# article on the series and on an episode title, episodes in two seasons.
+SS="$ROOT/SortShows/The Sort Show (2024)"
+clip "$SS/Season 01/The Sort Show (2024) S01E01.mp4" 1 310 4
+clip "$SS/Season 01/The Sort Show (2024) S01E02.mp4" 1 320 4
+clip "$SS/Season 02/The Sort Show (2024) S02E01.mp4" 1 330 4
+printf '<tvshow><title>The Sort Show</title></tvshow>\n' >"$SS/tvshow.nfo"
+printf '<episodedetails><title>The Opening</title><season>1</season><episode>1</episode></episodedetails>\n' >"$SS/Season 01/The Sort Show (2024) S01E01.nfo"
+printf '<episodedetails><title>Second Chapter</title><season>1</season><episode>2</episode></episodedetails>\n' >"$SS/Season 01/The Sort Show (2024) S01E02.nfo"
+printf '<episodedetails><title>An Opener</title><season>2</season><episode>1</episode></episodedetails>\n' >"$SS/Season 02/The Sort Show (2024) S02E01.nfo"
+
+# Larger frames (own library "Sizes", lazy): the dimension filters (HD / 4K buckets).
+clip "$ROOT/Sizes/HD Size (2030)/HD Size (2030).mp4" 1 240 2 1280x720
+clip "$ROOT/Sizes/UHD Size (2031)/UHD Size (2031).mp4" 1 250 1 3840x2160
+# bucket edges: widths 1200 / 1198 and 3800, height 2100
+clip "$ROOT/Sizes/Edge W1200 (2032)/Edge W1200 (2032).mp4" 1 260 1 1200x100
+clip "$ROOT/Sizes/Edge W1198 (2033)/Edge W1198 (2033).mp4" 1 270 1 1198x100
+clip "$ROOT/Sizes/Edge W3800 (2034)/Edge W3800 (2034).mp4" 1 280 1 3800x100
+clip "$ROOT/Sizes/Edge H2100 (2035)/Edge H2100 (2035).mp4" 1 290 1 100x2100
+clip "$ROOT/Sizes/Edge W1300H2200 (2036)/Edge W1300H2200 (2036).mp4" 1 300 1 1300x2200
 
 # 150 tiny movies (own library "Many", lazy): the default page size check.
 many_src="$ROOT/.src/many.mp4"

@@ -40,5 +40,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in paths, query parameters and bodies (`wire.id.R2`). Existing databases are
   migrated in place (migration 0013) and a persisted dashed server id is
   folded on startup, so clients see a one-time `ServerId` spelling change.
+- Item sort names follow the reference: a leading article is dropped, accents
+  fold to ASCII, digit runs are zero-padded and episodes order by season and
+  episode (`items.sort.R8`, `R9`); `SortName` is returned in listings only when
+  requested through `Fields`. Existing items pick the new key up on their next
+  library scan.
+- `IsHd` and `Is4K` select resolution buckets and combine as a union
+  (`items.filter.R17`).
+- A progress or stopped report below the minimum resume position no longer
+  sets `LastPlayedDate`; a negative progress position is stored as given.
+- QuickConnect: authorizing an already authorized code answers 500 and
+  authorizing moves `DateAdded` one minute forward, as on the reference.
 - Compatibility scope is Jellyfin 12+ only: pre-12 legacy routes and legacy
   authentication channels are not part of the contract (decision D14).

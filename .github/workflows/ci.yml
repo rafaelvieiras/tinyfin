@@ -70,7 +70,7 @@ jobs:
             -admin-user admin -admin-pass 'Conformance-Admin-1' \
             -media-root "$RUNNER_TEMP/media" \
             -server-data-dir "${{ steps.tf.outputs.dir }}" \
-            -baseline docs/contract/baseline.json -skip-tags time-dependent -device-suffix auto
+            -baseline docs/contract/baseline.json -skip-tags time-dependent,expiry -device-suffix auto
       - name: Start a second throwaway Tinyfin for the risky scenarios
         id: tf2
         run: |

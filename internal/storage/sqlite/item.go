@@ -285,9 +285,14 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 		people=excluded.people,
 		search_text=excluded.search_text`
 
+	// The stored sort name is the normalized ordering key, not the raw
+	// title (items.sort.R8). Search text still sees the title as given.
+	searchText := itemSearchText(item)
+	sortKey := item.SortKey()
+
 	err = s.withTx(ctx, func(ex dbtx) error {
 		if _, err := ex.ExecContext(ctx, query,
-			string(item.ID), string(item.Type), string(item.LibraryID), idPtrToAny(item.ParentID), item.Name, item.OriginalTitle, item.SortName, item.Overview,
+			string(item.ID), string(item.Type), string(item.LibraryID), idPtrToAny(item.ParentID), item.Name, item.OriginalTitle, sortKey, item.Overview,
 			taglinesJSON, genresJSON, tagsJSON, studiosJSON,
 			ptrToAny(item.ProductionYear), ptrToAny(item.PremiereDate), ptrToAny(item.EndDate), item.OfficialRating, ptrToAny(item.CommunityRating), ptrToAny(item.CriticRating), ptrToAny(item.RunTimeTicks),
 			ptrToAny(item.IndexNumber), ptrToAny(item.ParentIndexNumber),
@@ -298,7 +303,7 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 			string(item.CollectionType),
 			mediaStreamsJSON,
 			peopleJSON,
-			itemSearchText(item),
+			searchText,
 			item.DateCreated,
 		); err != nil {
 			return fmt.Errorf("sqlite: upserting item %q: %w", item.ID, err)
@@ -662,19 +667,28 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 	if filter.MaxHeight != nil {
 		addWhere(videoStreamExists("json_extract(vs.value,'$.Height') <= ?"), *filter.MaxHeight)
 	}
-	if filter.IsHD != nil {
-		if *filter.IsHD {
-			addWhere(videoStreamExists("json_extract(vs.value,'$.Width') >= 1200"))
-		} else {
-			addWhere(videoStreamExists("json_extract(vs.value,'$.Width') < 1200"))
+	if filter.IsHD != nil || filter.Is4K != nil {
+		// IsHd and Is4K select resolution buckets (items.filter.R17) and
+		// the selected buckets are united: SD is width below 1200, HD width
+		// of 1200 or more that is not 4K, 4K width of 3800 or more or height
+		// of 2100 or more. Is4K=false selects no bucket of its own, so it
+		// alone matches nothing.
+		const is4K = "(json_extract(vs.value,'$.Width') >= 3800 OR json_extract(vs.value,'$.Height') >= 2100)"
+		var buckets []string
+		if filter.IsHD != nil {
+			if *filter.IsHD {
+				buckets = append(buckets, "(json_extract(vs.value,'$.Width') >= 1200 AND NOT "+is4K+")")
+			} else {
+				buckets = append(buckets, "json_extract(vs.value,'$.Width') < 1200")
+			}
 		}
-	}
-	if filter.Is4K != nil {
-		if *filter.Is4K {
-			addWhere(videoStreamExists("(json_extract(vs.value,'$.Width') >= 3800 OR json_extract(vs.value,'$.Height') >= 2100)"))
-		} else {
-			// 4K=false without HD=true is not a satisfiable class of its own.
+		if filter.Is4K != nil && *filter.Is4K {
+			buckets = append(buckets, is4K)
+		}
+		if len(buckets) == 0 {
 			addWhere("0")
+		} else {
+			addWhere(videoStreamExists("(" + strings.Join(buckets, " OR ") + ")"))
 		}
 	}
 

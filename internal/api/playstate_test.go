@@ -508,3 +508,74 @@ func TestSessionPlayState(t *testing.T) {
 	code, _ = e.do(e.aliceTok, http.MethodPost, "/Sessions/Playing/Ping", "")
 	wantStatus(t, code, 400, "ping without id")
 }
+
+// playstate.progress.R12 / stopped.R13: a position below the minimum resume
+// percentage clears the saved position but leaves LastPlayedDate alone.
+func TestReportBelowMinimumKeepsLastPlayedDate(t *testing.T) {
+	for _, kind := range []string{"/Progress", "/Stopped"} {
+		t.Run(kind, func(t *testing.T) {
+			e := newPSEnv(t)
+			body := func(pos int64) string {
+				b, _ := json.Marshal(map[string]any{"ItemId": e.movie, "PositionTicks": pos})
+				return string(b)
+			}
+			for _, pos := range []int64{0, 100} {
+				if code := e.report(e.aliceTok, kind, body(pos)); code != 204 {
+					t.Fatal(code)
+				}
+				got := e.userData(e.aliceTok, e.movie)
+				if _, has := got["LastPlayedDate"]; has || got["Played"] != false || num(got, "PlaybackPositionTicks") != 0 {
+					t.Fatalf("below minimum at %d = %v, want no LastPlayedDate, unplayed, position 0", pos, got)
+				}
+			}
+			// An existing date survives it.
+			if code := e.report(e.aliceTok, "", `{"ItemId":"`+string(e.movie)+`"}`); code != 204 {
+				t.Fatal(code)
+			}
+			before := e.userData(e.aliceTok, e.movie)["LastPlayedDate"]
+			if before == nil {
+				t.Fatal("start did not set LastPlayedDate")
+			}
+			if code := e.report(e.aliceTok, kind, body(100)); code != 204 {
+				t.Fatal(code)
+			}
+			if after := e.userData(e.aliceTok, e.movie)["LastPlayedDate"]; after != before {
+				t.Fatalf("LastPlayedDate changed from %v to %v", before, after)
+			}
+		})
+	}
+}
+
+// playstate.progress.R13: a negative position on a progress report is
+// accepted and stored as given, without touching Played or LastPlayedDate
+// (a stopped report with one is refused, stopped.R6).
+func TestProgressNegativePositionStoredVerbatim(t *testing.T) {
+	e := newPSEnv(t)
+	body := func(pos int64) string {
+		b, _ := json.Marshal(map[string]any{"ItemId": e.movie, "PositionTicks": pos})
+		return string(b)
+	}
+	if code := e.report(e.aliceTok, "/Progress", body(-5)); code != 204 {
+		t.Fatal(code)
+	}
+	got := e.userData(e.aliceTok, e.movie)
+	if num(got, "PlaybackPositionTicks") != -5 || got["Played"] != false {
+		t.Fatalf("negative progress = %v", got)
+	}
+	if _, has := got["LastPlayedDate"]; has {
+		t.Fatalf("negative progress set LastPlayedDate: %v", got)
+	}
+	if _, has := got["PlayedPercentage"]; has {
+		t.Fatalf("negative position produced a PlayedPercentage: %v", got)
+	}
+	if code := e.report(e.aliceTok, "/Stopped", body(-5)); code != 400 {
+		t.Fatalf("negative stopped = %d, want 400", code)
+	}
+	// A later in-range report overwrites it.
+	if code := e.report(e.aliceTok, "/Progress", body(100)); code != 204 {
+		t.Fatal(code)
+	}
+	if got := e.userData(e.aliceTok, e.movie); num(got, "PlaybackPositionTicks") != 0 {
+		t.Fatalf("after in-range progress = %v", got)
+	}
+}

@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 	"github.com/rafaelvieiras/tinyfin/internal/storage/sqlite"
@@ -322,5 +324,129 @@ func TestQuickConnectDisabledValidationFirst(t *testing.T) {
 	}
 	if code, _ := rawDo(t, ts.URL, http.MethodPost, "/QuickConnect/Authorize", "", auth); code != http.StatusBadRequest {
 		t.Errorf("authorize without code: %d, want 400", code)
+	}
+}
+
+// quickconnect.authorize.R8: a code that is already authorized is refused
+// with a 500 (as on the reference); the first authorization stands.
+func TestQuickConnectReauthorizeRefused(t *testing.T) {
+	ts, st := newTestServer(t)
+	alice := createTestUser(t, st, "alice", "pw")
+	createTestAdminUser(t, st, "admin", "adminpw")
+	phone := deviceLogin(t, ts.URL, "alice", "pw", "phone")
+	adminTok := deviceLogin(t, ts.URL, "admin", "adminpw", "adminphone")
+	qc := qcInitiate(t, ts.URL, "tv")
+
+	if code, _ := rawDo(t, ts.URL, http.MethodPost, "/QuickConnect/Authorize?code="+qc.Code, "", authHeader("phone", phone)); code != http.StatusOK {
+		t.Fatalf("first authorize: %d", code)
+	}
+	for _, tok := range []struct{ device, token string }{{"phone", phone}, {"adminphone", adminTok}} {
+		code, _ := rawDo(t, ts.URL, http.MethodPost, "/QuickConnect/Authorize?code="+qc.Code, "", authHeader(tok.device, tok.token))
+		if code != http.StatusInternalServerError {
+			t.Errorf("re-authorize with %s: %d, want 500", tok.device, code)
+		}
+	}
+	// Still authorized, still for the first user.
+	code, res := qcExchange(t, ts.URL, qc.Secret)
+	if code != http.StatusOK || res.User.ID != string(alice.ID) {
+		t.Errorf("exchange after refused re-authorize: %d user %s, want 200 for alice", code, res.User.ID)
+	}
+}
+
+// quickconnect.connect.R3: authorizing moves DateAdded forward (one minute
+// past the authorization); polling alone leaves it untouched.
+func TestQuickConnectDateAddedAdvancesOnAuthorize(t *testing.T) {
+	ts, st := newTestServer(t)
+	createTestUser(t, st, "alice", "pw")
+	phone := deviceLogin(t, ts.URL, "alice", "pw", "phone")
+	_, body := rawDo(t, ts.URL, http.MethodPost, "/QuickConnect/Initiate", "", authHeader("tv", ""))
+	var init quickConnectResult
+	if err := json.Unmarshal(body, &init); err != nil {
+		t.Fatal(err)
+	}
+	poll := func() quickConnectResult {
+		_, b := rawDo(t, ts.URL, http.MethodGet, "/QuickConnect/Connect?secret="+init.Secret, "", "")
+		var r quickConnectResult
+		if err := json.Unmarshal(b, &r); err != nil {
+			t.Fatal(err)
+		}
+		return r
+	}
+	if got := poll().DateAdded; got != init.DateAdded {
+		t.Errorf("pending poll DateAdded %s, want unchanged %s", got, init.DateAdded)
+	}
+	before := time.Now()
+	if code, _ := rawDo(t, ts.URL, http.MethodPost, "/QuickConnect/Authorize?code="+init.Code, "", authHeader("phone", phone)); code != http.StatusOK {
+		t.Fatalf("authorize: %d", code)
+	}
+	got, err := time.Parse(time.RFC3339Nano, poll().DateAdded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d := got.Sub(before); d < 59*time.Second || d > 62*time.Second {
+		t.Errorf("DateAdded after authorize is %v after the authorization, want about 1 minute", d)
+	}
+}
+
+// quickconnect.expiry.R1/R2: a pending request is gone ten minutes after
+// Initiate; an authorized one is visible to Connect until ten minutes after
+// its (advanced) DateAdded but can be exchanged for ten minutes after the
+// authorization only, whenever it was initiated.
+func TestQuickConnectLifetimes(t *testing.T) {
+	st, err := sqlite.New(filepath.Join(t.TempDir(), "tinyfin.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	srv := NewServer(st, Config{ServerName: "TestServer"})
+	ts := httptest.NewServer(srv.Handler())
+	t.Cleanup(ts.Close)
+	createTestUser(t, st, "alice", "pw")
+	phone := deviceLogin(t, ts.URL, "alice", "pw", "phone")
+
+	// The server under test shares the process: advance its clock.
+	var offset time.Duration
+	var mu sync.Mutex
+	srv.quick.now = func() time.Time {
+		mu.Lock()
+		defer mu.Unlock()
+		return time.Now().Add(offset)
+	}
+	advance := func(d time.Duration) { mu.Lock(); offset += d; mu.Unlock() }
+
+	pending := qcInitiate(t, ts.URL, "tv-pending")
+	early := qcInitiate(t, ts.URL, "tv-early")
+	late := qcInitiate(t, ts.URL, "tv-late")
+	if code, _ := rawDo(t, ts.URL, http.MethodPost, "/QuickConnect/Authorize?code="+early.Code, "", authHeader("phone", phone)); code != 200 {
+		t.Fatalf("authorize early: %d", code)
+	}
+	advance(5 * time.Minute)
+	if code, _ := rawDo(t, ts.URL, http.MethodPost, "/QuickConnect/Authorize?code="+late.Code, "", authHeader("phone", phone)); code != 200 {
+		t.Fatalf("authorize late: %d", code)
+	}
+	advance(5*time.Minute + 15*time.Second) // 10 min 15 s after Initiate
+
+	connect := func(secret string) int {
+		c, _ := rawDo(t, ts.URL, http.MethodGet, "/QuickConnect/Connect?secret="+secret, "", "")
+		return c
+	}
+	if c := connect(pending.Secret); c != http.StatusNotFound {
+		t.Errorf("pending after 10 min: connect %d, want 404", c)
+	}
+	if c, _ := rawDo(t, ts.URL, http.MethodPost, "/QuickConnect/Authorize?code="+pending.Code, "", authHeader("phone", phone)); c != http.StatusNotFound {
+		t.Errorf("pending after 10 min: authorize %d, want 404", c)
+	}
+	if c := connect(early.Secret); c != http.StatusOK {
+		t.Errorf("authorized 10 min 15 s ago: connect %d, want 200 (visible until 11 min)", c)
+	}
+	if c, _ := qcExchange(t, ts.URL, early.Secret); c != http.StatusNotFound {
+		t.Errorf("authorized 10 min 15 s ago: exchange %d, want 404", c)
+	}
+	if c, res := qcExchange(t, ts.URL, late.Secret); c != http.StatusOK || res.AccessToken == "" {
+		t.Errorf("authorized 5 min 15 s ago: exchange %d, want 200", c)
+	}
+	advance(time.Minute)
+	if c := connect(early.Secret); c != http.StatusNotFound {
+		t.Errorf("authorized 11 min 15 s ago: connect %d, want 404", c)
 	}
 }

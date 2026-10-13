@@ -1734,5 +1734,637 @@
         }
       }
     ]
+  },
+  {
+    "id": "quickconnect.authorize.already-authorized",
+    "endpoint": "POST /QuickConnect/Authorize",
+    "spec": "quickconnect.md#authorize",
+    "scope": "modern",
+    "tags": [
+      "quickconnect"
+    ],
+    "covers": [
+      "quickconnect.authorize.R8"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-quickconnect-reauthorize",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-quickconnect-reauthorize",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "log in on the signed-in device",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-quickconnect-reauthorize",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-qc-reauthorize-ui{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "tokUi": "$.AccessToken"
+        }
+      },
+      {
+        "name": "initiate",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-qc-reauthorize-tv{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "secret": "$.Secret",
+          "code": "$.Code",
+          "added": "$.DateAdded"
+        }
+      },
+      {
+        "name": "authorize",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.code}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-qc-reauthorize-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "authorize the same code again",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.code}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-qc-reauthorize-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
+          }
+        },
+        "expect": {
+          "status": 500
+        }
+      },
+      {
+        "name": "again with an explicit userId",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.code}}",
+            "userId": "{{capture.u}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-qc-reauthorize-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
+          }
+        },
+        "expect": {
+          "status": 500
+        }
+      },
+      {
+        "name": "the request stays authorized",
+        "as": "anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/QuickConnect/Connect",
+          "query": {
+            "secret": "{{capture.secret}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Authenticated",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "and is exchangeable",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateWithQuickConnect",
+          "body": {
+            "Secret": "{{capture.secret}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.AccessToken",
+              "op": "exists"
+            },
+            {
+              "path": "$.User.Name",
+              "op": "eq",
+              "value": "tmp-quickconnect-reauthorize"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "quickconnect.connect.date-added-advances",
+    "endpoint": "GET /QuickConnect/Connect",
+    "spec": "quickconnect.md#connect",
+    "scope": "modern",
+    "tags": [
+      "quickconnect"
+    ],
+    "covers": [
+      "quickconnect.connect.R3"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-quickconnect-dateadded",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-quickconnect-dateadded",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "log in on the signed-in device",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-quickconnect-dateadded",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-qc-dateadded-ui{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "tokUi": "$.AccessToken"
+        }
+      },
+      {
+        "name": "initiate",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-qc-dateadded-tv{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "secret": "$.Secret",
+          "code": "$.Code",
+          "added": "$.DateAdded"
+        }
+      },
+      {
+        "name": "pending: DateAdded is the Initiate value",
+        "as": "anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/QuickConnect/Connect",
+          "query": {
+            "secret": "{{capture.secret}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.DateAdded",
+              "op": "eq",
+              "value": "{{capture.added}}"
+            },
+            {
+              "path": "$.Authenticated",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "authorize",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.code}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-qc-dateadded-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "authorized: DateAdded has moved forward",
+        "as": "anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/QuickConnect/Connect",
+          "query": {
+            "secret": "{{capture.secret}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Authenticated",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.DateAdded",
+              "op": "ne",
+              "value": "{{capture.added}}"
+            },
+            {
+              "path": "$.DateAdded",
+              "op": "matches",
+              "value": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "quickconnect.expiry.pending-and-authorized",
+    "endpoint": "GET /QuickConnect/Connect",
+    "spec": "quickconnect.md#expiry",
+    "scope": "modern",
+    "tags": [
+      "quickconnect",
+      "slow",
+      "expiry"
+    ],
+    "covers": [
+      "quickconnect.expiry.R1",
+      "quickconnect.expiry.R2"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-quickconnect-expiry",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-quickconnect-expiry",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "log in on the signed-in device",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-quickconnect-expiry",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-qc-expiry-ui{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "tokUi": "$.AccessToken"
+        }
+      },
+      {
+        "name": "initiate a request that stays pending",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-qc-expiry-P{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "secretP": "$.Secret",
+          "codeP": "$.Code",
+          "addedP": "$.DateAdded"
+        }
+      },
+      {
+        "name": "initiate a request and authorize it at once",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-qc-expiry-A{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "secretA": "$.Secret",
+          "codeA": "$.Code",
+          "addedA": "$.DateAdded"
+        }
+      },
+      {
+        "name": "initiate a request and authorize it later",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-qc-expiry-B{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "secretB": "$.Secret",
+          "codeB": "$.Code",
+          "addedB": "$.DateAdded"
+        }
+      },
+      {
+        "name": "authorize the first",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.codeA}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-qc-expiry-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "pending request is alive",
+        "as": "anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/QuickConnect/Connect",
+          "query": {
+            "secret": "{{capture.secretP}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Authenticated",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "wait 5 minutes",
+        "sleepMs": 300000
+      },
+      {
+        "name": "authorize the second, five minutes after Initiate",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.codeB}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-qc-expiry-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "wait 5 minutes 15 seconds",
+        "sleepMs": 315000
+      },
+      {
+        "name": "pending request has expired (10 min 15 s after Initiate)",
+        "as": "anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/QuickConnect/Connect",
+          "query": {
+            "secret": "{{capture.secretP}}"
+          }
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "its secret cannot be exchanged",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateWithQuickConnect",
+          "body": {
+            "Secret": "{{capture.secretP}}"
+          }
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "its code is unknown now",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.codeP}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-qc-expiry-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
+          }
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "the first authorized request is still visible to Connect (11 min window)",
+        "as": "anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/QuickConnect/Connect",
+          "query": {
+            "secret": "{{capture.secretA}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Authenticated",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "but its exchange window (10 min after authorization) has closed",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateWithQuickConnect",
+          "body": {
+            "Secret": "{{capture.secretA}}"
+          }
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "the second one, authorized 5 min 15 s ago, can still be exchanged",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateWithQuickConnect",
+          "body": {
+            "Secret": "{{capture.secretB}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.AccessToken",
+              "op": "exists"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
   }
 ]

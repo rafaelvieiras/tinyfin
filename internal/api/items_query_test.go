@@ -353,6 +353,16 @@ func TestItemsList_TotalRecordCountAndFields(t *testing.T) {
 		t.Errorf("Fields=NotAField: %+v, want no Path", r.Items)
 	}
 
+	// SortName is an optional field too (items.fields.R5).
+	r = f.get(t, f.adminTok, "/Items?Ids=alpha")
+	if len(r.Items) != 1 || r.Items[0].SortName != "" {
+		t.Errorf("without Fields: %+v, want no SortName", r.Items)
+	}
+	r = f.get(t, f.adminTok, "/Items?Ids=alpha&Fields=SortName")
+	if len(r.Items) != 1 || r.Items[0].SortName != "alpha movie" {
+		t.Errorf("Fields=SortName: %+v, want the normalized sort name", r.Items)
+	}
+
 	// UserData is present by default and omitted by EnableUserData=false.
 	r = f.get(t, f.aliceTok, "/Items?Ids=alpha")
 	if r.Items[0].UserData == nil {

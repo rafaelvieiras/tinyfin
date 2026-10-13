@@ -365,3 +365,17 @@ func TestParseNFODate(t *testing.T) {
 		}
 	}
 }
+
+// items.sort.R10: <sorttitle> becomes the item's sort title (the input of
+// the sort-name rules) without renaming the item.
+func TestNFOSortTitle(t *testing.T) {
+	var n movieNFO
+	if err := xml.Unmarshal([]byte(`<movie><title>Zebra Sort</title><sorttitle>An Aardvark Sort</sorttitle></movie>`), &n); err != nil {
+		t.Fatal(err)
+	}
+	var item storage.Item
+	applyCommonNFOFields(&item, n.commonNFOFields)
+	if item.Name != "Zebra Sort" || item.SortName != "An Aardvark Sort" {
+		t.Errorf("Name %q SortName %q, want the title and the sort title", item.Name, item.SortName)
+	}
+}

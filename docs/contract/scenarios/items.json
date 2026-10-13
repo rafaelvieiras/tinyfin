@@ -11872,5 +11872,1496 @@
     }
    }
   ]
+ },
+ {
+  "id": "items.sort.premiere-date-fallback",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.sort.R3"
+  ],
+  "requires": [
+   "item:sort-prem-early",
+   "item:sort-apple",
+   "item:sort-zeta",
+   "item:sort-prem-mid",
+   "item:sort-yankee",
+   "item:sort-zulu",
+   "item:sort-prem-late",
+   "library:sorting"
+  ],
+  "steps": [
+   {
+    "name": "PremiereDate ascending: year-only items use January 1st of their year",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.sort-prem-early.id}},{{item.sort-apple.id}},{{item.sort-zeta.id}},{{item.sort-prem-mid.id}},{{item.sort-yankee.id}},{{item.sort-zulu.id}},{{item.sort-prem-late.id}}",
+      "SortBy": "PremiereDate",
+      "SortOrder": "Ascending",
+      "Fields": "PremiereDate"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 7
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.sort-prem-early.id}}"
+      },
+      {
+       "path": "$.Items[1].Id",
+       "op": "eq",
+       "value": "{{item.sort-apple.id}}"
+      },
+      {
+       "path": "$.Items[2].Id",
+       "op": "eq",
+       "value": "{{item.sort-zeta.id}}"
+      },
+      {
+       "path": "$.Items[3].Id",
+       "op": "eq",
+       "value": "{{item.sort-prem-mid.id}}"
+      },
+      {
+       "path": "$.Items[4].Id",
+       "op": "eq",
+       "value": "{{item.sort-yankee.id}}"
+      },
+      {
+       "path": "$.Items[5].Id",
+       "op": "eq",
+       "value": "{{item.sort-zulu.id}}"
+      },
+      {
+       "path": "$.Items[6].Id",
+       "op": "eq",
+       "value": "{{item.sort-prem-late.id}}"
+      },
+      {
+       "path": "$.Items[0].PremiereDate",
+       "op": "matches",
+       "value": "^2001-03-04"
+      },
+      {
+       "path": "$.Items[1].PremiereDate",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "PremiereDate descending",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.sort-prem-early.id}},{{item.sort-apple.id}},{{item.sort-zeta.id}},{{item.sort-prem-mid.id}},{{item.sort-yankee.id}},{{item.sort-zulu.id}},{{item.sort-prem-late.id}}",
+      "SortBy": "PremiereDate",
+      "SortOrder": "Descending"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.sort-prem-late.id}}"
+      },
+      {
+       "path": "$.Items[1].Id",
+       "op": "eq",
+       "value": "{{item.sort-zulu.id}}"
+      },
+      {
+       "path": "$.Items[2].Id",
+       "op": "eq",
+       "value": "{{item.sort-yankee.id}}"
+      },
+      {
+       "path": "$.Items[3].Id",
+       "op": "eq",
+       "value": "{{item.sort-prem-mid.id}}"
+      },
+      {
+       "path": "$.Items[4].Id",
+       "op": "eq",
+       "value": "{{item.sort-zeta.id}}"
+      },
+      {
+       "path": "$.Items[5].Id",
+       "op": "eq",
+       "value": "{{item.sort-apple.id}}"
+      },
+      {
+       "path": "$.Items[6].Id",
+       "op": "eq",
+       "value": "{{item.sort-prem-early.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "ProductionYear ignores the premiere date; ties by sort name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.sort-prem-early.id}},{{item.sort-apple.id}},{{item.sort-zeta.id}},{{item.sort-prem-mid.id}},{{item.sort-yankee.id}},{{item.sort-zulu.id}},{{item.sort-prem-late.id}}",
+      "SortBy": "ProductionYear",
+      "SortOrder": "Ascending"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.sort-prem-late.id}}"
+      },
+      {
+       "path": "$.Items[1].Id",
+       "op": "eq",
+       "value": "{{item.sort-apple.id}}"
+      },
+      {
+       "path": "$.Items[2].Id",
+       "op": "eq",
+       "value": "{{item.sort-prem-mid.id}}"
+      },
+      {
+       "path": "$.Items[3].Id",
+       "op": "eq",
+       "value": "{{item.sort-zeta.id}}"
+      },
+      {
+       "path": "$.Items[4].Id",
+       "op": "eq",
+       "value": "{{item.sort-yankee.id}}"
+      },
+      {
+       "path": "$.Items[5].Id",
+       "op": "eq",
+       "value": "{{item.sort-zulu.id}}"
+      },
+      {
+       "path": "$.Items[6].Id",
+       "op": "eq",
+       "value": "{{item.sort-prem-early.id}}"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.sort.sort-name-rules",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.sort.R8",
+   "items.sort.R10"
+  ],
+  "requires": [
+   "item:sort-zeta",
+   "item:sort-yankee",
+   "item:sort-xray",
+   "item:sort-eclair",
+   "item:sort-angstrom",
+   "item:sort-zulu",
+   "item:sort-apple",
+   "item:sort-theater",
+   "item:sort-num10",
+   "item:sort-num2",
+   "item:sort-punct",
+   "item:sort-prem-early",
+   "item:sort-prem-late",
+   "item:sort-prem-mid",
+   "library:sorting",
+   "user:alice",
+   "item:sort-sorttitle"
+  ],
+  "steps": [
+   {
+    "name": "ordered by the derived sort name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.sort-zeta.id}},{{item.sort-yankee.id}},{{item.sort-xray.id}},{{item.sort-eclair.id}},{{item.sort-angstrom.id}},{{item.sort-zulu.id}},{{item.sort-apple.id}},{{item.sort-theater.id}},{{item.sort-num10.id}},{{item.sort-num2.id}},{{item.sort-punct.id}},{{item.sort-prem-early.id}},{{item.sort-prem-late.id}},{{item.sort-prem-mid.id}},{{item.sort-sorttitle.id}}",
+      "SortBy": "SortName",
+      "Fields": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 15
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.sort-sorttitle.id}}"
+      },
+      {
+       "path": "$.Items[0].SortName",
+       "op": "eq",
+       "value": "aardvark sort"
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Zebra Sort"
+      },
+      {
+       "path": "$.Items[1].Id",
+       "op": "eq",
+       "value": "{{item.sort-angstrom.id}}"
+      },
+      {
+       "path": "$.Items[1].SortName",
+       "op": "eq",
+       "value": "angstrom sort"
+      },
+      {
+       "path": "$.Items[2].Id",
+       "op": "eq",
+       "value": "{{item.sort-apple.id}}"
+      },
+      {
+       "path": "$.Items[2].SortName",
+       "op": "eq",
+       "value": "apple sort"
+      },
+      {
+       "path": "$.Items[3].Id",
+       "op": "eq",
+       "value": "{{item.sort-eclair.id}}"
+      },
+      {
+       "path": "$.Items[3].SortName",
+       "op": "eq",
+       "value": "eclair sort"
+      },
+      {
+       "path": "$.Items[4].Id",
+       "op": "eq",
+       "value": "{{item.sort-punct.id}}"
+      },
+      {
+       "path": "$.Items[4].SortName",
+       "op": "eq",
+       "value": "mr  hyphenateds sort"
+      },
+      {
+       "path": "$.Items[5].Id",
+       "op": "eq",
+       "value": "{{item.sort-num2.id}}"
+      },
+      {
+       "path": "$.Items[5].SortName",
+       "op": "eq",
+       "value": "number 0000000002 sort"
+      },
+      {
+       "path": "$.Items[6].Id",
+       "op": "eq",
+       "value": "{{item.sort-num10.id}}"
+      },
+      {
+       "path": "$.Items[6].SortName",
+       "op": "eq",
+       "value": "number 0000000010 sort"
+      },
+      {
+       "path": "$.Items[7].Id",
+       "op": "eq",
+       "value": "{{item.sort-prem-early.id}}"
+      },
+      {
+       "path": "$.Items[7].SortName",
+       "op": "eq",
+       "value": "premiere early"
+      },
+      {
+       "path": "$.Items[8].Id",
+       "op": "eq",
+       "value": "{{item.sort-prem-late.id}}"
+      },
+      {
+       "path": "$.Items[8].SortName",
+       "op": "eq",
+       "value": "premiere late"
+      },
+      {
+       "path": "$.Items[9].Id",
+       "op": "eq",
+       "value": "{{item.sort-prem-mid.id}}"
+      },
+      {
+       "path": "$.Items[9].SortName",
+       "op": "eq",
+       "value": "premiere mid"
+      },
+      {
+       "path": "$.Items[10].Id",
+       "op": "eq",
+       "value": "{{item.sort-theater.id}}"
+      },
+      {
+       "path": "$.Items[10].SortName",
+       "op": "eq",
+       "value": "theater sort"
+      },
+      {
+       "path": "$.Items[11].Id",
+       "op": "eq",
+       "value": "{{item.sort-xray.id}}"
+      },
+      {
+       "path": "$.Items[11].SortName",
+       "op": "eq",
+       "value": "xray sort"
+      },
+      {
+       "path": "$.Items[12].Id",
+       "op": "eq",
+       "value": "{{item.sort-yankee.id}}"
+      },
+      {
+       "path": "$.Items[12].SortName",
+       "op": "eq",
+       "value": "yankee sort"
+      },
+      {
+       "path": "$.Items[13].Id",
+       "op": "eq",
+       "value": "{{item.sort-zeta.id}}"
+      },
+      {
+       "path": "$.Items[13].SortName",
+       "op": "eq",
+       "value": "zeta sort"
+      },
+      {
+       "path": "$.Items[14].Id",
+       "op": "eq",
+       "value": "{{item.sort-zulu.id}}"
+      },
+      {
+       "path": "$.Items[14].SortName",
+       "op": "eq",
+       "value": "zulu sort"
+      }
+     ]
+    }
+   },
+   {
+    "name": "descending is the exact reverse",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.sort-zeta.id}},{{item.sort-yankee.id}},{{item.sort-xray.id}},{{item.sort-eclair.id}},{{item.sort-angstrom.id}},{{item.sort-zulu.id}},{{item.sort-apple.id}},{{item.sort-theater.id}},{{item.sort-num10.id}},{{item.sort-num2.id}},{{item.sort-punct.id}},{{item.sort-prem-early.id}},{{item.sort-prem-late.id}},{{item.sort-prem-mid.id}},{{item.sort-sorttitle.id}}",
+      "SortBy": "SortName",
+      "SortOrder": "Descending"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.sort-zulu.id}}"
+      },
+      {
+       "path": "$.Items[14].Id",
+       "op": "eq",
+       "value": "{{item.sort-sorttitle.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "NameStartsWith compares with the sort name (article dropped)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.sort-zeta.id}},{{item.sort-yankee.id}},{{item.sort-xray.id}},{{item.sort-eclair.id}},{{item.sort-angstrom.id}},{{item.sort-zulu.id}},{{item.sort-apple.id}},{{item.sort-theater.id}},{{item.sort-num10.id}},{{item.sort-num2.id}},{{item.sort-punct.id}},{{item.sort-prem-early.id}},{{item.sort-prem-late.id}},{{item.sort-prem-mid.id}},{{item.sort-sorttitle.id}}",
+      "NameStartsWith": "zeta"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.sort-zeta.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an article is not part of the sort name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.sort-zeta.id}},{{item.sort-yankee.id}},{{item.sort-xray.id}},{{item.sort-eclair.id}},{{item.sort-angstrom.id}},{{item.sort-zulu.id}},{{item.sort-apple.id}},{{item.sort-theater.id}},{{item.sort-num10.id}},{{item.sort-num2.id}},{{item.sort-punct.id}},{{item.sort-prem-early.id}},{{item.sort-prem-late.id}},{{item.sort-prem-mid.id}},{{item.sort-sorttitle.id}}",
+      "NameStartsWith": "the"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.sort-theater.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "accents fold to ASCII",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.sort-zeta.id}},{{item.sort-yankee.id}},{{item.sort-xray.id}},{{item.sort-eclair.id}},{{item.sort-angstrom.id}},{{item.sort-zulu.id}},{{item.sort-apple.id}},{{item.sort-theater.id}},{{item.sort-num10.id}},{{item.sort-num2.id}},{{item.sort-punct.id}},{{item.sort-prem-early.id}},{{item.sort-prem-late.id}},{{item.sort-prem-mid.id}},{{item.sort-sorttitle.id}}",
+      "NameStartsWith": "ecl"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.sort-eclair.id}}"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.sort.series-and-episode-sort-names",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.sort.R8",
+   "items.sort.R9"
+  ],
+  "requires": [
+   "item:sortshow",
+   "item:sortshow-e11",
+   "item:sortshow-e12",
+   "item:sortshow-e21",
+   "library:sortshows"
+  ],
+  "steps": [
+   {
+    "name": "series drops the article, episodes order by season then episode",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.sortshow.id}},{{item.sortshow-e21.id}},{{item.sortshow-e12.id}},{{item.sortshow-e11.id}}",
+      "SortBy": "SortName",
+      "Fields": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.sortshow-e11.id}}"
+      },
+      {
+       "path": "$.Items[0].SortName",
+       "op": "eq",
+       "value": "001 - 0001 - The Opening"
+      },
+      {
+       "path": "$.Items[1].Id",
+       "op": "eq",
+       "value": "{{item.sortshow-e12.id}}"
+      },
+      {
+       "path": "$.Items[1].SortName",
+       "op": "eq",
+       "value": "001 - 0002 - Second Chapter"
+      },
+      {
+       "path": "$.Items[2].Id",
+       "op": "eq",
+       "value": "{{item.sortshow-e21.id}}"
+      },
+      {
+       "path": "$.Items[2].SortName",
+       "op": "eq",
+       "value": "002 - 0001 - An Opener"
+      },
+      {
+       "path": "$.Items[3].Id",
+       "op": "eq",
+       "value": "{{item.sortshow.id}}"
+      },
+      {
+       "path": "$.Items[3].SortName",
+       "op": "eq",
+       "value": "sort show"
+      }
+     ]
+    }
+   },
+   {
+    "name": "seasons carry their number",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{item.sortshow.id}}",
+      "SortBy": "SortName",
+      "Fields": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].SortName",
+       "op": "eq",
+       "value": "0001"
+      },
+      {
+       "path": "$.Items[1].SortName",
+       "op": "eq",
+       "value": "0002"
+      }
+     ]
+    }
+   },
+   {
+    "name": "NameStartsWith on episodes sees the composite name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{item.sortshow.id}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "Episode",
+      "NameStartsWith": "001 - 0002"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.sortshow-e12.id}}"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.fields.sortname-optional",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.fields.R5"
+  ],
+  "requires": [
+   "item:sort-zeta",
+   "library:sorting"
+  ],
+  "steps": [
+   {
+    "name": "listing without Fields",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.sort-zeta.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].SortName",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Fields=SortName",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.sort-zeta.id}}",
+      "Fields": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].SortName",
+       "op": "eq",
+       "value": "zeta sort"
+      }
+     ]
+    }
+   },
+   {
+    "name": "single read carries it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sort-zeta.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.SortName",
+       "op": "eq",
+       "value": "zeta sort"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.filter.dimension-buckets",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.filter.R17"
+  ],
+  "requires": [
+   "item:alpha",
+   "library:movies",
+   "item:size-hd",
+   "item:size-uhd",
+   "item:size-w1200",
+   "item:size-w1198",
+   "item:size-w3800",
+   "item:size-h2100",
+   "item:size-mixed",
+   "library:sizes"
+  ],
+  "steps": [
+   {
+    "name": "IsHd=true: 1200 or wider and not 4K",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IsHd": "true",
+      "Ids": "{{item.alpha.id}},{{item.size-hd.id}},{{item.size-uhd.id}},{{item.size-w1200.id}},{{item.size-w1198.id}},{{item.size-w3800.id}},{{item.size-h2100.id}},{{item.size-mixed.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-hd.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-w1200.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "IsHd=false: narrower than 1200",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IsHd": "false",
+      "Ids": "{{item.alpha.id}},{{item.size-hd.id}},{{item.size-uhd.id}},{{item.size-w1200.id}},{{item.size-w1198.id}},{{item.size-w3800.id}},{{item.size-h2100.id}},{{item.size-mixed.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-w1198.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-h2100.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Is4K=true: 3800 wide or 2100 tall",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Is4K": "true",
+      "Ids": "{{item.alpha.id}},{{item.size-hd.id}},{{item.size-uhd.id}},{{item.size-w1200.id}},{{item.size-w1198.id}},{{item.size-w3800.id}},{{item.size-h2100.id}},{{item.size-mixed.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-uhd.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-w3800.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-h2100.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-mixed.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Is4K=false alone matches nothing",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Is4K": "false",
+      "Ids": "{{item.alpha.id}},{{item.size-hd.id}},{{item.size-uhd.id}},{{item.size-w1200.id}},{{item.size-w1198.id}},{{item.size-w3800.id}},{{item.size-h2100.id}},{{item.size-mixed.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "IsHd=true with Is4K=false",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IsHd": "true",
+      "Is4K": "false",
+      "Ids": "{{item.alpha.id}},{{item.size-hd.id}},{{item.size-uhd.id}},{{item.size-w1200.id}},{{item.size-w1198.id}},{{item.size-w3800.id}},{{item.size-h2100.id}},{{item.size-mixed.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-hd.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-w1200.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "IsHd=false with Is4K=false",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IsHd": "false",
+      "Is4K": "false",
+      "Ids": "{{item.alpha.id}},{{item.size-hd.id}},{{item.size-uhd.id}},{{item.size-w1200.id}},{{item.size-w1198.id}},{{item.size-w3800.id}},{{item.size-h2100.id}},{{item.size-mixed.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-w1198.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-h2100.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "IsHd=true with Is4K=true is the union",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IsHd": "true",
+      "Is4K": "true",
+      "Ids": "{{item.alpha.id}},{{item.size-hd.id}},{{item.size-uhd.id}},{{item.size-w1200.id}},{{item.size-w1198.id}},{{item.size-w3800.id}},{{item.size-h2100.id}},{{item.size-mixed.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 6
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-hd.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-w1200.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-uhd.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-w3800.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-h2100.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-mixed.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "IsHd=false with Is4K=true is the union",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IsHd": "false",
+      "Is4K": "true",
+      "Ids": "{{item.alpha.id}},{{item.size-hd.id}},{{item.size-uhd.id}},{{item.size-w1200.id}},{{item.size-w1198.id}},{{item.size-w3800.id}},{{item.size-h2100.id}},{{item.size-mixed.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 6
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-w1198.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-h2100.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-uhd.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-w3800.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-mixed.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "MinWidth=1280",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "MinWidth": "1280",
+      "Ids": "{{item.alpha.id}},{{item.size-hd.id}},{{item.size-uhd.id}},{{item.size-w1200.id}},{{item.size-w1198.id}},{{item.size-w3800.id}},{{item.size-h2100.id}},{{item.size-mixed.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-hd.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-uhd.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-w3800.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-mixed.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "MaxWidth=1280",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "MaxWidth": "1280",
+      "Ids": "{{item.alpha.id}},{{item.size-hd.id}},{{item.size-uhd.id}},{{item.size-w1200.id}},{{item.size-w1198.id}},{{item.size-w3800.id}},{{item.size-h2100.id}},{{item.size-mixed.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 5
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-hd.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-w1200.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-w1198.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-h2100.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "MinHeight=2100",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "MinHeight": "2100",
+      "Ids": "{{item.alpha.id}},{{item.size-hd.id}},{{item.size-uhd.id}},{{item.size-w1200.id}},{{item.size-w1198.id}},{{item.size-w3800.id}},{{item.size-h2100.id}},{{item.size-mixed.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-uhd.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-h2100.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-mixed.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "MaxHeight=100",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "MaxHeight": "100",
+      "Ids": "{{item.alpha.id}},{{item.size-hd.id}},{{item.size-uhd.id}},{{item.size-w1200.id}},{{item.size-w1198.id}},{{item.size-w3800.id}},{{item.size-h2100.id}},{{item.size-mixed.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-w1200.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-w1198.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.size-w3800.id}}"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.get.non-guid-item-id",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "items.md#get",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.get.R10"
+  ],
+  "steps": [
+   {
+    "name": "single read",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/not-a-guid"
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400,
+     "json": [
+      {
+       "path": "$.errors",
+       "op": "exists"
+      }
+     ]
+    }
+   },
+   {
+    "name": "digits are not a GUID either",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/12345"
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   },
+   {
+    "name": "user data read",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/UserItems/not-a-guid/UserData"
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   },
+   {
+    "name": "user data write",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/UserItems/not-a-guid/UserData",
+     "body": {
+      "Played": true
+     }
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   },
+   {
+    "name": "anonymous gets 401 before binding",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Items/not-a-guid"
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.legacy.item-alias-path-ids",
+  "endpoint": "GET /Users/{userId}/Items/{itemId}",
+  "spec": "items.md#legacy",
+  "scope": "legacy-web-required",
+  "tags": [
+   "items",
+   "legacy",
+   "web-client"
+  ],
+  "covers": [
+   "items.legacy.R6",
+   "items.legacy.R7"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:alice",
+   "user:nofolders"
+  ],
+  "steps": [
+   {
+    "name": "mark played as admin",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/UserPlayedItems/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "all-zero user id: the caller (admin) is the context user",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Users/00000000-0000-0000-0000-000000000000/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.UserData.Played",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "plain all-zero form",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Users/00000000000000000000000000000000/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.UserData.Played",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "all-zero user id as alice sees her own data",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Users/00000000-0000-0000-0000-000000000000/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.UserData.Played",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "all-zero user id on the list alias: the caller (no library access) sees nothing",
+    "as": "nofolders",
+    "request": {
+     "method": "GET",
+     "path": "/Users/00000000-0000-0000-0000-000000000000/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "user id that is not a GUID",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Users/not-a-guid/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   },
+   {
+    "name": "item id that is not a GUID",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Users/{{user.alice.id}}/Items/not-a-guid"
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   },
+   {
+    "name": "user id that is not a GUID on the list alias",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Users/not-a-guid/Items"
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "mark unplayed",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200
+    }
+   }
+  ]
  }
 ]

@@ -290,24 +290,30 @@ func decodePlaybackReport(w http.ResponseWriter, r *http.Request) (playbackRepor
 // (progress.R2-R5, stopped.R3-R4). It never touches PlayCount.
 func applyReportedPosition(state *storage.Playstate, runtime, pos int64, now time.Time) {
 	if pos < 0 {
-		pos = 0
+		// progress.R13: a negative position is stored as given and nothing
+		// else changes (a stopped report with one never gets here).
+		state.PlaybackPositionTicks = pos
+		return
 	}
-	state.LastPlayedDate = &now
 	if runtime <= 0 {
+		state.LastPlayedDate = &now
 		state.PlaybackPositionTicks = pos
 		return
 	}
 	pct := float64(pos) * 100 / float64(runtime)
 	switch {
 	case pct < minResumePercent:
-		// Not far enough in: the saved position is cleared.
+		// Not far enough in: the saved position is cleared and the last
+		// played date is left alone (progress.R12).
 		state.PlaybackPositionTicks = 0
 	case pct > maxResumePercent || pos >= runtime-finishedGuardTicks,
 		runtime < minResumeDurationTicks:
 		// Finished, or too short to ever keep a resume position.
+		state.LastPlayedDate = &now
 		state.Played = true
 		state.PlaybackPositionTicks = 0
 	default:
+		state.LastPlayedDate = &now
 		state.PlaybackPositionTicks = pos
 	}
 }
