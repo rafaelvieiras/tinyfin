@@ -308,7 +308,7 @@ func TestSocketActivityLogEntryAdminOnly(t *testing.T) {
 	})
 
 	// Trigger a real activity-log append: a failed login.
-	resp := authenticate(t, ts.URL, "no-such-user", "whatever")
+	resp := authenticate(t, ts.URL, plain.Name, "wrong-password")
 	resp.Body.Close()
 
 	msg := readSocketMessage(t, adminConn)

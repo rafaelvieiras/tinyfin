@@ -18,11 +18,9 @@ import (
 //	 "Type":"SessionStarted","Date":"2026-09-04T23:24:40.095896Z","UserId":"b3017418aebd460699f4f2cadadcb542",
 //	 "Severity":"Information"}
 //
-// UserId is omitted (not null) for a failed-login entry — no user was ever
-// authenticated for that request (storage.ActivityEntry.UserID's doc
-// comment) — confirmed live that the reference server's own failed-login
-// entries carry no UserId either (they're exactly what the hasUserId=false
-// query in handleActivityLogEntries' doc comment returns). Name/
+// A failed-login entry has no stored user (storage.ActivityEntry.UserID's
+// doc comment, what hasUserId=false matches); on the wire its UserId is the
+// all-zero id, as the 12.2 reference does (users.auth.R26). Name/
 // ShortOverview are plain English here even though the reference server
 // localizes them (its own live example above is Portuguese): this project
 // has no i18n system (internal/api/localization.go's scope), so English
@@ -132,6 +130,12 @@ func activityEntryToDto(e storage.ActivityEntry) activityLogEntryDto {
 	if e.UserID != nil {
 		uid := string(*e.UserID)
 		dto.UserId = &uid
+	} else {
+		// An entry with no user (a failed login) shows the all-zero id on
+		// the wire, as the reference does (users.auth.R26); the stored
+		// NULL is what hasUserId=false matches.
+		zero := "00000000000000000000000000000000"
+		dto.UserId = &zero
 	}
 	if e.ItemID != nil {
 		iid := string(*e.ItemID)

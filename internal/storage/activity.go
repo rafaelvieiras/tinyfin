@@ -3,7 +3,7 @@ package storage
 import "time"
 
 // ActivityType is the reference server's ActivityLogEntry.Type discriminator
-// (04), narrowed to the two values this project actually generates — see
+// (04), narrowed to the values this project actually generates — see
 // ActivityLogStore's doc comment (store.go) for why the scope stops there.
 // Kept as a plain string type, same convention as ItemType/SortBy (item.go):
 // a value this project doesn't have a constant for yet doesn't need an
@@ -14,6 +14,10 @@ const (
 	// ActivityTypeSessionStarted is a successful login — internal/api's
 	// handleAuthenticateByName appends one right before issuing a token.
 	ActivityTypeSessionStarted ActivityType = "SessionStarted"
+
+	// ActivityTypeAuthenticationSucceeded is written right after
+	// SessionStarted on every successful login (users.auth.R23).
+	ActivityTypeAuthenticationSucceeded ActivityType = "AuthenticationSucceeded"
 
 	// ActivityTypeAuthenticationFailed is a rejected login attempt —
 	// wrong/unknown username or wrong password. The reference server's own

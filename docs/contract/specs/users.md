@@ -101,6 +101,11 @@ Index of routes:
 - **users.auth.R20** The password field is named `Pw`. A body that sends the password under another name (for example `Password`) is treated as having no `Pw`.
 - **users.auth.R21** A user with `EnableRemoteAccess=false` is refused with `403` when the login comes from outside the local network, even with correct credentials. (Not observable from a local test runner.)
 - **users.auth.R22** A successful login updates the user's `LastLoginDate` (and `LastActivityDate`).
+- **users.auth.R23** A successful login (password login or QuickConnect exchange) writes two activity-log entries, in this order: `SessionStarted`, then `AuthenticationSucceeded`. Both have `Severity` `Information`, `UserId` of the user who logged in and no `ItemId`. Listed newest first (`GET /System/ActivityLog/Entries`, administrator) the `AuthenticationSucceeded` entry is directly above the `SessionStarted` one, and both are visible before the login response is read.
+- **users.auth.R24** The entry texts are `<user name> is online from <device name>` (`SessionStarted`) and `<user name> successfully authenticated` (`AuthenticationSucceeded`). `<user name>` is the account's stored name, not the (case-insensitive) spelling sent; `<device name>` is the percent-decoded `Device` of the login (for the QuickConnect exchange, the `Device` the secret was issued to), not `Client`.
+- **users.auth.R25** `ShortOverview` of both login entries is `IP address: <remote address>`; for a QuickConnect exchange the address part is empty (`IP address: `).
+- **users.auth.R26** A wrong password for an existing, enabled account writes one `AuthenticationFailed` entry: `Severity` `Error`, `Name` `Failed login attempt from <username>` with the username exactly as sent, `ShortOverview` as in `users.auth.R25`, and `UserId` the all-zero id (`00000000000000000000000000000000`). It is therefore returned by `hasUserId=false` and not by `hasUserId=true`.
+- **users.auth.R27** No activity entry is written for an unknown username, for a disabled account (`403`, whether or not the password is correct, including after a lockout) or for a malformed request (`400`).
 
 ---
 
@@ -551,6 +556,11 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 | `users.auth.R20` | `users.auth.password-field-name` |
 | `users.auth.R21` | `users.auth.remote-access-disabled` (pending) |
 | `users.auth.R22` | `users.auth.last-login-recorded` |
+| `users.auth.R23` | `users.auth.activity-login-entries`, `users.auth.activity-quickconnect-entries` |
+| `users.auth.R24` | `users.auth.activity-login-entries`, `users.auth.activity-quickconnect-entries` |
+| `users.auth.R25` | `users.auth.activity-login-entries`, `users.auth.activity-quickconnect-entries` |
+| `users.auth.R26` | `users.auth.activity-failed-login-entry` |
+| `users.auth.R27` | `users.auth.activity-no-entry-for-refusals` |
 | `users.token.R1` | `users.auth.token-usable` |
 | `users.token.R2` | `users.token.invalid-token` |
 | `users.token.R3` | `users.token.apikey-query` |
@@ -677,6 +687,7 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 
 ## Open questions
 
+0. Other activity entries around authentication that the reference writes and Tinyfin does not (not specified yet): `UserLockedOut` (on the failure that triggers a lockout, written between the failed attempt's own text and its `AuthenticationFailed` entry) and `SessionEnded` (when a login replaces the same device's previous token, written just before the new `SessionStarted`).
 1. `EnableUserPreferenceAccess` (resolved): the policy endpoint persists it and a non-administrator without it is refused (`403`) when changing their own password or updating their own account; verified on the reference (`users.password.R13`, `users.update.R11`).
 2. Access-schedule hour semantics: `StartHour <= hour <= EndHour` is inclusive and uses the server's local time, but whether `hour` includes minutes (fractional hours) is not confirmed. Scenarios that depend on it use the 03:00 window and are tagged `time-dependent`; they would flip if run during the 03:xx hour.
 3. `LoginAttemptsBeforeLockout=0` reads back as `0` or `3`? Only the lockout behavior (`0` acts as `3`) is asserted.

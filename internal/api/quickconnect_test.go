@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/rafaelvieiras/tinyfin/internal/storage"
 	"github.com/rafaelvieiras/tinyfin/internal/storage/sqlite"
 )
 
@@ -138,6 +140,45 @@ func TestQuickConnectFlow(t *testing.T) {
 	// R7: single use.
 	if code, _ := qcExchange(t, ts.URL, qc.Secret); code != http.StatusNotFound {
 		t.Errorf("second exchange: %d, want 404", code)
+	}
+}
+
+// TestQuickConnectExchangeAppendsActivityLogEntries: the exchange writes
+// the same two login entries as a password login (users.auth.R23-R25),
+// with the device name given at Initiate and an empty address.
+func TestQuickConnectExchangeAppendsActivityLogEntries(t *testing.T) {
+	ts, st := newTestServer(t)
+	alice := createTestUser(t, st, "alice", "pw")
+	phone := deviceLogin(t, ts.URL, "alice", "pw", "phone")
+	qc := qcInitiate(t, ts.URL, "tv")
+	if code, _ := rawDo(t, ts.URL, http.MethodPost, "/QuickConnect/Authorize?code="+qc.Code, "", authHeader("phone", phone)); code != http.StatusOK {
+		t.Fatalf("authorize: %d", code)
+	}
+	if code, _ := qcExchange(t, ts.URL, qc.Secret); code != http.StatusOK {
+		t.Fatalf("exchange: %d", code)
+	}
+	entries, _, err := st.QueryActivityEntries(context.Background(), storage.ActivityEntryFilter{Limit: 2})
+	if err != nil || len(entries) != 2 {
+		t.Fatalf("entries = %d, err %v, want 2", len(entries), err)
+	}
+	want := []struct {
+		typ  storage.ActivityType
+		name string
+	}{
+		{storage.ActivityTypeAuthenticationSucceeded, "alice successfully authenticated"},
+		{storage.ActivityTypeSessionStarted, "alice is online from Test"},
+	}
+	for i, w := range want {
+		e := entries[i]
+		if e.Type != w.typ || e.Name != w.name {
+			t.Errorf("entries[%d] = %q %q, want %q %q", i, e.Type, e.Name, w.typ, w.name)
+		}
+		if e.ShortOverview != "IP address: " {
+			t.Errorf("entries[%d].ShortOverview = %q, want %q", i, e.ShortOverview, "IP address: ")
+		}
+		if e.UserID == nil || *e.UserID != alice.ID {
+			t.Errorf("entries[%d].UserID = %v, want %q", i, e.UserID, alice.ID)
+		}
 	}
 }
 

@@ -84,11 +84,11 @@ func TestActivityLogEntriesRequiresAdminNotJustAuth(t *testing.T) {
 // minDate, and hasUserId — the exact query params confirmed live against a
 // real Jellyfin server (handleActivityLogEntries' doc comment) — plus the
 // response envelope shape (Items/TotalRecordCount/StartIndex) and that a
-// failed-login entry carries no UserId key at all on the wire.
+// failed-login entry carries the all-zero UserId on the wire (users.auth.R26).
 func TestActivityLogEntriesQueryParamsAndShape(t *testing.T) {
 	ts, st := newTestServerWithActivityLog(t)
 	admin := createTestAdminUser(t, st, "admin", "adminpass")
-	token := loginToken(t, ts.URL, admin.Name, "adminpass") // appends one SessionStarted entry, for real
+	token := loginToken(t, ts.URL, admin.Name, "adminpass") // appends SessionStarted + AuthenticationSucceeded, for real
 	get := authedClient(t, ts.URL, token)
 
 	// Seed an older failed-login entry directly through the store.
@@ -104,7 +104,7 @@ func TestActivityLogEntriesQueryParamsAndShape(t *testing.T) {
 	}
 
 	// hasUserId=true should surface the admin's own just-logged-in
-	// SessionStarted entry, and only that one.
+	// AuthenticationSucceeded + SessionStarted entries, and only those.
 	resp := get(http.MethodGet, "/System/ActivityLog/Entries?startIndex=0&limit=10&hasUserId=true")
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -117,10 +117,13 @@ func TestActivityLogEntriesQueryParamsAndShape(t *testing.T) {
 	if result.StartIndex != 0 {
 		t.Errorf("StartIndex = %d, want 0", result.StartIndex)
 	}
-	if len(result.Items) != 1 || result.TotalRecordCount != 1 {
-		t.Fatalf("hasUserId=true: Items=%+v TotalRecordCount=%d, want 1 item", result.Items, result.TotalRecordCount)
+	if len(result.Items) != 2 || result.TotalRecordCount != 2 {
+		t.Fatalf("hasUserId=true: Items=%+v TotalRecordCount=%d, want 2 items", result.Items, result.TotalRecordCount)
 	}
-	entry := result.Items[0]
+	if result.Items[0].Type != string(storage.ActivityTypeAuthenticationSucceeded) {
+		t.Errorf("Items[0].Type = %q, want %q (newest first)", result.Items[0].Type, storage.ActivityTypeAuthenticationSucceeded)
+	}
+	entry := result.Items[1]
 	if entry.Type != string(storage.ActivityTypeSessionStarted) {
 		t.Errorf("Type = %q, want %q", entry.Type, storage.ActivityTypeSessionStarted)
 	}
@@ -134,9 +137,8 @@ func TestActivityLogEntriesQueryParamsAndShape(t *testing.T) {
 		t.Error("Id = 0, want a real auto-increment id")
 	}
 
-	// hasUserId=false should return only the seeded failed login, with no
-	// UserId key at all on the wire (json.RawMessage-free raw decode, so
-	// "absent" and "present but null" are distinguishable).
+	// hasUserId=false should return only the seeded failed login, whose
+	// UserId on the wire is the all-zero id (users.auth.R26).
 	resp2 := get(http.MethodGet, "/System/ActivityLog/Entries?startIndex=0&limit=10&hasUserId=false")
 	defer resp2.Body.Close()
 	var raw map[string]any
@@ -148,8 +150,8 @@ func TestActivityLogEntriesQueryParamsAndShape(t *testing.T) {
 		t.Fatalf("hasUserId=false: len(Items) = %d, want 1", len(items))
 	}
 	first, _ := items[0].(map[string]any)
-	if _, ok := first["UserId"]; ok {
-		t.Errorf("hasUserId=false entry has a UserId key: %v", first["UserId"])
+	if first["UserId"] != "00000000000000000000000000000000" {
+		t.Errorf("hasUserId=false entry UserId = %v, want the all-zero id", first["UserId"])
 	}
 	if first["Name"] != "Failed login attempt by ghost" {
 		t.Errorf("Name = %v, want %q", first["Name"], "Failed login attempt by ghost")
@@ -169,7 +171,7 @@ func TestActivityLogEntriesQueryParamsAndShape(t *testing.T) {
 		}
 	}
 
-	// startIndex/limit paging: limit=1 with two total entries should
+	// startIndex/limit paging: limit=1 with three total entries should
 	// still report the true pre-pagination TotalRecordCount.
 	resp4 := get(http.MethodGet, "/System/ActivityLog/Entries?startIndex=0&limit=1")
 	defer resp4.Body.Close()
@@ -180,7 +182,7 @@ func TestActivityLogEntriesQueryParamsAndShape(t *testing.T) {
 	if len(result4.Items) != 1 {
 		t.Fatalf("limit=1: len(Items) = %d, want 1", len(result4.Items))
 	}
-	if result4.TotalRecordCount != 2 {
-		t.Errorf("TotalRecordCount = %d, want 2 (pre-pagination match count)", result4.TotalRecordCount)
+	if result4.TotalRecordCount != 3 {
+		t.Errorf("TotalRecordCount = %d, want 3 (pre-pagination match count)", result4.TotalRecordCount)
 	}
 }

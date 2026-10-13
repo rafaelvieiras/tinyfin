@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"golang.org/x/crypto/bcrypt"
@@ -198,15 +199,17 @@ func TestAuthenticateByNameWrongPassword(t *testing.T) {
 	}
 }
 
-// TestAuthenticateByNameSuccessAppendsActivityLogEntry regression-guards
+// TestAuthenticateByNameSuccessAppendsActivityLogEntries regression-guards
 // handleAuthenticateByName's success path (auth_by_name.go's
-// logAuthSuccess): a SessionStarted entry, UserID set to the logged-in
-// user, Severity "Information".
-func TestAuthenticateByNameSuccessAppendsActivityLogEntry(t *testing.T) {
+// logAuthSuccess): two entries, SessionStarted then AuthenticationSucceeded
+// (users.auth.R23), each with the user's id, Severity "Information" and
+// the texts and address overview of users.auth.R24/R25.
+func TestAuthenticateByNameSuccessAppendsActivityLogEntries(t *testing.T) {
 	ts, st := newTestServer(t)
 	user := createTestUser(t, st, "erin", "hunter2")
 
-	resp := authenticate(t, ts.URL, user.Name, "hunter2")
+	// Upper-cased: the entry texts use the stored name (users.auth.R24).
+	resp := authenticate(t, ts.URL, "ERIN", "hunter2")
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status = %d, want 200", resp.StatusCode)
@@ -217,37 +220,76 @@ func TestAuthenticateByNameSuccessAppendsActivityLogEntry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("QueryActivityEntries: %v", err)
 	}
-	if total != 1 || len(entries) != 1 {
-		t.Fatalf("total=%d len(entries)=%d, want exactly one hasUserId=true entry", total, len(entries))
+	if total != 2 || len(entries) != 2 {
+		t.Fatalf("total=%d len(entries)=%d, want exactly two hasUserId=true entries", total, len(entries))
 	}
-	e := entries[0]
-	if e.Type != storage.ActivityTypeSessionStarted {
-		t.Errorf("Type = %q, want %q", e.Type, storage.ActivityTypeSessionStarted)
+	// Newest first: AuthenticationSucceeded was written after SessionStarted.
+	want := []struct {
+		typ  storage.ActivityType
+		name string
+	}{
+		{storage.ActivityTypeAuthenticationSucceeded, "erin successfully authenticated"},
+		{storage.ActivityTypeSessionStarted, "erin is online from TestDevice"},
 	}
-	if e.UserID == nil || *e.UserID != user.ID {
-		t.Errorf("UserID = %v, want %q", e.UserID, user.ID)
+	for i, w := range want {
+		e := entries[i]
+		if e.Type != w.typ {
+			t.Errorf("entries[%d].Type = %q, want %q", i, e.Type, w.typ)
+		}
+		if e.Name != w.name {
+			t.Errorf("entries[%d].Name = %q, want %q", i, e.Name, w.name)
+		}
+		if e.UserID == nil || *e.UserID != user.ID {
+			t.Errorf("entries[%d].UserID = %v, want %q", i, e.UserID, user.ID)
+		}
+		if e.Severity != storage.ActivitySeverityInfo {
+			t.Errorf("entries[%d].Severity = %q, want %q", i, e.Severity, storage.ActivitySeverityInfo)
+		}
+		if !strings.HasPrefix(e.ShortOverview, "IP address: ") || e.ShortOverview == "IP address: " {
+			t.Errorf("entries[%d].ShortOverview = %q, want \"IP address: <address>\"", i, e.ShortOverview)
+		}
 	}
-	if e.Severity != storage.ActivitySeverityInfo {
-		t.Errorf("Severity = %q, want %q", e.Severity, storage.ActivitySeverityInfo)
+	if entries[0].ID <= entries[1].ID {
+		t.Errorf("AuthenticationSucceeded id %d not after SessionStarted id %d", entries[0].ID, entries[1].ID)
 	}
 }
 
 // TestAuthenticateByNameFailureAppendsActivityLogEntry regression-guards
-// handleAuthenticateByName's two failure paths (auth_by_name.go's
-// logAuthFailure, called for both "no such user" and "wrong password"): an
-// AuthenticationFailed entry with no UserID, Severity "Error", distinct
-// from what a successful login appends.
+// the wrong-password path (auth_by_name.go's logAuthFailure): one
+// AuthenticationFailed entry with no stored UserID, Severity "Error",
+// "Failed login attempt from <username as sent>" (users.auth.R26). An
+// unknown username, a disabled account and a malformed request write
+// nothing (users.auth.R27).
 func TestAuthenticateByNameFailureAppendsActivityLogEntry(t *testing.T) {
 	ts, st := newTestServer(t)
 	user := createTestUser(t, st, "frank", "correct-password")
 
-	resp := authenticate(t, ts.URL, user.Name, "wrong-password")
+	noUser := false
+	count := func() int {
+		t.Helper()
+		_, total, err := st.QueryActivityEntries(context.Background(), storage.ActivityEntryFilter{Limit: 10})
+		if err != nil {
+			t.Fatalf("QueryActivityEntries: %v", err)
+		}
+		return total
+	}
+
+	// users.auth.R27: unknown username -> 401 and no entry.
+	resp2 := authenticate(t, ts.URL, "no-such-user", "whatever")
+	resp2.Body.Close()
+	if resp2.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("unknown status = %d, want 401", resp2.StatusCode)
+	}
+	if n := count(); n != 0 {
+		t.Fatalf("entries after unknown-user login = %d, want 0", n)
+	}
+
+	resp := authenticate(t, ts.URL, "FRANK", "wrong-password")
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want 401", resp.StatusCode)
 	}
 
-	noUser := false
 	entries, total, err := st.QueryActivityEntries(context.Background(), storage.ActivityEntryFilter{Limit: 10, HasUserID: &noUser})
 	if err != nil {
 		t.Fatalf("QueryActivityEntries: %v", err)
@@ -265,20 +307,26 @@ func TestAuthenticateByNameFailureAppendsActivityLogEntry(t *testing.T) {
 	if e.Severity != storage.ActivitySeverityError {
 		t.Errorf("Severity = %q, want %q", e.Severity, storage.ActivitySeverityError)
 	}
+	if e.Name != "Failed login attempt from FRANK" {
+		t.Errorf("Name = %q, want %q", e.Name, "Failed login attempt from FRANK")
+	}
+	if !strings.HasPrefix(e.ShortOverview, "IP address: ") {
+		t.Errorf("ShortOverview = %q, want an \"IP address: \" prefix", e.ShortOverview)
+	}
 
-	// A login against a wholly unknown username hits the other failure
-	// call site (GetUserByName error) and appends the same shape of entry.
-	resp2 := authenticate(t, ts.URL, "no-such-user", "whatever")
-	resp2.Body.Close()
-	if resp2.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("status = %d, want 401", resp2.StatusCode)
+	// users.auth.R27: a disabled account answers 403 and writes nothing.
+	user.IsDisabled = true
+	if err := st.UpdateUser(context.Background(), user); err != nil {
+		t.Fatalf("UpdateUser: %v", err)
 	}
-	_, total2, err := st.QueryActivityEntries(context.Background(), storage.ActivityEntryFilter{Limit: 10, HasUserID: &noUser})
-	if err != nil {
-		t.Fatalf("QueryActivityEntries: %v", err)
+	before := count()
+	resp3 := authenticate(t, ts.URL, "frank", "wrong-password")
+	resp3.Body.Close()
+	if resp3.StatusCode != http.StatusForbidden {
+		t.Fatalf("disabled status = %d, want 403", resp3.StatusCode)
 	}
-	if total2 != 2 {
-		t.Fatalf("total2 = %d, want 2 (both failure call sites logged)", total2)
+	if n := count(); n != before {
+		t.Fatalf("entries after disabled-account login = %d, want %d", n, before)
 	}
 }
 

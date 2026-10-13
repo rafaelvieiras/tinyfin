@@ -13597,6 +13597,665 @@
     ]
   },
   {
+    "id": "users.auth.activity-login-entries",
+    "endpoint": "POST /Users/AuthenticateByName",
+    "spec": "users.md#authenticate-by-name",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "activity-log"
+    ],
+    "covers": [
+      "users.auth.R23",
+      "users.auth.R24",
+      "users.auth.R25"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-auth-activity-login",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-auth-activity-login",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "login",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "TMP-AUTH-ACTIVITY-LOGIN",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20Phone\", DeviceId=\"sc-users-auth-activity-login{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "newest two activity entries",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "2"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "AuthenticationSucceeded"
+            },
+            {
+              "path": "$.Items[0].Name",
+              "op": "eq",
+              "value": "tmp-auth-activity-login successfully authenticated"
+            },
+            {
+              "path": "$.Items[0].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[0].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[0].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[0].ShortOverview",
+              "op": "matches",
+              "value": "^IP address: \\S+$"
+            },
+            {
+              "path": "$.Items[1].Type",
+              "op": "eq",
+              "value": "SessionStarted"
+            },
+            {
+              "path": "$.Items[1].Name",
+              "op": "eq",
+              "value": "tmp-auth-activity-login is online from Conf Phone"
+            },
+            {
+              "path": "$.Items[1].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[1].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[1].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[1].ShortOverview",
+              "op": "matches",
+              "value": "^IP address: \\S+$"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.auth.activity-failed-login-entry",
+    "endpoint": "POST /Users/AuthenticateByName",
+    "spec": "users.md#authenticate-by-name",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "activity-log"
+    ],
+    "covers": [
+      "users.auth.R26"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-auth-activity-failed",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-auth-activity-failed",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "wrong password, name in another case",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "TMP-AUTH-ACTIVITY-FAILED",
+            "Pw": "wrong"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-activity-failed{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "newest activity entry",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "1"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "AuthenticationFailed"
+            },
+            {
+              "path": "$.Items[0].Name",
+              "op": "eq",
+              "value": "Failed login attempt from TMP-AUTH-ACTIVITY-FAILED"
+            },
+            {
+              "path": "$.Items[0].Severity",
+              "op": "eq",
+              "value": "Error"
+            },
+            {
+              "path": "$.Items[0].UserId",
+              "op": "eq",
+              "value": "00000000000000000000000000000000"
+            },
+            {
+              "path": "$.Items[0].ItemId",
+              "op": "absent"
+            },
+            {
+              "path": "$.Items[0].ShortOverview",
+              "op": "matches",
+              "value": "^IP address: \\S+$"
+            }
+          ]
+        }
+      },
+      {
+        "name": "it is found by hasUserId=false and not by hasUserId=true",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "1",
+            "hasUserId": "false"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "AuthenticationFailed"
+            },
+            {
+              "path": "$.Items[0].Name",
+              "op": "eq",
+              "value": "Failed login attempt from TMP-AUTH-ACTIVITY-FAILED"
+            }
+          ]
+        }
+      },
+      {
+        "name": "hasUserId=true newest is not a failure",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "1",
+            "hasUserId": "true"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "ne",
+              "value": "AuthenticationFailed"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.auth.activity-no-entry-for-refusals",
+    "endpoint": "POST /Users/AuthenticateByName",
+    "spec": "users.md#authenticate-by-name",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "activity-log"
+    ],
+    "covers": [
+      "users.auth.R27"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-auth-activity-silent",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-auth-activity-silent",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "disable",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "IsDisabled": true
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "remember the newest entry",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "1"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Id",
+              "op": "exists"
+            }
+          ]
+        },
+        "capture": {
+          "last": "$.Items[0].Id"
+        }
+      },
+      {
+        "name": "disabled, correct password",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-auth-activity-silent",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-activity-silent{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "disabled, wrong password",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-auth-activity-silent",
+            "Pw": "wrong"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-activity-silent{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "unknown username",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-auth-activity-nobody",
+            "Pw": "wrong"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-activity-silent{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "blank username",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "",
+            "Pw": "x"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-activity-silent{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "the newest entry is still the remembered one",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "1"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Id",
+              "op": "eq",
+              "value": "{{capture.last}}"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.auth.activity-quickconnect-entries",
+    "endpoint": "POST /Users/AuthenticateWithQuickConnect",
+    "spec": "quickconnect.md#exchange",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "activity-log",
+      "quickconnect"
+    ],
+    "covers": [
+      "users.auth.R23",
+      "users.auth.R24",
+      "users.auth.R25"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-auth-activity-quickconnect",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-auth-activity-quickconnect",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "the user logs in on an existing device",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-auth-activity-quickconnect",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-activity-quickconnect-ui{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "tokUi": "$.AccessToken"
+        }
+      },
+      {
+        "name": "initiate",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conf%20TV\", DeviceId=\"sc-users-auth-activity-quickconnect-tv{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "secret": "$.Secret",
+          "code": "$.Code"
+        }
+      },
+      {
+        "name": "authorize from the logged-in device",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.code}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-auth-activity-quickconnect-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "exchange the secret",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateWithQuickConnect",
+          "body": {
+            "Secret": "{{capture.secret}}"
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "newest two activity entries",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "2"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "AuthenticationSucceeded"
+            },
+            {
+              "path": "$.Items[0].Name",
+              "op": "eq",
+              "value": "tmp-auth-activity-quickconnect successfully authenticated"
+            },
+            {
+              "path": "$.Items[0].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[0].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[0].ShortOverview",
+              "op": "eq",
+              "value": "IP address: "
+            },
+            {
+              "path": "$.Items[1].Type",
+              "op": "eq",
+              "value": "SessionStarted"
+            },
+            {
+              "path": "$.Items[1].Name",
+              "op": "eq",
+              "value": "tmp-auth-activity-quickconnect is online from Conf TV"
+            },
+            {
+              "path": "$.Items[1].UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.Items[1].Severity",
+              "op": "eq",
+              "value": "Information"
+            },
+            {
+              "path": "$.Items[1].ShortOverview",
+              "op": "eq",
+              "value": "IP address: "
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
     "id": "users.me.api-key-has-no-user",
     "endpoint": "GET /Users/Me",
     "spec": "users.md#get-current-user",

@@ -270,7 +270,7 @@ func (s *Server) handleAuthenticateWithQuickConnect(w http.ResponseWriter, r *ht
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
-	s.issueLogin(w, r, user, storedUserPolicy(user), time.Now(), req.AppName, req.DeviceName, req.DeviceID, req.AppVersion)
+	s.issueLogin(w, r, user, storedUserPolicy(user), time.Now(), req.AppName, req.DeviceName, req.DeviceID, req.AppVersion, false)
 }
 
 // isEmptyGUID reports whether s is the all-zero id, in dashed or plain form.

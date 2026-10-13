@@ -65,8 +65,8 @@ func (s *Server) handleAuthenticateByName(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		// Same response for "no such user" and "wrong password" (below) —
 		// distinguishing them in the response would let a client enumerate
-		// valid usernames. No failure counter exists for an unknown user.
-		s.logAuthFailure(r, req.Username)
+		// valid usernames. No failure counter exists for an unknown user, and
+		// no activity entry is written for one (users.auth.R27).
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -96,15 +96,17 @@ func (s *Server) handleAuthenticateByName(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	s.issueLogin(w, r, user, policy, now, ac.Client, ac.Device, ac.DeviceID, ac.Version)
+	s.issueLogin(w, r, user, policy, now, ac.Client, ac.Device, ac.DeviceID, ac.Version, true)
 }
 
 // issueLogin runs the checks that follow a verified credential (remote
 // access, schedule, device allow-list, session limit) and, when they pass,
 // issues the device's token and writes the AuthenticationResult. It is
 // shared by the password login and the QuickConnect exchange so both
-// apply exactly the same account rules and side effects.
-func (s *Server) issueLogin(w http.ResponseWriter, r *http.Request, user storage.User, policy userPolicyDto, now time.Time, client, device, deviceID, version string) {
+// apply exactly the same account rules and side effects. withAddress is
+// false for the exchange: its activity entries carry no remote address
+// (users.auth.R25).
+func (s *Server) issueLogin(w http.ResponseWriter, r *http.Request, user storage.User, policy userPolicyDto, now time.Time, client, device, deviceID, version string, withAddress bool) {
 	ctx := r.Context()
 	// users.auth.R21: no remote access from outside the local network.
 	if !policy.EnableRemoteAccess && !fromLocalNetwork(r) {
@@ -183,7 +185,7 @@ func (s *Server) issueLogin(w http.ResponseWriter, r *http.Request, user storage
 
 	session := s.sessions.loginSession(s.cfg.ServerID, deviceID, string(user.ID), user.Name, client, device, version, remoteEndPoint(r))
 
-	s.logAuthSuccess(r, user, client)
+	s.logAuthSuccess(r, user, device, withAddress)
 
 	writeJSON(w, http.StatusOK, authenticationResult{
 		User:        s.userDto(user),
@@ -245,22 +247,34 @@ func containsString(list []string, v string) bool {
 	return false
 }
 
+// activityAddress is the ShortOverview of the login activity entries:
+// "IP address: <remote address>" (users.auth.R25). An empty address is
+// written for the QuickConnect exchange, as the reference does.
+func activityAddress(r *http.Request, withAddress bool) string {
+	if !withAddress {
+		return "IP address: "
+	}
+	if ip := remoteIP(r); ip != nil {
+		return "IP address: " + ip.String()
+	}
+	return "IP address: " + r.RemoteAddr
+}
+
 // logAuthFailure appends an AuthenticationFailed activity log entry
-// (docs/05's ActivityLogStore, internal/storage/activity.go) for a
-// rejected login attempt — username unknown or password wrong, the two
-// call sites above deliberately can't be told apart on the wire (this
-// handler's own doc comment), and aren't told apart in the log either.
-// UserID is left nil: no user was ever authenticated for this attempt,
-// only a (possibly nonexistent) attempted username, which Name mentions
-// instead. Failing to write this entry must never change the auth response
-// the client sees — the error is logged and dropped, not propagated
-// (docs/05's ActivityLogStore doc comment).
+// (internal/storage/activity.go) for a wrong password on an existing,
+// enabled account (users.auth.R26). It is not called for an unknown
+// username or a disabled account (users.auth.R27). UserID is left nil
+// (stored as NULL, so hasUserId=false finds it; on the wire it is the
+// all-zero id, activityEntryToDto), and Name quotes the username exactly
+// as sent. Failing to write this entry must never change the auth
+// response the client sees: the error is logged and dropped.
 func (s *Server) logAuthFailure(r *http.Request, username string) {
 	entry := storage.ActivityEntry{
-		Name:     fmt.Sprintf("Failed login attempt by %s", username),
-		Type:     storage.ActivityTypeAuthenticationFailed,
-		Date:     time.Now().UTC(),
-		Severity: storage.ActivitySeverityError,
+		Name:          fmt.Sprintf("Failed login attempt from %s", username),
+		ShortOverview: activityAddress(r, true),
+		Type:          storage.ActivityTypeAuthenticationFailed,
+		Date:          time.Now().UTC(),
+		Severity:      storage.ActivitySeverityError,
 	}
 	if _, err := s.store.AppendActivityEntry(r.Context(), entry); err != nil {
 		log.Printf("api: appending activity log entry for failed login by %q: %v", username, err)
@@ -269,30 +283,37 @@ func (s *Server) logAuthFailure(r *http.Request, username string) {
 	s.notifyActivityLog(r.Context())
 }
 
-// logAuthSuccess appends a SessionStarted activity log entry for a
-// successful login, right before the AccessToken it protects goes out on
-// the wire. ShortOverview carries the remote IP the way the reference
-// server's own confirmed-live example does; client is ac.Client (the
-// AuthContext parsed off this same request, above) rather than a device
-// name, matching that example's "<user> is online in <client>" phrasing.
+// logAuthSuccess appends the two activity log entries of a successful
+// login, in order: SessionStarted ("<user> is online from <device>") and
+// AuthenticationSucceeded ("<user> successfully authenticated")
+// (users.auth.R23-R25), right before the AccessToken they accompany goes
+// out on the wire. device is the percent-decoded Device of the login.
 // Same log-and-continue error handling as logAuthFailure.
-func (s *Server) logAuthSuccess(r *http.Request, user storage.User, client string) {
-	ipStr := "unknown"
-	if ip := remoteIP(r); ip != nil {
-		ipStr = ip.String()
-	}
+func (s *Server) logAuthSuccess(r *http.Request, user storage.User, device string, withAddress bool) {
+	overview := activityAddress(r, withAddress)
 	uid := user.ID
-	entry := storage.ActivityEntry{
-		Name:          fmt.Sprintf("%s is online from %s", user.Name, client),
-		ShortOverview: "Remote IP: " + ipStr,
-		Type:          storage.ActivityTypeSessionStarted,
-		Date:          time.Now().UTC(),
-		UserID:        &uid,
-		Severity:      storage.ActivitySeverityInfo,
+	entries := []storage.ActivityEntry{
+		{
+			Name:          fmt.Sprintf("%s is online from %s", user.Name, device),
+			ShortOverview: overview,
+			Type:          storage.ActivityTypeSessionStarted,
+			UserID:        &uid,
+			Severity:      storage.ActivitySeverityInfo,
+		},
+		{
+			Name:          fmt.Sprintf("%s successfully authenticated", user.Name),
+			ShortOverview: overview,
+			Type:          storage.ActivityTypeAuthenticationSucceeded,
+			UserID:        &uid,
+			Severity:      storage.ActivitySeverityInfo,
+		},
 	}
-	if _, err := s.store.AppendActivityEntry(r.Context(), entry); err != nil {
-		log.Printf("api: appending activity log entry for successful login by %q: %v", user.Name, err)
-		return
+	for _, entry := range entries {
+		entry.Date = time.Now().UTC()
+		if _, err := s.store.AppendActivityEntry(r.Context(), entry); err != nil {
+			log.Printf("api: appending activity log entry for successful login by %q: %v", user.Name, err)
+			return
+		}
 	}
 	s.notifyActivityLog(r.Context())
 }
