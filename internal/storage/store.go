@@ -107,7 +107,12 @@ type UserStore interface {
 	UpdateUser(ctx context.Context, user User) error
 	DeleteUser(ctx context.Context, id UserID) error
 
+	// IssueToken mints a token for (userID, deviceID), revoking any earlier
+	// token of that same pair (one live token per user and device).
+	// GetUserByName matches the name case-insensitively.
 	IssueToken(ctx context.Context, userID UserID, deviceID DeviceID) (AuthToken, error)
+	// QueryUserTokens lists the user's live tokens (one per device).
+	QueryUserTokens(ctx context.Context, userID UserID) ([]AuthToken, error)
 	LookupToken(ctx context.Context, token string) (AuthToken, error)
 	RevokeToken(ctx context.Context, token string) error
 	// RevokeUserTokens removes the user's tokens issued to any device not

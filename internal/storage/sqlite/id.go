@@ -46,12 +46,12 @@ func formatUUID(hex32 string) string {
 	return hex32[0:8] + "-" + hex32[8:12] + "-" + hex32[12:16] + "-" + hex32[16:20] + "-" + hex32[20:32]
 }
 
-// newToken mints an opaque bearer token for IssueToken — a longer random
-// value than newID since it doubles as a secret credential, not just a
-// lookup key, so it carries no time prefix (no reason to make any part of
-// it predictable).
+// newToken mints an opaque bearer token for IssueToken: 128 random bits
+// rendered as 32 lower-case hex digits (users.auth.R1). It doubles as a
+// secret credential, not just a lookup key, so it carries no time prefix
+// (no reason to make any part of it predictable).
 func newToken() string {
-	var b [32]byte
+	var b [16]byte
 	if _, err := rand.Read(b[:]); err != nil {
 		panic("sqlite: reading random bytes for token generation: " + err.Error())
 	}

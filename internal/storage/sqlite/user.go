@@ -55,7 +55,7 @@ func (s *Store) GetUser(ctx context.Context, id storage.UserID) (storage.User, e
 }
 
 func (s *Store) GetUserByName(ctx context.Context, name string) (storage.User, error) {
-	row := s.ex.QueryRowContext(ctx, `SELECT `+userColumns+` FROM users WHERE name = ?`, name)
+	row := s.ex.QueryRowContext(ctx, `SELECT `+userColumns+` FROM users WHERE name = ? COLLATE NOCASE ORDER BY name = ? DESC LIMIT 1`, name, name)
 	user, err := scanUser(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -136,12 +136,19 @@ func (s *Store) DeleteUser(ctx context.Context, id storage.UserID) error {
 	return nil
 }
 
+// IssueToken mints a token bound to (userID, deviceID). A token is bound to
+// exactly one such pair, so any earlier token of the same pair is revoked
+// (users.auth.R10); tokens of other devices and other users are untouched.
 func (s *Store) IssueToken(ctx context.Context, userID storage.UserID, deviceID storage.DeviceID) (storage.AuthToken, error) {
 	token := storage.AuthToken{
 		Token:    newToken(),
 		UserID:   userID,
 		DeviceID: deviceID,
 		IssuedAt: time.Now().UTC(),
+	}
+
+	if _, err := s.exec(ctx, `DELETE FROM auth_tokens WHERE user_id = ? AND device_id = ?`, string(userID), string(deviceID)); err != nil {
+		return storage.AuthToken{}, fmt.Errorf("sqlite: revoking previous token of user %q: %w", userID, err)
 	}
 
 	const query = `INSERT INTO auth_tokens (token, user_id, device_id, issued_at) VALUES (?, ?, ?, ?)`
@@ -166,6 +173,29 @@ func (s *Store) LookupToken(ctx context.Context, token string) (storage.AuthToke
 	t.UserID = storage.UserID(userID)
 	t.DeviceID = storage.DeviceID(deviceID)
 	return t, nil
+}
+
+func (s *Store) QueryUserTokens(ctx context.Context, userID storage.UserID) ([]storage.AuthToken, error) {
+	rows, err := s.ex.QueryContext(ctx, `SELECT token, device_id, issued_at FROM auth_tokens WHERE user_id = ? ORDER BY issued_at`, string(userID))
+	if err != nil {
+		return nil, fmt.Errorf("sqlite: querying tokens of user %q: %w", userID, err)
+	}
+	defer rows.Close()
+
+	var out []storage.AuthToken
+	for rows.Next() {
+		t := storage.AuthToken{UserID: userID}
+		var deviceID string
+		if err := rows.Scan(&t.Token, &deviceID, &t.IssuedAt); err != nil {
+			return nil, fmt.Errorf("sqlite: scanning token row: %w", err)
+		}
+		t.DeviceID = storage.DeviceID(deviceID)
+		out = append(out, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("sqlite: iterating token rows: %w", err)
+	}
+	return out, nil
 }
 
 func (s *Store) RevokeToken(ctx context.Context, token string) error {
