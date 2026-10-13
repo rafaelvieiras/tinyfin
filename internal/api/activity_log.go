@@ -33,6 +33,7 @@ type activityLogEntryDto struct {
 	ShortOverview string    `json:"ShortOverview"`
 	Type          string    `json:"Type"`
 	Date          time.Time `json:"Date"`
+	ItemId        *string   `json:"ItemId,omitempty"`
 	UserId        *string   `json:"UserId,omitempty"`
 	Severity      string    `json:"Severity"`
 }
@@ -107,19 +108,7 @@ func (s *Server) handleActivityLogEntries(w http.ResponseWriter, r *http.Request
 
 	items := make([]activityLogEntryDto, 0, len(entries))
 	for _, e := range entries {
-		dto := activityLogEntryDto{
-			Id:            e.ID,
-			Name:          e.Name,
-			ShortOverview: e.ShortOverview,
-			Type:          string(e.Type),
-			Date:          e.Date,
-			Severity:      string(e.Severity),
-		}
-		if e.UserID != nil {
-			uid := string(*e.UserID)
-			dto.UserId = &uid
-		}
-		items = append(items, dto)
+		items = append(items, activityEntryToDto(e))
 	}
 
 	writeJSON(w, http.StatusOK, activityLogEntriesResult{
@@ -127,4 +116,26 @@ func (s *Server) handleActivityLogEntries(w http.ResponseWriter, r *http.Request
 		TotalRecordCount: total,
 		StartIndex:       startIndex,
 	})
+}
+
+// activityEntryToDto maps a stored entry to its wire shape, shared by the
+// REST route and the ActivityLogEntry WebSocket push.
+func activityEntryToDto(e storage.ActivityEntry) activityLogEntryDto {
+	dto := activityLogEntryDto{
+		Id:            e.ID,
+		Name:          e.Name,
+		ShortOverview: e.ShortOverview,
+		Type:          string(e.Type),
+		Date:          e.Date,
+		Severity:      string(e.Severity),
+	}
+	if e.UserID != nil {
+		uid := string(*e.UserID)
+		dto.UserId = &uid
+	}
+	if e.ItemID != nil {
+		iid := string(*e.ItemID)
+		dto.ItemId = &iid
+	}
+	return dto
 }

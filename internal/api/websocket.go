@@ -434,19 +434,7 @@ func (s *Server) notifyActivityLog(ctx context.Context) {
 	}
 	items := make([]activityLogEntryDto, 0, len(entries))
 	for _, e := range entries {
-		dto := activityLogEntryDto{
-			Id:            e.ID,
-			Name:          e.Name,
-			ShortOverview: e.ShortOverview,
-			Type:          string(e.Type),
-			Date:          e.Date,
-			Severity:      string(e.Severity),
-		}
-		if e.UserID != nil {
-			uid := string(*e.UserID)
-			dto.UserId = &uid
-		}
-		items = append(items, dto)
+		items = append(items, activityEntryToDto(e))
 	}
 
 	for _, c := range conns {

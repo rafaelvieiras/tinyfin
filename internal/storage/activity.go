@@ -22,6 +22,14 @@ const (
 	// no confirmed Type string byte-for-byte), not independently confirmed
 	// against a live response the way SessionStarted was.
 	ActivityTypeAuthenticationFailed ActivityType = "AuthenticationFailed"
+
+	// Playback entries: a start (video / audio / any other media type) and
+	// the matching stop. There is no stop entry for other media types.
+	ActivityTypeVideoPlayback        ActivityType = "VideoPlayback"
+	ActivityTypeAudioPlayback        ActivityType = "AudioPlayback"
+	ActivityTypePlayback             ActivityType = "Playback"
+	ActivityTypeVideoPlaybackStopped ActivityType = "VideoPlaybackStopped"
+	ActivityTypeAudioPlaybackStopped ActivityType = "AudioPlaybackStopped"
 )
 
 // ActivitySeverity is the reference server's ActivityLogEntry.Severity
@@ -73,6 +81,10 @@ type ActivityEntry struct {
 	// successful login. This is also the field ActivityEntryFilter.HasUserID
 	// filters on.
 	UserID *UserID
+
+	// ItemID is the item a playback entry is about; nil for entries that
+	// are not about an item (logins).
+	ItemID *ItemID
 
 	Severity ActivitySeverity
 }

@@ -142,3 +142,28 @@ func TestQueryActivityEntriesRequiresPositiveLimit(t *testing.T) {
 		t.Fatal("QueryActivityEntries with Limit=0: want an error, got nil")
 	}
 }
+
+// TestActivityEntryItemIDRoundTrip: a playback entry names the item it is
+// about; entries that are not about an item have none.
+func TestActivityEntryItemIDRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	st := openTestStore(t)
+	uid := storage.UserID("0123456789abcdef0123456789abcdef")
+	itemID := storage.ItemID("fedcba9876543210fedcba9876543210")
+	now := time.Now().UTC()
+	for _, e := range []storage.ActivityEntry{
+		{Name: "login", Type: storage.ActivityTypeSessionStarted, Date: now, UserID: &uid, Severity: storage.ActivitySeverityInfo},
+		{Name: "playing", Type: storage.ActivityTypeVideoPlayback, Date: now.Add(time.Second), UserID: &uid, ItemID: &itemID, Severity: storage.ActivitySeverityInfo},
+	} {
+		if _, err := st.AppendActivityEntry(ctx, e); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, _, err := st.QueryActivityEntries(ctx, storage.ActivityEntryFilter{Limit: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got[0].ItemID == nil || *got[0].ItemID != itemID || got[1].ItemID != nil {
+		t.Fatalf("entries = %+v", got)
+	}
+}

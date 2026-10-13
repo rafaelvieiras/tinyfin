@@ -14,13 +14,16 @@ import (
 // — storage.ActivityEntry.ID's doc comment explains why a plain integer,
 // not this project's opaque UUID-shaped ID, is the right shape here.
 func (s *Store) AppendActivityEntry(ctx context.Context, entry storage.ActivityEntry) (int64, error) {
-	var userID any
+	var userID, itemID any
 	if entry.UserID != nil {
 		userID = string(*entry.UserID)
 	}
+	if entry.ItemID != nil {
+		itemID = string(*entry.ItemID)
+	}
 
-	const query = `INSERT INTO activity_log (name, short_overview, type, date, user_id, severity) VALUES (?, ?, ?, ?, ?, ?)`
-	res, err := s.exec(ctx, query, entry.Name, entry.ShortOverview, string(entry.Type), entry.Date, userID, string(entry.Severity))
+	const query = `INSERT INTO activity_log (name, short_overview, type, date, user_id, severity, item_id) VALUES (?, ?, ?, ?, ?, ?, ?)`
+	res, err := s.exec(ctx, query, entry.Name, entry.ShortOverview, string(entry.Type), entry.Date, userID, string(entry.Severity), itemID)
 	if err != nil {
 		return 0, fmt.Errorf("sqlite: appending activity log entry: %w", err)
 	}
@@ -66,7 +69,7 @@ func (s *Store) QueryActivityEntries(ctx context.Context, filter storage.Activit
 		return nil, 0, fmt.Errorf("sqlite: counting activity log entries: %w", err)
 	}
 
-	query := `SELECT id, name, short_overview, type, date, user_id, severity FROM activity_log ` + where +
+	query := `SELECT id, name, short_overview, type, date, user_id, severity, item_id FROM activity_log ` + where +
 		` ORDER BY date DESC, id DESC LIMIT ? OFFSET ?`
 	pageArgs := append(append([]any{}, args...), filter.Limit, filter.Offset)
 
@@ -82,8 +85,9 @@ func (s *Store) QueryActivityEntries(ctx context.Context, filter storage.Activit
 			e             storage.ActivityEntry
 			typ, severity string
 			userID        sql.NullString
+			itemID        sql.NullString
 		)
-		if err := rows.Scan(&e.ID, &e.Name, &e.ShortOverview, &typ, &e.Date, &userID, &severity); err != nil {
+		if err := rows.Scan(&e.ID, &e.Name, &e.ShortOverview, &typ, &e.Date, &userID, &severity, &itemID); err != nil {
 			return nil, 0, fmt.Errorf("sqlite: scanning activity log row: %w", err)
 		}
 		e.Type = storage.ActivityType(typ)
@@ -91,6 +95,10 @@ func (s *Store) QueryActivityEntries(ctx context.Context, filter storage.Activit
 		if userID.Valid {
 			uid := storage.UserID(userID.String)
 			e.UserID = &uid
+		}
+		if itemID.Valid {
+			iid := storage.ItemID(itemID.String)
+			e.ItemID = &iid
 		}
 		entries = append(entries, e)
 	}

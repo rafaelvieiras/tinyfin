@@ -20,11 +20,12 @@ resume position and play count that result. Behavior only; every rule below is e
 - Fixture position values used by scenarios: `100000` ticks (0.01 s, about 0.2 %, below the minimum),
   `25000000` (2.5 s, between the thresholds), `59500000` (above the maximum or inside the last second),
   `6000000000` (600 s, beyond the end of every fixture item).
-- Because every fixture movie is far shorter than the 300 s minimum resume duration, a **resume position can
-  never be saved for a fixture item** with the default configuration: a stop or progress between the
+- Because the regular fixture movies are far shorter than the 300 s minimum resume duration, a **resume
+  position can never be saved for them** with the default configuration: a stop or progress between the
   thresholds marks the item played instead. The branch "between the thresholds and runtime of at least 300 s
-  saves a resume position" is specified (rules `progress.R5`, `stopped.R4`) and its scenarios are `pending`
-  until a fixture movie of at least 300 s (`item:long`) exists.
+  saves a resume position" (rules `progress.R5`, `stopped.R4`) is exercised on `item:long`, a 330 s movie in a
+  lazy fixture library (created and removed around each scenario that requires it); `600000000` ticks (60 s,
+  about 18 %) is the in-between position and `6000000000` is beyond its end.
 - Seeding a resume position for the "mark played/unplayed resets position" scenarios uses
   `POST /UserItems/{itemId}/UserData` with `PlaybackPositionTicks` (owned by another area, tagged
   `depends:userdata-update`).
@@ -188,7 +189,11 @@ type; 401 anonymous.
 - **playstate.start.R9** `SessionId` in the body is ignored; the server always uses the caller's own session.
 - **playstate.start.R10** A start of a video item creates an activity-log entry of type `VideoPlayback` (audio:
   `AudioPlayback`, other: `Playback`); a stop creates `VideoPlaybackStopped` / `AudioPlaybackStopped` and none
-  for other media types. No entry when the item is unknown or is theme media. (Pending runtime verification.)
+  for other media types. No entry when the item is unknown or is theme media. Observable through
+  `GET /System/ActivityLog/Entries` (administrator): entries are listed newest first, appear before the report
+  returns (a short wait is harmless), carry `ItemId` and `UserId` of the report and `Severity` `Information`,
+  and every start and every stop writes one - repeated starts, a stop without a start and a `Failed=true` stop
+  included; a progress report writes none. An item the caller cannot see is logged like any other.
 - **playstate.start.R11** [untestable: WebSocket delivery] Start, progress and stop push session and
   user-data-changed messages to subscribed WebSocket clients; progress-only saves do not push user-data-changed.
 
@@ -237,7 +242,7 @@ Responses: 204 empty; 400 (negative `PositionTicks`, malformed body); 401 anonym
   position 0; between and runtime below 300 s: `Played=true`, position 0. `PlayCount` is not changed by the
   stop itself (a start then a stop with a position gives `PlayCount` 1).
 - **playstate.stopped.R4** Between the thresholds with runtime of at least 300 s: position saved and `Played`
-  false; above 90 % on such an item: `Played=true`, position 0. (Pending, needs `item:long`.)
+  false; above 90 % on such an item: `Played=true`, position 0.
 - **playstate.stopped.R5** `Failed=true` writes nothing: `PlayCount`, `Played` and position keep the values
   they had before the stop (the count from an earlier start stays).
 - **playstate.stopped.R6** Negative `PositionTicks` yields 400 and changes no user data.
@@ -335,7 +340,6 @@ The deprecated `/PlayingItems/...` and `/Users/{userId}/PlayingItems/...` routes
 8. A user whose session was removed mid-request, and the 404 "session not found" of start/stopped, cannot be
    triggered black-box.
 9. Reports from a restricted user leave a hidden user-data row that scenarios cannot clean up.
-10. Fixture `item:long` (movie of at least 300 s) is needed to unpend the resume-position scenarios.
 
 ## Rule to scenarios
 
@@ -383,13 +387,13 @@ The deprecated `/PlayingItems/...` and `/Users/{userId}/PlayingItems/...` routes
 | `playstate.start.R7` | `start.invalid-item-guid`, `start.malformed-json`, `start.invalid-enum` |
 | `playstate.start.R8` | `start.ignored-fields-accepted` |
 | `playstate.start.R9` | `start.ignored-fields-accepted` |
-| `playstate.start.R10` | `start.activity-log (pending)` |
+| `playstate.start.R10` | `start.activity-log`, `stopped.activity-log` |
 | `playstate.start.R11` | none (untestable) |
 | `playstate.progress.R1` | `progress.below-minimum` |
 | `playstate.progress.R2` | `progress.below-minimum` |
 | `playstate.progress.R3` | `progress.above-maximum` |
 | `playstate.progress.R4` | `progress.mid-short-video` |
-| `playstate.progress.R5` | `progress.long-runtime-saves-position (pending)` |
+| `playstate.progress.R5` | `progress.long-runtime-saves-position` |
 | `playstate.progress.R6` | `progress.position-omitted` |
 | `playstate.progress.R7` | `progress.below-minimum`, `progress.does-not-count` |
 | `playstate.progress.R8` | `progress.without-start` |
@@ -399,7 +403,7 @@ The deprecated `/PlayingItems/...` and `/Users/{userId}/PlayingItems/...` routes
 | `playstate.stopped.R1` | `stopped.no-position-is-complete` |
 | `playstate.stopped.R2` | `stopped.no-position-is-complete`, `stopped.start-then-no-position` |
 | `playstate.stopped.R3` | `stopped.below-minimum`, `stopped.mid-short-video`, `stopped.above-maximum`, `stopped.beyond-runtime` |
-| `playstate.stopped.R4` | `stopped.long-runtime-saves-position (pending)`, `stopped.long-runtime-end-is-played (pending)` |
+| `playstate.stopped.R4` | `stopped.long-runtime-saves-position`, `stopped.long-runtime-end-is-played` |
 | `playstate.stopped.R5` | `stopped.failed` |
 | `playstate.stopped.R6` | `stopped.negative-position` |
 | `playstate.stopped.R7` | `stopped.no-item` |
@@ -408,7 +412,7 @@ The deprecated `/PlayingItems/...` and `/Users/{userId}/PlayingItems/...` routes
 | `playstate.stopped.R9` | `stopped.below-minimum`, `stopped.mid-short-video` |
 | `playstate.stopped.R10` | `stopped.no-position-is-complete`, `stopped.without-start` |
 | `playstate.stopped.R11` | `stopped.invalid-body` |
-| `playstate.resume.R1` | `resume.saved-position-listed-until-played`, `resume.long-runtime-listed (pending)` |
+| `playstate.resume.R1` | `resume.saved-position-listed-until-played`, `resume.long-runtime-listed` |
 | `playstate.resume.R2` | `resume.saved-position-listed-until-played` |
 | `playstate.resume.R3` | `resume.below-minimum-removes-entry` |
 | `playstate.ping.R1` | `ping.basic`, `ping.unknown-play-session` |

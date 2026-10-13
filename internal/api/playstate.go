@@ -3,7 +3,9 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -350,6 +352,9 @@ func (s *Server) handlePlaybackReport(w http.ResponseWriter, r *http.Request, ki
 	now := time.Now().UTC()
 	if item != nil {
 		s.recordPlaybackUserData(r.Context(), ac.User.ID, *item, rep, kind, now)
+		if kind != reportProgress {
+			s.logPlaybackActivity(r, ac, *item, kind, now)
+		}
 	}
 	if !visible {
 		item = nil
@@ -459,4 +464,47 @@ func (s *Server) updatePlaybackSession(r *http.Request, ac *AuthContext, item *s
 		}
 		ts.playing = &playingState{item: nowPlaying, state: ps, runtime: runtime, reportedAt: now}
 	})
+}
+
+// logPlaybackActivity appends the activity-log entry of a start or stop
+// report (playstate.start.R10): VideoPlayback / AudioPlayback / Playback on
+// a start, VideoPlaybackStopped / AudioPlaybackStopped on a stop and nothing
+// for a stop of another media type. Every start and every stop writes one,
+// a failed stop included, whatever the item's visibility to the caller.
+// A failure to log never fails the report.
+func (s *Server) logPlaybackActivity(r *http.Request, ac *AuthContext, item storage.Item, kind reportKind, now time.Time) {
+	var typ storage.ActivityType
+	var verb string
+	switch item.Type {
+	case storage.ItemTypeAudio:
+		typ, verb = storage.ActivityTypeAudioPlayback, "is playing"
+		if kind == reportStopped {
+			typ, verb = storage.ActivityTypeAudioPlaybackStopped, "has finished playing"
+		}
+	case storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeTrailer:
+		typ, verb = storage.ActivityTypeVideoPlayback, "is playing"
+		if kind == reportStopped {
+			typ, verb = storage.ActivityTypeVideoPlaybackStopped, "has finished playing"
+		}
+	default:
+		if kind == reportStopped {
+			return
+		}
+		typ, verb = storage.ActivityTypePlayback, "is playing"
+	}
+	uid := ac.User.ID
+	iid := item.ID
+	entry := storage.ActivityEntry{
+		Name:     fmt.Sprintf("%s %s %s on %s", ac.User.Name, verb, item.Name, ac.Device),
+		Type:     typ,
+		Date:     now,
+		UserID:   &uid,
+		ItemID:   &iid,
+		Severity: storage.ActivitySeverityInfo,
+	}
+	if _, err := s.store.AppendActivityEntry(r.Context(), entry); err != nil {
+		log.Printf("api: appending playback activity log entry: %v", err)
+		return
+	}
+	s.notifyActivityLog(r.Context())
 }

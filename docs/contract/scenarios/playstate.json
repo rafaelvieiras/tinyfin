@@ -5249,7 +5249,10 @@
         }
       },
       {
-        "name": "read newest activity entry",
+        "sleepMs": 500
+      },
+      {
+        "name": "newest activity entry is the playback start",
         "as": "admin",
         "request": {
           "method": "GET",
@@ -5265,6 +5268,21 @@
               "path": "$.Items[0].Type",
               "op": "eq",
               "value": "VideoPlayback"
+            },
+            {
+              "path": "$.Items[0].ItemId",
+              "op": "eq",
+              "value": "{{item.charlie.id}}"
+            },
+            {
+              "path": "$.Items[0].UserId",
+              "op": "eq",
+              "value": "{{user.alice.id}}"
+            },
+            {
+              "path": "$.Items[0].Severity",
+              "op": "eq",
+              "value": "Information"
             }
           ]
         }
@@ -5298,8 +5316,95 @@
           "status": 200
         }
       }
+    ]
+  },
+  {
+    "id": "playstate.stopped.activity-log",
+    "endpoint": "POST /Sessions/Playing/Stopped",
+    "spec": "playstate.md#playback-stopped",
+    "scope": "modern",
+    "tags": [
+      "playstate"
     ],
-    "pending": "activity entries are written asynchronously; ordering against other entries and the entry type are not runtime-verified"
+    "covers": [
+      "playstate.start.R10"
+    ],
+    "requires": [
+      "item:charlie",
+      "user:alice",
+      "user:admin"
+    ],
+    "steps": [
+      {
+        "name": "stop",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.charlie.id}}",
+            "PlaySessionId": "sc-playstate-stop-15",
+            "Failed": true
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "sleepMs": 500
+      },
+      {
+        "name": "newest activity entry is the playback stop",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/ActivityLog/Entries",
+          "query": {
+            "limit": "1"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Type",
+              "op": "eq",
+              "value": "VideoPlaybackStopped"
+            },
+            {
+              "path": "$.Items[0].ItemId",
+              "op": "eq",
+              "value": "{{item.charlie.id}}"
+            },
+            {
+              "path": "$.Items[0].UserId",
+              "op": "eq",
+              "value": "{{user.alice.id}}"
+            },
+            {
+              "path": "$.Items[0].Severity",
+              "op": "eq",
+              "value": "Information"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "cleanup: reset played state",
+        "as": "alice",
+        "request": {
+          "method": "DELETE",
+          "path": "/UserPlayedItems/{{item.charlie.id}}"
+        },
+        "expect": {
+          "status": 200
+        }
+      }
+    ]
   },
   {
     "id": "playstate.progress.below-minimum",
@@ -6351,8 +6456,7 @@
           "status": 200
         }
       }
-    ],
-    "pending": "needs a fixture movie of at least 300 s (key item:long); all fixture movies are about 6 s, which is below the default minimum-resume duration, so a resume position can never be saved"
+    ]
   },
   {
     "id": "playstate.stopped.no-position-is-complete",
@@ -7591,8 +7695,7 @@
           "status": 200
         }
       }
-    ],
-    "pending": "needs a fixture movie of at least 300 s (key item:long); all fixture movies are about 6 s, which is below the default minimum-resume duration, so a resume position can never be saved"
+    ]
   },
   {
     "id": "playstate.stopped.long-runtime-end-is-played",
@@ -7703,8 +7806,7 @@
           "status": 200
         }
       }
-    ],
-    "pending": "needs a fixture movie of at least 300 s (key item:long); all fixture movies are about 6 s, which is below the default minimum-resume duration, so a resume position can never be saved"
+    ]
   },
   {
     "id": "playstate.resume.saved-position-listed-until-played",
@@ -8064,8 +8166,7 @@
           "status": 200
         }
       }
-    ],
-    "pending": "needs a fixture movie of at least 300 s (key item:long); all fixture movies are about 6 s, which is below the default minimum-resume duration, so a resume position can never be saved"
+    ]
   },
   {
     "id": "playstate.ping.basic",
