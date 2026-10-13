@@ -58,15 +58,6 @@ func userItemDataFromState(state storage.Playstate, item storage.Item) *userItem
 	return dto
 }
 
-// normalizeGUID lowercases s and inserts dashes into a 32-digit form; it
-// reports false for anything that is not a GUID.
-func normalizeGUID(s string) (string, bool) {
-	id, ok := parseUserGUID(s)
-	return string(id), ok
-}
-
-const zeroGUID = "00000000-0000-0000-0000-000000000000"
-
 // libraryAccess describes which libraries a user may see.
 type libraryAccess struct {
 	all bool
