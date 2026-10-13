@@ -1,8 +1,10 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -220,6 +222,7 @@ type userDto struct {
 	ServerID              string               `json:"ServerId"`
 	ServerName            string               `json:"ServerName"`
 	ID                    string               `json:"Id"`
+	HasPassword           bool                 `json:"HasPassword"`
 	HasConfiguredPassword bool                 `json:"HasConfiguredPassword"`
 	EnableAutoLogin       bool                 `json:"EnableAutoLogin"`
 	LastLoginDate         *time.Time           `json:"LastLoginDate,omitempty"`
@@ -228,32 +231,39 @@ type userDto struct {
 	Policy                userPolicyDto        `json:"Policy"`
 }
 
+// userDto builds the wire object of u, loading its stored preferences. It
+// is the context-free form used by callers that have no request context at
+// hand; handlers in this file use userDtoCtx.
 func (s *Server) userDto(u storage.User) userDto {
+	return s.userDtoCtx(context.Background(), u)
+}
+
+func (s *Server) userDtoCtx(ctx context.Context, u storage.User) userDto {
+	cfg := defaultUserConfiguration()
+	if raw, err := s.store.GetUserConfiguration(ctx, u.ID); err == nil && raw != "" {
+		if json.Unmarshal([]byte(raw), &cfg) != nil {
+			cfg = defaultUserConfiguration()
+		}
+		cfg.normalize()
+	}
 	return userDto{
 		Name:                  u.Name,
 		ServerID:              s.cfg.ServerID,
 		ServerName:            s.cfg.ServerName,
 		ID:                    string(u.ID),
+		HasPassword:           u.PasswordHash != "",
 		HasConfiguredPassword: u.PasswordHash != "",
 		EnableAutoLogin:       u.EnableAutoLogin,
 		LastLoginDate:         u.LastLoginDate,
 		LastActivityDate:      u.LastActivityDate,
-		Configuration: userConfigurationDto{
-			RememberAudioSelections:    true,
-			RememberSubtitleSelections: true,
-			SubtitleMode:               "Default",
-			GroupedFolders:             []string{},
-			OrderedViews:               []string{},
-			LatestItemsExcludes:        []string{},
-			MyMediaExcludes:            []string{},
-		},
-		Policy: storedUserPolicy(u),
+		Configuration:         cfg,
+		Policy:                storedUserPolicy(u),
 	}
 }
 
 func (s *Server) handleUsersMe(w http.ResponseWriter, r *http.Request) {
 	ac, _ := AuthFromContext(r.Context())
-	writeJSON(w, http.StatusOK, s.userDto(ac.User))
+	writeJSON(w, http.StatusOK, s.userDtoCtx(r.Context(), ac.User))
 }
 
 // handleUsersPublic is GET /Users/Public — unauthenticated, unlike every
@@ -278,12 +288,28 @@ func (s *Server) handleUsersPublic(w http.ResponseWriter, r *http.Request) {
 		if p := storedUserPolicy(u); p.IsHidden || p.IsDisabled {
 			continue
 		}
-		dtos = append(dtos, s.userDto(u))
+		dtos = append(dtos, s.userDtoCtx(r.Context(), u))
 	}
 	writeJSON(w, http.StatusOK, dtos)
 }
 
+// handleUsersList is GET /Users (users.list.R1-R6): every account, ordered
+// by name, optionally narrowed by the isHidden / isDisabled filters.
 func (s *Server) handleUsersList(w http.ResponseWriter, r *http.Request) {
+	var hidden, disabled *bool
+	for key, dst := range map[string]**bool{"isHidden": &hidden, "isDisabled": &disabled} {
+		v := r.URL.Query().Get(key)
+		if v == "" {
+			continue
+		}
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		*dst = &b
+	}
+
 	users, err := s.store.QueryUsers(r.Context())
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -292,7 +318,14 @@ func (s *Server) handleUsersList(w http.ResponseWriter, r *http.Request) {
 
 	dtos := make([]userDto, 0, len(users))
 	for _, u := range users {
-		dtos = append(dtos, s.userDto(u))
+		p := storedUserPolicy(u)
+		if hidden != nil && p.IsHidden != *hidden {
+			continue
+		}
+		if disabled != nil && p.IsDisabled != *disabled {
+			continue
+		}
+		dtos = append(dtos, s.userDtoCtx(r.Context(), u))
 	}
 	writeJSON(w, http.StatusOK, dtos)
 }
@@ -312,7 +345,17 @@ func (s *Server) handleUsersCreate(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	if req.Name == "" {
+	// users.create.R5/R6: valid, unique (case-insensitive) name.
+	if !validUserName(req.Name) {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	taken, err := s.userNameTaken(r.Context(), req.Name, "")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if taken {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -347,7 +390,7 @@ func (s *Server) handleUsersCreate(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, http.StatusOK, s.userDto(created))
+	writeJSON(w, http.StatusOK, s.userDtoCtx(r.Context(), created))
 }
 
 // handleUsersGet is GET /Users/{userId} — distinct from handleUsersMe
@@ -355,13 +398,18 @@ func (s *Server) handleUsersCreate(w http.ResponseWriter, r *http.Request) {
 // rather than the Me shortcut once it's past the login screen, found by
 // testing against a real jellyfin-web build.
 func (s *Server) handleUsersGet(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("userId")
-	user, err := s.store.GetUser(r.Context(), storage.UserID(id))
+	// users.get.R4/R5: the empty GUID and non-GUIDs are 400, unknown ids 404.
+	id, ok := parseUserGUID(r.PathValue("userId"))
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	user, err := s.store.GetUser(r.Context(), id)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	writeJSON(w, http.StatusOK, s.userDto(user))
+	writeJSON(w, http.StatusOK, s.userDtoCtx(r.Context(), user))
 }
 
 func (s *Server) handleUsersDelete(w http.ResponseWriter, r *http.Request) {

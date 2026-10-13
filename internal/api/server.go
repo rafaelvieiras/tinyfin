@@ -372,6 +372,14 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /Users/{userId}", requireAuth(s.handleUsersGet))
 	s.mux.HandleFunc("DELETE /Users/{userId}", requireAdmin(s.handleUsersDelete))
 	s.mux.HandleFunc("POST /Users/{userId}/Policy", requireAdmin(s.handleUsersPolicy))
+	// Update and configuration: self or administrator (users.update,
+	// users.configuration). The {userId} forms are the legacy aliases the
+	// official web client still calls; the literal "New", "Configuration"
+	// and "AuthenticateByName" paths win over the wildcard.
+	s.mux.HandleFunc("POST /Users", requireAuth(s.handleUsersUpdate))
+	s.mux.HandleFunc("POST /Users/{userId}", requireAuth(s.handleUsersUpdate))
+	s.mux.HandleFunc("POST /Users/Configuration", requireAuth(s.handleUsersConfiguration))
+	s.mux.HandleFunc("POST /Users/{userId}/Configuration", requireAuth(s.handleUsersConfiguration))
 
 	// Library and item navigation (library.go) — docs/04's highest-priority
 	// group.
