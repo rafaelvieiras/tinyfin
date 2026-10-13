@@ -283,6 +283,7 @@ func (s *Server) handleUsersUpdate(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	renamed := false
 	if *req.Name != target.Name {
 		taken, err := s.userNameTaken(r.Context(), *req.Name, target.ID)
 		if err != nil {
@@ -298,10 +299,16 @@ func (s *Server) handleUsersUpdate(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		renamed = true
 	}
 	if err := s.saveUserConfiguration(r.Context(), target.ID, cfg); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+	// The change of name (not the preferences) is announced to the user's
+	// open sessions.
+	if renamed {
+		s.notifyUserUpdated(r.Context(), target)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

@@ -362,3 +362,43 @@ func TestParseWSInterval(t *testing.T) {
 		}
 	}
 }
+
+// TestSocketUserUpdatedOnRename covers users.update: a rename is announced
+// to the renamed user's open sockets (and only theirs); an update that keeps
+// the name is not.
+func TestSocketUserUpdatedOnRename(t *testing.T) {
+	ts, st, _ := newSocketTestServer(t)
+	createTestAdminUser(t, st, "admin", "adminpass")
+	alice := createTestUser(t, st, "alice", "pw")
+	createTestUser(t, st, "bob", "pw")
+	adminTok := policyLogin(t, ts.URL, "admin", "adminpass")
+
+	aliceConn := dialSocket(t, ts, loginToken(t, ts.URL, "alice", "pw"))
+	_ = readSocketMessage(t, aliceConn) // ForceKeepAlive
+	bobConn := dialSocket(t, ts, loginToken(t, ts.URL, "bob", "pw"))
+	_ = readSocketMessage(t, bobConn) // ForceKeepAlive
+
+	// Same name: no announcement.
+	if code, _ := policyDo(t, ts.URL, adminTok, http.MethodPost, "/Users?userId="+string(alice.ID), updateBody("alice", "")); code != http.StatusNoContent {
+		t.Fatalf("no-op update: %d", code)
+	}
+	if code, _ := policyDo(t, ts.URL, adminTok, http.MethodPost, "/Users?userId="+string(alice.ID), updateBody("alice-renamed", "")); code != http.StatusNoContent {
+		t.Fatalf("rename: %d", code)
+	}
+
+	msg := readSocketMessage(t, aliceConn)
+	if msg.MessageType != "UserUpdated" {
+		t.Fatalf("message type = %q, want UserUpdated", msg.MessageType)
+	}
+	data, ok := msg.Data.(map[string]any)
+	if !ok || data["Name"] != "alice-renamed" || data["Id"] != string(alice.ID) {
+		t.Fatalf("UserUpdated Data = %#v", msg.Data)
+	}
+
+	// Bob's socket got nothing: the next frame he sees is the keep-alive
+	// answer to his own probe, not a UserUpdated.
+	sendSocketMessage(t, bobConn, "KeepAlive", "")
+	if m := readSocketMessage(t, bobConn); m.MessageType != "KeepAlive" {
+		t.Errorf("bob received %q, want only his KeepAlive answer", m.MessageType)
+	}
+}

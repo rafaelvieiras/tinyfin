@@ -458,3 +458,24 @@ func (s *Server) notifyActivityLog(ctx context.Context) {
 		c.send(ctx, "ActivityLogEntry", items)
 	}
 }
+
+// notifyUserUpdated pushes a "UserUpdated" message carrying the user object
+// to every open connection of that user (users.update: a rename is
+// announced to the user's open sessions). Other users' connections are not
+// told.
+func (s *Server) notifyUserUpdated(ctx context.Context, u storage.User) {
+	var payload *userDto
+	for _, c := range s.hub.snapshot() {
+		c.mu.Lock()
+		match := c.userID == string(u.ID)
+		c.mu.Unlock()
+		if !match {
+			continue
+		}
+		if payload == nil {
+			dto := s.userDtoCtx(ctx, u)
+			payload = &dto
+		}
+		c.send(ctx, "UserUpdated", payload)
+	}
+}
