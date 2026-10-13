@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `GET /Items` query semantics per the items contract: library-views form, scope
+  and parent rules, library access restriction (also for `Ids`), filters, search
+  ranking, multi-key sorting, paging and `Fields` shaping; `GET /Items/{id}`
+  returns a problem document for unknown or hidden items.
 - Executable behavior contract for Jellyfin 12+ wire compatibility under
   `docs/contract/` (users, items, playstate) with a conformance runner
   (`cmd/conformance`) that runs the same scenarios against a reference server

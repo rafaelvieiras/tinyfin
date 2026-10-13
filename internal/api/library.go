@@ -55,14 +55,17 @@ const unboundedEpisodesLimit = 1 << 20
 // library count is operator-scale, not catalog-scale, same reasoning as
 // UserStore.QueryUsers), so no paging is applied here.
 func (s *Server) handleUserViews(w http.ResponseWriter, r *http.Request) {
-	libs, err := s.store.QueryLibraries(r.Context())
+	// Only the libraries the user may access (policy EnableAllFolders /
+	// EnabledFolders) are listed.
+	ac, _ := AuthFromContext(r.Context())
+	scope, err := s.itemsScopeFor(r.Context(), ac.User)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	items := make([]baseItemDto, 0, len(libs))
-	for _, lib := range libs {
+	items := make([]baseItemDto, 0, len(scope.libs))
+	for _, lib := range scope.libs {
 		items = append(items, s.libraryBaseItemDto(r.Context(), lib))
 	}
 
@@ -169,144 +172,6 @@ func resolveTotalRecordCount(enableParam string, itemCount, realTotal int) int {
 	return realTotal
 }
 
-// handleItemsList serves both GET /Items and GET /Users/{userId}/Items (the
-// per-user listing form jellyfin-web's Favorites screen calls — {userId} is
-// accepted but ignored, same precedent as handleItemGet's per-user form
-// below; see server.go's registration comment). Maps the subset of query
-// params this slice covers (parentId, recursive, includeItemTypes,
-// searchTerm, limit/startIndex, sortBy/sortOrder, filters) to a
-// storage.ItemFilter and returns a BaseItemDtoQueryResult. Filters beyond
-// IsFavorite/IsPlayed (genres, years, ...) are a deliberate gap, not a
-// silent guess — left for a later increment, not something the Favorites
-// screen this was added for needs.
-func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
-	q := caseInsensitiveQuery(r)
-
-	filter := storage.ItemFilter{
-		Recursive:  q.Get("recursive") == "true",
-		SearchText: q.Get("searchterm"),
-		Limit:      defaultItemsLimit,
-	}
-
-	if v := q.Get("filters"); v != "" {
-		var wantsPlaystate bool
-		for _, f := range strings.Split(v, ",") {
-			switch strings.TrimSpace(f) {
-			case "IsFavorite":
-				t := true
-				filter.Favorite = &t
-				wantsPlaystate = true
-			case "IsPlayed":
-				t := true
-				filter.Played = &t
-				wantsPlaystate = true
-			}
-			// Other Filters values the reference server defines (IsNotFavorite,
-			// IsUnplayed, ...) aren't observed being sent by the Favorites
-			// screen this was added for — deliberately not guessed at, see
-			// this function's doc comment.
-		}
-		// storage.ItemFilter.Played/Favorite only take effect when UserID is
-		// set (types.go's doc comment: they key off a LEFT JOIN against that
-		// user's playstate) — this route has no other reason to set UserID,
-		// so only do it when a playstate filter actually needs it.
-		if wantsPlaystate {
-			if ac, ok := AuthFromContext(r.Context()); ok && ac != nil {
-				userID := ac.User.ID
-				filter.UserID = &userID
-			}
-		}
-	}
-
-	if v := q.Get("parentid"); v != "" {
-		// A library root isn't itself an Item row in this storage model
-		// (storage.Library and storage.Item are separate, see
-		// storage/library.go) — GET /UserViews hands clients a Library's
-		// ID as a browsable "parent". Try that first; anything else is an
-		// ordinary Item parent (e.g. a season browsing its episodes).
-		//
-		// Known simplification: filtering by LibraryID returns the whole
-		// library subtree regardless of the recursive flag (Item.LibraryID
-		// doesn't encode nesting depth, per storage/item.go's doc
-		// comment) — a non-recursive top-level listing of a library root
-		// isn't distinguishable from a recursive one here.
-		if _, err := s.store.GetLibrary(r.Context(), storage.LibraryID(v)); err == nil {
-			libID := storage.LibraryID(v)
-			filter.LibraryID = &libID
-		} else {
-			id := storage.ItemID(v)
-			filter.ParentID = &id
-		}
-	}
-
-	if v := q.Get("includeitemtypes"); v != "" {
-		for _, t := range strings.Split(v, ",") {
-			t = strings.TrimSpace(t)
-			if t != "" {
-				filter.ItemTypes = append(filter.ItemTypes, storage.ItemType(t))
-			}
-		}
-	}
-
-	if v := q.Get("limit"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			filter.Limit = n
-		}
-		// A non-numeric or non-positive limit falls back to
-		// defaultItemsLimit rather than erroring or passing an unbounded
-		// value through to storage.
-	}
-
-	if v := q.Get("startindex"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
-			filter.Offset = n
-		}
-	}
-
-	filter.SortBy = parseSortFields(q.Get("sortby"), q.Get("sortorder"))
-
-	page, err := s.store.QueryItems(r.Context(), filter)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	items := make([]baseItemDto, 0, len(page.Items))
-	for _, it := range page.Items {
-		items = append(items, s.baseItemDto(r.Context(), it))
-	}
-
-	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{
-		Items:            items,
-		TotalRecordCount: resolveTotalRecordCount(q.Get("enabletotalrecordcount"), len(items), page.TotalCount),
-		StartIndex:       page.Offset,
-	})
-}
-
-// handleItemGet serves GET /Items/{itemId}.
-//
-// A library root isn't itself an Item row (storage.Library and storage.Item
-// are separate stores, storage/library.go's doc comment) — GET /UserViews
-// hands clients a Library's ID as a browsable item, same as handleItemsList's
-// parentId handling above, so a plain GetItem miss falls back to GetLibrary
-// before 404ing. Found by testing against a real jellyfin-android build:
-// its WebView item-detail flow calls this route with a library's own ID
-// (reached by tapping a UserView tile straight through to its "item" view)
-// and 404ing there is a dead end the client doesn't recover from.
-func (s *Server) handleItemGet(w http.ResponseWriter, r *http.Request) {
-	id := storage.ItemID(r.PathValue("itemId"))
-	item, err := s.store.GetItem(r.Context(), id)
-	if err != nil {
-		if lib, libErr := s.store.GetLibrary(r.Context(), storage.LibraryID(id)); libErr == nil {
-			writeJSON(w, http.StatusOK, s.libraryBaseItemDto(r.Context(), lib))
-			return
-		}
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-	writeJSON(w, http.StatusOK, s.baseItemDto(r.Context(), item))
-}
-
 // defaultLatestLimit is GET /Items/Latest's own default page size when the
 // client doesn't specify limit — distinct from defaultItemsLimit (GET
 // /Items), matching the reference server's own smaller default for this
@@ -338,6 +203,8 @@ func (s *Server) handleItemsLatest(w http.ResponseWriter, r *http.Request) {
 		Recursive: true,
 		Limit:     defaultLatestLimit,
 		SortBy:    []storage.SortField{{By: storage.SortByDateCreated, Descending: true}},
+		// A library's own root folder item is not "recently added media".
+		ExcludeItemTypes: []storage.ItemType{storage.ItemTypeFolder},
 	}
 	s.applyParentID(r, &filter)
 
