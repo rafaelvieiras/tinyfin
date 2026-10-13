@@ -13212,6 +13212,67 @@
     ]
   },
   {
+    "id": "users.forgot.pinfile-bare-name",
+    "endpoint": "POST /Users/ForgotPassword",
+    "spec": "users.md#forgot-password",
+    "scope": "modern",
+    "tags": [
+      "anonymous",
+      "security"
+    ],
+    "covers": [
+      "users.forgot.R10"
+    ],
+    "requires": [
+      "user:alice"
+    ],
+    "steps": [
+      {
+        "name": "PinFile carries no path",
+        "request": {
+          "method": "POST",
+          "path": "/Users/ForgotPassword",
+          "body": {
+            "EnteredUsername": "{{user.alice.name}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.PinFile",
+              "op": "matches",
+              "value": "^[^/\\\\]+$"
+            }
+          ]
+        }
+      },
+      {
+        "name": "same for an unknown user",
+        "request": {
+          "method": "POST",
+          "path": "/Users/ForgotPassword",
+          "body": {
+            "EnteredUsername": "tmp-no-such-user-xyz"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.PinFile",
+              "op": "matches",
+              "value": "^[^/\\\\]+$"
+            }
+          ]
+        }
+      }
+    ],
+    "divergence": {
+      "reason": "The reference returns the absolute server path of the PIN file in PinFile, which discloses the server's directory layout. Tinyfin returns only the bare file name."
+    }
+  },
+  {
     "id": "users.forgot.unknown-user-same-answer",
     "endpoint": "POST /Users/ForgotPassword",
     "spec": "users.md#forgot-password",
@@ -14338,6 +14399,17 @@
     ],
     "steps": [],
     "pending": "The PIN is only written to a file on the server and never returned by the API; needs filesystem access to the server's data directory."
+  },
+  {
+    "id": "users.forgot-pin.throttle",
+    "endpoint": "POST /Users/ForgotPassword/Pin",
+    "spec": "users.md#forgot-password-pin",
+    "scope": "modern",
+    "covers": [
+      "users.forgot.R9"
+    ],
+    "steps": [],
+    "pending": "Observing the throttle on a right PIN needs the PIN file on the server's filesystem; covered by Go unit tests (internal/api forgot_test.go)."
   },
   {
     "id": "users.quickconnect.disabled",

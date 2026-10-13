@@ -502,7 +502,7 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 
 **Responses.** `200` `{Action, PinFile, PinExpirationDate}`; `400` missing username.
 
-**Notes.** The PIN is written to a file on the server (path in `PinFile`, an absolute server path in the reference) and must be read there by the owner. This leaks the server's path layout (finding S11); replicated because the official web client shows `PinFile` to the user. See *Open questions*.
+**Notes.** The PIN is written to a file on the server and must be read there by the owner. The reference puts the file's absolute server path in `PinFile`, which leaks the server's path layout (finding S11). Tinyfin answers with the bare file name only (`users.forgot.R10`, a deliberate divergence): the official web client just displays the string, and the owner knows where the server keeps its data.
 
 
 **Rules**
@@ -512,6 +512,7 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 - **users.forgot.R3** An unknown user receives a `200` of the same shape as a known one (no enumeration). The username lookup is case-insensitive.
 - **users.forgot.R4** A missing `EnteredUsername`, or a body that is not JSON, answers `400`.
 - **users.forgot.R5** Starting the flow does not change the account's password or invalidate its tokens.
+- **users.forgot.R10** `PinFile` is a bare file name: it contains no path separator and no directory. *Tinyfin hardening, divergence from the reference* (which returns an absolute server path, finding S11); the scenario carries a `divergence` record and is skipped on the reference.
 
 ---
 
@@ -532,6 +533,7 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 - **users.forgot.R6** `POST /Users/ForgotPassword/Pin` is anonymous. A `Pin` that matches no pending reset answers `404`. The comparison ignores `-`.
 - **users.forgot.R7** A missing `Pin`, or a body that is not JSON, answers `400`.
 - **users.forgot.R8** A matching, unexpired `Pin` answers `200` `{Success: true, UsersReset: [<user names>]}`; the matching users' password becomes the PIN text exactly as sent; the reset request is consumed; existing tokens are not revoked and a lockout is not cleared. (Requires reading the PIN file on the server; not testable black-box.)
+- **users.forgot.R9** *Tinyfin hardening, not a reference behavior (the reference's behavior here is not specified or relied on).* The PIN has few bits and a 30 minute life, so redeem attempts are limited, and every refusal is the same uniform `404` as a wrong PIN (no distinct status, no `Retry-After`, nothing that tells a throttled attempt from a wrong one): (a) a source address that sends 5 wrong PINs is refused for 15 minutes without its PIN being evaluated, even if the PIN is right; (b) 5 wrong PINs in total, from any sources, invalidate every pending request, so the owner has to start the flow again; (c) the PIN is compared in constant time. Malformed bodies (`400`) are not counted; a successful redeem resets the total. Needs the PIN file to observe the effect on a right PIN, so the scenario is parked as pending; a wrong-PIN burst alone is indistinguishable from `users.forgot.R6` and is exercised there.
 
 ---
 
@@ -664,13 +666,16 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 | `users.forgot.R6` | `users.forgot-pin.no-match` |
 | `users.forgot.R7` | `users.forgot-pin.pin-missing` |
 | `users.forgot.R8` | `users.forgot-pin.redeem` (pending) |
+| `users.forgot.R9` | `users.forgot-pin.throttle` (pending) |
+| `users.forgot.R10` | `users.forgot.pinfile-bare-name` |
 | `users.quickconnect.R1` | `users.quickconnect.exchange` |
 | `users.quickconnect.R2` | `users.quickconnect.exchange` |
 | `users.quickconnect.R3` | `users.quickconnect.unknown-secret` |
 | `users.quickconnect.R4` | `users.quickconnect.secret-missing` |
 | `users.quickconnect.R5` | `users.quickconnect.admin-authorizes-other-user` |
 | `users.quickconnect.R6` | `users.quickconnect.exchange-revokes-device-token` |
-| `users.quickconnect.R7` | `users.quickconnect.secret-single-use` |
+| `users.quickconnect.R7` | `users.forgot.pinfile-bare-name` | `PinFile` is the absolute path of the reset file on the server (finding S11). | `PinFile` is a bare file name, no path. |
+| `users.quickconnect.secret-single-use` |
 | `users.quickconnect.R8` | `users.quickconnect.disabled` |
 | `users.socket.R1` | `users.socket.upgrade`, `users.socket.upgrade-api-key` |
 | `users.socket.R2` | `users.socket.refused-without-credential` |
@@ -690,7 +695,7 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 - **S4** any authenticated user can list all users and read any user's full `Policy` (`users.list.R1`, `users.get.R2`). Restricting this would break clients that list users for non-administrators; left to the lead.
 - **S5** no lockout by default, no rate limit (`users.auth.R13`).
 - **S10** `ResetPassword=true` needs no current password and keeps sessions (`users.password.R9`).
-- **S11** `ForgotPassword` returns the server path of the PIN file (`users.forgot.R1`). The official web client displays it.
+- **S11** (diverged, `users.forgot.R10`) the reference's `ForgotPassword` returns the server path of the PIN file; Tinyfin returns a bare file name. PIN redeem is additionally rate limited (`users.forgot.R9`).
 
 ## Open questions
 

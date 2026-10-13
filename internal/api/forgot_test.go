@@ -134,3 +134,92 @@ func TestForgotPasswordUnknownUserCreatesNoPin(t *testing.T) {
 		t.Errorf("PIN file created for unknown user: %v", files)
 	}
 }
+
+func TestPinThrottleUnit(t *testing.T) {
+	th := newPinThrottle()
+	now := time.Now()
+	for i := 0; i < pinMaxFailuresPerSource; i++ {
+		if !th.allow("10.0.0.1", now) {
+			t.Fatalf("attempt %d refused too early", i)
+		}
+		th.fail("10.0.0.1", now)
+	}
+	if th.allow("10.0.0.1", now) {
+		t.Error("source not locked out after the limit")
+	}
+	if !th.allow("10.0.0.2", now) {
+		t.Error("another source must not be affected")
+	}
+	if !th.allow("10.0.0.1", now.Add(pinLockout+time.Second)) {
+		t.Error("lockout must end")
+	}
+	// Pending-request budget: failures from any source add up and then
+	// request invalidation of everything pending, once.
+	th = newPinThrottle()
+	invalidated := false
+	for i := 0; i < pinMaxFailuresPerRequest; i++ {
+		src := string(rune('a' + i))
+		if th.fail(src, now) {
+			invalidated = true
+			if i != pinMaxFailuresPerRequest-1 {
+				t.Errorf("invalidated too early at %d", i)
+			}
+		}
+	}
+	if !invalidated {
+		t.Error("pending requests not invalidated after the budget")
+	}
+	if th.fail("z", now) {
+		t.Error("budget must restart after an invalidation")
+	}
+}
+
+func TestForgotPasswordPinThrottled(t *testing.T) {
+	ts, st, dir := newForgotServer(t)
+	createTestUser(t, st, "alice", "pw")
+	rawDo(t, ts.URL, http.MethodPost, "/Users/ForgotPassword", `{"EnteredUsername":"alice"}`, "")
+	files, _ := filepath.Glob(filepath.Join(dir, "passwordreset", "*"))
+	if len(files) != 1 {
+		t.Fatalf("pin files: %v", files)
+	}
+	raw, _ := os.ReadFile(files[0])
+	var f struct{ Pin string }
+	_ = json.Unmarshal(raw, &f)
+
+	for i := 0; i < pinMaxFailuresPerRequest; i++ {
+		if code, _ := rawDo(t, ts.URL, http.MethodPost, "/Users/ForgotPassword/Pin", `{"Pin":"00-00-00-0`+string(rune('0'+i))+`"}`, ""); code != http.StatusNotFound {
+			t.Fatalf("wrong pin %d: %d, want 404", i, code)
+		}
+	}
+	// The pending request is gone, so even the right PIN now fails with the
+	// same uniform answer.
+	if left, _ := filepath.Glob(filepath.Join(dir, "passwordreset", "*")); len(left) != 0 {
+		t.Errorf("pending request survived the failures: %v", left)
+	}
+	b, _ := json.Marshal(map[string]string{"Pin": f.Pin})
+	if code, _ := rawDo(t, ts.URL, http.MethodPost, "/Users/ForgotPassword/Pin", string(b), ""); code != http.StatusNotFound {
+		t.Errorf("right pin after invalidation: %d, want 404", code)
+	}
+	if !loginOK(t, ts.URL, "alice", "pw") {
+		t.Error("password changed by a refused redeem")
+	}
+}
+
+func TestForgotPasswordPinSourceLockout(t *testing.T) {
+	ts, st, dir := newForgotServer(t)
+	createTestUser(t, st, "alice", "pw")
+	// Failures with no pending request still count per source: a client
+	// must not be able to probe freely and wait for a request to appear.
+	for i := 0; i < pinMaxFailuresPerSource; i++ {
+		rawDo(t, ts.URL, http.MethodPost, "/Users/ForgotPassword/Pin", `{"Pin":"11-11-11-11"}`, "")
+	}
+	rawDo(t, ts.URL, http.MethodPost, "/Users/ForgotPassword", `{"EnteredUsername":"alice"}`, "")
+	files, _ := filepath.Glob(filepath.Join(dir, "passwordreset", "*"))
+	raw, _ := os.ReadFile(files[0])
+	var f struct{ Pin string }
+	_ = json.Unmarshal(raw, &f)
+	b, _ := json.Marshal(map[string]string{"Pin": f.Pin})
+	if code, _ := rawDo(t, ts.URL, http.MethodPost, "/Users/ForgotPassword/Pin", string(b), ""); code != http.StatusNotFound {
+		t.Errorf("locked-out source redeemed: %d, want 404", code)
+	}
+}

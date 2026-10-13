@@ -145,6 +145,7 @@ type Server struct {
 	// qcOverride is the runtime QuickConnect setting: 0 unset (the
 	// command-line default applies), 1 enabled, 2 disabled.
 	qcOverride atomic.Int32
+	pinLimit   *pinThrottle
 }
 
 // NewServer builds a Server backed by store, applying cfg defaults where
@@ -176,6 +177,7 @@ func NewServer(store storage.Store, cfg Config) *Server {
 		sessions:  newSessionRegistry(),
 		hub:       newWSHub(),
 		quick:     newQuickConnectState(),
+		pinLimit:  newPinThrottle(),
 	}
 	s.loadRuntimeSettings()
 	s.routes()

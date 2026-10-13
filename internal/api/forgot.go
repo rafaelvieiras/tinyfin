@@ -2,6 +2,7 @@ package api
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"os"
@@ -123,7 +124,19 @@ func (s *Server) handleForgotPasswordPin(w http.ResponseWriter, r *http.Request)
 		writeInvalidBody(w)
 		return
 	}
-	want := strings.ToUpper(strings.ReplaceAll(req.Pin, "-", ""))
+	want := normalizePin(req.Pin)
+
+	// users.forgot.R9: throttled sources get the same answer as a wrong PIN
+	// and the PIN is not even evaluated.
+	src := "unknown"
+	if ip := remoteIP(r); ip != nil {
+		src = ip.String()
+	}
+	now := time.Now()
+	if !s.pinLimit.allow(src, now) {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 
 	dir := s.passwordResetDir()
 	entries, err := os.ReadDir(dir)
@@ -131,8 +144,8 @@ func (s *Server) handleForgotPasswordPin(w http.ResponseWriter, r *http.Request)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	now := time.Now()
 	reset := []string{}
+	var pending []string
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
 			continue
@@ -150,7 +163,9 @@ func (s *Server) handleForgotPasswordPin(w http.ResponseWriter, r *http.Request)
 			_ = os.Remove(path)
 			continue
 		}
-		if strings.ToUpper(strings.ReplaceAll(f.Pin, "-", "")) != want {
+		pending = append(pending, path)
+		// Constant-time comparison; every pending request is examined.
+		if subtle.ConstantTimeCompare([]byte(normalizePin(f.Pin)), []byte(want)) != 1 {
 			continue
 		}
 		_ = os.Remove(path)
@@ -165,8 +180,19 @@ func (s *Server) handleForgotPasswordPin(w http.ResponseWriter, r *http.Request)
 		reset = append(reset, user.Name)
 	}
 	if len(reset) == 0 {
+		if s.pinLimit.fail(src, now) {
+			for _, p := range pending {
+				_ = os.Remove(p)
+			}
+		}
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+	s.pinLimit.success()
 	writeJSON(w, http.StatusOK, map[string]any{"Success": true, "UsersReset": reset})
+}
+
+// normalizePin is the comparison form of a PIN: dashes ignored, upper case.
+func normalizePin(p string) string {
+	return strings.ToUpper(strings.ReplaceAll(p, "-", ""))
 }
