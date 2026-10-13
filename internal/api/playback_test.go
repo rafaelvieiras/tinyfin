@@ -57,8 +57,7 @@ func TestPlaybackInfoDirectPlaySupported(t *testing.T) {
 	})
 
 	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/Items/"+string(item.ID)+"/PlaybackInfo", nil)
-	req.Header.Set("X-Emby-Token", token)
-	req.Header.Set("X-Emby-Authorization", `MediaBrowser Client="Jellyfin Web", Device="TestDevice", DeviceId="test-device-1", Version="1.0.0"`)
+	req.Header.Set("Authorization", `MediaBrowser Client="Jellyfin Web", Device="TestDevice", DeviceId="test-device-1", Version="1.0.0", Token="`+token+`"`)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("GET PlaybackInfo: %v", err)
@@ -115,7 +114,7 @@ func TestPlaybackInfoDirectPlayUnsupportedFallsBackToTranscode(t *testing.T) {
 	})
 
 	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/Items/"+string(item.ID)+"/PlaybackInfo", nil)
-	req.Header.Set("X-Emby-Token", token)
+	req.Header.Set("Authorization", `MediaBrowser Token="`+token+`"`)
 	// No Client header this time -> falls through to deviceprofile.Default(),
 	// which is conservative (mp4/h264/aac only) for Direct Play but still
 	// carries a TranscodingProfiles fallback.
@@ -147,12 +146,12 @@ func TestPlaybackInfoDirectPlayUnsupportedFallsBackToTranscode(t *testing.T) {
 	}
 	// The token must be embedded in the URL itself, not just implied by
 	// the request that fetched PlaybackInfo: a browser's hls.js resolves
-	// TranscodingUrl directly and can't attach the X-Emby-Token header a
+	// TranscodingUrl directly and can't attach the Authorization header a
 	// normal API call would — confirmed by testing an actual transcode
 	// through jellyfin-web in a real browser, where the master.m3u8 fetch
 	// 401'd until this was added (ROADMAP.md's Phase 2 HLS serving entry).
-	if !strings.Contains(source.TranscodingUrl, "api_key="+token) {
-		t.Errorf("TranscodingUrl = %q, want it to contain api_key=%s", source.TranscodingUrl, token)
+	if !strings.Contains(source.TranscodingUrl, "ApiKey="+token) {
+		t.Errorf("TranscodingUrl = %q, want it to contain ApiKey=%s", source.TranscodingUrl, token)
 	}
 	if source.TranscodingSubProtocol != "hls" {
 		t.Errorf("TranscodingSubProtocol = %q, want %q", source.TranscodingSubProtocol, "hls")
@@ -199,7 +198,7 @@ func TestPlaybackInfoNoCompatibleStreamWhenProfileHasNoTranscodingFallback(t *te
 	}
 
 	req, _ := http.NewRequest(http.MethodPost, ts.URL+"/Items/"+string(item.ID)+"/PlaybackInfo", bytes.NewReader(body))
-	req.Header.Set("X-Emby-Token", token)
+	req.Header.Set("Authorization", `MediaBrowser Token="`+token+`"`)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -258,7 +257,7 @@ func TestPlaybackInfoPostInlineProfile(t *testing.T) {
 
 	req, _ := http.NewRequest(http.MethodPost, ts.URL+"/Items/"+string(item.ID)+"/PlaybackInfo", bytes.NewReader(bodyJSON))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Emby-Token", token)
+	req.Header.Set("Authorization", `MediaBrowser Token="`+token+`"`)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("POST PlaybackInfo: %v", err)
@@ -300,7 +299,7 @@ func TestVideoStreamServesBytesAndRange(t *testing.T) {
 
 	// Full-body GET.
 	fullReq, _ := http.NewRequest(http.MethodGet, ts.URL+"/Videos/"+string(item.ID)+"/stream", nil)
-	fullReq.Header.Set("X-Emby-Token", token)
+	fullReq.Header.Set("Authorization", `MediaBrowser Token="`+token+`"`)
 	fullResp, err := http.DefaultClient.Do(fullReq)
 	if err != nil {
 		t.Fatalf("GET stream: %v", err)
@@ -321,7 +320,7 @@ func TestVideoStreamServesBytesAndRange(t *testing.T) {
 	// the first 5 bytes — this is what makes seeking work for a real
 	// client.
 	rangeReq, _ := http.NewRequest(http.MethodGet, ts.URL+"/Videos/"+string(item.ID)+"/stream.mp4", nil)
-	rangeReq.Header.Set("X-Emby-Token", token)
+	rangeReq.Header.Set("Authorization", `MediaBrowser Token="`+token+`"`)
 	rangeReq.Header.Set("Range", "bytes=0-4")
 	rangeResp, err := http.DefaultClient.Do(rangeReq)
 	if err != nil {
@@ -346,7 +345,7 @@ func TestVideoStreamNotFoundForMissingItem(t *testing.T) {
 	token := loginToken(t, ts.URL, user.Name, "kimpass")
 
 	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/Videos/does-not-exist/stream", nil)
-	req.Header.Set("X-Emby-Token", token)
+	req.Header.Set("Authorization", `MediaBrowser Token="`+token+`"`)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("GET stream: %v", err)

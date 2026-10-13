@@ -26,35 +26,20 @@ func (s *Server) withAuthContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ac := &AuthContext{}
 
-		header := r.Header.Get("X-Emby-Authorization")
-		if header == "" {
-			header = r.Header.Get("Authorization")
-		}
-		if header != "" {
+		// Only two credential channels are honored (decision D14,
+		// docs/contract/README.md scope rule 6): an `Authorization:
+		// MediaBrowser ...` header, and the `ApiKey` query parameter —
+		// needed because a plain <video>/<audio> element or an HLS player
+		// resolving a stream URL cannot attach any header. Legacy
+		// channels (X-Emby-Authorization, X-Emby-Token,
+		// X-MediaBrowser-Token, the api_key query parameter and the Emby
+		// scheme) are deliberately ignored: the request is simply
+		// unauthenticated.
+		if header := r.Header.Get("Authorization"); header != "" {
 			ac.Client, ac.Device, ac.DeviceID, ac.Version, ac.Token = parseEmbyAuth(header)
 		}
-		// Fallback: a bare token with no MediaBrowser wrapper (docs/04).
-		// Only takes effect if the header above didn't already supply one.
 		if ac.Token == "" {
-			if t := r.Header.Get("X-Emby-Token"); t != "" {
-				ac.Token = t
-			}
-		}
-		// Fallback: a query-string token. Confirmed necessary, not just a
-		// reference-server nicety, by testing against a real jellyfin-web
-		// build: a plain <video src=...>/<audio src=...> element can't
-		// attach any header at all (same root cause as handleItemImage's
-		// public-route fix in library.go), so jellyfin-web puts the token
-		// in the stream URL itself instead — as "ApiKey" (confirmed) and,
-		// per the wider Jellyfin ecosystem's convention for the same
-		// mechanism, its lowercase-with-underscore spelling "api_key".
-		// Lowest precedence: only checked once every header-based source
-		// above has come up empty.
-		if ac.Token == "" {
-			q := r.URL.Query()
-			if t := q.Get("ApiKey"); t != "" {
-				ac.Token = t
-			} else if t := q.Get("api_key"); t != "" {
+			if t := r.URL.Query().Get("ApiKey"); t != "" {
 				ac.Token = t
 			}
 		}
@@ -74,7 +59,7 @@ func (s *Server) withAuthContext(next http.Handler) http.Handler {
 }
 
 // parseEmbyAuth parses the MediaBrowser client-identification header used
-// by both X-Emby-Authorization and a bare Authorization header (docs/04):
+// by the Authorization header (docs/04):
 //
 //	MediaBrowser Client="...", Device="...", DeviceId="...", Version="...", Token="..."
 //

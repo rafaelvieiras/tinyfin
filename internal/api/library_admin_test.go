@@ -36,7 +36,7 @@ func adminClient(t *testing.T, ts string, token string) func(method, path string
 		if err != nil {
 			t.Fatalf("NewRequest: %v", err)
 		}
-		r.Header.Set("X-Emby-Token", token)
+		r.Header.Set("Authorization", `MediaBrowser Token="`+token+`"`)
 		resp, err := http.DefaultClient.Do(r)
 		if err != nil {
 			t.Fatalf("%s %s: %v", method, path, err)

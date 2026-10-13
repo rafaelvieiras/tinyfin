@@ -1169,6 +1169,8 @@ guessing from a longer black-box capture window.
   auth, same lowercase `api_key` fallback Tinyfin's own `auth.go` already recognizes for the
   stream-URL case. No `Authorization`/`X-Emby-Authorization` header is sent on the WebSocket
   upgrade request itself in this client's implementation, only the query string.
+  (Superseded by D14a: `api_key` and `X-Emby-*` are no longer honored; the 12+ client's `ApiKey`
+  spelling is the supported one.)
 - **On connect**, before anything else, the server immediately sends one frame:
   `{"MessageId":"<uuid>","Data":60,"MessageType":"ForceKeepAlive"}`. `Data` is a keep-alive
   timeout in seconds.

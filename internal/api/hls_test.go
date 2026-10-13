@@ -68,7 +68,7 @@ func TestHLSTranscodeEndToEnd(t *testing.T) {
 	authedGet := func(path string) *http.Response {
 		t.Helper()
 		req, _ := http.NewRequest(http.MethodGet, ts.URL+path, nil)
-		req.Header.Set("X-Emby-Token", token)
+		req.Header.Set("Authorization", `MediaBrowser Token="`+token+`"`)
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			t.Fatalf("GET %s: %v", path, err)
@@ -145,7 +145,7 @@ func TestHLSTranscodeEndToEnd(t *testing.T) {
 // TestHLSTranscodeQueryOnlyAuth mirrors what a browser's hls.js actually
 // does, unlike TestHLSTranscodeEndToEnd's authedGet helper: it resolves
 // TranscodingUrl and every playlist-referenced segment URI itself, with no
-// way to attach the X-Emby-Token header a normal API call would carry. A
+// way to attach the Authorization header a normal API call would carry. A
 // real end-to-end run through jellyfin-web in an actual browser caught
 // this failing with 401 on master.m3u8 before hlsMasterURL/
 // handleHLSPlaylist were fixed to embed and propagate the token via query
@@ -191,7 +191,7 @@ func TestHLSTranscodeQueryOnlyAuth(t *testing.T) {
 		},
 	})
 
-	// No X-Emby-Token header anywhere below — only whatever query string
+	// No Authorization header anywhere below — only whatever query string
 	// each response itself hands back, exactly like hls.js resolving URLs
 	// out of a playlist it doesn't know is "authenticated" at all.
 	get := func(rawURL string) *http.Response {
@@ -203,7 +203,7 @@ func TestHLSTranscodeQueryOnlyAuth(t *testing.T) {
 		return resp
 	}
 
-	masterResp := get(ts.URL + "/Videos/" + string(item.ID) + "/master.m3u8?api_key=" + token)
+	masterResp := get(ts.URL + "/Videos/" + string(item.ID) + "/master.m3u8?ApiKey=" + token)
 	defer masterResp.Body.Close()
 	if masterResp.StatusCode != http.StatusOK {
 		t.Fatalf("master.m3u8 status = %d, want 200", masterResp.StatusCode)
@@ -224,7 +224,7 @@ func TestHLSTranscodeQueryOnlyAuth(t *testing.T) {
 	if playlistLine == "" {
 		t.Fatalf("master.m3u8 body has no main.m3u8 line:\n%s", masterBody)
 	}
-	if !strings.Contains(playlistLine, "api_key="+token) {
+	if !strings.Contains(playlistLine, "ApiKey="+token) {
 		t.Fatalf("main.m3u8 line %q doesn't carry the token forward", playlistLine)
 	}
 
@@ -249,7 +249,7 @@ func TestHLSTranscodeQueryOnlyAuth(t *testing.T) {
 	if segmentLine == "" {
 		t.Fatalf("main.m3u8 listed no .ts segment:\n%s", playlistBody)
 	}
-	if !strings.Contains(segmentLine, "api_key="+token) {
+	if !strings.Contains(segmentLine, "ApiKey="+token) {
 		t.Fatalf("segment line %q doesn't carry the token forward", segmentLine)
 	}
 
@@ -283,7 +283,7 @@ func TestHLSMasterNotFoundForDirectPlayableItem(t *testing.T) {
 	})
 
 	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/Videos/"+string(item.ID)+"/master.m3u8", nil)
-	req.Header.Set("X-Emby-Token", token)
+	req.Header.Set("Authorization", `MediaBrowser Token="`+token+`"`)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("GET master.m3u8: %v", err)

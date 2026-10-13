@@ -698,7 +698,7 @@ func (s *Server) handleLiveTvPrograms(w http.ResponseWriter, r *http.Request) {
 // reference-server nicety, by testing against a real jellyfin-web build:
 // the <img> tags it renders for posters/backdrops carry neither a token
 // header (browsers don't attach custom headers to <img src>) nor an
-// api_key/token query param, so requiring auth here left every image
+// ApiKey/token query param, so requiring auth here left every image
 // 401ing silently.
 func (s *Server) handleItemImage(w http.ResponseWriter, r *http.Request) {
 	itemID := storage.ItemID(r.PathValue("itemId"))

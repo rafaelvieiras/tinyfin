@@ -51,14 +51,19 @@ environment, client logs, time sync, localization.
 Matches the reference format so that clients don't need any awareness they're talking to a
 different server:
 
-- Header `X-Emby-Authorization` (or bare `Authorization`), format:
+- Header `Authorization`, format:
   `MediaBrowser Client="...", Device="...", DeviceId="...", Version="...", Token="..."`
 - Two token kinds:
   - **API key** — no user context, full administrative access, created by an admin, does not
     expire until revoked.
   - **User token** — obtained via `POST /Users/AuthenticateByName` (username/password), used on
     every subsequent request.
-- Fallback header `X-Emby-Token: <token>` alone, no surrounding `MediaBrowser ...` wrapper.
+- Query parameter `ApiKey=<token>` for requests that cannot carry a header (media element
+  sources, HLS segment URLs, the `GET /socket` upgrade).
+- **Legacy channels are not honored** (decision D14/D14a): `X-Emby-Authorization`,
+  `X-Emby-Token`, `X-MediaBrowser-Token`, the `api_key` query parameter and the `Emby` scheme
+  are ignored, so the request is unauthenticated (401 on protected routes; login without a
+  usable `Authorization` header is 400).
 - QuickConnect (short-code pairing without typing a password) as a secondary flow for
   input-constrained clients (TVs).
 

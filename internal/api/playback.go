@@ -102,7 +102,7 @@ type playbackInfoRequestBody struct {
 // resolveDeviceProfile implements docs/07 O2's negotiation order: a
 // client-submitted inline profile (POST body) is authoritative whenever
 // present; otherwise fall back to the built-in registry keyed by the
-// Client string off X-Emby-Authorization; otherwise the conservative
+// Client string off the Authorization header; otherwise the conservative
 // Default().
 func (s *Server) resolveDeviceProfile(r *http.Request) deviceprofile.DeviceProfile {
 	if r.Method == http.MethodPost {
@@ -221,7 +221,7 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 func hlsMasterURL(itemID storage.ItemID, playSessionID, apiKey string) string {
 	v := url.Values{"PlaySessionId": {playSessionID}}
 	if apiKey != "" {
-		v.Set("api_key", apiKey)
+		v.Set("ApiKey", apiKey)
 	}
 	return fmt.Sprintf("/Videos/%s/master.m3u8?%s", url.PathEscape(string(itemID)), v.Encode())
 }

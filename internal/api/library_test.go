@@ -14,7 +14,7 @@ import (
 )
 
 // authedClient returns a helper that issues an authenticated request
-// (X-Emby-Token) against ts and returns the raw *http.Response.
+// (Authorization) against ts and returns the raw *http.Response.
 func authedClient(t *testing.T, ts string, token string) func(method, path string) *http.Response {
 	t.Helper()
 	return func(method, path string) *http.Response {
@@ -23,7 +23,7 @@ func authedClient(t *testing.T, ts string, token string) func(method, path strin
 		if err != nil {
 			t.Fatalf("NewRequest: %v", err)
 		}
-		req.Header.Set("X-Emby-Token", token)
+		req.Header.Set("Authorization", `MediaBrowser Token="`+token+`"`)
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			t.Fatalf("%s %s: %v", method, path, err)

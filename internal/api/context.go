@@ -14,8 +14,8 @@ type ctxKey int
 const authContextKey ctxKey = iota
 
 // AuthContext is what withAuthContext (auth.go) attaches to every request's
-// context after parsing the X-Emby-Authorization/Authorization header (or
-// the bare X-Emby-Token fallback) and, if a Token was present, resolving it
+// context after parsing the Authorization: MediaBrowser header (or the ApiKey
+// query parameter) and, if a Token was present, resolving it
 // against storage.UserStore.LookupToken.
 //
 // It is attached unconditionally — on a request with no header, an

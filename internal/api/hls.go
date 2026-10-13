@@ -171,7 +171,7 @@ func (s *Server) handleHLSPlaylist(w http.ResponseWriter, r *http.Request) {
 }
 
 // rewritePlaylistSegmentQueries appends rawQuery (this request's own
-// PlaySessionId/api_key — see hlsMasterURL's doc comment) to every segment
+// PlaySessionId/ApiKey — see hlsMasterURL's doc comment) to every segment
 // line in playlist. ffmpeg writes segment URIs as plain relative filenames
 // with no query string (internal/transcode's buildArgs doc comment), so
 // without this a real HLS client resolves each one to a bare

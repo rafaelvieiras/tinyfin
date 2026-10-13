@@ -5,8 +5,8 @@
 // per AGENTS.md principle 2 ("single binary, zero required dependencies by
 // default").
 //
-// Scope for this package right now: authentication (X-Emby-Authorization
-// parsing and token lookup) plus the System/Users endpoints needed to prove
+// Scope for this package right now: authentication (Authorization
+// header parsing and token lookup) plus the System/Users endpoints needed to prove
 // the auth flow end to end. Library/playback/session endpoints are later
 // slices (see the package-level TODO markers, none — deliberately not
 // stubbed here at all, to avoid dead routes).
@@ -433,9 +433,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /Users/{userId}/Items/{itemId}", requireAuth(s.handleItemGet))
 	// Public, unlike every other route in this slice — see handleItemImage's
 	// doc comment in library.go for why: a browser's plain <img src=...>
-	// can't attach the X-Emby-Token header this project's other routes
+	// can't attach the Authorization header this project's other routes
 	// require, and testing against a real jellyfin-web build confirmed the
-	// image URLs it renders never carry a token or api_key query param
+	// image URLs it renders never carry a token or ApiKey query param
 	// either, so requiring auth here makes every image 401 silently
 	// (broken poster/backdrop, no console-visible crash).
 	s.mux.HandleFunc("GET /Items/{itemId}/Images/{imageType}", s.handleItemImage)
@@ -496,7 +496,7 @@ func (s *Server) routes() {
 	// overview — the GET /socket realtime channel" section). requireAuth
 	// rejects an unauthenticated upgrade attempt (401) before the socket is
 	// ever accepted, matching docs/12's "auth reuses the same mechanism as
-	// every other route" — including the api_key query-param fallback,
+	// every other route" — including the ApiKey query-param fallback,
 	// since withAuthContext resolves that unconditionally before this
 	// handler runs.
 	s.mux.HandleFunc("GET /socket", requireAuth(s.handleSocket))

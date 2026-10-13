@@ -11,11 +11,10 @@ import (
 
 // sessionsAuthedRequest issues a request carrying the full MediaBrowser
 // client-identification header (Client/Device/DeviceId/Version) plus Token
-// — unlike authedClient/adminClient (which only set X-Emby-Token), this is
+// — unlike authedClient/adminClient (which send only Token), this is
 // what a POST /Sessions/Capabilities/Full or GET /Sessions caller needs
-// here: the session registry keys off AuthContext.DeviceID, which auth.go's
-// withAuthContext only ever populates from X-Emby-Authorization/
-// Authorization, never from a bare X-Emby-Token.
+// here: the session registry keys off AuthContext.DeviceID, which is
+// populated only when the Authorization header carries a DeviceId field.
 func sessionsAuthedRequest(t *testing.T, tsURL, token, client, device, deviceID, version, method, path string, body any) *http.Response {
 	t.Helper()
 	var r *http.Request
@@ -35,7 +34,7 @@ func sessionsAuthedRequest(t *testing.T, tsURL, token, client, device, deviceID,
 	if err != nil {
 		t.Fatalf("NewRequest: %v", err)
 	}
-	r.Header.Set("X-Emby-Authorization", `MediaBrowser Client="`+client+`", Device="`+device+`", DeviceId="`+deviceID+`", Version="`+version+`", Token="`+token+`"`)
+	r.Header.Set("Authorization", `MediaBrowser Client="`+client+`", Device="`+device+`", DeviceId="`+deviceID+`", Version="`+version+`", Token="`+token+`"`)
 	resp, err := http.DefaultClient.Do(r)
 	if err != nil {
 		t.Fatalf("%s %s: %v", method, path, err)

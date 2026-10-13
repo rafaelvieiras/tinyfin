@@ -112,7 +112,7 @@ func authenticate(t *testing.T, baseURL, username, password string) *http.Respon
 		t.Fatalf("NewRequest: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Emby-Authorization", `MediaBrowser Client="TestClient", Device="TestDevice", DeviceId="test-device-1", Version="1.0.0"`)
+	req.Header.Set("Authorization", `MediaBrowser Client="TestClient", Device="TestDevice", DeviceId="test-device-1", Version="1.0.0"`)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -144,7 +144,7 @@ func TestAuthenticateByNameAndUsersMe(t *testing.T) {
 
 	// /Users/Me with the token succeeds.
 	meReq, _ := http.NewRequest(http.MethodGet, ts.URL+"/Users/Me", nil)
-	meReq.Header.Set("X-Emby-Token", authResult.AccessToken)
+	meReq.Header.Set("Authorization", `MediaBrowser Token="`+authResult.AccessToken+`"`)
 	meResp, err := http.DefaultClient.Do(meReq)
 	if err != nil {
 		t.Fatalf("GET /Users/Me: %v", err)
@@ -176,7 +176,7 @@ func TestAuthenticateByNameAndUsersMe(t *testing.T) {
 
 	// /Users/Me with a garbage token also fails with 401, not a crash.
 	badReq, _ := http.NewRequest(http.MethodGet, ts.URL+"/Users/Me", nil)
-	badReq.Header.Set("X-Emby-Token", "not-a-real-token")
+	badReq.Header.Set("Authorization", `MediaBrowser Token="`+"not-a-real-token"+`"`)
 	badResp, err := http.DefaultClient.Do(badReq)
 	if err != nil {
 		t.Fatalf("GET /Users/Me (bad token): %v", err)
@@ -306,7 +306,7 @@ func TestUsersListCreateDelete(t *testing.T) {
 		if err != nil {
 			t.Fatalf("NewRequest: %v", err)
 		}
-		r.Header.Set("X-Emby-Token", authResult.AccessToken)
+		r.Header.Set("Authorization", `MediaBrowser Token="`+authResult.AccessToken+`"`)
 		resp, err := http.DefaultClient.Do(r)
 		if err != nil {
 			t.Fatalf("%s %s: %v", method, path, err)

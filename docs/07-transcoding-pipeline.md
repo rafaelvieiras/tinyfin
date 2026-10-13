@@ -43,7 +43,7 @@ part of the `PlaybackInfo`-equivalent request — that inline profile is authori
 it's present, since it reflects exactly what that client build actually supports. Tinyfin's own
 profile set exists only as a fallback for the client builds that don't send one, so it needs to
 be looked up by *client identity*, not by request content: the `Client=` field already parsed out
-of `X-Emby-Authorization` (`04`) is the natural key, since it's present on every authenticated
+of the `Authorization` header (`04`) is the natural key, since it's present on every authenticated
 request regardless of whether a profile was submitted.
 
 **Format (O2, resolved):** compiled into the binary as a Go value — `map[string]DeviceProfile`

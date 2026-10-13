@@ -1,7 +1,7 @@
 // Package deviceprofile implements the O2 decision from
 // docs/07-transcoding-pipeline.md: a small, compiled-into-the-binary table
 // of DeviceProfile values keyed by the Client string parsed out of
-// X-Emby-Authorization (docs/04), used only as a fallback for requests that
+// the Authorization header (docs/04), used only as a fallback for requests that
 // don't carry an inline profile of their own.
 //
 // DeviceProfile is deliberately the same Go type a client-submitted profile
@@ -156,7 +156,7 @@ type SubtitleProfile struct {
 //
 // Client-string caveat: "Jellyfin Web" is confirmed by the reference
 // server's own web client source conventions (it identifies itself via the
-// X-Emby-Authorization Client field as "Jellyfin Web" in every publicly
+// Authorization header Client field as "Jellyfin Web" in every publicly
 // documented capture). The official Android/iOS app Client strings below
 // are NOT independently confirmed against real client traffic — this
 // project's clean-room policy (AGENTS.md) rules out consulting the

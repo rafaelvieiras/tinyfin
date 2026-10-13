@@ -37,7 +37,7 @@ func newSocketTestServer(t *testing.T) (*httptest.Server, *sqlite.Store, *Server
 	return ts, st, srv
 }
 
-// dialSocket dials GET /socket with the given token as an X-Emby-Token
+// dialSocket dials GET /socket with the given token as an Authorization
 // header (docs/12: the same auth mechanism as every other route, not a
 // separate WebSocket-specific scheme).
 func dialSocket(t *testing.T, ts *httptest.Server, token string) *websocket.Conn {
@@ -45,7 +45,7 @@ func dialSocket(t *testing.T, ts *httptest.Server, token string) *websocket.Conn
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	conn, _, err := websocket.Dial(ctx, ts.URL+"/socket", &websocket.DialOptions{
-		HTTPHeader: http.Header{"X-Emby-Token": []string{token}},
+		HTTPHeader: http.Header{"Authorization": []string{`MediaBrowser Token="` + token + `"`}},
 	})
 	if err != nil {
 		t.Fatalf("dialing /socket: %v", err)

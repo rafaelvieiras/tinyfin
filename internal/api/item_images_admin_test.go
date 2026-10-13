@@ -82,7 +82,7 @@ func authedRequest(t *testing.T, ts, token, method, path, contentType string, bo
 	if err != nil {
 		t.Fatalf("NewRequest: %v", err)
 	}
-	req.Header.Set("X-Emby-Token", token)
+	req.Header.Set("Authorization", `MediaBrowser Token="`+token+`"`)
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
 	}
