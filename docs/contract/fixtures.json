@@ -3,12 +3,19 @@
     {"key": "alice", "name": "alice", "password": "Alice-Pass-1"},
     {"key": "nodownload", "name": "nodownload", "password": "NoDl-Pass-1", "policy": {"EnableContentDownloading": false}},
     {"key": "nofolders", "name": "nofolders", "password": "NoFold-Pass-1", "policy": {"EnableAllFolders": false, "EnabledFolders": []}},
-    {"key": "disabled", "name": "disabled", "password": "Disabled-Pass-1", "policy": {"IsDisabled": true}}
+    {"key": "disabled", "name": "disabled", "password": "Disabled-Pass-1", "policy": {"IsDisabled": true}},
+    {"key": "rating10", "name": "rating10", "password": "Rating-Pass-10", "policy": {"MaxParentalRating": 10}},
+    {"key": "rating17", "name": "rating17", "password": "Rating-Pass-17", "policy": {"MaxParentalRating": 17}},
+    {"key": "rating17s1", "name": "rating17s1", "password": "Rating-Pass-17s", "policy": {"MaxParentalRating": 17, "MaxParentalSubRating": 1}},
+    {"key": "blockunrated", "name": "blockunrated", "password": "Block-Pass-1", "policy": {"BlockUnratedItems": ["Movie"]}}
   ],
   "libraries": [
     {"key": "movies", "name": "Movies", "type": "movies", "path": "Movies"},
     {"key": "shows", "name": "Shows", "type": "tvshows", "path": "Shows"},
-    {"key": "long", "name": "Long", "type": "movies", "path": "Long", "lazy": true}
+    {"key": "long", "name": "Long", "type": "movies", "path": "Long", "lazy": true},
+    {"key": "rated", "name": "Rated", "type": "movies", "path": "Rated", "lazy": true},
+    {"key": "ratedshows", "name": "RatedShows", "type": "tvshows", "path": "RatedShows", "lazy": true},
+    {"key": "many", "name": "Many", "type": "movies", "path": "Many", "lazy": true}
   ],
   "items": [
     {"key": "alpha", "type": "Movie", "path": "Movies/Alpha Movie (2015)/Alpha Movie (2015).mp4"},
@@ -18,6 +25,19 @@
     {"key": "show", "type": "Series", "path": "Shows/Test Show (2019)"},
     {"key": "s01e01", "type": "Episode", "path": "Shows/Test Show (2019)/Season 01/Test Show (2019) S01E01.mp4"},
     {"key": "s01e02", "type": "Episode", "path": "Shows/Test Show (2019)/Season 01/Test Show (2019) S01E02.mp4"},
-    {"key": "s02e01", "type": "Episode", "path": "Shows/Test Show (2019)/Season 02/Test Show (2019) S02E01.mp4"}
+    {"key": "s02e01", "type": "Episode", "path": "Shows/Test Show (2019)/Season 02/Test Show (2019) S02E01.mp4"},
+    {"key": "rated-g", "type": "Movie", "library": "rated", "path": "Rated/Rated G (2001)/Rated G (2001).mp4"},
+    {"key": "rated-pg", "type": "Movie", "library": "rated", "path": "Rated/Rated PG (2002)/Rated PG (2002).mp4"},
+    {"key": "rated-pg13", "type": "Movie", "library": "rated", "path": "Rated/Rated PG13 (2003)/Rated PG13 (2003).mp4"},
+    {"key": "rated-r", "type": "Movie", "library": "rated", "path": "Rated/Rated R (2004)/Rated R (2004).mp4"},
+    {"key": "rated-nc17", "type": "Movie", "library": "rated", "path": "Rated/Rated NC17 (2005)/Rated NC17 (2005).mp4"},
+    {"key": "rated-tvma", "type": "Movie", "library": "rated", "path": "Rated/Rated TVMA (2006)/Rated TVMA (2006).mp4"},
+    {"key": "rated-tv14", "type": "Movie", "library": "rated", "path": "Rated/Rated TV14 (2007)/Rated TV14 (2007).mp4"},
+    {"key": "rated-12", "type": "Movie", "library": "rated", "path": "Rated/Rated Twelve (2008)/Rated Twelve (2008).mp4"},
+    {"key": "rated-unknown", "type": "Movie", "library": "rated", "path": "Rated/Rated Unknown (2009)/Rated Unknown (2009).mp4"},
+    {"key": "rated-none", "type": "Movie", "library": "rated", "path": "Rated/Rated None (2010)/Rated None (2010).mp4"},
+    {"key": "rated-show", "type": "Series", "library": "ratedshows", "path": "RatedShows/Rated Show (2020)"},
+    {"key": "rated-ep1", "type": "Episode", "library": "ratedshows", "path": "RatedShows/Rated Show (2020)/Season 01/Rated Show (2020) S01E01.mp4"},
+    {"key": "rated-ep2", "type": "Episode", "library": "ratedshows", "path": "RatedShows/Rated Show (2020)/Season 01/Rated Show (2020) S01E02.mp4"}
   ]
 }

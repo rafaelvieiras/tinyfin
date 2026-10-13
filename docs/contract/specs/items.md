@@ -12,7 +12,12 @@ Rule IDs are stable (`items.<topic>.R<n>`); scenarios reference them through `co
 
 * Libraries `Movies` (movies) and `Shows` (tvshows). Items: movies *Alpha Movie* (2015), *Bravo Movie* (2020),
   *Charlie Movie* (2018); series *Test Show* (2019) with seasons 1 and 2 and three episodes (S01E01, S01E02, S02E01).
-* No metadata beyond names/years/numbering: no genres, ratings, overviews, people, external ids, subtitles. (Images: the reference extracts a `Primary` image from each movie and episode video, so `ImageTypes=Primary` matches those; series and seasons have none. Image-type scenarios therefore use types nothing has.)
+* No metadata beyond names/years/numbering: no genres, ratings, overviews, people, external ids, subtitles.
+  The only exceptions are lazy libraries that exist just around the scenarios requiring them: `Rated` (ten
+  movies whose sidecar `.nfo` carries `G`, `PG`, `PG-13`, `R`, `NC-17`, `TV-MA`, `TV-14`, `12`, `ZZ-99` and no
+  rating), `RatedShows` (a `TV-MA` series, one episode without a rating, one with `TV-Y`) and `Many` (150 tiny
+  movies named `Bulk NNN`). Policy users `rating10` (`MaxParentalRating` 10), `rating17`, `rating17s1`
+  (`MaxParentalSubRating` 1) and `blockunrated` (`BlockUnratedItems=[Movie]`) are fixtures. (Images: the reference extracts a `Primary` image from each movie and episode video, so `ImageTypes=Primary` matches those; series and seasons have none. Image-type scenarios therefore use types nothing has.)
   Videos are 320x240, about 4-6 seconds long.
 * Users: `admin`, `alice` (default policy), `nofolders` (`EnableAllFolders=false`, no enabled folders),
   `nodownload`, `disabled`. The `disabled` user cannot authenticate, so no scenario uses it.
@@ -82,6 +87,59 @@ Rule IDs are stable (`items.<topic>.R<n>`); scenarios reference them through `co
 - **items.scope.R2** `ParentId` naming a library the user may not access is **401** (not 403, not an empty list), even when `Recursive` is true. A user with access gets the normal listing.
 - **items.scope.R3** Library restriction must also hold when items are requested by `Ids`: a restricted user receives no items, consistent with the 404 of the single-item read (items.get.R6). **Divergence:** the reference does not apply the restriction on this path (confirmed at runtime: a user with no library access gets the requested items back with 200, and an administrator using that user's `UserId` gets them too). That is an access-control defect; the scenario asserts the safe result and is skipped on the reference.
 
+### Rules: parental rating restrictions
+
+An item's *rating* is its `OfficialRating` text. A user is restricted by the policy fields `MaxParentalRating`
+(integer, with optional `MaxParentalSubRating`) and `BlockUnratedItems` (list of item groups), and a listing
+can be bounded with the `MaxOfficialRating` / `MinOfficialRating` query parameters. Verified black-box against
+the 12.2 reference with fixture items whose rating comes from a sidecar `.nfo` (`<mpaa>`).
+
+- **items.rating.R1** Rating text maps to a *score* `(value, sub)`, compared by value and then sub. The table
+  (the same one `GET /Localization/ParentalRatings` publishes, case-insensitive) is: `G`, `TV-G`, `TV-Y`,
+  `Approved` = 0/0; `TV-Y7` = 7/0, `TV-Y7-FV` = 7/1; `PG`, `TV-PG` = 10/0 (`TV-PG-D`, `-L`, `-S`, `-V` and
+  combinations = 10/1); `PG-13` = 13/0; `TV-14` = 14/0 (with `-D/-L/-S/-V` combinations 14/1); `R` = 17/0;
+  `NC-17` = 17/1; `TV-MA` = 17/1 (with `-L/-S/-V` combinations 17/1); `TV-X`, `TV-AO` = 18/0; `21` = 21/0;
+  `XXX` = 1000/0; `Banned` = 1001/0. Text not in the table is resolved by, in order: removing a leading
+  `Rated `; removing a country prefix up to the first `:` or `-` and looking the rest up in the table or reading
+  it as a number (`US:PG` = 10, `DE-12` = 12, `ZZ-99` = 99); reading the whole text as a number, ignoring a
+  trailing `+` (`12` = 12, `16+` = 16). Anything else, the empty text and `Unrated` have **no value**: the item
+  is *unrated*.
+- **items.rating.R2** With `MaxParentalRating` set, listings, searches and every other item list hide a rated
+  item whose value exceeds it; unrated items stay visible (an unrecognized rating text is unrated).
+- **items.rating.R3** At the same value the sub rating decides: the maximum's sub rating defaults to 0
+  (`MaxParentalSubRating`), so with `MaxParentalRating=17` an `R` item (17/0) is visible and `NC-17`/`TV-MA` (17/1)
+  are not until `MaxParentalSubRating` is 1.
+- **items.rating.R4** `BlockUnratedItems` hides unrated items of the listed groups: `Movie` covers movies;
+  `Series` covers series, seasons and episodes; `Trailer`; `Music` (artists, albums, songs); `Other` (everything
+  else, library folders included in listings). An item whose rating is inherited (R6) is rated. Without
+  `MaxParentalRating` the block still applies.
+- **items.rating.R5** `MaxOfficialRating` keeps rated items with a score at most the parameter's (value, then sub:
+  `R` excludes `NC-17` and `TV-MA`; a number resolves as in R1: `12` keeps `PG` and the `12` item, `10` equals `PG`);
+  `MinOfficialRating` keeps rated items with a score at least the parameter's. Unrated items always pass both, and
+  a value that has no score (`Unrated`, unrecognized) filters nothing. The two combine with each other and with
+  the policy. (Leaves `items.filter.R19` intact: unrated items stay.)
+- **items.rating.R6** An item with no rating of its own (an episode or season) uses its series' rating. An item
+  with its own rating keeps it for listing purposes.
+- **items.rating.R7** Reading one item (`GET /Items/{itemId}`, `GET /Users/{userId}/Items/{itemId}`) that the
+  restrictions hide answers the same `404` problem document as a missing item. Differences from the listing
+  filter, kept for compatibility: only the rating *value* is compared (so at maximum 17 an `NC-17`/`TV-MA`
+  item is readable although the listing hides it), an item inside a series is also refused when the series' own
+  rating value exceeds the maximum (an episode with its own `TV-Y` in a `TV-MA` series is `404` at maximum 10 while
+  the listing still shows it), and `BlockUnratedItems` applies to movies, series, seasons, episodes, trailers and
+  music but not to library folders (a library is readable although `Other` is blocked).
+- **items.rating.R8** The same scope (library, tags, ratings) applies to the other item read paths: item lists
+  of `GET /Items/Latest`, `GET /UserItems/Resume` and the counts of `GET /Items/Counts`; the single-item
+  reads `GET /Items/{id}/Similar`, `/Ancestors`, `/PlaybackInfo`, the stream routes and
+  `GET /UserItems/{id}/UserData` answer `404` for a hidden item; `GET /Shows/{seriesId}/Seasons` and `/Episodes`
+  answer `404` for a hidden series.
+
+> `GET /Shows/NextUp` is scoped the same way in Tinyfin; the reference's answer could not be observed with the
+> fixtures (nothing is in progress), so it is not part of R8.
+>
+> Tinyfin's own notes: the rating is evaluated at query time, so a changed `OfficialRating` or policy applies
+> immediately. The table is the US one the reference serves by default; the reference ignores a `countryCode`
+> query on `GET /Localization/ParentalRatings`, so no country-specific table is specified.
+
 ### Rules: user resolution
 
 - **items.user.R1** `UserId` absent: the context (accessible libraries, user data) is the authenticated token user.
@@ -142,6 +200,7 @@ Rule IDs are stable (`items.<topic>.R<n>`); scenarios reference them through `co
 - **items.paging.R3** `Limit=0` returns no items but still reports the full `TotalRecordCount` (on queries that go through paging).
 - **items.paging.R4** `EnableTotalRecordCount` defaults to true. With `false`, `TotalRecordCount` equals the number of items in the returned page (not the full count).
 - **items.paging.R5** Non-numeric `Limit` or `StartIndex`, and non-boolean `Recursive`, are rejected with **400** (parameter binding).
+- **items.paging.R6** There is no default page size: `GET /Items` without `Limit` returns every match (verified with 150 movies in one library: 150 items, `TotalRecordCount` 150), and so does `GET /UserItems/Resume`. `Limit` and `StartIndex` still page. (`GET /Items/Latest` is different: its default is 20 and it honors `Limit` up to the number of matches.)
 
 ### Rules: item shape and shaping options
 
@@ -351,6 +410,15 @@ reference; that is deliberately left unexercised.
 | `items.paging.R3` | `items.paging.limit-zero` |
 | `items.paging.R4` | `items.paging.total-record-count-flag` |
 | `items.paging.R5` | `items.paging.malformed` |
+| `items.paging.R6` | `items.paging.no-default-cap` |
+| `items.rating.R1` | `items.rating.policy-max-value` |
+| `items.rating.R2` | `items.rating.policy-max-value` |
+| `items.rating.R3` | `items.rating.policy-max-sub-rating` |
+| `items.rating.R4` | `items.rating.block-unrated` |
+| `items.rating.R5` | `items.rating.query-bounds` |
+| `items.rating.R6` | `items.rating.series-inheritance` |
+| `items.rating.R7` | `items.rating.single-item-read` |
+| `items.rating.R8` | `items.rating.other-read-paths` |
 | `items.fields.R1` | `items.fields.movie-basics`, `items.fields.series-and-episode` |
 | `items.fields.R2` | `items.fields.path-on-request` |
 | `items.fields.R3` | `items.fields.enable-user-data`, `items.userdata.reflected-in-listing` |

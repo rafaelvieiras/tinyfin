@@ -9759,5 +9759,164 @@
         }
       }
     ]
+  },
+  {
+    "id": "playstate.stopped.hidden-item-writes-user-data",
+    "endpoint": "POST /Sessions/Playing/Stopped",
+    "spec": "playstate.md#playback-stopped",
+    "scope": "modern",
+    "tags": [
+      "playstate",
+      "parental"
+    ],
+    "covers": [
+      "playstate.stopped.R12"
+    ],
+    "requires": [
+      "item:alpha"
+    ],
+    "steps": [
+      {
+        "name": "create user",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-hidden-report-data",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id",
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "restrict the user to no folder",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "EnableAllFolders": false,
+            "EnabledFolders": []
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "log in",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-hidden-report-data",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-playstate-hidden-data{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "tok": "$.AccessToken"
+        }
+      },
+      {
+        "name": "the item is hidden",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.alpha.id}}",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-playstate-hidden-data{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+          },
+          "noAuth": true
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "report a finished play of the hidden item",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-playstate-hidden-data{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+          },
+          "body": {
+            "ItemId": "{{item.alpha.id}}",
+            "PlaySessionId": "sc-playstate-hidden-data"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "restore the user's access",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "EnableAllFolders": true
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "the report left its mark on the item",
+        "request": {
+          "method": "GET",
+          "path": "/UserItems/{{item.alpha.id}}/UserData",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-playstate-hidden-data{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Played",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.PlaybackPositionTicks",
+              "op": "eq",
+              "value": 0
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete the user",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
   }
 ]

@@ -401,5 +401,39 @@ func (c *Client) materialize(ctx context.Context, ll *lazyLibrary) (undo func(),
 			time.Sleep(time.Second)
 		}
 	}
+	c.settleItems(ctx, 30*time.Second)
 	return undo, nil
+}
+
+// settleItems waits until the catalog stops changing: metadata (sidecar
+// ratings, titles) is applied after an item first appears, and a scenario
+// must not run against the half-filled state. The catalog counts as settled
+// when its items (id, name, rating) are identical across three consecutive
+// polls.
+func (c *Client) settleItems(ctx context.Context, max time.Duration) {
+	deadline := time.Now().Add(max)
+	var last string
+	same := 0
+	for time.Now().Before(deadline) {
+		r, err := c.Do(ctx, "admin", "GET", "/Items",
+			map[string]string{"Recursive": "true", "Fields": "OfficialRating", "userId": c.Vars["user.admin.id"]}, nil, nil)
+		if err == nil && r.Status == 200 {
+			m, _ := r.JSON.(map[string]any)
+			arr, _ := m["Items"].([]any)
+			var b strings.Builder
+			for _, x := range arr {
+				o, _ := x.(map[string]any)
+				fmt.Fprintf(&b, "%v|%v|%v;", o["Id"], o["Name"], o["OfficialRating"])
+			}
+			if cur := b.String(); cur == last {
+				same++
+				if same >= 3 {
+					return
+				}
+			} else {
+				last, same = cur, 0
+			}
+		}
+		time.Sleep(700 * time.Millisecond)
+	}
 }

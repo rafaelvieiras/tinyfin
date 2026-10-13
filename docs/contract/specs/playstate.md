@@ -178,9 +178,9 @@ type; 401 anonymous.
 - **playstate.start.R4** `PositionTicks` in a start report is not persisted to user data.
 - **playstate.start.R5** An `ItemId` that is missing, all-zero or unknown is not an error: 204, and no user
   data is touched (only the session state is updated).
-- **playstate.start.R6** An item that exists but is not visible to the caller (restricted user) is also
-  accepted with 204; the report is not rejected. (Audit-derived: reports are resolved without the user's
-  library filter. Flagged as a divergence candidate, see Open questions.)
+- **playstate.start.R6** An item that exists but is not visible to the caller (library, tag or rating
+  restriction) is also accepted with 204; the report is not rejected, and its user data is written like any
+  other (see `stopped.R12`). Verified against the reference.
 - **playstate.start.R7** Invalid input yields 400 and changes nothing: `ItemId` not a GUID, malformed JSON,
   enum fields with unknown names, numeric fields with non-numeric values.
 - **playstate.start.R8** `Brightness`, `AspectRatio`, `PlaybackStartTimeTicks`, `NextMediaType` and unknown
@@ -244,6 +244,11 @@ Responses: 204 empty; 400 (negative `PositionTicks`, malformed body); 401 anonym
 - **playstate.stopped.R7** Missing, all-zero or unknown `ItemId`: 204, no user data touched.
 - **playstate.stopped.R8** An item not visible to the caller is accepted with 204 like start (see
   `start.R6`).
+- **playstate.stopped.R12** The report of a hidden item *does* write the caller's user data for it (verified
+  on the reference for items hidden by library access and by a rating maximum): a stop without a position leaves
+  the item played. The data is not readable while the item is hidden and shows once the caller can see the item
+  again. The report never shows the hidden item as
+  the session's now-playing item. Reports for an unknown item write nothing (`stopped.R7`).
 - **playstate.stopped.R9** Start followed by a stop with a position increments `PlayCount` exactly once (by the
   start).
 - **playstate.stopped.R10** A stop without a preceding start is valid and updates user data as above (no
@@ -313,9 +318,11 @@ The deprecated `/PlayingItems/...` and `/Users/{userId}/PlayingItems/...` routes
 
 ## Open questions
 
-1. Reports for items the user cannot see (start/progress/stopped) are accepted and write user data for the
-   hidden item (rules `start.R6`, `stopped.R8`). Static audit only; not in the validated security findings.
-   Decide whether Tinyfin should reject with 404 and record a `divergence`.
+1. Resolved (reference probe): reports for items the user cannot see are accepted with 204 and write user data
+   for the hidden item (`start.R6`, `stopped.R8`, `stopped.R12`); Tinyfin matches. The data does not appear in
+   `GET /UserItems/Resume` or `GET /UserItems/{id}/UserData` while the item is hidden (404), including for an
+   administrator acting on that user. Rejecting such reports with 404 would be a hardening and a divergence; it
+   is not done.
 2. `PlayedPercentage` for leaf items and its exact value for folders is not asserted (audit unresolved).
 3. Resolved (reference probe): `LastPlayedDate` is omitted from the JSON (not `null`) when the item was never
    played, in both the mark response and `UserData`.
@@ -397,6 +404,7 @@ The deprecated `/PlayingItems/...` and `/Users/{userId}/PlayingItems/...` routes
 | `playstate.stopped.R6` | `stopped.negative-position` |
 | `playstate.stopped.R7` | `stopped.no-item` |
 | `playstate.stopped.R8` | `stopped.hidden-item` |
+| `playstate.stopped.R12` | `stopped.hidden-item-writes-user-data` |
 | `playstate.stopped.R9` | `stopped.below-minimum`, `stopped.mid-short-video` |
 | `playstate.stopped.R10` | `stopped.no-position-is-complete`, `stopped.without-start` |
 | `playstate.stopped.R11` | `stopped.invalid-body` |

@@ -10772,5 +10772,1105 @@
     }
    }
   ]
+ },
+ {
+  "id": "items.rating.policy-max-value",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items",
+   "parental"
+  ],
+  "covers": [
+   "items.rating.R1",
+   "items.rating.R2"
+  ],
+  "requires": [
+   "item:rated-g",
+   "item:rated-pg",
+   "item:rated-pg13",
+   "item:rated-r",
+   "item:rated-nc17",
+   "item:rated-tvma",
+   "item:rated-tv14",
+   "item:rated-12",
+   "item:rated-unknown",
+   "item:rated-none",
+   "item:alpha",
+   "user:rating10"
+  ],
+  "steps": [
+   {
+    "name": "maximum 10 (PG)",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-g.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-pg.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-none.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-pg13.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-12.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-r.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-nc17.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-tvma.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-tv14.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-unknown.id}}"
+      }
+     ]
+    },
+    "as": "rating10"
+   }
+  ]
+ },
+ {
+  "id": "items.rating.policy-max-sub-rating",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items",
+   "parental"
+  ],
+  "covers": [
+   "items.rating.R3"
+  ],
+  "requires": [
+   "item:rated-g",
+   "item:rated-pg",
+   "item:rated-pg13",
+   "item:rated-r",
+   "item:rated-nc17",
+   "item:rated-tvma",
+   "item:rated-tv14",
+   "item:rated-12",
+   "item:rated-unknown",
+   "item:rated-none",
+   "item:alpha",
+   "user:rating17",
+   "user:rating17s1"
+  ],
+  "steps": [
+   {
+    "name": "maximum 17 without sub rating",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-g.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-pg.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-pg13.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-r.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-tv14.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-12.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-none.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-nc17.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-tvma.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-unknown.id}}"
+      }
+     ]
+    },
+    "as": "rating17"
+   },
+   {
+    "name": "maximum 17 with sub rating 1",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-r.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-nc17.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-tvma.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-none.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-unknown.id}}"
+      }
+     ]
+    },
+    "as": "rating17s1"
+   }
+  ]
+ },
+ {
+  "id": "items.rating.block-unrated",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items",
+   "parental"
+  ],
+  "covers": [
+   "items.rating.R4"
+  ],
+  "requires": [
+   "item:rated-g",
+   "item:rated-pg",
+   "item:rated-pg13",
+   "item:rated-r",
+   "item:rated-nc17",
+   "item:rated-tvma",
+   "item:rated-tv14",
+   "item:rated-12",
+   "item:rated-unknown",
+   "item:rated-none",
+   "item:alpha",
+   "user:blockunrated"
+  ],
+  "steps": [
+   {
+    "name": "unrated movies are hidden",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-g.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-unknown.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-r.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-none.id}}"
+      }
+     ]
+    },
+    "as": "blockunrated"
+   },
+   {
+    "name": "an unrated movie is refused by id",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 404,
+     "json": [
+      {
+       "path": "$.status",
+       "op": "eq",
+       "value": 404
+      }
+     ]
+    },
+    "as": "blockunrated"
+   },
+   {
+    "name": "a rated movie is readable",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.rated-g.id}}"
+    },
+    "expect": {
+     "status": 200
+    },
+    "as": "blockunrated"
+   }
+  ]
+ },
+ {
+  "id": "items.rating.query-bounds",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items",
+   "parental"
+  ],
+  "covers": [
+   "items.rating.R5"
+  ],
+  "requires": [
+   "item:rated-g",
+   "item:rated-pg",
+   "item:rated-pg13",
+   "item:rated-r",
+   "item:rated-nc17",
+   "item:rated-tvma",
+   "item:rated-tv14",
+   "item:rated-12",
+   "item:rated-unknown",
+   "item:rated-none",
+   "item:alpha",
+   "user:rating10"
+  ],
+  "steps": [
+   {
+    "name": "MaxOfficialRating=PG",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "MaxOfficialRating": "PG"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-g.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-pg.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-none.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-pg13.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-12.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-r.id}}"
+      }
+     ]
+    },
+    "as": "admin"
+   },
+   {
+    "name": "MaxOfficialRating=R also compares the sub rating",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "MaxOfficialRating": "R"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-r.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-tv14.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-12.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-pg13.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-nc17.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-tvma.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-unknown.id}}"
+      }
+     ]
+    },
+    "as": "admin"
+   },
+   {
+    "name": "MaxOfficialRating=NC-17",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "MaxOfficialRating": "NC-17"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-r.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-nc17.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-tvma.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-unknown.id}}"
+      }
+     ]
+    },
+    "as": "admin"
+   },
+   {
+    "name": "MaxOfficialRating=Unrated filters nothing",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "MaxOfficialRating": "Unrated"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-r.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-unknown.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-g.id}}"
+      }
+     ]
+    },
+    "as": "admin"
+   },
+   {
+    "name": "MinOfficialRating=R keeps unrated and rated items from R up",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "MinOfficialRating": "R"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-r.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-nc17.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-tvma.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-unknown.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-none.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-g.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-pg.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-pg13.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-tv14.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-12.id}}"
+      }
+     ]
+    },
+    "as": "admin"
+   },
+   {
+    "name": "both bounds",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "MinOfficialRating": "PG",
+      "MaxOfficialRating": "R"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-pg.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-pg13.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-tv14.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-12.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-r.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-g.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-nc17.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-tvma.id}}"
+      }
+     ]
+    },
+    "as": "admin"
+   }
+  ]
+ },
+ {
+  "id": "items.rating.series-inheritance",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items",
+   "parental"
+  ],
+  "covers": [
+   "items.rating.R6"
+  ],
+  "requires": [
+   "item:rated-show",
+   "item:rated-ep1",
+   "item:rated-ep2",
+   "user:rating10",
+   "user:rating17",
+   "user:rating17s1"
+  ],
+  "steps": [
+   {
+    "name": "maximum 10: only the episode with its own rating",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Series,Season,Episode"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-ep2.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-show.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-ep1.id}}"
+      }
+     ]
+    },
+    "as": "rating10"
+   },
+   {
+    "name": "maximum 17: the show is 17/1",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Series,Season,Episode"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-ep2.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-show.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-ep1.id}}"
+      }
+     ]
+    },
+    "as": "rating17"
+   },
+   {
+    "name": "maximum 17 sub 1",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Series,Season,Episode"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-show.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-ep1.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-ep2.id}}"
+      }
+     ]
+    },
+    "as": "rating17s1"
+   }
+  ]
+ },
+ {
+  "id": "items.rating.single-item-read",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "items.md#get",
+  "scope": "modern",
+  "tags": [
+   "items",
+   "parental"
+  ],
+  "covers": [
+   "items.rating.R7"
+  ],
+  "requires": [
+   "item:rated-show",
+   "item:rated-ep1",
+   "item:rated-ep2",
+   "item:rated-r",
+   "item:rated-nc17",
+   "item:rated-tvma",
+   "item:rated-g",
+   "user:rating10",
+   "user:rating17"
+  ],
+  "steps": [
+   {
+    "name": "within the maximum",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.rated-g.id}}"
+    },
+    "expect": {
+     "status": 200
+    },
+    "as": "rating10"
+   },
+   {
+    "name": "above the maximum",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.rated-r.id}}"
+    },
+    "expect": {
+     "status": 404,
+     "json": [
+      {
+       "path": "$.status",
+       "op": "eq",
+       "value": 404
+      }
+     ]
+    },
+    "as": "rating10"
+   },
+   {
+    "name": "series above the maximum",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.rated-show.id}}"
+    },
+    "expect": {
+     "status": 404
+    },
+    "as": "rating10"
+   },
+   {
+    "name": "episode inheriting the series rating",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.rated-ep1.id}}"
+    },
+    "expect": {
+     "status": 404
+    },
+    "as": "rating10"
+   },
+   {
+    "name": "episode with its own TV-Y rating, series TV-MA",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.rated-ep2.id}}"
+    },
+    "expect": {
+     "status": 404
+    },
+    "as": "rating10"
+   },
+   {
+    "name": "17/1 is readable at maximum 17 (sub rating ignored)",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.rated-nc17.id}}"
+    },
+    "expect": {
+     "status": 200
+    },
+    "as": "rating17"
+   },
+   {
+    "name": "TV-MA is readable at maximum 17",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.rated-tvma.id}}"
+    },
+    "expect": {
+     "status": 200
+    },
+    "as": "rating17"
+   },
+   {
+    "name": "episode of a 17/1 series at maximum 17",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.rated-ep1.id}}"
+    },
+    "expect": {
+     "status": 200
+    },
+    "as": "rating17"
+   },
+   {
+    "name": "series at maximum 17",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.rated-show.id}}"
+    },
+    "expect": {
+     "status": 200
+    },
+    "as": "rating17"
+   }
+  ]
+ },
+ {
+  "id": "items.rating.other-read-paths",
+  "endpoint": "GET /Items/{itemId}/Similar",
+  "spec": "items.md#get",
+  "scope": "modern",
+  "tags": [
+   "items",
+   "parental"
+  ],
+  "covers": [
+   "items.rating.R8"
+  ],
+  "requires": [
+   "item:rated-show",
+   "item:rated-ep1",
+   "item:rated-ep2",
+   "item:rated-r",
+   "item:rated-g",
+   "item:rated-nc17",
+   "user:rating10"
+  ],
+  "steps": [
+   {
+    "name": "similar of a hidden item",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.rated-r.id}}/Similar"
+    },
+    "expect": {
+     "status": 404
+    },
+    "as": "rating10"
+   },
+   {
+    "name": "ancestors of a hidden item",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.rated-r.id}}/Ancestors"
+    },
+    "expect": {
+     "status": 404
+    },
+    "as": "rating10"
+   },
+   {
+    "name": "playback info of a hidden item",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.rated-r.id}}/PlaybackInfo"
+    },
+    "expect": {
+     "status": 404
+    },
+    "as": "rating10"
+   },
+   {
+    "name": "user data of a hidden item",
+    "request": {
+     "method": "GET",
+     "path": "/UserItems/{{item.rated-r.id}}/UserData"
+    },
+    "expect": {
+     "status": 404
+    },
+    "as": "rating10"
+   },
+   {
+    "name": "episodes of a hidden series of a hidden item",
+    "request": {
+     "method": "GET",
+     "path": "/Shows/{{item.rated-show.id}}/Episodes"
+    },
+    "expect": {
+     "status": 404
+    },
+    "as": "rating10"
+   },
+   {
+    "name": "seasons of a hidden series of a hidden item",
+    "request": {
+     "method": "GET",
+     "path": "/Shows/{{item.rated-show.id}}/Seasons"
+    },
+    "expect": {
+     "status": 404
+    },
+    "as": "rating10"
+   },
+   {
+    "name": "latest does not list hidden items",
+    "as": "rating10",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "IncludeItemTypes": "Movie",
+      "Limit": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Id",
+       "op": "contains",
+       "value": "{{item.rated-g.id}}"
+      },
+      {
+       "path": "$[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-r.id}}"
+      },
+      {
+       "path": "$[*].Id",
+       "op": "notcontains",
+       "value": "{{item.rated-nc17.id}}"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.paging.no-default-cap",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items",
+   "paging",
+   "slow"
+  ],
+  "covers": [
+   "items.paging.R6"
+  ],
+  "requires": [
+   "library:many",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "150 movies without Limit",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "NameStartsWith": "Bulk"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 150
+      },
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 150
+      }
+     ]
+    }
+   }
+  ]
  }
 ]
