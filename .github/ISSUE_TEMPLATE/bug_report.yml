@@ -1,0 +1,47 @@
+name: Bug report
+description: A client does not work as expected against Tinyfin
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please redact tokens, API keys and anything you do not want to share before pasting logs or request captures.
+  - type: input
+    id: version
+    attributes:
+      label: Tinyfin version
+      description: The version or commit you run, and how you run it (container image, binary, built from source).
+    validations:
+      required: true
+  - type: input
+    id: client
+    attributes:
+      label: Client and version
+      description: For example `jellyfin-web 12.2`, `Jellyfin Android 2.6`, `Kodi add-on 1.x`.
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what did you expect?
+      description: If you can compare with a Jellyfin 12+ server, say how it behaves there.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Log in with ...
+        2. Open ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: request
+    attributes:
+      label: Request and response (if known)
+      description: Method, path, relevant headers/body and the status you got. Redact secrets.
+      render: shell
+    validations:
+      required: false

@@ -61,13 +61,26 @@ format an existing client depends on.
 3. **Match the surrounding stack and style** — Go on the backend (see
    [`docs/03-architecture.md`](docs/03-architecture.md)).
 4. **Write in English** — code, comments, commit messages, and all versioned documentation.
-5. **Commit messages** follow `type: summary` (e.g. `docs:`, `feat:`, `fix:`, `refactor:`), imperative mood.
+5. **Commit messages** follow `type: summary` (e.g. `docs:`, `feat:`, `fix:`, `refactor:`), imperative mood. Commits are human-owned: no AI/tool co-author trailers or "generated with" footers.
 6. **Open the PR** referencing the issue and, where applicable, the decision-log entry it resolves.
+
+## Before you open a PR
+
+```sh
+gofmt -l .            # must print nothing
+go build ./... && go vet ./... && go test ./...
+go run ./cmd/conformance lint   # if docs/contract changed
+```
+
+See [`AGENTS.md`](AGENTS.md#repository-conventions-open-source) for the full list of
+repository conventions (English only, no personal or infrastructure data).
 
 ## Security
 
 **No secrets in code, ever.** If you find a credential or key committed to history, report it
-privately rather than opening a public issue, so it can be rotated first.
+privately (see [`SECURITY.md`](SECURITY.md)) rather than opening a public issue, so it can be rotated first.
+
+By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License of your contribution
 

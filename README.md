@@ -42,9 +42,10 @@ above — no extra flags needed for a first run.)
 `WITH_WEB=true` bundles a real, unmodified [`jellyfin-web`](https://github.com/jellyfin/jellyfin-web)
 build into the image, served at `/web/` — off by default so the base image stays MIT-only with no
 GPL code linked in (see [`docs/00-decision-log.md`](docs/00-decision-log.md)'s **D9**). `jellyfin-ffmpeg`
-is always bundled regardless (Remux/Direct Stream/Transcode need it unconditionally). See
-[`staging/docker-compose.yml`](staging/docker-compose.yml) for a fuller example, including a
-side-by-side reference Jellyfin server for wire-compatibility comparison.
+is always bundled regardless (Remux/Direct Stream/Transcode need it unconditionally). To compare
+against a reference Jellyfin 12.x server side by side, see
+[`scripts/conformance-ref-up.sh`](scripts/conformance-ref-up.sh) and
+[`docs/contract/README.md`](docs/contract/README.md).
 
 Once it's up, point any Jellyfin client (the bundled web UI at `/web/`, the official mobile/TV
 apps, Kodi's add-on, Findroid, Infuse, ...) at `http://<host>:8096` like it's a normal Jellyfin

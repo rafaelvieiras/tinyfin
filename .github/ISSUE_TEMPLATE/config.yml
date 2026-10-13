@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & discussions
+    url: https://github.com/rafaelvieiras/tinyfin/discussions
+    about: Ask questions and share ideas here.
+  - name: Security vulnerability
+    url: https://github.com/rafaelvieiras/tinyfin/security/advisories/new
+    about: Report security problems privately, not as a public issue.

@@ -14,6 +14,46 @@ path to multi-node scale exists without being mandatory. Module:
 transcoding pipeline, metadata provider interface — see [`ROADMAP.md`](ROADMAP.md) for what's
 actually done); Phase 4 (scale mode) hasn't started.
 
+## Repository conventions (open source)
+
+This is an open-source project. These rules apply to every contributor, human
+or LLM, and to every artifact in the repo:
+
+- **English only.** Code, comments, identifiers, UI strings, log/error
+  messages, test names, docs, commit messages, issues and PRs are all written
+  in English. The only exception is test data or captured wire values that
+  deliberately exercise non-English input (e.g. a localized display title the
+  reference server produced), and it must be explained by an English comment.
+- **Commits are human-owned.** Every commit is authored by, and is the
+  responsibility of, one or more humans. Never add AI/LLM/tool co-authorship
+  or attribution to a commit or PR — no `Co-Authored-By:` trailer naming a
+  tool or model, no "Generated with ..." footer — even if your tooling adds
+  one by default. A `Co-Authored-By:` trailer for another human is fine.
+  Messages are short and imperative, in English, with a conventional prefix
+  (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`).
+- **No personal or infrastructure data.** Nothing in the repo (files, tests,
+  fixtures, comments, commit messages, docs) may reveal a developer's or
+  operator's personal details or setup: real names or e-mail addresses (git
+  authorship and `LICENSE` are the only places), absolute home directories,
+  hostnames, IPs, ports or paths of someone's machine, the names of someone's
+  personal media library or titles, hardware/OS anecdotes stated as a local
+  fact ("on my machine ..."), private notes or vault references, credentials,
+  API keys, tokens or `.env*` contents. Use placeholders (`example.com`,
+  `<path>`) and synthetic fixtures. Refer to people by role ("the maintainer",
+  "a reporter"), never by name. The rule covers everything published about the
+  project, not only files: issues, issue and PR comments, PR descriptions,
+  release notes, and their edit history. It also covers inference: never say or
+  imply which hardware, operating system, hosting or deployment the
+  maintainers or any user runs; describe a platform only as a supported target.
+  Write issues from the project's point of view, not from a person's setup.
+- **Evidence is described, not narrated.** Docs record what the server does and
+  why (behavior, root cause, decision), not the story of who noticed it or in
+  which session. Say "a client sent X", not "<person> reported X".
+- Quick self-check before committing:
+  `git grep -nIP '[áéíóúâêôãõçÁÉÍÓÚÂÊÔÃÕÇ]'` and
+  `git grep -nIE '/home/|/Users/'` should print nothing except deliberate,
+  explained multilingual data.
+
 ## Principles that don't bend
 
 All six are in the [README](README.md) and [CONTRIBUTING.md](CONTRIBUTING.md):
@@ -68,7 +108,7 @@ clean; do not blur it for convenience. See D12 in
 Prefer black-box observation — real client traffic, a running reference server, published API
 docs (`docs/04`'s verification approach) — over reading the C# source by default. It's usually
 enough for wire compatibility and needs nothing further. Reach for the C# source when black-box
-behavior alone can't resolve something, **or whenever Rafael explicitly asks for it** — an
+behavior alone can't resolve something, **or whenever the maintainer explicitly asks for it** — an
 explicit request is its own sufficient reason, not a fallback to second-guess or quietly
 downgrade back to black-box-only. When you do, follow a strict two-phase process:
 
@@ -115,7 +155,7 @@ One caveat, already on record in `docs/11`: different jellyfin-web builds can di
 actually send (the modern `@jellyfin/sdk` client vs. the legacy `jellyfin-apiclient` package
 embedded in the same bundle disagree on some URL shapes). Reading source is a way to find *what to
 verify*, not a substitute for confirming it live against the actual embedded bundle this project
-ships (`tinyfin-staging`'s own `/web`) — treat it as generating a hypothesis, not the final answer.
+ships (a Tinyfin deployment's own `/web`) — treat it as generating a hypothesis, not the final answer.
 
 ## Decisions-first workflow
 
