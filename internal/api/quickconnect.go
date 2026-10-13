@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -159,11 +160,17 @@ func (q *quickConnectState) byCodeLocked(code string) *quickConnectRequest {
 // handleQuickConnectConnect is GET /QuickConnect/Connect?secret=: the poll
 // the device runs while it waits to be authorized.
 func (s *Server) handleQuickConnectConnect(w http.ResponseWriter, r *http.Request) {
+	// quickconnect.disabled.R1: a missing parameter is a validation error
+	// before the availability check.
+	secret := r.URL.Query().Get("secret")
+	if secret == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	if !s.quickConnectEnabled() {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-	secret := r.URL.Query().Get("secret")
 	q := s.quick
 	q.mu.Lock()
 	defer q.mu.Unlock()
@@ -181,13 +188,20 @@ func (s *Server) handleQuickConnectConnect(w http.ResponseWriter, r *http.Reques
 // administrator may name another account; a non-administrator naming
 // someone else is refused (users.quickconnect.R5).
 func (s *Server) handleQuickConnectAuthorize(w http.ResponseWriter, r *http.Request) {
+	code := r.URL.Query().Get("code")
+	if code == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	if !s.quickConnectEnabled() {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 	ac, _ := AuthFromContext(r.Context())
 	target := ac.User.ID
-	if raw := r.URL.Query().Get("userId"); raw != "" {
+	// quickconnect.authorize.R6-R7: the empty id counts as "not given", any
+	// other id must be well formed and name an account (both 400).
+	if raw := r.URL.Query().Get("userId"); raw != "" && !isEmptyGUID(raw) {
 		id, ok := parseUserGUID(raw)
 		if !ok {
 			writeInvalidID(w, "userId", raw)
@@ -198,18 +212,17 @@ func (s *Server) handleQuickConnectAuthorize(w http.ResponseWriter, r *http.Requ
 			return
 		}
 		if _, err := s.store.GetUser(r.Context(), id); err != nil {
-			w.WriteHeader(http.StatusNotFound)
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		target = id
 	}
-	code := r.URL.Query().Get("code")
 	q := s.quick
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	q.sweepLocked(time.Now())
 	req := q.byCodeLocked(code)
-	if code == "" || req == nil {
+	if req == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -258,4 +271,10 @@ func (s *Server) handleAuthenticateWithQuickConnect(w http.ResponseWriter, r *ht
 		return
 	}
 	s.issueLogin(w, r, user, storedUserPolicy(user), time.Now(), req.AppName, req.DeviceName, req.DeviceID, req.AppVersion)
+}
+
+// isEmptyGUID reports whether s is the all-zero id, in dashed or plain form.
+func isEmptyGUID(s string) bool {
+	s = strings.ReplaceAll(strings.TrimSpace(s), "-", "")
+	return len(s) == 32 && strings.Trim(s, "0") == ""
 }

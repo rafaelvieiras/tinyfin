@@ -222,3 +222,64 @@ func TestQuickConnectDisabled(t *testing.T) {
 		t.Errorf("exchange: %d, want 401", code)
 	}
 }
+
+// quickconnect.connect.R2 / authorize.R3 / authorize.R6-R7 / disabled.R1:
+// parameter validation comes before everything but authentication.
+func TestQuickConnectParameterValidation(t *testing.T) {
+	ts, st := newTestServer(t)
+	createTestAdminUser(t, st, "admin", "adminpw")
+	admin := deviceLogin(t, ts.URL, "admin", "adminpw", "adm")
+	auth := authHeader("adm", admin)
+	qc := qcInitiate(t, ts.URL, "tv")
+
+	if code, _ := rawDo(t, ts.URL, http.MethodGet, "/QuickConnect/Connect", "", ""); code != http.StatusBadRequest {
+		t.Errorf("connect without secret: %d, want 400", code)
+	}
+	if code, _ := rawDo(t, ts.URL, http.MethodGet, "/QuickConnect/Connect?secret="+qc.Secret+"x", "", ""); code != http.StatusNotFound {
+		t.Errorf("connect unknown secret: %d, want 404", code)
+	}
+	if code, _ := rawDo(t, ts.URL, http.MethodPost, "/QuickConnect/Authorize", "", auth); code != http.StatusBadRequest {
+		t.Errorf("authorize without code: %d, want 400", code)
+	}
+	if code, _ := rawDo(t, ts.URL, http.MethodPost, "/QuickConnect/Authorize?code="+qc.Code+"&userId=zz", "", auth); code != http.StatusBadRequest {
+		t.Errorf("authorize junk userId: %d, want 400", code)
+	}
+	if code, _ := rawDo(t, ts.URL, http.MethodPost, "/QuickConnect/Authorize?code="+qc.Code+"&userId=12345678123412341234123456789abc", "", auth); code != http.StatusBadRequest {
+		t.Errorf("authorize unknown userId: %d, want 400", code)
+	}
+	var r struct{ Authenticated bool }
+	_, body := rawDo(t, ts.URL, http.MethodGet, "/QuickConnect/Connect?secret="+qc.Secret, "", "")
+	_ = json.Unmarshal(body, &r)
+	if r.Authenticated {
+		t.Error("a refused authorize must not authorize")
+	}
+	// The empty id counts as "not given".
+	if code, _ := rawDo(t, ts.URL, http.MethodPost, "/QuickConnect/Authorize?code="+qc.Code+"&userId=00000000000000000000000000000000", "", auth); code != http.StatusOK {
+		t.Errorf("authorize with the empty id: %d, want 200", code)
+	}
+}
+
+func TestQuickConnectDisabledValidationFirst(t *testing.T) {
+	st, err := sqlite.New(filepath.Join(t.TempDir(), "tinyfin.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	createTestAdminUser(t, st, "admin", "adminpw")
+	ts := httptest.NewServer(NewServer(st, Config{ServerName: "T", QuickConnectDisabled: true}).Handler())
+	t.Cleanup(ts.Close)
+	admin := deviceLogin(t, ts.URL, "admin", "adminpw", "adm")
+	auth := authHeader("adm", admin)
+	if code, _ := rawDo(t, ts.URL, http.MethodGet, "/QuickConnect/Connect?secret=abc", "", ""); code != http.StatusUnauthorized {
+		t.Errorf("connect: %d, want 401", code)
+	}
+	if code, _ := rawDo(t, ts.URL, http.MethodGet, "/QuickConnect/Connect", "", ""); code != http.StatusBadRequest {
+		t.Errorf("connect without secret: %d, want 400", code)
+	}
+	if code, _ := rawDo(t, ts.URL, http.MethodPost, "/QuickConnect/Authorize?code=000000", "", auth); code != http.StatusUnauthorized {
+		t.Errorf("authorize: %d, want 401", code)
+	}
+	if code, _ := rawDo(t, ts.URL, http.MethodPost, "/QuickConnect/Authorize", "", auth); code != http.StatusBadRequest {
+		t.Errorf("authorize without code: %d, want 400", code)
+	}
+}

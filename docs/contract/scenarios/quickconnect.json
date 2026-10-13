@@ -1,0 +1,1738 @@
+[
+  {
+    "id": "users.quickconnect.exchange",
+    "endpoint": "POST /Users/AuthenticateWithQuickConnect",
+    "spec": "quickconnect.md#exchange",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "web-client",
+      "quickconnect"
+    ],
+    "covers": [
+      "quickconnect.exchange.R1",
+      "quickconnect.exchange.R2",
+      "quickconnect.authorize.R1"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-quickconnect-exchange",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-quickconnect-exchange",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "the user logs in on an existing device",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-quickconnect-exchange",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-ui{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "tokUi": "$.AccessToken"
+        }
+      },
+      {
+        "name": "initiate",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-tv{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "secret": "$.Secret",
+          "code": "$.Code"
+        }
+      },
+      {
+        "name": "exchange before authorization",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateWithQuickConnect",
+          "body": {
+            "Secret": "{{capture.secret}}"
+          }
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "authorize from the logged-in device",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.code}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "exchange the secret",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateWithQuickConnect",
+          "body": {
+            "Secret": "{{capture.secret}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.User.Id",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.User.Name",
+              "op": "eq",
+              "value": "tmp-quickconnect-exchange"
+            },
+            {
+              "path": "$.AccessToken",
+              "op": "matches",
+              "value": "^[0-9a-f]{32}$"
+            },
+            {
+              "path": "$.ServerId",
+              "op": "type",
+              "value": "string"
+            },
+            {
+              "path": "$.SessionInfo.DeviceId",
+              "op": "eq",
+              "value": "sc-users-quickconnect-exchange-tv{{run.suffix}}"
+            }
+          ]
+        },
+        "capture": {
+          "tvTok": "$.AccessToken"
+        }
+      },
+      {
+        "name": "the issued token authenticates",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Me",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-tv{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tvTok}}\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Id",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.quickconnect.unknown-secret",
+    "endpoint": "POST /Users/AuthenticateWithQuickConnect",
+    "spec": "quickconnect.md#exchange",
+    "scope": "modern",
+    "tags": [
+      "quickconnect"
+    ],
+    "covers": [
+      "quickconnect.exchange.R3"
+    ],
+    "steps": [
+      {
+        "name": "secret that was never issued",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateWithQuickConnect",
+          "body": {
+            "Secret": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        },
+        "expect": {
+          "status": 404
+        }
+      }
+    ]
+  },
+  {
+    "id": "users.quickconnect.secret-missing",
+    "endpoint": "POST /Users/AuthenticateWithQuickConnect",
+    "spec": "quickconnect.md#exchange",
+    "scope": "modern",
+    "tags": [
+      "quickconnect",
+      "validation"
+    ],
+    "covers": [
+      "quickconnect.exchange.R4"
+    ],
+    "steps": [
+      {
+        "name": "empty object",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateWithQuickConnect",
+          "bodyRaw": "{}",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "not json",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateWithQuickConnect",
+          "bodyRaw": "nope",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      }
+    ]
+  },
+  {
+    "id": "users.quickconnect.admin-authorizes-other-user",
+    "endpoint": "POST /Users/AuthenticateWithQuickConnect",
+    "spec": "quickconnect.md#exchange",
+    "scope": "modern",
+    "tags": [
+      "quickconnect"
+    ],
+    "covers": [
+      "quickconnect.authorize.R4"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-quickconnect-admin-authorizes-other-user",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-quickconnect-admin-authorizes-other-user",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "initiate",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-admin-authorizes-other-user-tv{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "secret": "$.Secret",
+          "code": "$.Code"
+        }
+      },
+      {
+        "name": "admin authorizes on behalf of another user",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.code}}",
+            "userId": "{{capture.u}}"
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "the token belongs to the other user",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateWithQuickConnect",
+          "body": {
+            "Secret": "{{capture.secret}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.User.Id",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.quickconnect.exchange-revokes-device-token",
+    "endpoint": "POST /Users/AuthenticateWithQuickConnect",
+    "spec": "quickconnect.md#exchange",
+    "scope": "modern",
+    "tags": [
+      "quickconnect",
+      "token-revocation"
+    ],
+    "covers": [
+      "quickconnect.exchange.R5"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-quickconnect-exchange-revokes-device-token",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-quickconnect-exchange-revokes-device-token",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "the TV is already logged in",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-quickconnect-exchange-revokes-device-token",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-tv{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "oldTok": "$.AccessToken"
+        }
+      },
+      {
+        "name": "the phone is logged in",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-quickconnect-exchange-revokes-device-token",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-ui{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "tokUi": "$.AccessToken"
+        }
+      },
+      {
+        "name": "TV starts quick connect with the same DeviceId",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-tv{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "secret": "$.Secret",
+          "code": "$.Code"
+        }
+      },
+      {
+        "name": "phone authorizes",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.code}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "exchange",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateWithQuickConnect",
+          "body": {
+            "Secret": "{{capture.secret}}"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "newTok": "$.AccessToken"
+        }
+      },
+      {
+        "name": "the TV's previous token is revoked",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Me",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-tv{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.oldTok}}\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "the new token works",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Me",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-tv{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.newTok}}\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "the phone is unaffected",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Me",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-exchange-revokes-device-token-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.quickconnect.secret-single-use",
+    "endpoint": "POST /Users/AuthenticateWithQuickConnect",
+    "spec": "quickconnect.md#exchange",
+    "scope": "modern",
+    "tags": [
+      "quickconnect",
+      "security"
+    ],
+    "covers": [
+      "quickconnect.exchange.R6"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-quickconnect-secret-single-use",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-quickconnect-secret-single-use",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "login tmp-quickconnect-secret-single-use",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-quickconnect-secret-single-use",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-secret-single-use-ui{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "tokUi": "$.AccessToken"
+        }
+      },
+      {
+        "name": "initiate",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-secret-single-use-tv{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "secret": "$.Secret",
+          "code": "$.Code"
+        }
+      },
+      {
+        "name": "authorize",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.code}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-secret-single-use-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "first exchange",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateWithQuickConnect",
+          "body": {
+            "Secret": "{{capture.secret}}"
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "second exchange of the same secret",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateWithQuickConnect",
+          "body": {
+            "Secret": "{{capture.secret}}"
+          }
+        },
+        "expect": {
+          "status": 404
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ],
+    "divergence": {
+      "reason": "The reference keeps an authorized secret valid for about ten minutes and returns the same token to every caller that presents it, so a leaked secret can be replayed. A secret must be exchangeable once."
+    }
+  },
+  {
+    "id": "users.quickconnect.disabled",
+    "endpoint": "POST /Users/AuthenticateWithQuickConnect",
+    "spec": "quickconnect.md#disabled",
+    "scope": "modern",
+    "covers": [
+      "quickconnect.disabled.R1",
+      "quickconnect.enabled.R1"
+    ],
+    "steps": [
+      {
+        "name": "turn QuickConnect off",
+        "config": {
+          "set": {
+            "QuickConnectAvailable": false
+          }
+        }
+      },
+      {
+        "name": "availability probe",
+        "request": {
+          "method": "GET",
+          "path": "/QuickConnect/Enabled"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "initiate is refused",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-disabled{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "exchange is refused",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateWithQuickConnect",
+          "body": {
+            "Secret": "0123456789abcdef"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-quickconnect-disabled{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      }
+    ],
+    "tags": [
+      "config-toggle"
+    ]
+  },
+  {
+    "id": "quickconnect.enabled.default",
+    "endpoint": "GET /QuickConnect/Enabled",
+    "spec": "quickconnect.md#enabled",
+    "scope": "modern",
+    "tags": [
+      "quickconnect"
+    ],
+    "covers": [
+      "quickconnect.enabled.R1"
+    ],
+    "steps": [
+      {
+        "name": "anonymous probe",
+        "request": {
+          "method": "GET",
+          "path": "/QuickConnect/Enabled"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "quickconnect.initiate.shape",
+    "endpoint": "POST /QuickConnect/Initiate",
+    "spec": "quickconnect.md#initiate",
+    "scope": "modern",
+    "tags": [
+      "quickconnect",
+      "anonymous"
+    ],
+    "covers": [
+      "quickconnect.initiate.R1",
+      "quickconnect.initiate.R4"
+    ],
+    "steps": [
+      {
+        "name": "initiate",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-quickconnect-initiate-shape-a{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Authenticated",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$.Secret",
+              "op": "type",
+              "value": "string"
+            },
+            {
+              "path": "$.Code",
+              "op": "matches",
+              "value": "^[0-9]{6}$"
+            },
+            {
+              "path": "$.DeviceId",
+              "op": "eq",
+              "value": "sc-quickconnect-initiate-shape-a{{run.suffix}}"
+            },
+            {
+              "path": "$.DeviceName",
+              "op": "eq",
+              "value": "Conformance"
+            },
+            {
+              "path": "$.AppName",
+              "op": "eq",
+              "value": "Conformance"
+            },
+            {
+              "path": "$.AppVersion",
+              "op": "eq",
+              "value": "1.0.0"
+            },
+            {
+              "path": "$.DateAdded",
+              "op": "matches",
+              "value": "^\\d{4}-\\d{2}-\\d{2}T"
+            }
+          ]
+        },
+        "capture": {
+          "secret1": "$.Secret",
+          "code1": "$.Code"
+        }
+      },
+      {
+        "name": "a second initiate gets its own secret",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-quickconnect-initiate-shape-b{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Secret",
+              "op": "ne",
+              "value": "{{capture.secret1}}"
+            },
+            {
+              "path": "$.Code",
+              "op": "ne",
+              "value": "{{capture.code1}}"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "quickconnect.initiate.device-headers-required",
+    "endpoint": "POST /QuickConnect/Initiate",
+    "spec": "quickconnect.md#initiate",
+    "scope": "modern",
+    "tags": [
+      "quickconnect",
+      "validation"
+    ],
+    "covers": [
+      "quickconnect.initiate.R2"
+    ],
+    "steps": [
+      {
+        "name": "no Authorization header",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "noAuth": true
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "no Version",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-quickconnect-no-version{{run.suffix}}\""
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "no DeviceId",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "no Client",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Device=\"Conformance\", DeviceId=\"sc-quickconnect-no-client{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      }
+    ]
+  },
+  {
+    "id": "quickconnect.initiate.invalid-token-ignored",
+    "endpoint": "POST /QuickConnect/Initiate",
+    "spec": "quickconnect.md#initiate",
+    "scope": "modern",
+    "tags": [
+      "quickconnect",
+      "anonymous"
+    ],
+    "covers": [
+      "quickconnect.initiate.R3"
+    ],
+    "steps": [
+      {
+        "name": "a bogus token does not matter",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-quickconnect-bogus-token{{run.suffix}}\", Version=\"1.0.0\", Token=\"00000000000000000000000000000000\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Authenticated",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "quickconnect.connect.poll",
+    "endpoint": "GET /QuickConnect/Connect",
+    "spec": "quickconnect.md#connect",
+    "scope": "modern",
+    "tags": [
+      "quickconnect"
+    ],
+    "covers": [
+      "quickconnect.connect.R1"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-quickconnect-connect-poll",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-quickconnect-connect-poll",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "as": "admin",
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "log in connect-poll",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-quickconnect-connect-poll",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-quickconnect-connect-poll-ui{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "tokUi": "$.AccessToken"
+        }
+      },
+      {
+        "name": "initiate",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-quickconnect-connect-poll-tv{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "secret": "$.Secret",
+          "code": "$.Code"
+        }
+      },
+      {
+        "name": "poll before authorization",
+        "request": {
+          "method": "GET",
+          "path": "/QuickConnect/Connect",
+          "query": {
+            "secret": "{{capture.secret}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Authenticated",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$.Secret",
+              "op": "eq",
+              "value": "{{capture.secret}}"
+            },
+            {
+              "path": "$.Code",
+              "op": "eq",
+              "value": "{{capture.code}}"
+            },
+            {
+              "path": "$.DeviceId",
+              "op": "eq",
+              "value": "sc-quickconnect-connect-poll-tv{{run.suffix}}"
+            }
+          ]
+        }
+      },
+      {
+        "name": "authorize",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.code}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-quickconnect-connect-poll-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokUi}}\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "poll after authorization",
+        "request": {
+          "method": "GET",
+          "path": "/QuickConnect/Connect",
+          "query": {
+            "secret": "{{capture.secret}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Authenticated",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.Code",
+              "op": "eq",
+              "value": "{{capture.code}}"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "quickconnect.connect.unknown-or-missing-secret",
+    "endpoint": "GET /QuickConnect/Connect",
+    "spec": "quickconnect.md#connect",
+    "scope": "modern",
+    "tags": [
+      "quickconnect",
+      "validation"
+    ],
+    "covers": [
+      "quickconnect.connect.R2"
+    ],
+    "steps": [
+      {
+        "name": "secret never issued",
+        "request": {
+          "method": "GET",
+          "path": "/QuickConnect/Connect",
+          "query": {
+            "secret": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "no secret",
+        "request": {
+          "method": "GET",
+          "path": "/QuickConnect/Connect"
+        },
+        "expect": {
+          "status": 400
+        }
+      }
+    ]
+  },
+  {
+    "id": "quickconnect.authorize.anonymous-refused",
+    "endpoint": "POST /QuickConnect/Authorize",
+    "spec": "quickconnect.md#authorize",
+    "scope": "modern",
+    "tags": [
+      "quickconnect",
+      "security"
+    ],
+    "covers": [
+      "quickconnect.authorize.R2"
+    ],
+    "steps": [
+      {
+        "name": "initiate",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-quickconnect-authorize-anon-tv{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "code": "$.Code",
+          "secret": "$.Secret"
+        }
+      },
+      {
+        "name": "authorize without a token",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.code}}"
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "the request stays unauthorized",
+        "request": {
+          "method": "GET",
+          "path": "/QuickConnect/Connect",
+          "query": {
+            "secret": "{{capture.secret}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Authenticated",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "quickconnect.authorize.unknown-or-missing-code",
+    "endpoint": "POST /QuickConnect/Authorize",
+    "spec": "quickconnect.md#authorize",
+    "scope": "modern",
+    "tags": [
+      "quickconnect",
+      "validation"
+    ],
+    "covers": [
+      "quickconnect.authorize.R3"
+    ],
+    "steps": [
+      {
+        "name": "unknown code",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "000000x"
+          }
+        },
+        "expect": {
+          "status": 404
+        },
+        "as": "admin"
+      },
+      {
+        "name": "no code",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize"
+        },
+        "expect": {
+          "status": 400
+        },
+        "as": "admin"
+      }
+    ]
+  },
+  {
+    "id": "quickconnect.authorize.non-admin-other-user-forbidden",
+    "endpoint": "POST /QuickConnect/Authorize",
+    "spec": "quickconnect.md#authorize",
+    "scope": "modern",
+    "tags": [
+      "quickconnect",
+      "security"
+    ],
+    "covers": [
+      "quickconnect.authorize.R5"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-quickconnect-authorize-forbidden-a",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-quickconnect-authorize-forbidden-a",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "as": "admin",
+        "capture": {
+          "a": "$.Id"
+        }
+      },
+      {
+        "name": "create tmp-quickconnect-authorize-forbidden-b",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-quickconnect-authorize-forbidden-b",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "as": "admin",
+        "capture": {
+          "b": "$.Id"
+        }
+      },
+      {
+        "name": "log in authorize-forbidden-a",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-quickconnect-authorize-forbidden-a",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-quickconnect-authorize-forbidden-ui{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "tokA": "$.AccessToken"
+        }
+      },
+      {
+        "name": "initiate",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-quickconnect-authorize-forbidden-tv{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "code": "$.Code",
+          "secret": "$.Secret"
+        }
+      },
+      {
+        "name": "naming another user is refused",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.code}}",
+            "userId": "{{capture.b}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-quickconnect-authorize-forbidden-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokA}}\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "naming oneself works",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.code}}",
+            "userId": "{{capture.a}}"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-quickconnect-authorize-forbidden-ui{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tokA}}\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete a",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.a}}"
+        },
+        "expect": {}
+      },
+      {
+        "name": "delete b",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.b}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "quickconnect.authorize.invalid-user-id",
+    "endpoint": "POST /QuickConnect/Authorize",
+    "spec": "quickconnect.md#authorize",
+    "scope": "modern",
+    "tags": [
+      "quickconnect",
+      "validation"
+    ],
+    "covers": [
+      "quickconnect.authorize.R6"
+    ],
+    "steps": [
+      {
+        "name": "initiate",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-quickconnect-authorize-bad-id-tv{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "code": "$.Code"
+        }
+      },
+      {
+        "name": "userId is not an id",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.code}}",
+            "userId": "zz"
+          }
+        },
+        "expect": {
+          "status": 400
+        },
+        "as": "admin"
+      }
+    ]
+  },
+  {
+    "id": "quickconnect.authorize.unknown-user-id",
+    "endpoint": "POST /QuickConnect/Authorize",
+    "spec": "quickconnect.md#authorize",
+    "scope": "modern",
+    "tags": [
+      "quickconnect",
+      "validation"
+    ],
+    "covers": [
+      "quickconnect.authorize.R7"
+    ],
+    "steps": [
+      {
+        "name": "initiate",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-quickconnect-authorize-unknown-id-tv{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "code": "$.Code",
+          "secret": "$.Secret"
+        }
+      },
+      {
+        "name": "userId of nobody is refused",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.code}}",
+            "userId": "12345678123412341234123456789abc"
+          }
+        },
+        "expect": {
+          "status": 400
+        },
+        "as": "admin"
+      },
+      {
+        "name": "nothing was authorized",
+        "request": {
+          "method": "GET",
+          "path": "/QuickConnect/Connect",
+          "query": {
+            "secret": "{{capture.secret}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Authenticated",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "the empty id means no userId",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.code}}",
+            "userId": "00000000000000000000000000000000"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        },
+        "as": "admin"
+      }
+    ]
+  },
+  {
+    "id": "quickconnect.exchange.disabled-account",
+    "endpoint": "POST /Users/AuthenticateWithQuickConnect",
+    "spec": "quickconnect.md#exchange",
+    "scope": "modern",
+    "tags": [
+      "quickconnect",
+      "security"
+    ],
+    "covers": [
+      "quickconnect.exchange.R7"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-quickconnect-exchange-disabled",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-quickconnect-exchange-disabled",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "as": "admin",
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "initiate",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Initiate",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-quickconnect-exchange-disabled-tv{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "code": "$.Code",
+          "secret": "$.Secret"
+        }
+      },
+      {
+        "name": "read the policy",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "as": "admin",
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "authorize for the account",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "{{capture.code}}",
+            "userId": "{{capture.u}}"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "as": "admin"
+      },
+      {
+        "name": "disable the account",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "IsDisabled": true
+          }
+        },
+        "expect": {
+          "status": 204
+        },
+        "as": "admin"
+      },
+      {
+        "name": "exchange for a disabled account is refused",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateWithQuickConnect",
+          "body": {
+            "Secret": "{{capture.secret}}"
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ],
+    "divergence": {
+      "reason": "The reference issues a working QuickConnect login result for an account that was disabled after its secret was authorized. A disabled account must be refused (403), as on a password login (users.auth.R8)."
+    }
+  },
+  {
+    "id": "quickconnect.disabled.parameters-and-authorize",
+    "endpoint": "POST /QuickConnect/Authorize",
+    "spec": "quickconnect.md#disabled",
+    "scope": "modern",
+    "tags": [
+      "quickconnect",
+      "config-toggle"
+    ],
+    "covers": [
+      "quickconnect.disabled.R1"
+    ],
+    "steps": [
+      {
+        "name": "turn QuickConnect off",
+        "config": {
+          "set": {
+            "QuickConnectAvailable": false
+          }
+        }
+      },
+      {
+        "name": "connect is refused",
+        "request": {
+          "method": "GET",
+          "path": "/QuickConnect/Connect",
+          "query": {
+            "secret": "0123456789abcdef"
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "authorize is refused",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "000000"
+          }
+        },
+        "expect": {
+          "status": 401
+        },
+        "as": "admin"
+      },
+      {
+        "name": "missing parameters are still a validation error: connect",
+        "request": {
+          "method": "GET",
+          "path": "/QuickConnect/Connect"
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "missing parameters are still a validation error: authorize",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize"
+        },
+        "expect": {
+          "status": 400
+        },
+        "as": "admin"
+      },
+      {
+        "name": "anonymous authorize is refused as usual",
+        "request": {
+          "method": "POST",
+          "path": "/QuickConnect/Authorize",
+          "query": {
+            "code": "000000"
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      }
+    ]
+  }
+]

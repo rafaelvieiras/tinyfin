@@ -142,19 +142,7 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 
 **Precondition for the scenarios.** The server has QuickConnect enabled (`GET /QuickConnect/Enabled` is `true`). The flows below need no second device: one script plays both the TV (`Initiate`, poll) and the signed-in phone (`Authorize`). `Initiate`/`Authorize` themselves are specified in the QuickConnect area; here only their effect on the exchange is used.
 
-**Divergence.** The reference lets an authorized secret be exchanged repeatedly for about ten minutes and returns the same token each time (replay). Tinyfin must make the secret single-use (`users.quickconnect.R7`); the scenario carries a `divergence` record and is skipped on the reference.
-
-
-**Rules**
-
-- **users.quickconnect.R1** After a QuickConnect request (`POST /QuickConnect/Initiate`) has been authorized by a signed-in user (`POST /QuickConnect/Authorize`), presenting its `Secret` answers `200` with the same `{User, SessionInfo, AccessToken, ServerId}` shape as password login. The token belongs to the authorizing user (or the user named in `userId`), is bound to the device identity sent to `Initiate`, and works as a normal token.
-- **users.quickconnect.R2** Presenting the `Secret` before it is authorized answers `404`; the client keeps polling.
-- **users.quickconnect.R3** A secret that does not exist (or has expired) answers `404`.
-- **users.quickconnect.R4** A body without `Secret`, or not JSON, answers `400`.
-- **users.quickconnect.R5** When an administrator authorizes with another `userId`, the issued token belongs to that user; a non-administrator naming another user answers `403` at the authorize step.
-- **users.quickconnect.R6** Issuing the token revokes any earlier token of the same user on the same `DeviceId`, exactly like a password login.
-- **users.quickconnect.R7** A secret can be exchanged once: a second exchange answers `404`.
-- **users.quickconnect.R8** When QuickConnect is disabled on the server every QuickConnect step answers `401`. 
+**Rules and scenarios.** The exchange, and the `Initiate` / `Connect` / `Authorize` routes it depends on, are specified in [`quickconnect.md`](quickconnect.md) (rules `quickconnect.<topic>.R<n>`, scenarios in `../scenarios/quickconnect.json`).
 
 ---
 
@@ -668,15 +656,6 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 | `users.forgot.R8` | `users.forgot-pin.redeem` (pending) |
 | `users.forgot.R9` | `users.forgot-pin.throttle` (pending) |
 | `users.forgot.R10` | `users.forgot.pinfile-bare-name` |
-| `users.quickconnect.R1` | `users.quickconnect.exchange` |
-| `users.quickconnect.R2` | `users.quickconnect.exchange` |
-| `users.quickconnect.R3` | `users.quickconnect.unknown-secret` |
-| `users.quickconnect.R4` | `users.quickconnect.secret-missing` |
-| `users.quickconnect.R5` | `users.quickconnect.admin-authorizes-other-user` |
-| `users.quickconnect.R6` | `users.quickconnect.exchange-revokes-device-token` |
-| `users.quickconnect.R7` | `users.forgot.pinfile-bare-name` | `PinFile` is the absolute path of the reset file on the server (finding S11). | `PinFile` is a bare file name, no path. |
-| `users.quickconnect.secret-single-use` |
-| `users.quickconnect.R8` | `users.quickconnect.disabled` |
 | `users.socket.R1` | `users.socket.upgrade`, `users.socket.upgrade-api-key` |
 | `users.socket.R2` | `users.socket.refused-without-credential` |
 | `users.socket.R3` | `users.socket.upgrade` |
@@ -688,7 +667,6 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 | Scenario | Reference behavior | Required behavior |
 |---|---|---|
 | `users.delete.last-admin-refused` | A refused deletion of the only administrator (`400`) still revokes all of that user's tokens (finding S13). | `400` and no side effect. |
-| `users.quickconnect.secret-single-use` | An authorized QuickConnect secret can be exchanged repeatedly for ~10 minutes, returning the same token (finding S9). | Exchangeable once; the second attempt answers `404`. |
 
 ## Behaviors replicated on purpose (security findings kept as-is)
 
@@ -707,7 +685,7 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 6. `HasPassword`, `HasConfiguredPassword`, `LastLoginDate` and `SessionInfo.{UserId,DeviceId,Client,DeviceName}` are part of the observed user/session objects but are not described field by field in the audit; they come from the shape of the official clients' use and must be confirmed against the reference.
 7. Path ids that are not GUIDs (`400`) follow from request binding and are not separately documented in the audit.
 8. A request whose body omits `Configuration` on `POST /Users` resets preferences to defaults (`users.update.R9`); the audit states the default but not the intent. Confirm on the reference.
-9. QuickConnect is assumed enabled on the test server; the disabled case is covered by `users.quickconnect.disabled`, which switches it off through `POST /System/Configuration` and always restores the setting afterwards.
+9. QuickConnect is specified in `quickconnect.md`; it is assumed enabled on the test server.
 10. Fixture `disabled` (in `fixtures.json`) is created and disabled through the policy endpoint, but the runner never logs in a user whose policy sets `IsDisabled` (login answers `403` by design), so it has no token: it is available for `{{user.disabled.id|name}}` templates and as a target, never as an `as` identity. Scenarios that need a disabled account with a token create it themselves and disable it mid-scenario.
 11. Remote-access restriction (`EnableRemoteAccess=false`) cannot be exercised from a local runner (`users.auth.R21`, pending): the runner always connects from the local network and the forwarded-address headers are only trusted from configured proxies. `users.forgot-pin.redeem` stays pending as well: the PIN is only written to a file on the server.
 12. Admin self-service rules differ between the modern route (no `CurrentPw` without `userId`) and the alias (always required). They are replicated as observed.
