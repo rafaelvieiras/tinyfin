@@ -121,6 +121,11 @@ reference source open in the same session.
   templates carry the tag `server-clock` (they need the administrator to be
   able to create users and set policies).
 * `capture` stores a value (`$.json.path` or `header:Name`) for later steps.
+* JSON paths are `$.a.b`, `$.a[0]`, `$.a[*].b` (every element) and
+  `$.a[?k=v].b`: the last element of the array whose member `k`, rendered as
+  text, equals `v` (lists that append in creation order, so the newest match
+  wins; not found when none matches). Templates are expanded in paths and in
+  capture sources, so `$.Items[?AppName={{capture.n}}].AccessToken` works.
 * Non-HTTP steps: `{"sleepMs": 1500}` pauses (time-based rules);
   `{"config": {"set": {"QuickConnectAvailable": false}}}` patches the
   server-wide configuration and the original is **always restored** when the

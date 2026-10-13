@@ -601,6 +601,10 @@ func (c *Client) checkExpect(st Step, resp *Response, scratch map[string]string)
 		}
 	}
 	for name, src := range st.Capture {
+		src, err := c.expand(src, scratch)
+		if err != nil {
+			return fmt.Errorf("capture %s: %w", name, err)
+		}
 		v, err := capture(resp, src)
 		if err != nil {
 			return fmt.Errorf("capture %s: %w", name, err)
@@ -722,7 +726,11 @@ func (c *Client) checkAssert(r *Response, a Assert, scratch map[string]string) e
 	if r.JSON == nil && a.Op != "absent" {
 		return fmt.Errorf("response has no JSON body")
 	}
-	got, found, err := evalPath(r.JSON, a.Path)
+	path, err := c.expand(a.Path, scratch)
+	if err != nil {
+		return err
+	}
+	got, found, err := evalPath(r.JSON, path)
 	if err != nil {
 		return err
 	}

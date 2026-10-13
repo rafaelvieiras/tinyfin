@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -71,7 +70,7 @@ func defaultUserConfiguration() userConfigurationDto {
 	c := userConfigurationDto{
 		CastReceiverId:             defaultCastReceiverID,
 		PlayDefaultAudioTrack:      true,
-		SubtitleMode:               "Default",
+		SubtitleMode:               subtitleModeValue("Default"),
 		HidePlayedInLatest:         true,
 		RememberAudioSelections:    true,
 		RememberSubtitleSelections: true,
@@ -104,39 +103,15 @@ func (c *userConfigurationDto) normalizeLists() {
 	}
 }
 
-func validSubtitleMode(m string) bool {
-	switch m {
-	case "Default", "Always", "OnlyForced", "None", "Smart":
-		return true
-	}
-	return false
-}
-
 // decodeUserConfiguration reads a configuration object from r onto the
-// defaults. ok is false for a body that is not a JSON object of the right
-// shape or that carries an invalid enum value.
+// defaults. ok is false for a body that is not a JSON object or that holds
+// a member the reference refuses (users.configuration.R7-R11).
 func decodeUserConfiguration(r io.Reader) (userConfigurationDto, bool) {
-	c := defaultUserConfiguration()
-	// Empty means "not supplied": the caller keeps the stored receiver.
-	c.CastReceiverId = ""
-	if err := json.NewDecoder(r).Decode(&c); err != nil {
-		return c, false
+	raw, err := io.ReadAll(r)
+	if err != nil {
+		return defaultUserConfiguration(), false
 	}
-	return validatedConfiguration(c)
-}
-
-func validatedConfiguration(c userConfigurationDto) (userConfigurationDto, bool) {
-	if !validSubtitleMode(c.SubtitleMode) {
-		return c, false
-	}
-	// users.prefs.R1-R2: CastReceiverId is only taken when it names a
-	// known receiver; otherwise it stays empty and the caller keeps the
-	// stored one (see withStoredCastReceiver).
-	if !knownCastReceiverIDs[c.CastReceiverId] {
-		c.CastReceiverId = ""
-	}
-	c.normalizeLists()
-	return c, true
+	return parseUserConfigRequest(raw)
 }
 
 // withStoredCastReceiver fills an unset CastReceiverId with the account's
@@ -282,7 +257,7 @@ func (s *Server) handleUsersUpdate(w http.ResponseWriter, r *http.Request) {
 	cfg.CastReceiverId = ""
 	if req.Configuration != nil && string(req.Configuration) != "null" {
 		var ok bool
-		if cfg, ok = decodeUserConfiguration(bytes.NewReader(req.Configuration)); !ok {
+		if cfg, ok = parseUserConfigRequest(req.Configuration); !ok {
 			writeBadRequest(w)
 			return
 		}

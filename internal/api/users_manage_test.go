@@ -272,7 +272,7 @@ func TestUserConfiguration(t *testing.T) {
 	full := `{"SubtitleMode":"OnlyForced","AudioLanguagePreference":"jpn","SubtitleLanguagePreference":"eng","PlayDefaultAudioTrack":false,
 		"HidePlayedInLatest":false,"DisplayMissingEpisodes":true,"DisplayCollectionsView":true,"EnableNextEpisodeAutoPlay":false,
 		"RememberAudioSelections":false,"RememberSubtitleSelections":false,"EnableLocalPassword":true,
-		"OrderedViews":["a"],"GroupedFolders":["g"],"MyMediaExcludes":["m"],"LatestItemsExcludes":["l"],"CastReceiverId":"nope"}`
+		"OrderedViews":["11111111222233334444555555555551"],"GroupedFolders":["11111111222233334444555555555552"],"MyMediaExcludes":["11111111222233334444555555555553"],"LatestItemsExcludes":["11111111222233334444555555555554"],"CastReceiverId":"nope"}`
 	if code := post(aliceTok, "/Users/Configuration", full); code != http.StatusNoContent {
 		t.Fatalf("own update: %d", code)
 	}

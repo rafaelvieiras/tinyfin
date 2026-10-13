@@ -23360,5 +23360,4186 @@
         "expect": {}
       }
     ]
+  },
+  {
+    "id": "users.configuration.invalid-members",
+    "endpoint": "POST /Users/Configuration",
+    "spec": "users.md#update-user-configuration",
+    "scope": "modern",
+    "tags": [
+      "validation",
+      "users",
+      "configuration"
+    ],
+    "covers": [
+      "users.configuration.R7",
+      "users.configuration.R8",
+      "users.configuration.R10",
+      "users.configuration.R14"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-config-invalid",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-config-invalid",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "set a known state",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": "Smart",
+            "PlayDefaultAudioTrack": false
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "null boolean",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "PlayDefaultAudioTrack": null
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "null boolean (another member)",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "EnableNextEpisodeAutoPlay": null
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "string for a boolean",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "HidePlayedInLatest": "true"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "number for a boolean",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "EnableLocalPassword": 0
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "null SubtitleMode",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": null
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "null list",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "OrderedViews": null
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "null list (another member)",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "MyMediaExcludes": null
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "string for a list",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "GroupedFolders": "abc"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "non-GUID list entry",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "LatestItemsExcludes": [
+              "x"
+            ]
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "good and non-GUID list entries",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "OrderedViews": [
+              "11111111-2222-3333-4444-555555555555",
+              "nope"
+            ]
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "empty-string list entry",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "MyMediaExcludes": [
+              ""
+            ]
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "number list entry",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "GroupedFolders": [
+              1
+            ]
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "array for a string member",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "AudioLanguagePreference": [
+              "a"
+            ]
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "object for a string member",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleLanguagePreference": {}
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "unknown SubtitleMode name",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": "nope"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "empty SubtitleMode",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": ""
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "boolean SubtitleMode",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": true
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "nothing was changed",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "Smart"
+            },
+            {
+              "path": "$.Configuration.PlayDefaultAudioTrack",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.configuration-alias.invalid-members",
+    "endpoint": "POST /Users/{userId}/Configuration",
+    "spec": "users.md#update-user-configuration-legacy-alias",
+    "scope": "legacy-web-required",
+    "tags": [
+      "validation",
+      "users",
+      "configuration"
+    ],
+    "covers": [
+      "users.configuration.R7",
+      "users.configuration.R8",
+      "users.configuration.R10",
+      "users.configuration.R14"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-config-invalid-alias",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-config-invalid-alias",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "set a known state",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleMode": "Smart",
+            "PlayDefaultAudioTrack": false
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "null boolean",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "PlayDefaultAudioTrack": null
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "null boolean (another member)",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "EnableNextEpisodeAutoPlay": null
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "string for a boolean",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "HidePlayedInLatest": "true"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "number for a boolean",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "EnableLocalPassword": 0
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "null SubtitleMode",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleMode": null
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "null list",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "OrderedViews": null
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "null list (another member)",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "MyMediaExcludes": null
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "string for a list",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "GroupedFolders": "abc"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "non-GUID list entry",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "LatestItemsExcludes": [
+              "x"
+            ]
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "good and non-GUID list entries",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "OrderedViews": [
+              "11111111-2222-3333-4444-555555555555",
+              "nope"
+            ]
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "empty-string list entry",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "MyMediaExcludes": [
+              ""
+            ]
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "number list entry",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "GroupedFolders": [
+              1
+            ]
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "array for a string member",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "AudioLanguagePreference": [
+              "a"
+            ]
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "object for a string member",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleLanguagePreference": {}
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "unknown SubtitleMode name",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleMode": "nope"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "empty SubtitleMode",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleMode": ""
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "boolean SubtitleMode",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleMode": true
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "nothing was changed",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "Smart"
+            },
+            {
+              "path": "$.Configuration.PlayDefaultAudioTrack",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.configuration.body-shapes",
+    "endpoint": "POST /Users/Configuration",
+    "spec": "users.md#update-user-configuration",
+    "scope": "modern",
+    "tags": [
+      "validation",
+      "users",
+      "configuration"
+    ],
+    "covers": [
+      "users.configuration.R11"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-config-bodies",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-config-bodies",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "JSON null",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "bodyRaw": "null",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "empty body",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "bodyRaw": "",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "array",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "bodyRaw": "[]",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "number",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "bodyRaw": "1",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "string",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "bodyRaw": "\"x\"",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "true",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "bodyRaw": "true",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "trailing garbage",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "bodyRaw": "{} x",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "trailing comma",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "bodyRaw": "{\"SubtitleMode\":\"Always\",}",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "truncated",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "bodyRaw": "{",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "empty object",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "unknown members are ignored",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "Nope": 1,
+            "Other": null,
+            "SubtitleMode": "Always"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "the known member was applied",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "Always"
+            }
+          ]
+        }
+      },
+      {
+        "name": "member names are case-insensitive",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "subtitlemode": "None",
+            "playdefaultaudiotrack": false
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "lower-case names applied",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "None"
+            },
+            {
+              "path": "$.Configuration.PlayDefaultAudioTrack",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "a repeated member: the last wins",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "bodyRaw": "{\"SubtitleMode\":\"Always\",\"SubtitleMode\":\"Smart\"}",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "last value won",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "Smart"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.configuration-alias.body-shapes",
+    "endpoint": "POST /Users/{userId}/Configuration",
+    "spec": "users.md#update-user-configuration-legacy-alias",
+    "scope": "legacy-web-required",
+    "tags": [
+      "validation",
+      "users",
+      "configuration"
+    ],
+    "covers": [
+      "users.configuration.R11"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-config-bodies-alias",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-config-bodies-alias",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "JSON null",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "bodyRaw": "null",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "empty body",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "bodyRaw": "",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "array",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "bodyRaw": "[]",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "number",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "bodyRaw": "1",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "string",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "bodyRaw": "\"x\"",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "true",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "bodyRaw": "true",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "trailing garbage",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "bodyRaw": "{} x",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "trailing comma",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "bodyRaw": "{\"SubtitleMode\":\"Always\",}",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "truncated",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "bodyRaw": "{",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "empty object",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {}
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "unknown members are ignored",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "Nope": 1,
+            "Other": null,
+            "SubtitleMode": "Always"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "the known member was applied",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "Always"
+            }
+          ]
+        }
+      },
+      {
+        "name": "member names are case-insensitive",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "subtitlemode": "None",
+            "playdefaultaudiotrack": false
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "lower-case names applied",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "None"
+            },
+            {
+              "path": "$.Configuration.PlayDefaultAudioTrack",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "a repeated member: the last wins",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "bodyRaw": "{\"SubtitleMode\":\"Always\",\"SubtitleMode\":\"Smart\"}",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "last value won",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "Smart"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.configuration.lenient-values",
+    "endpoint": "POST /Users/Configuration",
+    "spec": "users.md#update-user-configuration",
+    "scope": "modern",
+    "tags": [
+      "users",
+      "configuration"
+    ],
+    "covers": [
+      "users.configuration.R8",
+      "users.configuration.R9",
+      "users.configuration.R10"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-config-lenient",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-config-lenient",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "enum number 2",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": 2
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: enum number 2",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "OnlyForced"
+            }
+          ]
+        }
+      },
+      {
+        "name": "enum number 0",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": 0
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: enum number 0",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "Default"
+            }
+          ]
+        }
+      },
+      {
+        "name": "enum name, other case",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": "always"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: enum name, other case",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "Always"
+            }
+          ]
+        }
+      },
+      {
+        "name": "enum name, upper case",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": "ONLYFORCED"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: enum name, upper case",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "OnlyForced"
+            }
+          ]
+        }
+      },
+      {
+        "name": "number as text",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": "3"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: number as text",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "None"
+            }
+          ]
+        }
+      },
+      {
+        "name": "signed number as text with spaces",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": " +4 "
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: signed number as text with spaces",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "Smart"
+            }
+          ]
+        }
+      },
+      {
+        "name": "number outside the enum is kept as a number",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": 9
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: number outside the enum is kept as a number",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": 9
+            }
+          ]
+        }
+      },
+      {
+        "name": "negative number",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": -1
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: negative number",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": -1
+            }
+          ]
+        }
+      },
+      {
+        "name": "names combine like flags",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": "Always, None"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: names combine like flags",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "None"
+            }
+          ]
+        }
+      },
+      {
+        "name": "combined value outside the enum",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": "always,smart"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: combined value outside the enum",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": 5
+            }
+          ]
+        }
+      },
+      {
+        "name": "one trailing comma is ignored",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": "Smart,"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: one trailing comma is ignored",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "Smart"
+            }
+          ]
+        }
+      },
+      {
+        "name": "empty member in a combination",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": "Always,,None"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "number inside a combination",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": "Always,1"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "fraction",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": 1.5
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "int32 overflow",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": 2147483648
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "number for a string member",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "AudioLanguagePreference": 5,
+            "SubtitleLanguagePreference": 1.5
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: number for a string member",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.AudioLanguagePreference",
+              "op": "eq",
+              "value": "5"
+            },
+            {
+              "path": "$.Configuration.SubtitleLanguagePreference",
+              "op": "eq",
+              "value": "1.5"
+            }
+          ]
+        }
+      },
+      {
+        "name": "boolean for a string member",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "AudioLanguagePreference": true,
+            "SubtitleLanguagePreference": false
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: boolean for a string member",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.AudioLanguagePreference",
+              "op": "eq",
+              "value": "true"
+            },
+            {
+              "path": "$.Configuration.SubtitleLanguagePreference",
+              "op": "eq",
+              "value": "false"
+            }
+          ]
+        }
+      },
+      {
+        "name": "list entries in every spelling",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "OrderedViews": [
+              "11111111-2222-3333-4444-555555555555",
+              "{11111111-2222-3333-4444-555555555555}",
+              "(11111111-2222-3333-4444-555555555555)",
+              " 11111111222233334444555555555555 ",
+              "11111111-2222-3333-4444-555555555555"
+            ],
+            "GroupedFolders": [
+              null
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: lists hold canonical ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.OrderedViews",
+              "op": "len",
+              "value": 5
+            },
+            {
+              "path": "$.Configuration.OrderedViews[*]",
+              "op": "allmatch",
+              "value": "^11111111222233334444555555555555$"
+            },
+            {
+              "path": "$.Configuration.GroupedFolders[0]",
+              "op": "eq",
+              "value": "00000000000000000000000000000000"
+            }
+          ]
+        }
+      },
+      {
+        "name": "unbalanced brace",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "OrderedViews": [
+              "{11111111-2222-3333-4444-555555555555"
+            ]
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "dashes in the wrong places",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "OrderedViews": [
+              "11111111-222233334444555555555555"
+            ]
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.configuration-alias.lenient-values",
+    "endpoint": "POST /Users/{userId}/Configuration",
+    "spec": "users.md#update-user-configuration-legacy-alias",
+    "scope": "legacy-web-required",
+    "tags": [
+      "users",
+      "configuration"
+    ],
+    "covers": [
+      "users.configuration.R8",
+      "users.configuration.R9",
+      "users.configuration.R10"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-config-lenient-alias",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-config-lenient-alias",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "enum number 2",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleMode": 2
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: enum number 2",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "OnlyForced"
+            }
+          ]
+        }
+      },
+      {
+        "name": "enum number 0",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleMode": 0
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: enum number 0",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "Default"
+            }
+          ]
+        }
+      },
+      {
+        "name": "enum name, other case",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleMode": "always"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: enum name, other case",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "Always"
+            }
+          ]
+        }
+      },
+      {
+        "name": "enum name, upper case",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleMode": "ONLYFORCED"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: enum name, upper case",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "OnlyForced"
+            }
+          ]
+        }
+      },
+      {
+        "name": "number as text",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleMode": "3"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: number as text",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "None"
+            }
+          ]
+        }
+      },
+      {
+        "name": "signed number as text with spaces",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleMode": " +4 "
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: signed number as text with spaces",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "Smart"
+            }
+          ]
+        }
+      },
+      {
+        "name": "number outside the enum is kept as a number",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleMode": 9
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: number outside the enum is kept as a number",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": 9
+            }
+          ]
+        }
+      },
+      {
+        "name": "negative number",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleMode": -1
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: negative number",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": -1
+            }
+          ]
+        }
+      },
+      {
+        "name": "names combine like flags",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleMode": "Always, None"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: names combine like flags",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "None"
+            }
+          ]
+        }
+      },
+      {
+        "name": "combined value outside the enum",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleMode": "always,smart"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: combined value outside the enum",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": 5
+            }
+          ]
+        }
+      },
+      {
+        "name": "one trailing comma is ignored",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleMode": "Smart,"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: one trailing comma is ignored",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "Smart"
+            }
+          ]
+        }
+      },
+      {
+        "name": "empty member in a combination",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleMode": "Always,,None"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "number inside a combination",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleMode": "Always,1"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "fraction",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleMode": 1.5
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "int32 overflow",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "SubtitleMode": 2147483648
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "number for a string member",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "AudioLanguagePreference": 5,
+            "SubtitleLanguagePreference": 1.5
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: number for a string member",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.AudioLanguagePreference",
+              "op": "eq",
+              "value": "5"
+            },
+            {
+              "path": "$.Configuration.SubtitleLanguagePreference",
+              "op": "eq",
+              "value": "1.5"
+            }
+          ]
+        }
+      },
+      {
+        "name": "boolean for a string member",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "AudioLanguagePreference": true,
+            "SubtitleLanguagePreference": false
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: boolean for a string member",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.AudioLanguagePreference",
+              "op": "eq",
+              "value": "true"
+            },
+            {
+              "path": "$.Configuration.SubtitleLanguagePreference",
+              "op": "eq",
+              "value": "false"
+            }
+          ]
+        }
+      },
+      {
+        "name": "list entries in every spelling",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "OrderedViews": [
+              "11111111-2222-3333-4444-555555555555",
+              "{11111111-2222-3333-4444-555555555555}",
+              "(11111111-2222-3333-4444-555555555555)",
+              " 11111111222233334444555555555555 ",
+              "11111111-2222-3333-4444-555555555555"
+            ],
+            "GroupedFolders": [
+              null
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read: lists hold canonical ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.OrderedViews",
+              "op": "len",
+              "value": 5
+            },
+            {
+              "path": "$.Configuration.OrderedViews[*]",
+              "op": "allmatch",
+              "value": "^11111111222233334444555555555555$"
+            },
+            {
+              "path": "$.Configuration.GroupedFolders[0]",
+              "op": "eq",
+              "value": "00000000000000000000000000000000"
+            }
+          ]
+        }
+      },
+      {
+        "name": "unbalanced brace",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "OrderedViews": [
+              "{11111111-2222-3333-4444-555555555555"
+            ]
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "dashes in the wrong places",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Configuration",
+          "body": {
+            "OrderedViews": [
+              "11111111-222233334444555555555555"
+            ]
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.configuration.via-user-update",
+    "endpoint": "POST /Users",
+    "spec": "users.md#update-user-configuration",
+    "scope": "modern",
+    "tags": [
+      "validation",
+      "users",
+      "configuration"
+    ],
+    "covers": [
+      "users.configuration.R12"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-config-via-update",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-config-via-update",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "set a known state",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "Name": "tmp-config-via-update",
+            "Configuration": {
+              "SubtitleMode": "Smart"
+            },
+            "Policy": {
+              "AuthenticationProviderId": "{{capture.ap}}",
+              "PasswordResetProviderId": "{{capture.rp}}"
+            }
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "null boolean",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "Name": "tmp-config-via-update",
+            "Configuration": {
+              "PlayDefaultAudioTrack": null
+            },
+            "Policy": {
+              "AuthenticationProviderId": "{{capture.ap}}",
+              "PasswordResetProviderId": "{{capture.rp}}"
+            }
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "null SubtitleMode",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "Name": "tmp-config-via-update",
+            "Configuration": {
+              "SubtitleMode": null
+            },
+            "Policy": {
+              "AuthenticationProviderId": "{{capture.ap}}",
+              "PasswordResetProviderId": "{{capture.rp}}"
+            }
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "null list",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "Name": "tmp-config-via-update",
+            "Configuration": {
+              "OrderedViews": null
+            },
+            "Policy": {
+              "AuthenticationProviderId": "{{capture.ap}}",
+              "PasswordResetProviderId": "{{capture.rp}}"
+            }
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "non-GUID list entry",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "Name": "tmp-config-via-update",
+            "Configuration": {
+              "OrderedViews": [
+                "x"
+              ]
+            },
+            "Policy": {
+              "AuthenticationProviderId": "{{capture.ap}}",
+              "PasswordResetProviderId": "{{capture.rp}}"
+            }
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "string Configuration",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "Name": "tmp-config-via-update",
+            "Configuration": "x",
+            "Policy": {
+              "AuthenticationProviderId": "{{capture.ap}}",
+              "PasswordResetProviderId": "{{capture.rp}}"
+            }
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "array Configuration",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "Name": "tmp-config-via-update",
+            "Configuration": [],
+            "Policy": {
+              "AuthenticationProviderId": "{{capture.ap}}",
+              "PasswordResetProviderId": "{{capture.rp}}"
+            }
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "nothing was changed",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "Smart"
+            }
+          ]
+        }
+      },
+      {
+        "name": "enum number",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "Name": "tmp-config-via-update",
+            "Configuration": {
+              "SubtitleMode": 2
+            },
+            "Policy": {
+              "AuthenticationProviderId": "{{capture.ap}}",
+              "PasswordResetProviderId": "{{capture.rp}}"
+            }
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "number applied",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "OnlyForced"
+            }
+          ]
+        }
+      },
+      {
+        "name": "enum name, other case",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "Name": "tmp-config-via-update",
+            "Configuration": {
+              "SubtitleMode": "always"
+            },
+            "Policy": {
+              "AuthenticationProviderId": "{{capture.ap}}",
+              "PasswordResetProviderId": "{{capture.rp}}"
+            }
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "case-insensitive name applied",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "Always"
+            }
+          ]
+        }
+      },
+      {
+        "name": "number for a string member",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "Name": "tmp-config-via-update",
+            "Configuration": {
+              "AudioLanguagePreference": 5
+            },
+            "Policy": {
+              "AuthenticationProviderId": "{{capture.ap}}",
+              "PasswordResetProviderId": "{{capture.rp}}"
+            }
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "number read as text",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.AudioLanguagePreference",
+              "op": "eq",
+              "value": "5"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.configuration.validation-order",
+    "endpoint": "POST /Users/Configuration",
+    "spec": "users.md#update-user-configuration",
+    "scope": "modern",
+    "tags": [
+      "validation",
+      "users",
+      "configuration"
+    ],
+    "covers": [
+      "users.configuration.R13"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-config-order",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-config-order",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "create alice-like second user",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-config-order-2",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "v": "$.Id"
+        }
+      },
+      {
+        "name": "log the second user in",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-config-order-2",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-configuration-order{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "vtok": "$.AccessToken"
+        }
+      },
+      {
+        "name": "anonymous with a bad body",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "PlayDefaultAudioTrack": null
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "another user's configuration, valid body",
+        "as": "token:{{capture.vtok}}",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "another user's configuration, bad body",
+        "as": "token:{{capture.vtok}}",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "PlayDefaultAudioTrack": null
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "another user's configuration, null body",
+        "as": "token:{{capture.vtok}}",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "bodyRaw": "null",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "unknown user, valid body",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "00000000-0000-0000-0000-000000000001"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "unknown user, bad body",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "00000000-0000-0000-0000-000000000001"
+          },
+          "body": {
+            "PlayDefaultAudioTrack": null
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "unknown user in the path, bad body",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/00000000-0000-0000-0000-000000000001/Configuration",
+          "body": {
+            "PlayDefaultAudioTrack": null
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "malformed id, bad body",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "not-a-guid"
+          },
+          "body": {
+            "PlayDefaultAudioTrack": null
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "own configuration, bad body",
+        "as": "token:{{capture.vtok}}",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "body": {
+            "PlayDefaultAudioTrack": null
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "own configuration, valid body",
+        "as": "token:{{capture.vtok}}",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "body": {
+            "SubtitleMode": "always"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      },
+      {
+        "name": "delete v",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.v}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.keys.listing-shape",
+    "endpoint": "GET /Auth/Keys",
+    "spec": "users.md#api-keys",
+    "scope": "modern",
+    "tags": [
+      "keys"
+    ],
+    "covers": [
+      "users.keys.R1",
+      "users.keys.R2",
+      "users.keys.R3"
+    ],
+    "steps": [
+      {
+        "name": "create a key",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Auth/Keys?app=conf-keys-shape{{run.suffix}}"
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "the listing",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Auth/Keys"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.StartIndex",
+              "op": "eq",
+              "value": 0
+            },
+            {
+              "path": "$.TotalRecordCount",
+              "op": "gte",
+              "value": 1
+            },
+            {
+              "path": "$.Items",
+              "op": "type",
+              "value": "array"
+            },
+            {
+              "path": "$.Items[?AppName=conf-keys-shape{{run.suffix}}].Id",
+              "op": "eq",
+              "value": 0
+            },
+            {
+              "path": "$.Items[?AppName=conf-keys-shape{{run.suffix}}].AccessToken",
+              "op": "hex32"
+            },
+            {
+              "path": "$.Items[?AppName=conf-keys-shape{{run.suffix}}].AppName",
+              "op": "eq",
+              "value": "conf-keys-shape{{run.suffix}}"
+            },
+            {
+              "path": "$.Items[?AppName=conf-keys-shape{{run.suffix}}].DeviceId",
+              "op": "eq",
+              "value": ""
+            },
+            {
+              "path": "$.Items[?AppName=conf-keys-shape{{run.suffix}}].AppVersion",
+              "op": "eq",
+              "value": ""
+            },
+            {
+              "path": "$.Items[?AppName=conf-keys-shape{{run.suffix}}].DeviceName",
+              "op": "eq",
+              "value": ""
+            },
+            {
+              "path": "$.Items[?AppName=conf-keys-shape{{run.suffix}}].UserId",
+              "op": "eq",
+              "value": "00000000000000000000000000000000"
+            },
+            {
+              "path": "$.Items[?AppName=conf-keys-shape{{run.suffix}}].IsActive",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$.Items[?AppName=conf-keys-shape{{run.suffix}}].DateCreated",
+              "op": "matches",
+              "value": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{0,6}[1-9]|\\.0000000)Z$"
+            },
+            {
+              "path": "$.Items[?AppName=conf-keys-shape{{run.suffix}}].DateLastActivity",
+              "op": "eq",
+              "value": "0001-01-01T00:00:00.0000000Z"
+            },
+            {
+              "path": "$.Items[?AppName=conf-keys-shape{{run.suffix}}].DateRevoked",
+              "op": "absent"
+            }
+          ]
+        },
+        "capture": {
+          "k": "$.Items[?AppName=conf-keys-shape{{run.suffix}}].AccessToken"
+        }
+      },
+      {
+        "name": "paging parameters are ignored",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Auth/Keys",
+          "query": {
+            "startIndex": "1",
+            "limit": "1"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.StartIndex",
+              "op": "eq",
+              "value": 0
+            },
+            {
+              "path": "$.Items[?AppName=conf-keys-shape{{run.suffix}}].AppName",
+              "op": "eq",
+              "value": "conf-keys-shape{{run.suffix}}"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "revoke k",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Auth/Keys/{{capture.k}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.keys.app-name-verbatim",
+    "endpoint": "POST /Auth/Keys",
+    "spec": "users.md#api-keys",
+    "scope": "modern",
+    "tags": [
+      "keys"
+    ],
+    "covers": [
+      "users.keys.R3"
+    ],
+    "steps": [
+      {
+        "name": "name with surrounding spaces",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Auth/Keys?app=%20conf-keys-padded{{run.suffix}}%20"
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "the spaces are kept",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Auth/Keys"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[?AppName= conf-keys-padded{{run.suffix}} ].AppName",
+              "op": "eq",
+              "value": " conf-keys-padded{{run.suffix}} "
+            }
+          ]
+        },
+        "capture": {
+          "k1": "$.Items[?AppName= conf-keys-padded{{run.suffix}} ].AccessToken"
+        }
+      },
+      {
+        "name": "query name is case-insensitive",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Auth/Keys?APP=conf-keys-upper{{run.suffix}}"
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "created",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Auth/Keys"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[?AppName=conf-keys-upper{{run.suffix}}].AppName",
+              "op": "eq",
+              "value": "conf-keys-upper{{run.suffix}}"
+            }
+          ]
+        },
+        "capture": {
+          "k2": "$.Items[?AppName=conf-keys-upper{{run.suffix}}].AccessToken"
+        }
+      },
+      {
+        "name": "the first of two values is used",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Auth/Keys?app=conf-keys-first{{run.suffix}}&app=conf-keys-second{{run.suffix}}"
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "first value kept",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Auth/Keys"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[?AppName=conf-keys-first{{run.suffix}}].AppName",
+              "op": "eq",
+              "value": "conf-keys-first{{run.suffix}}"
+            },
+            {
+              "path": "$.Items[?AppName=conf-keys-second{{run.suffix}}]",
+              "op": "absent"
+            }
+          ]
+        },
+        "capture": {
+          "k3": "$.Items[?AppName=conf-keys-first{{run.suffix}}].AccessToken"
+        }
+      },
+      {
+        "name": "a non-ASCII name",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Auth/Keys?app=%E2%9C%93{{run.suffix}}"
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "kept as sent",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Auth/Keys"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[?AppName=✓{{run.suffix}}].AppName",
+              "op": "eq",
+              "value": "✓{{run.suffix}}"
+            }
+          ]
+        },
+        "capture": {
+          "k4": "$.Items[?AppName=✓{{run.suffix}}].AccessToken"
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "revoke k1",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Auth/Keys/{{capture.k1}}"
+        },
+        "expect": {}
+      },
+      {
+        "name": "revoke k2",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Auth/Keys/{{capture.k2}}"
+        },
+        "expect": {}
+      },
+      {
+        "name": "revoke k3",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Auth/Keys/{{capture.k3}}"
+        },
+        "expect": {}
+      },
+      {
+        "name": "revoke k4",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Auth/Keys/{{capture.k4}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.keys.app-required",
+    "endpoint": "POST /Auth/Keys",
+    "spec": "users.md#api-keys",
+    "scope": "modern",
+    "tags": [
+      "keys",
+      "validation"
+    ],
+    "covers": [
+      "users.keys.R4"
+    ],
+    "steps": [
+      {
+        "name": "no app",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Auth/Keys"
+        },
+        "expect": {
+          "status": 400,
+          "problem": 400,
+          "json": [
+            {
+              "path": "$.errors.app",
+              "op": "exists"
+            }
+          ]
+        }
+      },
+      {
+        "name": "empty app",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Auth/Keys",
+          "query": {
+            "app": ""
+          }
+        },
+        "expect": {
+          "status": 400,
+          "problem": 400
+        }
+      },
+      {
+        "name": "blank app",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Auth/Keys",
+          "query": {
+            "app": "   "
+          }
+        },
+        "expect": {
+          "status": 400,
+          "problem": 400
+        }
+      },
+      {
+        "name": "another parameter name",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Auth/Keys",
+          "query": {
+            "name": "x"
+          }
+        },
+        "expect": {
+          "status": 400,
+          "problem": 400
+        }
+      }
+    ],
+    "cleanup": []
+  },
+  {
+    "id": "users.keys.use-and-revoke",
+    "endpoint": "DELETE /Auth/Keys/{key}",
+    "spec": "users.md#api-keys",
+    "scope": "modern",
+    "tags": [
+      "keys"
+    ],
+    "covers": [
+      "users.keys.R1",
+      "users.keys.R5",
+      "users.keys.R6"
+    ],
+    "steps": [
+      {
+        "name": "create a key",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Auth/Keys?app=conf-keys-life{{run.suffix}}"
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "find its token",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Auth/Keys"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[?AppName=conf-keys-life{{run.suffix}}].AccessToken",
+              "op": "hex32"
+            }
+          ]
+        },
+        "capture": {
+          "k": "$.Items[?AppName=conf-keys-life{{run.suffix}}].AccessToken"
+        }
+      },
+      {
+        "name": "the key authenticates",
+        "as": "token:{{capture.k}}",
+        "request": {
+          "method": "GET",
+          "path": "/System/Info"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "the key can list keys",
+        "as": "token:{{capture.k}}",
+        "request": {
+          "method": "GET",
+          "path": "/Auth/Keys"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[?AppName=conf-keys-life{{run.suffix}}].AppName",
+              "op": "eq",
+              "value": "conf-keys-life{{run.suffix}}"
+            }
+          ]
+        }
+      },
+      {
+        "name": "the key in the ApiKey query parameter",
+        "as": "anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/System/Info",
+          "query": {
+            "ApiKey": "{{capture.k}}"
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "use leaves the item unchanged",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Auth/Keys"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[?AppName=conf-keys-life{{run.suffix}}].DateLastActivity",
+              "op": "eq",
+              "value": "0001-01-01T00:00:00.0000000Z"
+            },
+            {
+              "path": "$.Items[?AppName=conf-keys-life{{run.suffix}}].IsActive",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$.Items[?AppName=conf-keys-life{{run.suffix}}].DateRevoked",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "revoking with the token in upper case is a no-op",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Auth/Keys/{{capture.k|upper}}"
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "the key still works",
+        "as": "token:{{capture.k}}",
+        "request": {
+          "method": "GET",
+          "path": "/System/Info"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "revoke the key",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Auth/Keys/{{capture.k}}"
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "it left the listing",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Auth/Keys"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[?AppName=conf-keys-life{{run.suffix}}]",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "the revoked key is refused",
+        "as": "token:{{capture.k}}",
+        "request": {
+          "method": "GET",
+          "path": "/System/Info"
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "revoke it again",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Auth/Keys/{{capture.k}}"
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "an unknown token",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Auth/Keys/00000000000000000000000000000000"
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "a token that is not hexadecimal",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Auth/Keys/not-a-token"
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      }
+    ],
+    "cleanup": []
+  },
+  {
+    "id": "users.keys.revoke-other-tokens",
+    "endpoint": "DELETE /Auth/Keys/{key}",
+    "spec": "users.md#api-keys",
+    "scope": "modern",
+    "tags": [
+      "keys"
+    ],
+    "covers": [
+      "users.keys.R6"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-keys-session",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-keys-session",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "log in",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-keys-session",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-keys-session{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "t": "$.AccessToken"
+        }
+      },
+      {
+        "name": "a user's session token is not a key",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Auth/Keys/{{capture.t}}"
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "the session still works",
+        "as": "token:{{capture.t}}",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Me"
+        },
+        "expect": {
+          "status": 200
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.keys.access",
+    "endpoint": "GET /Auth/Keys",
+    "spec": "users.md#api-keys",
+    "scope": "modern",
+    "tags": [
+      "keys",
+      "authz"
+    ],
+    "covers": [
+      "users.keys.R1",
+      "users.keys.R3",
+      "users.keys.R6"
+    ],
+    "requires": [
+      "user:alice"
+    ],
+    "steps": [
+      {
+        "name": "create a key",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Auth/Keys?app=conf-keys-access{{run.suffix}}"
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "find its token",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Auth/Keys"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[?AppName=conf-keys-access{{run.suffix}}].AccessToken",
+              "op": "hex32"
+            }
+          ]
+        },
+        "capture": {
+          "k": "$.Items[?AppName=conf-keys-access{{run.suffix}}].AccessToken"
+        }
+      },
+      {
+        "name": "anonymous list",
+        "as": "anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/Auth/Keys"
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "anonymous create",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Auth/Keys",
+          "query": {
+            "app": "x"
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "anonymous revoke",
+        "as": "anonymous",
+        "request": {
+          "method": "DELETE",
+          "path": "/Auth/Keys/{{capture.k}}"
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "non-administrator list",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/Auth/Keys"
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "non-administrator create",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Auth/Keys",
+          "query": {
+            "app": "x"
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "non-administrator revoke",
+        "as": "alice",
+        "request": {
+          "method": "DELETE",
+          "path": "/Auth/Keys/{{capture.k}}"
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "the key is still there",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Auth/Keys"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[?AppName=conf-keys-access{{run.suffix}}].AppName",
+              "op": "eq",
+              "value": "conf-keys-access{{run.suffix}}"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "revoke k",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Auth/Keys/{{capture.k}}"
+        },
+        "expect": {}
+      }
+    ]
   }
 ]

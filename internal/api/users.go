@@ -305,22 +305,22 @@ func storedUserPolicy(u storage.User) userPolicyDto {
 type userConfigurationDto struct {
 	// AudioLanguagePreference is a pointer: null or omitted is absent from
 	// the wire, an empty string is kept as "" (users.configuration.R6).
-	AudioLanguagePreference    *string  `json:"AudioLanguagePreference,omitempty"`
-	PlayDefaultAudioTrack      bool     `json:"PlayDefaultAudioTrack"`
-	SubtitleLanguagePreference string   `json:"SubtitleLanguagePreference"`
-	DisplayMissingEpisodes     bool     `json:"DisplayMissingEpisodes"`
-	GroupedFolders             []string `json:"GroupedFolders"`
-	SubtitleMode               string   `json:"SubtitleMode"`
-	DisplayCollectionsView     bool     `json:"DisplayCollectionsView"`
-	EnableLocalPassword        bool     `json:"EnableLocalPassword"`
-	OrderedViews               []string `json:"OrderedViews"`
-	LatestItemsExcludes        []string `json:"LatestItemsExcludes"`
-	MyMediaExcludes            []string `json:"MyMediaExcludes"`
-	HidePlayedInLatest         bool     `json:"HidePlayedInLatest"`
-	RememberAudioSelections    bool     `json:"RememberAudioSelections"`
-	RememberSubtitleSelections bool     `json:"RememberSubtitleSelections"`
-	EnableNextEpisodeAutoPlay  bool     `json:"EnableNextEpisodeAutoPlay"`
-	CastReceiverId             string   `json:"CastReceiverId"`
+	AudioLanguagePreference    *string           `json:"AudioLanguagePreference,omitempty"`
+	PlayDefaultAudioTrack      bool              `json:"PlayDefaultAudioTrack"`
+	SubtitleLanguagePreference string            `json:"SubtitleLanguagePreference"`
+	DisplayMissingEpisodes     bool              `json:"DisplayMissingEpisodes"`
+	GroupedFolders             []string          `json:"GroupedFolders"`
+	SubtitleMode               subtitleModeValue `json:"SubtitleMode"`
+	DisplayCollectionsView     bool              `json:"DisplayCollectionsView"`
+	EnableLocalPassword        bool              `json:"EnableLocalPassword"`
+	OrderedViews               []string          `json:"OrderedViews"`
+	LatestItemsExcludes        []string          `json:"LatestItemsExcludes"`
+	MyMediaExcludes            []string          `json:"MyMediaExcludes"`
+	HidePlayedInLatest         bool              `json:"HidePlayedInLatest"`
+	RememberAudioSelections    bool              `json:"RememberAudioSelections"`
+	RememberSubtitleSelections bool              `json:"RememberSubtitleSelections"`
+	EnableNextEpisodeAutoPlay  bool              `json:"EnableNextEpisodeAutoPlay"`
+	CastReceiverId             string            `json:"CastReceiverId"`
 }
 
 // userDto mirrors the OpenAPI schema's UserDto, trimmed to fields

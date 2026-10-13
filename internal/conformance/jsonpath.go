@@ -12,6 +12,9 @@ import (
 //	$.a.b        object member access
 //	$.a[0]       array index
 //	$.a[*].b     wildcard over an array; the result is the list of matches
+//	$.a[?k=v].b  the last element of the array whose member k, rendered as
+//	             text, equals v (lists that append in creation order, so the
+//	             newest match wins); not found when no element matches
 //	$.a.length   NOT supported; use the "len" operator instead
 //
 // It returns the value, whether it was found, and an error for malformed paths.
@@ -41,6 +44,25 @@ func evalPath(root any, path string) (any, bool, error) {
 				}
 				wild = true
 				next = append(next, arr...)
+			case strings.HasPrefix(t, "?"):
+				arr, ok := c.([]any)
+				if !ok {
+					return nil, false, nil
+				}
+				key, val, _ := strings.Cut(t[1:], "=")
+				var match any
+				hit := false
+				for _, e := range arr {
+					if m, ok := e.(map[string]any); ok {
+						if v, ok := m[key]; ok && fmt.Sprint(v) == val {
+							match, hit = m, true
+						}
+					}
+				}
+				if !hit {
+					return nil, false, nil
+				}
+				next = append(next, match)
 			case strings.HasPrefix(t, "#"):
 				idx, _ := strconv.Atoi(t[1:])
 				arr, ok := c.([]any)
@@ -94,6 +116,8 @@ func tokenize(s string) ([]string, error) {
 			inner := s[i+1 : i+j]
 			if inner == "*" {
 				out = append(out, "*")
+			} else if strings.HasPrefix(inner, "?") && strings.Contains(inner, "=") {
+				out = append(out, inner)
 			} else if _, err := strconv.Atoi(inner); err == nil {
 				out = append(out, "#"+inner)
 			} else {

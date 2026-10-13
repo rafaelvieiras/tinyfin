@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- User configuration validation per the users contract: `null` for a boolean,
+  `SubtitleMode` or a list member and non-GUID list entries answer `400`,
+  `SubtitleMode` is a lenient enumeration (numbers, any letter case, comma
+  combinations), numbers and booleans are accepted for string members, and a
+  `null` or non-object body answers `400`; also applied to the `Configuration`
+  of `POST /Users`.
+- `GET|POST /Auth/Keys` and `DELETE /Auth/Keys/{key}` specified and matched:
+  listing members (`Id` `0`, `IsActive` `false`, no `DateRevoked`), verbatim
+  application names and exact, case-sensitive token revocation.
 - `GET /Items` query semantics per the items contract: library-views form, scope
   and parent rules, library access restriction (also for `Ids`), filters, search
   ranking, multi-key sorting, paging and `Fields` shaping; `GET /Items/{id}`

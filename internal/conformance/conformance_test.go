@@ -27,6 +27,10 @@ func TestEvalPath(t *testing.T) {
 		{"$.n", true, "null"},
 		{"$.missing", false, ""},
 		{"$.a.b[5]", false, ""},
+		{"$.a.b[?c=2].c", true, "2"},
+		{"$.a.b[?c=2]", true, `{"c":2}`},
+		{"$.a.b[?c=9].c", false, ""},
+		{"$.s[?c=2]", false, ""},
 	}
 	for _, c := range cases {
 		v, found, err := evalPath(doc, c.path)

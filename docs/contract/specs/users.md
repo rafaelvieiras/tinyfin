@@ -42,6 +42,7 @@ Index of routes:
 | `POST /Users/{userId}` | legacy-web-required | [update-user-legacy-alias](#update-user-legacy-alias) |
 | `POST /Users/Configuration` | modern | [update-user-configuration](#update-user-configuration) |
 | `POST /Users/{userId}/Configuration` | legacy-web-required | [update-user-configuration-legacy-alias](#update-user-configuration-legacy-alias) |
+| `GET /Auth/Keys`, `POST /Auth/Keys`, `DELETE /Auth/Keys/{key}` | modern | [api-keys](#api-keys) |
 | `POST /Users/ForgotPassword` | modern | [forgot-password](#forgot-password) |
 | `POST /Users/ForgotPassword/Pin` | modern | [forgot-password-pin](#forgot-password-pin) |
 | `GET /socket` (WebSocket) | modern | [realtime-socket](#realtime-socket) |
@@ -454,7 +455,7 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 
 **Request.** Query `userId` (default the caller); body is a configuration object. `CastReceiverId` is only kept when it names a cast receiver configured on the server; otherwise it is silently ignored.
 
-**Responses.** `204` empty; `400` malformed body or invalid enum; `401`; `403`; `404`.
+**Responses.** `204` empty; `400` malformed body, invalid enum or a member of the wrong type (see R7-R12); `401`; `403`; `404`.
 
 
 **Rules**
@@ -462,7 +463,15 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 - **users.configuration.R1** `204` with an empty body. The target is `userId` (query), defaulting to the caller. The preferences (`SubtitleMode`, `AudioLanguagePreference`, `SubtitleLanguagePreference`, `PlayDefaultAudioTrack`, `HidePlayedInLatest`, `DisplayMissingEpisodes`, `DisplayCollectionsView`, `EnableNextEpisodeAutoPlay`, `RememberAudioSelections`, `RememberSubtitleSelections`, `EnableLocalPassword`, `OrderedViews`, `GroupedFolders`, `MyMediaExcludes`, `LatestItemsExcludes`) are returned under `Configuration` by `GET /Users/Me` and `GET /Users/{userId}`.
 - **users.configuration.R2** The configuration is replaced as a whole: fields omitted from the body go back to their defaults.
 - **users.configuration.R3** A user may update their own configuration; an administrator may update anyone's; a non-administrator naming another user answers `403`; anonymous answers `401`.
-- **users.configuration.R4** An unknown user answers `404`; a body that is not valid JSON, or an invalid enum value (`SubtitleMode` accepts `Default`, `Always`, `OnlyForced`, `None`, `Smart`), answers `400`.
+- **users.configuration.R4** An unknown user answers `404`; a body that is not valid JSON, or an invalid enum value (`SubtitleMode` accepts `Default`, `Always`, `OnlyForced`, `None`, `Smart`, plus the lenient forms of `users.configuration.R9`), answers `400`.
+- **users.configuration.R7** The eight boolean members (`PlayDefaultAudioTrack`, `DisplayMissingEpisodes`, `DisplayCollectionsView`, `EnableLocalPassword`, `HidePlayedInLatest`, `RememberAudioSelections`, `RememberSubtitleSelections`, `EnableNextEpisodeAutoPlay`) accept only the JSON literals `true` and `false`: `null`, a string (`"true"`), a number, an array or an object answers `400`. `SubtitleMode` and the four list members (`OrderedViews`, `GroupedFolders`, `MyMediaExcludes`, `LatestItemsExcludes`) refuse `null` as well. An omitted member is not an error (it takes its default, `users.configuration.R2`).
+- **users.configuration.R8** A list member must be a JSON array (anything else, `null` included, is `400`) whose entries are GUID strings in any spelling: 32 digits, dashed, dashed inside braces or parentheses, upper case, or with surrounding whitespace. They are stored and returned in the 32-digit lower-case form, in the order sent, duplicates kept. An entry that is JSON `null` stands for the all-zero GUID and is stored as `00000000000000000000000000000000`. Any other entry (a string that is not a GUID, the empty string, an unbalanced brace, a number, an object) answers `400`.
+- **users.configuration.R9** `SubtitleMode` is a lenient enumeration. Accepted: a name in any letter case with surrounding whitespace ignored (`always`, ` OnlyForced `); an integer JSON number or the same integer as text with an optional sign (`2`, `"2"`, `"+3"`) in the range -2147483648..2147483647; names joined by commas, whose values are combined bitwise (`"Always, None"` is `None`, `"always,smart"` is `5`), where one trailing comma is ignored. The number mapping is `0` Default, `1` Always, `2` OnlyForced, `3` None, `4` Smart. Read back, a value that names a member is returned as its name, any other value (`9`, `-1`, `5`) as a **JSON number**. Refused with `400`: `null`, the empty or a blank string, an unknown name, a fractional or exponent number (`1.0`, `1e0`, `"1.0"`), an integer outside the int32 range, a boolean, an array, an object, an empty member inside a combination (`"Always,,None"`, `",Always"`) and a number inside a combination (`"Always,1"`).
+- **users.configuration.R10** The string members (`AudioLanguagePreference`, `SubtitleLanguagePreference`, `CastReceiverId`) accept a string, `null` (see `users.configuration.R6`), a number or a boolean; a number or boolean is read as its literal text (`5` becomes `"5"`, `1.50` becomes `"1.50"`, `true` becomes `"true"`). An array or an object answers `400`. `CastReceiverId` then follows `users.prefs.R1` (a number or boolean is never a known receiver).
+- **users.configuration.R11** The body must be a JSON object: the literal `null`, an empty or blank body, an array, a number, a string, a boolean, a truncated document, text after the object and a trailing comma all answer `400`. An empty object `{}` is valid (every member takes its default). Unknown members are ignored whatever their value (`null` included), member names are matched case-insensitively (`subtitlemode`), when a member is repeated the last one wins, and a UTF-8 byte order mark before the object is accepted.
+- **users.configuration.R12** `POST /Users` validates its `Configuration` member exactly like R7-R10 and answers `400` for a member of the wrong type; a `Configuration` that is a string or an array is `400` too (an explicit `null` is `users.prefs.R3`). The `400` leaves the account unchanged, rename included.
+- **users.configuration.R13** Order of checks, on all three routes: authentication (`401`) first, then the body (`400` for R4, R7-R11), then the target id (`400` for a malformed or all-zero id, `users.ids.R1`), the authorization on the target (`403`) and the lookup (`404`). So a bad body answers `400` even for another user's account that the caller may not touch or for an unknown user, and an anonymous caller always gets `401`.
+- **users.configuration.R14** A refused request changes nothing: no member of the stored configuration is applied when any member of the body is refused.
 
 ---
 
@@ -497,6 +506,24 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 - **users.socket.R4** The legacy `api_key` query parameter is not a credential here either: a valid token sent that way is refused with `403`.
 
 Messages pushed to the sockets of the affected user: `UserUpdated` on rename and policy change (`users.update.R13`, `users.policy.R13`). A user-configuration update (`POST /Users/Configuration`) sends none.
+
+---
+
+<a id="api-keys"></a>
+## GET /Auth/Keys, POST /Auth/Keys, DELETE /Auth/Keys/{key}
+
+**Purpose.** Administration of API keys: opaque credentials that belong to no user. A key authenticates as an administrator-level caller (`playstate.user.R7`, `users.me.R4`).
+
+**Auth.** Administrator (a user with `IsAdministrator`, or an API key). Anonymous callers get `401`, other users `403`; both before any parameter is read.
+
+**Rules**
+
+- **users.keys.R1** `GET /Auth/Keys` answers `200` with `{"Items": [...], "TotalRecordCount": n, "StartIndex": 0}`. `Items` holds API keys only (no user sessions or device tokens), oldest first, and `TotalRecordCount` is its length. `startIndex` and `limit` are ignored. An API key may call the route. A fresh server lists no keys.
+- **users.keys.R2** Every item has exactly these members: `Id` (the JSON number `0` for every key), `AccessToken` (32 lower-case hex digits), `DeviceId`, `AppVersion` and `DeviceName` (empty strings), `AppName` (the name the key was created with), `UserId` (the all-zero GUID, 32 digits), `IsActive` (`false` for every key, also after use), `DateCreated` (`wire.date.R1`) and `DateLastActivity` (the zero date, `wire.date.R3`; using the key does not change it). There is no `DateRevoked` member.
+- **users.keys.R3** `POST /Auth/Keys?app=<name>` answers `204` with an empty body and creates one key whose `AppName` is `<name>` exactly as sent: surrounding spaces are kept, any length and any characters are accepted, names need not be unique (each call creates another key). The query parameter name is case-insensitive (`APP`), and when it is repeated the first value is used. The token is only available from the listing.
+- **users.keys.R4** A missing, empty or blank (whitespace-only) `app` answers `400` with a validation problem document whose `errors` has an `app` entry (`The app field is required.`); no key is created.
+- **users.keys.R5** A key is accepted in the `Token` of the `Authorization` header and in the `ApiKey` query parameter. Using it does not change its listing item (R2).
+- **users.keys.R6** `DELETE /Auth/Keys/{key}` answers `204` with an empty body and removes the key that has exactly that token: it leaves the listing and the token is refused with `401` from then on. The token is matched exactly (case-sensitive, not read as an id: the upper-case spelling of a key's token revokes nothing). A token that names no key (unknown, malformed, already revoked, or the token of a user session) is a successful no-op: the answer is still `204` and no session is ended.
 
 ---
 
@@ -753,6 +780,20 @@ The user object is the one of `GET /Users/{userId}` (also inside login answers, 
 | `users.configuration.R4` | `users.configuration.errors` |
 | `users.configuration.R5` | `users.configuration-alias.update`, `users.configuration-alias.errors` |
 | `users.configuration.R6` | `users.configuration.empty-language-preference` |
+| `users.configuration.R7` | `users.configuration.invalid-members`, `users.configuration-alias.invalid-members` |
+| `users.configuration.R8` | `users.configuration.invalid-members`, `users.configuration-alias.invalid-members`, `users.configuration.lenient-values`, `users.configuration-alias.lenient-values` |
+| `users.configuration.R9` | `users.configuration.lenient-values`, `users.configuration-alias.lenient-values` |
+| `users.configuration.R10` | `users.configuration.invalid-members`, `users.configuration-alias.invalid-members`, `users.configuration.lenient-values`, `users.configuration-alias.lenient-values` |
+| `users.configuration.R11` | `users.configuration.body-shapes`, `users.configuration-alias.body-shapes` |
+| `users.configuration.R12` | `users.configuration.via-user-update` |
+| `users.configuration.R13` | `users.configuration.validation-order` |
+| `users.configuration.R14` | `users.configuration.invalid-members`, `users.configuration-alias.invalid-members` |
+| `users.keys.R1` | `users.keys.listing-shape`, `users.keys.use-and-revoke`, `users.keys.access` |
+| `users.keys.R2` | `users.keys.listing-shape` |
+| `users.keys.R3` | `users.keys.listing-shape`, `users.keys.app-name-verbatim`, `users.keys.access` |
+| `users.keys.R4` | `users.keys.app-required` |
+| `users.keys.R5` | `users.keys.use-and-revoke` |
+| `users.keys.R6` | `users.keys.use-and-revoke`, `users.keys.revoke-other-tokens`, `users.keys.access` |
 | `users.forgot.R1` | `users.forgot.known-user` |
 | `users.forgot.R2` | `users.forgot.known-user` |
 | `users.forgot.R3` | `users.forgot.unknown-user-same-answer` |
@@ -821,4 +862,5 @@ The user object is the one of `GET /Users/{userId}` (also inside login answers, 
 10. Fixture `disabled` (in `fixtures.json`) is created and disabled through the policy endpoint, but the runner never logs in a user whose policy sets `IsDisabled` (login answers `403` by design), so it has no token: it is available for `{{user.disabled.id|name}}` templates and as a target, never as an `as` identity. Scenarios that need a disabled account with a token create it themselves and disable it mid-scenario.
 11. Remote-access restriction (`EnableRemoteAccess=false`, `users.auth.R21`) is exercised by making the runner's own address remote through `LocalNetworkSubnets`; that needs a peer address that is not loopback (a published container port reaches the reference from its gateway address; Tinyfin must be reached through one of the host's own addresses). The PIN scenarios (`users.forgot-pin.redeem`, `users.forgot-pin.throttle`) read the PIN from the server's file through the runner's server-file capability; without it they are BLOCKED, not failed.
 12. Admin self-service rules differ between the modern route (no `CurrentPw` without `userId`) and the alias (always required). They are replicated as observed.
-13. Configuration request validation (observed, not specified): on the reference a `null` for any boolean, for `SubtitleMode` or for one of the four list members answers `400`; an id that is not a GUID in a list member answers `400`; `SubtitleMode` also accepts the enum's number (`2` is `OnlyForced`) and any letter case (`always`); a number sent for `AudioLanguagePreference`/`CastReceiverId` is accepted (read as a string); a body that is the JSON literal `null` answers `400`. Tinyfin answers `204` for the nulls and the bad ids, `400` for the number forms and `204` for a `null` body. Left open until a client depends on it.
+13. Configuration request validation (resolved): `null` for a boolean, `SubtitleMode` or a list member is `400`, a non-GUID list entry is `400`, `SubtitleMode` is a lenient enumeration (numbers, any letter case, flag-style combinations), a number or boolean for a string member is read as text, a `null` body is `400` (`users.configuration.R7`-`R14`); verified on the reference for `POST /Users/Configuration`, the alias and the `Configuration` of `POST /Users`.
+14. API keys (resolved): the listing shape (`Id` always `0`, `IsActive` always `false`, no `DateRevoked`), creation and revocation rules and their error cases are specified in `users.keys.R1`-`R6`.

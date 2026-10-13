@@ -12,20 +12,19 @@ import (
 // no user.
 const zeroUserIDHex = "00000000000000000000000000000000"
 
-// apiKeyInfoDto is one element of the key listing (the reference's
-// AuthenticationInfo shape).
+// apiKeyInfoDto is one element of the key listing (users.keys.R2). There is
+// no DateRevoked member: a revoked key leaves the listing instead.
 type apiKeyInfoDto struct {
-	ID               int64      `json:"Id"`
-	AccessToken      string     `json:"AccessToken"`
-	DeviceID         string     `json:"DeviceId"`
-	AppName          string     `json:"AppName"`
-	AppVersion       string     `json:"AppVersion"`
-	DeviceName       string     `json:"DeviceName"`
-	UserID           string     `json:"UserId"`
-	IsActive         bool       `json:"IsActive"`
-	DateCreated      string     `json:"DateCreated"`
-	DateRevoked      *time.Time `json:"DateRevoked"`
-	DateLastActivity string     `json:"DateLastActivity"`
+	ID               int64  `json:"Id"`
+	AccessToken      string `json:"AccessToken"`
+	DeviceID         string `json:"DeviceId"`
+	AppName          string `json:"AppName"`
+	AppVersion       string `json:"AppVersion"`
+	DeviceName       string `json:"DeviceName"`
+	UserID           string `json:"UserId"`
+	IsActive         bool   `json:"IsActive"`
+	DateCreated      string `json:"DateCreated"`
+	DateLastActivity string `json:"DateLastActivity"`
 }
 
 type apiKeyInfoQueryResult struct {
@@ -37,11 +36,13 @@ type apiKeyInfoQueryResult struct {
 func apiKeyDto(k storage.APIKey) apiKeyInfoDto {
 	ts := formatWireTime(k.DateCreated)
 	return apiKeyInfoDto{
-		ID:          k.ID,
+		// Id is always 0 and IsActive always false: the reference fills
+		// neither for a key (users.keys.R2).
+		ID:          0,
 		AccessToken: k.Token,
 		AppName:     k.AppName,
 		UserID:      zeroUserIDHex,
-		IsActive:    true,
+		IsActive:    false,
 		DateCreated: ts,
 		// A key is never "used" as far as this listing shows: the
 		// reference keeps the zero date here.
@@ -66,8 +67,10 @@ func (s *Server) handleAuthKeysList(w http.ResponseWriter, r *http.Request) {
 // handleAuthKeysCreate is POST /Auth/Keys?app= (administrator only): mints
 // a key for the named application; the key is read back from the listing.
 func (s *Server) handleAuthKeysCreate(w http.ResponseWriter, r *http.Request) {
-	app := strings.TrimSpace(r.URL.Query().Get("app"))
-	if app == "" {
+	// The name is stored as sent (surrounding spaces included); only a
+	// missing or blank one is refused (users.keys.R4).
+	app := caseInsensitiveQuery(r).Get("app")
+	if strings.TrimSpace(app) == "" {
 		writeValidationProblem(w, "app", "The app field is required.")
 		return
 	}

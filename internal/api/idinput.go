@@ -13,6 +13,7 @@ import (
 var idQuerySkip = map[string]bool{
 	"apikey": true, "api_key": true, "tag": true, "deviceid": true,
 	"playsessionid": true, "pin": true, "secret": true, "code": true,
+	"app": true,
 }
 
 // withCanonicalIDs folds every identifier in the request path and query to
@@ -64,6 +65,11 @@ func canonicalPath(p string) (string, bool) {
 	segs := strings.Split(p, "/")
 	changed := false
 	for i, s := range segs {
+		// The key in /Auth/Keys/{key} is a credential, matched exactly
+		// (users.keys.R6).
+		if i >= 3 && strings.EqualFold(segs[i-1], "Keys") && strings.EqualFold(segs[i-2], "Auth") {
+			continue
+		}
 		if n, ok := foldID(s); ok {
 			segs[i], changed = n, true
 		}
