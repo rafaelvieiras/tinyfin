@@ -47,6 +47,11 @@ type AuthContext struct {
 	Token         string
 	AuthToken     storage.AuthToken
 	User          storage.User
+
+	// IsAPIKey is true when the credential is an API key: Authenticated is
+	// set and User carries administrator rights, but the caller belongs to
+	// no user (User.ID is empty).
+	IsAPIKey bool
 }
 
 func contextWithAuth(ctx context.Context, ac *AuthContext) context.Context {

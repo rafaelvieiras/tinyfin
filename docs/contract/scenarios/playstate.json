@@ -3668,81 +3668,30 @@
     "spec": "playstate.md#acting-user",
     "scope": "modern",
     "tags": [
-      "playstate"
+      "playstate",
+      "api-key"
     ],
     "covers": [
       "playstate.user.R7"
     ],
     "requires": [
       "item:alpha",
-      "user:admin"
+      "identity:apikey"
     ],
     "steps": [
       {
-        "name": "create key",
-        "as": "admin",
-        "request": {
-          "method": "POST",
-          "path": "/Auth/Keys",
-          "query": {
-            "app": "conf-playstate-key"
-          }
-        },
-        "expect": {
-          "status": 204
-        }
-      },
-      {
-        "name": "list keys",
-        "as": "admin",
-        "request": {
-          "method": "GET",
-          "path": "/Auth/Keys"
-        },
-        "expect": {
-          "status": 200,
-          "json": [
-            {
-              "path": "$.Items",
-              "op": "type",
-              "value": "array"
-            }
-          ]
-        },
-        "capture": {
-          "key": "$.Items[0].AccessToken"
-        }
-      },
-      {
         "name": "mark with api key and no userId",
-        "as": "anonymous",
+        "as": "apikey",
         "request": {
           "method": "POST",
-          "path": "/UserPlayedItems/{{item.alpha.id}}",
-          "noAuth": true,
-          "headers": {
-            "Authorization": "MediaBrowser Token=\"{{capture.key}}\""
-          }
+          "path": "/UserPlayedItems/{{item.alpha.id}}"
         },
         "expect": {
           "status": 400
         }
       }
     ],
-    "cleanup": [
-      {
-        "name": "cleanup: delete key",
-        "as": "admin",
-        "request": {
-          "method": "DELETE",
-          "path": "/Auth/Keys/{{capture.key}}"
-        },
-        "expect": {
-          "status": 204
-        }
-      }
-    ],
-    "pending": "the runner has no API-key identity and the new key is located by list position (ordering of the key list is unverified)"
+    "cleanup": []
   },
   {
     "id": "playstate.user.api-key-with-user",
@@ -3750,7 +3699,8 @@
     "spec": "playstate.md#acting-user",
     "scope": "modern",
     "tags": [
-      "playstate"
+      "playstate",
+      "api-key"
     ],
     "covers": [
       "playstate.user.R8"
@@ -3758,72 +3708,26 @@
     "requires": [
       "item:alpha",
       "user:alice",
-      "user:admin"
+      "identity:apikey"
     ],
     "steps": [
       {
-        "name": "create key",
-        "as": "admin",
-        "request": {
-          "method": "POST",
-          "path": "/Auth/Keys",
-          "query": {
-            "app": "conf-playstate-key"
-          }
-        },
-        "expect": {
-          "status": 204,
-          "json": [
-            {
-              "path": "$.status",
-              "op": "eq",
-              "value": 404
-            }
-          ]
-        }
-      },
-      {
-        "name": "list keys",
-        "as": "admin",
-        "request": {
-          "method": "GET",
-          "path": "/Auth/Keys"
-        },
-        "expect": {
-          "status": 200,
-          "json": [
-            {
-              "path": "$.status",
-              "op": "eq",
-              "value": 404
-            }
-          ]
-        },
-        "capture": {
-          "key": "$.Items[0].AccessToken"
-        }
-      },
-      {
         "name": "mark with api key and userId",
-        "as": "anonymous",
+        "as": "apikey",
         "request": {
           "method": "POST",
           "path": "/UserPlayedItems/{{item.alpha.id}}",
-          "noAuth": true,
           "query": {
             "userId": "{{user.alice.id}}"
-          },
-          "headers": {
-            "Authorization": "MediaBrowser Token=\"{{capture.key}}\""
           }
         },
         "expect": {
           "status": 200,
           "json": [
             {
-              "path": "$.status",
+              "path": "$.Played",
               "op": "eq",
-              "value": 404
+              "value": true
             }
           ]
         }
@@ -3842,9 +3746,14 @@
           "status": 200,
           "json": [
             {
-              "path": "$.status",
+              "path": "$.UserData.Played",
               "op": "eq",
-              "value": 404
+              "value": true
+            },
+            {
+              "path": "$.UserData.PlayCount",
+              "op": "eq",
+              "value": 1
             }
           ]
         }
@@ -3877,20 +3786,8 @@
         "expect": {
           "status": 200
         }
-      },
-      {
-        "name": "cleanup: delete key",
-        "as": "admin",
-        "request": {
-          "method": "DELETE",
-          "path": "/Auth/Keys/{{capture.key}}"
-        },
-        "expect": {
-          "status": 204
-        }
       }
-    ],
-    "pending": "the runner has no API-key identity and the new key is located by list position (ordering of the key list is unverified)"
+    ]
   },
   {
     "id": "playstate.item.unknown-id",

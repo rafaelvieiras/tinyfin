@@ -16,7 +16,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -87,17 +86,11 @@ var userRootItemID, playlistsFolderItemID = func() (string, string) {
 // writeItemsProblem writes an RFC 9457 style problem document (the body
 // the reference server sends with an unknown or hidden item).
 func writeItemsProblem(w http.ResponseWriter, status int, title string) {
-	trace := make([]byte, 24)
-	copy(trace, randomID())
-	body := map[string]any{
-		"type":    "https://tools.ietf.org/html/rfc9110#section-15.5.5",
-		"title":   title,
-		"status":  status,
-		"traceId": "00-" + hex.EncodeToString(trace[:16]) + "-" + hex.EncodeToString(trace[16:24]) + "-00",
+	typ := problemTypeNotFound
+	if status == http.StatusBadRequest {
+		typ = problemTypeBadRequest
 	}
-	w.Header().Set("Content-Type", "application/problem+json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(body)
+	writeProblemDoc(w, status, typ, title, nil)
 }
 
 // normalizeGUID returns s in canonical dashed lower-case form, or false
@@ -181,7 +174,7 @@ func (s *Server) itemsContextUser(w http.ResponseWriter, r *http.Request, rawUse
 	}
 	norm, ok := normalizeGUID(rawUserID)
 	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
+		writeInvalidID(w, "userId", rawUserID)
 		return storage.User{}, false
 	}
 	if norm == zeroGUID || norm == string(ac.User.ID) {
@@ -612,7 +605,7 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 	}
 	iq, err := parseItemsQuery(q, legacy)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		writeValidationProblem(w, "query", "One or more query parameters are not valid.")
 		return
 	}
 	scope, err := s.itemsScopeFor(ctx, user)
@@ -639,7 +632,7 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 	if raw := strings.TrimSpace(q.Get("parentid")); raw != "" {
 		norm, valid := normalizeGUID(raw)
 		if !valid || norm == zeroGUID {
-			w.WriteHeader(http.StatusBadRequest)
+			writeInvalidID(w, "parentId", raw)
 			return
 		}
 		switch {
@@ -667,7 +660,7 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 			}
 			parent, err := s.store.GetItem(ctx, storage.ItemID(norm))
 			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
+				writeBadRequest(w)
 				return
 			}
 			if isFolderType(parent.Type) && !scope.libIDs[parent.LibraryID] {
@@ -868,7 +861,8 @@ func (s *Server) handleItemGet(w http.ResponseWriter, r *http.Request) {
 	notFound := func() { writeItemsProblem(w, http.StatusNotFound, "Not Found") }
 	norm, valid := normalizeGUID(rawID)
 	if !valid {
-		notFound()
+		// wire.problem.R2: an id that is not a GUID cannot be bound.
+		writeInvalidID(w, "itemId", rawID)
 		return
 	}
 	// The DTO builders read the caller from the request context, so a

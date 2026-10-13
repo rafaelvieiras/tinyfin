@@ -47,17 +47,17 @@ func (s *Server) handleAuthenticateByName(w http.ResponseWriter, r *http.Request
 	// when the credentials are wrong; checked before the body is read.
 	ac, _ := AuthFromContext(ctx)
 	if ac == nil || ac.Client == "" || ac.Device == "" || ac.DeviceID == "" || ac.Version == "" {
-		w.WriteHeader(http.StatusBadRequest)
+		writeBadRequest(w)
 		return
 	}
 
 	var req authenticateUserByName
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		writeInvalidBody(w)
 		return
 	}
 	if strings.TrimSpace(req.Username) == "" {
-		w.WriteHeader(http.StatusBadRequest)
+		writeBadRequest(w)
 		return
 	}
 

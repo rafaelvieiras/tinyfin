@@ -57,6 +57,14 @@ func (s *Server) withAuthContext(next http.Handler) http.Handler {
 					ac.User = u
 					s.inheritDeviceFields(r.Context(), ac)
 				}
+			} else if k, err := s.store.LookupAPIKey(r.Context(), ac.Token); err == nil {
+				// An API key authenticates as an administrator-level
+				// caller that belongs to no user (users.me.R4,
+				// users.list.R8).
+				ac.Authenticated = true
+				ac.IsAPIKey = true
+				ac.AuthToken = storage.AuthToken{Token: k.Token, IssuedAt: k.DateCreated}
+				ac.User = storage.User{IsAdministrator: true}
 			}
 		}
 

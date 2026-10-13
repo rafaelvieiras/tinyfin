@@ -263,6 +263,11 @@ func (s *Server) userDtoCtx(ctx context.Context, u storage.User) userDto {
 
 func (s *Server) handleUsersMe(w http.ResponseWriter, r *http.Request) {
 	ac, _ := AuthFromContext(r.Context())
+	if ac.IsAPIKey {
+		// users.me.R4: an API key belongs to no user.
+		writeBadRequest(w)
+		return
+	}
 	writeJSON(w, http.StatusOK, s.userDtoCtx(r.Context(), ac.User))
 }
 
@@ -304,7 +309,7 @@ func (s *Server) handleUsersList(w http.ResponseWriter, r *http.Request) {
 		}
 		b, err := strconv.ParseBool(v)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
+			writeInvalidID(w, key, v)
 			return
 		}
 		*dst = &b
@@ -342,12 +347,12 @@ type createUserByName struct {
 func (s *Server) handleUsersCreate(w http.ResponseWriter, r *http.Request) {
 	var req createUserByName
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		writeInvalidBody(w)
 		return
 	}
 	// users.create.R5/R6: valid, unique (case-insensitive) name.
 	if !validUserName(req.Name) {
-		w.WriteHeader(http.StatusBadRequest)
+		writeBadRequest(w)
 		return
 	}
 	taken, err := s.userNameTaken(r.Context(), req.Name, "")
@@ -356,7 +361,7 @@ func (s *Server) handleUsersCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if taken {
-		w.WriteHeader(http.StatusBadRequest)
+		writeBadRequest(w)
 		return
 	}
 
@@ -381,7 +386,7 @@ func (s *Server) handleUsersCreate(w http.ResponseWriter, r *http.Request) {
 		Policy:       string(policy),
 	})
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		writeBadRequest(w)
 		return
 	}
 
@@ -401,7 +406,7 @@ func (s *Server) handleUsersGet(w http.ResponseWriter, r *http.Request) {
 	// users.get.R4/R5: the empty GUID and non-GUIDs are 400, unknown ids 404.
 	id, ok := parseUserGUID(r.PathValue("userId"))
 	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
+		writeInvalidID(w, "userId", r.PathValue("userId"))
 		return
 	}
 	user, err := s.store.GetUser(r.Context(), id)
@@ -415,7 +420,7 @@ func (s *Server) handleUsersGet(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleUsersDelete(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("userId")
 	if id == "" {
-		w.WriteHeader(http.StatusBadRequest)
+		writeBadRequest(w)
 		return
 	}
 	ctx := r.Context()
@@ -439,7 +444,7 @@ func (s *Server) handleUsersDelete(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if others == 0 {
-			w.WriteHeader(http.StatusBadRequest)
+			writeBadRequest(w)
 			return
 		}
 	}
@@ -465,7 +470,7 @@ func (s *Server) handleUsersPolicy(w http.ResponseWriter, r *http.Request) {
 	policy.AuthenticationProviderId = ""
 	policy.PasswordResetProviderId = ""
 	if err := json.NewDecoder(r.Body).Decode(&policy); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		writeInvalidBody(w)
 		return
 	}
 
@@ -475,7 +480,7 @@ func (s *Server) handleUsersPolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if policy.AuthenticationProviderId == "" || policy.PasswordResetProviderId == "" {
-		w.WriteHeader(http.StatusBadRequest)
+		writeBadRequest(w)
 		return
 	}
 
@@ -538,5 +543,7 @@ func (s *Server) handleUsersPolicy(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	// users.policy.R13: the target's own open sockets are told.
+	s.notifyUserUpdated(ctx, target)
 	w.WriteHeader(http.StatusNoContent)
 }

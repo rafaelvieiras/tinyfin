@@ -58,7 +58,7 @@ func (s *Server) handleDirectoryContents(w http.ResponseWriter, r *http.Request)
 	q := r.URL.Query()
 	path := q.Get("path")
 	if path == "" {
-		w.WriteHeader(http.StatusBadRequest)
+		writeBadRequest(w)
 		return
 	}
 	includeDirectories := q.Get("includeDirectories") == "true"
@@ -105,7 +105,7 @@ func (s *Server) handleDirectoryContents(w http.ResponseWriter, r *http.Request)
 func (s *Server) handleParentPath(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Query().Get("path")
 	if path == "" {
-		w.WriteHeader(http.StatusBadRequest)
+		writeBadRequest(w)
 		return
 	}
 
@@ -143,7 +143,7 @@ type validatePathRequest struct {
 func (s *Server) handleValidatePath(w http.ResponseWriter, r *http.Request) {
 	var body validatePathRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Path == "" {
-		w.WriteHeader(http.StatusBadRequest)
+		writeInvalidBody(w)
 		return
 	}
 	if _, err := os.Stat(body.Path); err != nil {

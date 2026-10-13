@@ -29,7 +29,7 @@ func (s *Server) handleUsersPassword(w http.ResponseWriter, r *http.Request) {
 	}
 	var req updatePasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		writeInvalidBody(w)
 		return
 	}
 
@@ -52,7 +52,7 @@ func (s *Server) handleUsersPassword(w http.ResponseWriter, r *http.Request) {
 	// leaves every session alone (an administrator target is refused, R8).
 	if req.ResetPassword {
 		if target.IsAdministrator {
-			w.WriteHeader(http.StatusBadRequest)
+			writeBadRequest(w)
 			return
 		}
 		s.storePassword(w, r, target, "")
@@ -81,7 +81,7 @@ func (s *Server) handleUsersPassword(w http.ResponseWriter, r *http.Request) {
 	}
 	// R8: an administrator account never ends up without a password.
 	if newPw == "" && target.IsAdministrator {
-		w.WriteHeader(http.StatusBadRequest)
+		writeBadRequest(w)
 		return
 	}
 

@@ -109,7 +109,7 @@ func (s *Server) resolveUserItemFor(w http.ResponseWriter, r *http.Request, rawU
 	raw := r.PathValue("itemId")
 	id, ok := normalizeGUID(raw)
 	if !ok || id == zeroGUID {
-		w.WriteHeader(http.StatusBadRequest)
+		writeInvalidID(w, "itemId", raw)
 		return storage.User{}, storage.Item{}, false
 	}
 	target, ok := s.resolveUserTarget(w, r, rawUserID)
@@ -147,12 +147,12 @@ func (s *Server) handleUserItemDataPost(w http.ResponseWriter, r *http.Request) 
 	}
 	raw, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 	if err != nil || len(strings.TrimSpace(string(raw))) == 0 || strings.TrimSpace(string(raw))[0] != '{' {
-		w.WriteHeader(http.StatusBadRequest)
+		writeInvalidBody(w)
 		return
 	}
 	var body userDataBody
 	if err := json.Unmarshal(raw, &body); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		writeInvalidBody(w)
 		return
 	}
 

@@ -324,7 +324,7 @@ The deprecated `/PlayingItems/...` and `/Users/{userId}/PlayingItems/...` routes
 5. Position `PositionTicks` negative on progress is unspecified.
 6. Multi-user sessions (additional users) and live-TV stream handling are not observable black-box and are not
    specified.
-7. API-key scenarios (`user.R7`, `user.R8`) need an API-key identity in the runner; they are pending.
+7. API-key scenarios (`user.R7`, `user.R8`) use the runner's `apikey` identity (a key created through `/Auth/Keys`).
 8. A user whose session was removed mid-request, and the 404 "session not found" of start/stopped, cannot be
    triggered black-box.
 9. Reports from a restricted user leave a hidden user-data row that scenarios cannot clean up.
@@ -356,8 +356,8 @@ The deprecated `/PlayingItems/...` and `/Users/{userId}/PlayingItems/...` routes
 | `playstate.user.R4` | `user.nonadmin-other-user-forbidden`, `user.nonadmin-other-user-forbidden-unmark`, `user.nonadmin-unknown-user-forbidden` |
 | `playstate.user.R5` | `user.admin-unknown-user` |
 | `playstate.user.R6` | `user.invalid-guid` |
-| `playstate.user.R7` | `user.api-key-without-user (pending)` |
-| `playstate.user.R8` | `user.api-key-with-user (pending)` |
+| `playstate.user.R7` | `user.api-key-without-user` |
+| `playstate.user.R8` | `user.api-key-with-user` |
 | `playstate.user.R9` | `user.isolation` |
 | `playstate.item.R1` | `item.unknown-id` |
 | `playstate.item.R2` | `item.invalid-guid` |

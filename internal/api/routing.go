@@ -23,6 +23,9 @@ var routePaths = []string{
 	// 4 segments (including the leading empty split element) — no length
 	// collision with "/System/Info" (3) or "/System/Endpoint" (3) above.
 	"/System/Info/Storage",
+	"/System/Configuration",
+	"/Auth/Keys",
+	"/Auth/Keys/{key}",
 	// 2 segments (including the leading empty split element) — shorter than
 	// every other entry in this list, no collision possible.
 	"/ScheduledTasks",

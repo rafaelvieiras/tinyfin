@@ -71,7 +71,7 @@ func (s *Server) handleAddVirtualFolder(w http.ResponseWriter, r *http.Request) 
 	q := r.URL.Query()
 	name := strings.TrimSpace(q.Get("name"))
 	if name == "" {
-		w.WriteHeader(http.StatusBadRequest)
+		writeBadRequest(w)
 		return
 	}
 
@@ -165,7 +165,7 @@ func (s *Server) handleSaveLibraryOptions(w http.ResponseWriter, r *http.Request
 		LibraryOptions json.RawMessage `json:"LibraryOptions"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		writeInvalidBody(w)
 		return
 	}
 	lib, err := s.store.GetLibrary(r.Context(), storage.LibraryID(body.Id))
@@ -193,7 +193,7 @@ func (s *Server) handleRenameVirtualFolder(w http.ResponseWriter, r *http.Reques
 	name := q.Get("name")
 	newName := strings.TrimSpace(q.Get("newName"))
 	if newName == "" {
-		w.WriteHeader(http.StatusBadRequest)
+		writeBadRequest(w)
 		return
 	}
 

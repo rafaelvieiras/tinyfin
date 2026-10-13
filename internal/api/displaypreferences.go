@@ -129,7 +129,7 @@ func (s *Server) handleDisplayPreferencesUpdate(w http.ResponseWriter, r *http.R
 
 	var dto displayPreferencesDto
 	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		writeInvalidBody(w)
 		return
 	}
 

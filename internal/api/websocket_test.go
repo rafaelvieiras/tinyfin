@@ -118,12 +118,12 @@ func TestSocketRequiresAuth(t *testing.T) {
 	if err == nil {
 		t.Fatal("Dial succeeded with no auth, want an error")
 	}
-	if resp == nil || resp.StatusCode != http.StatusUnauthorized {
+	if resp == nil || resp.StatusCode != http.StatusForbidden {
 		status := -1
 		if resp != nil {
 			status = resp.StatusCode
 		}
-		t.Fatalf("status = %d, want 401", status)
+		t.Fatalf("status = %d, want 403", status)
 	}
 }
 

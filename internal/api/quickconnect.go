@@ -101,8 +101,6 @@ func (r *quickConnectRequest) result() quickConnectResult {
 	}
 }
 
-func (s *Server) quickConnectEnabled() bool { return !s.cfg.QuickConnectDisabled }
-
 // handleQuickConnectInitiate is POST /QuickConnect/Initiate: anonymous; the
 // device identity comes from the Authorization header and is what the
 // issued token will be bound to (users.quickconnect.R1).
@@ -113,7 +111,7 @@ func (s *Server) handleQuickConnectInitiate(w http.ResponseWriter, r *http.Reque
 	}
 	ac, _ := AuthFromContext(r.Context())
 	if ac == nil || ac.Client == "" || ac.Device == "" || ac.DeviceID == "" || ac.Version == "" {
-		w.WriteHeader(http.StatusBadRequest)
+		writeBadRequest(w)
 		return
 	}
 	secret, err := randomHex(16)
@@ -192,7 +190,7 @@ func (s *Server) handleQuickConnectAuthorize(w http.ResponseWriter, r *http.Requ
 	if raw := r.URL.Query().Get("userId"); raw != "" {
 		id, ok := parseUserGUID(raw)
 		if !ok {
-			w.WriteHeader(http.StatusBadRequest)
+			writeInvalidID(w, "userId", raw)
 			return
 		}
 		if id != ac.User.ID && !ac.User.IsAdministrator {
@@ -230,7 +228,7 @@ func (s *Server) handleAuthenticateWithQuickConnect(w http.ResponseWriter, r *ht
 		Secret string `json:"Secret"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Secret == "" {
-		w.WriteHeader(http.StatusBadRequest)
+		writeInvalidBody(w)
 		return
 	}
 	if !s.quickConnectEnabled() {

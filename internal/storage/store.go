@@ -24,6 +24,8 @@ type Store interface {
 	LyricStore
 	LibraryStore
 	ActivityLogStore
+	APIKeyStore
+	SettingStore
 
 	// Tx runs fn against a Store bound to a single transaction: everything
 	// fn does through it commits or rolls back together. In scale mode a
@@ -249,4 +251,23 @@ type ActivityLogStore interface {
 	// pre-pagination match count (TotalRecordCount on the wire), same
 	// convention as ItemPage.TotalCount.
 	QueryActivityEntries(ctx context.Context, filter ActivityEntryFilter) ([]ActivityEntry, int, error)
+}
+
+// APIKeyStore covers API keys: opaque credentials that belong to no user.
+type APIKeyStore interface {
+	// CreateAPIKey mints a new key for appName.
+	CreateAPIKey(ctx context.Context, appName string) (APIKey, error)
+	// QueryAPIKeys lists every key, oldest first.
+	QueryAPIKeys(ctx context.Context) ([]APIKey, error)
+	// LookupAPIKey resolves a key's token; an unknown token is an error.
+	LookupAPIKey(ctx context.Context, token string) (APIKey, error)
+	// RevokeAPIKey removes a key; revoking an unknown token is not an error.
+	RevokeAPIKey(ctx context.Context, token string) error
+}
+
+// SettingStore persists small server-wide runtime settings as strings.
+type SettingStore interface {
+	// GetSetting returns the stored value; ok is false when never set.
+	GetSetting(ctx context.Context, key string) (value string, ok bool, err error)
+	SetSetting(ctx context.Context, key, value string) error
 }

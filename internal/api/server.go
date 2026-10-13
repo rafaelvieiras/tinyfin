@@ -20,6 +20,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/metadata"
@@ -141,6 +142,9 @@ type Server struct {
 	sessions  *sessionRegistry
 	hub       *wsHub
 	quick     *quickConnectState
+	// qcOverride is the runtime QuickConnect setting: 0 unset (the
+	// command-line default applies), 1 enabled, 2 disabled.
+	qcOverride atomic.Int32
 }
 
 // NewServer builds a Server backed by store, applying cfg defaults where
@@ -173,6 +177,7 @@ func NewServer(store storage.Store, cfg Config) *Server {
 		hub:       newWSHub(),
 		quick:     newQuickConnectState(),
 	}
+	s.loadRuntimeSettings()
 	s.routes()
 	go s.runWSWatchdog(context.Background())
 	return s
@@ -523,7 +528,14 @@ func (s *Server) routes() {
 	// every other route" — including the ApiKey query-param fallback,
 	// since withAuthContext resolves that unconditionally before this
 	// handler runs.
-	s.mux.HandleFunc("GET /socket", requireAuth(s.handleSocket))
+	s.mux.HandleFunc("GET /socket", s.handleSocket)
+
+	// API keys and runtime server configuration (administrator only).
+	s.mux.HandleFunc("GET /Auth/Keys", requireAdmin(s.handleAuthKeysList))
+	s.mux.HandleFunc("POST /Auth/Keys", requireAdmin(s.handleAuthKeysCreate))
+	s.mux.HandleFunc("DELETE /Auth/Keys/{key}", requireAdmin(s.handleAuthKeysRevoke))
+	s.mux.HandleFunc("GET /System/Configuration", requireAdmin(s.handleSystemConfigurationGet))
+	s.mux.HandleFunc("POST /System/Configuration", requireAdmin(s.handleSystemConfigurationPost))
 
 	// Playstate reporting and media segments (sessions_playback.go) — found
 	// missing while mapping the whole native playback flow for coverage,

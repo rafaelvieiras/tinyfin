@@ -110,7 +110,7 @@ func (s *Server) markPlayed(w http.ResponseWriter, r *http.Request, rawUserID st
 		if raw := caseInsensitiveQuery(r).Get("dateplayed"); raw != "" {
 			t, ok := parseDatePlayed(raw)
 			if !ok {
-				w.WriteHeader(http.StatusBadRequest)
+				writeInvalidID(w, "datePlayed", caseInsensitiveQuery(r).Get("dateplayed"))
 				return
 			}
 			date = &t
@@ -241,13 +241,13 @@ func decodePlaybackReport(w http.ResponseWriter, r *http.Request) (playbackRepor
 	var rep playbackReport
 	raw, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 	if err != nil || len(strings.TrimSpace(string(raw))) == 0 || json.Unmarshal(raw, &rep) != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		writeInvalidBody(w)
 		return rep, false
 	}
 	if rep.ItemID != "" {
 		id, ok := normalizeGUID(rep.ItemID)
 		if !ok {
-			w.WriteHeader(http.StatusBadRequest)
+			writeInvalidID(w, "ItemId", rep.ItemID)
 			return rep, false
 		}
 		rep.ItemID = id
@@ -269,7 +269,7 @@ func decodePlaybackReport(w http.ResponseWriter, r *http.Request) (playbackRepor
 		}
 		name, ok := canonicalEnum(**e.field, e.allowed...)
 		if !ok {
-			w.WriteHeader(http.StatusBadRequest)
+			writeValidationProblem(w, "$", "The value is not valid for the request.")
 			return rep, false
 		}
 		*e.field = &name
@@ -324,7 +324,7 @@ func (s *Server) handlePlaybackReport(w http.ResponseWriter, r *http.Request, ki
 		return
 	}
 	if kind == reportStopped && rep.PositionTicks != nil && *rep.PositionTicks < 0 {
-		w.WriteHeader(http.StatusBadRequest)
+		writeBadRequest(w)
 		return
 	}
 

@@ -78,7 +78,7 @@ type userItemDataDto struct {
 // 204 for a non-empty playSessionId, 400 otherwise, no state touched.
 func (s *Server) handleSessionsPlayingPing(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("playSessionId") == "" {
-		w.WriteHeader(http.StatusBadRequest)
+		writeValidationProblem(w, "playSessionId", "The playSessionId field is required.")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

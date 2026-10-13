@@ -149,10 +149,15 @@ func (s *Server) saveUserConfiguration(ctx context.Context, id storage.UserID, c
 func (s *Server) resolveUserTarget(w http.ResponseWriter, r *http.Request, rawID string) (storage.User, bool) {
 	ac, _ := AuthFromContext(r.Context())
 	target := ac.User.ID
+	if rawID == "" && ac.IsAPIKey {
+		// A key has no user of its own to act on (playstate.user.R7).
+		writeBadRequest(w)
+		return storage.User{}, false
+	}
 	if rawID != "" {
 		id, ok := parseUserGUID(rawID)
 		if !ok {
-			w.WriteHeader(http.StatusBadRequest)
+			writeInvalidID(w, "userId", rawID)
 			return storage.User{}, false
 		}
 		target = id
@@ -179,7 +184,7 @@ func (s *Server) handleUsersConfiguration(w http.ResponseWriter, r *http.Request
 	}
 	cfg, ok := decodeUserConfiguration(r.Body)
 	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
+		writeInvalidBody(w)
 		return
 	}
 	target, ok := s.resolveUserTarget(w, r, rawID)
@@ -207,12 +212,7 @@ func writeUpdateValidationError(w http.ResponseWriter, fields ...string) {
 	for _, f := range fields {
 		errs[f] = []string{"The " + f[strings.LastIndex(f, ".")+1:] + " field is required."}
 	}
-	writeJSON(w, http.StatusBadRequest, bitrateTestValidationError{
-		Type:   "https://tools.ietf.org/html/rfc9110#section-15.5.1",
-		Title:  "One or more validation errors occurred.",
-		Status: http.StatusBadRequest,
-		Errors: errs,
-	})
+	writeValidationErrors(w, errs)
 }
 
 // handleUsersUpdate is POST /Users (target in the userId query) and its
@@ -226,7 +226,7 @@ func (s *Server) handleUsersUpdate(w http.ResponseWriter, r *http.Request) {
 
 	var req updateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		writeInvalidBody(w)
 		return
 	}
 	// users.update.R12: body validation precedes lookup and authorization.
@@ -240,7 +240,7 @@ func (s *Server) handleUsersUpdate(w http.ResponseWriter, r *http.Request) {
 			PasswordResetProviderId  string
 		}
 		if err := json.Unmarshal(req.Policy, &p); err != nil {
-			w.WriteHeader(http.StatusBadRequest)
+			writeInvalidBody(w)
 			return
 		}
 		var missing []string
@@ -260,7 +260,7 @@ func (s *Server) handleUsersUpdate(w http.ResponseWriter, r *http.Request) {
 	if req.Configuration != nil && string(req.Configuration) != "null" {
 		var ok bool
 		if cfg, ok = decodeUserConfiguration(bytes.NewReader(req.Configuration)); !ok {
-			w.WriteHeader(http.StatusBadRequest)
+			writeBadRequest(w)
 			return
 		}
 	}
@@ -280,7 +280,7 @@ func (s *Server) handleUsersUpdate(w http.ResponseWriter, r *http.Request) {
 	// users.update.R6/R7: Name is required and follows the creation rules;
 	// an identical name is a no-op, a case-only change is applied.
 	if req.Name == nil || !validUserName(*req.Name) {
-		w.WriteHeader(http.StatusBadRequest)
+		writeBadRequest(w)
 		return
 	}
 	renamed := false
@@ -291,7 +291,7 @@ func (s *Server) handleUsersUpdate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if taken {
-			w.WriteHeader(http.StatusBadRequest)
+			writeBadRequest(w)
 			return
 		}
 		target.Name = *req.Name

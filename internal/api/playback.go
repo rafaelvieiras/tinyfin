@@ -325,30 +325,8 @@ func bitrateTestRoundedSize(size int) int {
 	return n
 }
 
-// bitrateTestValidationError mirrors the ASP.NET Core ProblemDetails shape
-// the real server's own model-binding validation returns for a Size
-// outside bitrateTestMinSize/bitrateTestMaxSize or not parseable as an
-// integer at all (confirmed against the real server for both cases) — a
-// generic ASP.NET Core framework default (RFC 9110 problem-details), not
-// anything specific to Jellyfin's own source, so mirroring its shape here
-// doesn't cross the clean-room boundary AGENTS.md describes. TraceId is
-// left out: it's a per-request diagnostic correlation id with no fixed
-// value to reproduce, and nothing in a real client is expected to parse
-// it.
-type bitrateTestValidationError struct {
-	Type   string              `json:"type"`
-	Title  string              `json:"title"`
-	Status int                 `json:"status"`
-	Errors map[string][]string `json:"errors"`
-}
-
 func writeBitrateTestValidationError(w http.ResponseWriter, message string) {
-	writeJSON(w, http.StatusBadRequest, bitrateTestValidationError{
-		Type:   "https://tools.ietf.org/html/rfc9110#section-15.5.1",
-		Title:  "One or more validation errors occurred.",
-		Status: http.StatusBadRequest,
-		Errors: map[string][]string{"size": {message}},
-	})
+	writeValidationProblem(w, "size", message)
 }
 
 // handlePlaybackBitrateTest serves GET /Playback/BitrateTest?Size={bytes} —

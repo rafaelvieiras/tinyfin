@@ -75,3 +75,11 @@ type DisplayPreferences struct {
 	// Tinyfin doesn't need to understand their meaning to store them.
 	CustomPrefs map[string]string
 }
+
+// APIKey is a credential that belongs to no user.
+type APIKey struct {
+	ID          int64
+	Token       string
+	AppName     string
+	DateCreated time.Time
+}

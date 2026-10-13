@@ -64,7 +64,7 @@ func (s *Server) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 		EnteredUsername string `json:"EnteredUsername"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.EnteredUsername) == "" {
-		w.WriteHeader(http.StatusBadRequest)
+		writeInvalidBody(w)
 		return
 	}
 	expires := time.Now().Add(forgotPinTTL).UTC()
@@ -120,7 +120,7 @@ func (s *Server) handleForgotPasswordPin(w http.ResponseWriter, r *http.Request)
 		Pin string `json:"Pin"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Pin == "" {
-		w.WriteHeader(http.StatusBadRequest)
+		writeInvalidBody(w)
 		return
 	}
 	want := strings.ToUpper(strings.ReplaceAll(req.Pin, "-", ""))

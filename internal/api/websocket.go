@@ -167,9 +167,8 @@ func (h *wsHub) snapshot() []*wsConn {
 	return out
 }
 
-// handleSocket is GET /socket, registered with requireAuth (server.go) so
-// an unauthenticated upgrade attempt is rejected (401) before the socket
-// is ever accepted.
+// handleSocket is GET /socket, an unauthenticated upgrade attempt is refused
+// (403) before the socket is ever accepted.
 //
 // The connection is tied to the caller's tracked session (sessionRegistry,
 // sessions.go) the same way POST /Sessions/Capabilities/Full is, per
@@ -177,9 +176,11 @@ func (h *wsHub) snapshot() []*wsConn {
 // remote-control command delivery over that session (GeneralCommand et al)
 // stays explicitly out of scope, same as docs/11 already tracks it.
 func (s *Server) handleSocket(w http.ResponseWriter, r *http.Request) {
+	// users.socket.R2: a missing, unknown or revoked credential is refused
+	// before the upgrade with 403 (not the 401 of the REST routes).
 	ac, ok := AuthFromContext(r.Context())
-	if !ok || ac == nil {
-		w.WriteHeader(http.StatusUnauthorized)
+	if !ok || ac == nil || !ac.Authenticated {
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 

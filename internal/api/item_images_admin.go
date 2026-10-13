@@ -120,7 +120,7 @@ func (s *Server) handleUploadItemImage(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		writeBadRequest(w)
 		return
 	}
 	// Reference server's own body is base64-only (see doc comment above),
