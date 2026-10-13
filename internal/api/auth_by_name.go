@@ -96,6 +96,16 @@ func (s *Server) handleAuthenticateByName(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	s.issueLogin(w, r, user, policy, now, ac.Client, ac.Device, ac.DeviceID, ac.Version)
+}
+
+// issueLogin runs the checks that follow a verified credential (remote
+// access, schedule, device allow-list, session limit) and, when they pass,
+// issues the device's token and writes the AuthenticationResult. It is
+// shared by the password login and the QuickConnect exchange so both
+// apply exactly the same account rules and side effects.
+func (s *Server) issueLogin(w http.ResponseWriter, r *http.Request, user storage.User, policy userPolicyDto, now time.Time, client, device, deviceID, version string) {
+	ctx := r.Context()
 	// users.auth.R21: no remote access from outside the local network.
 	if !policy.EnableRemoteAccess && !fromLocalNetwork(r) {
 		w.WriteHeader(http.StatusForbidden)
@@ -107,7 +117,7 @@ func (s *Server) handleAuthenticateByName(w http.ResponseWriter, r *http.Request
 		return
 	}
 	// users.auth.R17.
-	if !deviceAllowed {
+	if !(policy.EnableAllDevices || containsString(policy.EnabledDevices, deviceID)) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -121,7 +131,7 @@ func (s *Server) handleAuthenticateByName(w http.ResponseWriter, r *http.Request
 		}
 		active := 0
 		for _, t := range toks {
-			if string(t.DeviceID) != ac.DeviceID {
+			if string(t.DeviceID) != deviceID {
 				active++
 			}
 		}
@@ -133,10 +143,10 @@ func (s *Server) handleAuthenticateByName(w http.ResponseWriter, r *http.Request
 
 	nowUTC := now.UTC()
 	if err := s.store.UpsertDevice(ctx, storage.Device{
-		ID:               storage.DeviceID(ac.DeviceID),
-		Name:             ac.Device,
-		AppName:          ac.Client,
-		AppVersion:       ac.Version,
+		ID:               storage.DeviceID(deviceID),
+		Name:             device,
+		AppName:          client,
+		AppVersion:       version,
 		LastUserID:       user.ID,
 		LastUserName:     user.Name,
 		DateLastActivity: nowUTC,
@@ -147,7 +157,7 @@ func (s *Server) handleAuthenticateByName(w http.ResponseWriter, r *http.Request
 
 	// IssueToken revokes the user's previous token on this DeviceId
 	// (users.auth.R10).
-	token, err := s.store.IssueToken(ctx, user.ID, storage.DeviceID(ac.DeviceID))
+	token, err := s.store.IssueToken(ctx, user.ID, storage.DeviceID(deviceID))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -171,9 +181,9 @@ func (s *Server) handleAuthenticateByName(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	session := s.sessions.loginSession(s.cfg.ServerID, ac.DeviceID, string(user.ID), user.Name, ac.Client, ac.Device, ac.Version, remoteEndPoint(r))
+	session := s.sessions.loginSession(s.cfg.ServerID, deviceID, string(user.ID), user.Name, client, device, version, remoteEndPoint(r))
 
-	s.logAuthSuccess(r, user, ac.Client)
+	s.logAuthSuccess(r, user, client)
 
 	writeJSON(w, http.StatusOK, authenticationResult{
 		User:        s.userDto(user),

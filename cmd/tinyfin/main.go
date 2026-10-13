@@ -57,6 +57,8 @@ func main() {
 		"TMDB API key for the direct metadata provider (docs/08's D3 reference provider); "+
 			"empty disables remote enrichment — the scanner still catalogs every item from "+
 			"filename-derived data alone (internal/scan's package doc comment). Overridable via TINYFIN_TMDB_API_KEY.")
+	noQuickConnect := flag.Bool("no-quickconnect", envOrDefault("TINYFIN_NO_QUICKCONNECT", "") != "",
+		"disable the QuickConnect sign-in flow (enabled by default). Set TINYFIN_NO_QUICKCONNECT to any non-empty value for the same effect.")
 	flag.Parse()
 
 	store, err := sqlite.New(*dataPath)
@@ -100,13 +102,14 @@ func main() {
 	}
 
 	server := api.NewServer(store, api.Config{
-		ServerID:            serverID,
-		TranscodeFFmpegPath: resolvedFFmpegPath,
-		ScanFFprobePath:     resolvedFFprobePath,
-		ScanImageDir:        scanImageDir,
-		TMDBAPIKey:          *tmdbAPIKey,
-		DataDir:             filepath.Dir(*dataPath),
-		WebDir:              resolvedWebDir,
+		ServerID:             serverID,
+		TranscodeFFmpegPath:  resolvedFFmpegPath,
+		ScanFFprobePath:      resolvedFFprobePath,
+		ScanImageDir:         scanImageDir,
+		TMDBAPIKey:           *tmdbAPIKey,
+		DataDir:              filepath.Dir(*dataPath),
+		WebDir:               resolvedWebDir,
+		QuickConnectDisabled: *noQuickConnect,
 	})
 
 	handler := server.Handler()

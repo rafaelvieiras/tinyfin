@@ -38,6 +38,16 @@ var routePaths = []string{
 	"/Users/Me",
 	"/Users",
 	"/Users/New",
+	// Literal two-segment paths: listed ahead of /Users/{userId} (below) so
+	// the wildcard cannot swallow them during case normalization.
+	"/Users/Password",
+	"/Users/ForgotPassword",
+	"/Users/AuthenticateWithQuickConnect",
+	"/Users/ForgotPassword/Pin",
+	"/Users/{userId}/Password",
+	"/QuickConnect/Initiate",
+	"/QuickConnect/Connect",
+	"/QuickConnect/Authorize",
 	// Must precede /Users/{userId} below: normalizePathCase returns on the
 	// first same-length match, so the literal has to be checked before the
 	// wildcard would swallow it — otherwise a lowercase "/users/public"

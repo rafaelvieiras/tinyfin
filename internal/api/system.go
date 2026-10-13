@@ -79,14 +79,11 @@ func (s *Server) handleSystemInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleQuickConnectEnabled is GET /QuickConnect/Enabled — unauthenticated,
-// called unconditionally by jellyfin-web's login screen on mount. Tinyfin
-// has no Quick Connect implementation, so this always answers false rather
-// than 404ing: found missing by testing against a real jellyfin-web build
-// (Android WebView shell) — an unhandled 404 here throws an uncaught
-// promise rejection that leaves the login screen stuck on its loading
-// spinner instead of rendering.
+// called unconditionally by jellyfin-web's login screen on mount (an
+// unhandled 404 here leaves the login screen on its loading spinner).
+// Reports whether the QuickConnect flow (quickconnect.go) is on.
 func (s *Server) handleQuickConnectEnabled(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, false)
+	writeJSON(w, http.StatusOK, s.quickConnectEnabled())
 }
 
 // brandingOptions mirrors the OpenAPI schema's BrandingOptions. Tinyfin has

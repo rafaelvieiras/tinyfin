@@ -123,6 +123,10 @@ type Config struct {
 	// bundle to report on at all" question always agrees with what main.go
 	// actually decided to serve.
 	WebDir string
+
+	// QuickConnectDisabled turns the QuickConnect sign-in flow off: the
+	// zero value leaves it enabled, as the official clients expect.
+	QuickConnectDisabled bool
 }
 
 // Server is the API/metadata role's HTTP surface (docs/03). The zero value
@@ -136,6 +140,7 @@ type Server struct {
 	scanState *scanTracker
 	sessions  *sessionRegistry
 	hub       *wsHub
+	quick     *quickConnectState
 }
 
 // NewServer builds a Server backed by store, applying cfg defaults where
@@ -166,6 +171,7 @@ func NewServer(store storage.Store, cfg Config) *Server {
 		scanState: &scanTracker{},
 		sessions:  newSessionRegistry(),
 		hub:       newWSHub(),
+		quick:     newQuickConnectState(),
 	}
 	s.routes()
 	go s.runWSWatchdog(context.Background())
@@ -342,6 +348,14 @@ func (s *Server) routes() {
 	// specific than the wildcard regardless of registration order.
 	s.mux.HandleFunc("GET /Users/Public", s.handleUsersPublic)
 	s.mux.HandleFunc("GET /QuickConnect/Enabled", s.handleQuickConnectEnabled)
+	s.mux.HandleFunc("POST /QuickConnect/Initiate", s.handleQuickConnectInitiate)
+	s.mux.HandleFunc("GET /QuickConnect/Connect", s.handleQuickConnectConnect)
+	s.mux.HandleFunc("POST /QuickConnect/Authorize", requireAuth(s.handleQuickConnectAuthorize))
+	s.mux.HandleFunc("POST /Users/AuthenticateWithQuickConnect", s.handleAuthenticateWithQuickConnect)
+	// Anonymous recovery flow: the PIN, read from the server, is the
+	// credential.
+	s.mux.HandleFunc("POST /Users/ForgotPassword", s.handleForgotPassword)
+	s.mux.HandleFunc("POST /Users/ForgotPassword/Pin", s.handleForgotPasswordPin)
 	s.mux.HandleFunc("GET /Branding/Configuration", s.handleBrandingConfiguration)
 
 	// Everything else in this slice's scope requires a valid token.
@@ -379,6 +393,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /Users", requireAuth(s.handleUsersUpdate))
 	s.mux.HandleFunc("POST /Users/{userId}", requireAuth(s.handleUsersUpdate))
 	s.mux.HandleFunc("POST /Users/Configuration", requireAuth(s.handleUsersConfiguration))
+	s.mux.HandleFunc("POST /Users/Password", requireAuth(s.handleUsersPassword))
+	s.mux.HandleFunc("POST /Users/{userId}/Password", requireAuth(s.handleUsersPassword))
 	s.mux.HandleFunc("POST /Users/{userId}/Configuration", requireAuth(s.handleUsersConfiguration))
 
 	// Library and item navigation (library.go) — docs/04's highest-priority
