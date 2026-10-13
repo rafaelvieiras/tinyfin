@@ -36,8 +36,14 @@ func TestOpenAndMigrate(t *testing.T) {
 	if err := st.db.QueryRow(`SELECT MAX(version) FROM schema_migrations`).Scan(&version); err != nil {
 		t.Fatalf("reading schema_migrations: %v", err)
 	}
-	if version != 8 {
-		t.Fatalf("expected schema version 8, got %d", version)
+	// The newest embedded migration, not a literal: branches reserve
+	// version numbers independently and would otherwise all edit this line.
+	migs, err := loadMigrations()
+	if err != nil {
+		t.Fatalf("loadMigrations: %v", err)
+	}
+	if want := migs[len(migs)-1].version; version != want {
+		t.Fatalf("expected schema version %d, got %d", want, version)
 	}
 
 	// Reopening an already-migrated database must be a no-op, not an error.

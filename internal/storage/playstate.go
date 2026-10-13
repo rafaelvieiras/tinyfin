@@ -7,14 +7,17 @@ import "time"
 // watched status (docs/05's PlaystateStore comment: "explicitly storage,
 // not session/realtime state ... it must survive a restart"). Fields that
 // are query-time aggregates over a folder rather than per-item state
-// (PlayedPercentage, UnplayedItemCount) and the deprecated Likes field are
-// not stored here; Rating (a 0-10 user rating, distinct from IsFavorite)
-// is left out for the same "minimal over guessed" reason as elsewhere —
-// nothing in docs/04's Phase 1 priority groups exercises it yet.
+// (PlayedPercentage, UnplayedItemCount) are not stored here; Rating (a
+// user rating, distinct from IsFavorite) and Likes
+// is stored here as an optional value (see the Rating field).
 type Playstate struct {
 	Played                bool
 	PlaybackPositionTicks int64
 	PlayCount             int
 	IsFavorite            bool
 	LastPlayedDate        *time.Time
+	// Rating is the user's own rating of the item and Likes a like/dislike
+	// flag; nil means never set.
+	Rating *float64
+	Likes  *bool
 }

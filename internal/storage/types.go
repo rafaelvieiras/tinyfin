@@ -66,8 +66,14 @@ type ItemFilter struct {
 	// differently-derived ID (a prior devseed run, a since-changed hashing
 	// scheme, ...) gets updated in place on the next scan rather than
 	// duplicated alongside a second row for the same file.
-	Path       string
-	ItemTypes  []ItemType
+	Path      string
+	ItemTypes []ItemType
+	// ExcludeItemTypes removes the listed types from the result.
+	ExcludeItemTypes []ItemType
+	// LibraryIDs restricts the result to the listed libraries; nil means
+	// unrestricted and a non-nil empty slice matches nothing. Backs a
+	// user's folder access restriction.
+	LibraryIDs []LibraryID
 	Genres     []string
 	SearchText string // backs FTS5 search, 09
 	Recursive  bool
@@ -77,7 +83,8 @@ type ItemFilter struct {
 	// Resume selects items with a saved, unfinished playback position for
 	// UserID (PlaybackPositionTicks > 0 and not Played) — backs GET
 	// /UserItems/Resume ("Continue Watching"). Requires UserID; ignored
-	// otherwise, same as Played/Favorite above.
+	// otherwise, same as Played/Favorite above. With no SortBy the result is
+	// ordered by last played date, most recent first.
 	Resume bool
 	SortBy []SortField
 	Limit  int

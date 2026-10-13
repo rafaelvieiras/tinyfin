@@ -518,6 +518,28 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 		wheres = append(wheres, "items.type IN ("+strings.Join(ph, ",")+")")
 	}
 
+	if len(filter.ExcludeItemTypes) > 0 {
+		ph := make([]string, len(filter.ExcludeItemTypes))
+		for i, t := range filter.ExcludeItemTypes {
+			ph[i] = "?"
+			whereArgs = append(whereArgs, string(t))
+		}
+		wheres = append(wheres, "items.type NOT IN ("+strings.Join(ph, ",")+")")
+	}
+
+	if filter.LibraryIDs != nil {
+		if len(filter.LibraryIDs) == 0 {
+			wheres = append(wheres, "0")
+		} else {
+			ph := make([]string, len(filter.LibraryIDs))
+			for i, l := range filter.LibraryIDs {
+				ph[i] = "?"
+				whereArgs = append(whereArgs, string(l))
+			}
+			wheres = append(wheres, "items.library_id IN ("+strings.Join(ph, ",")+")")
+		}
+	}
+
 	for _, g := range filter.Genres {
 		wheres = append(wheres, "EXISTS (SELECT 1 FROM json_each(items.genres) WHERE value = ?)")
 		whereArgs = append(whereArgs, g)
@@ -569,7 +591,11 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 		return storage.ItemPage{}, fmt.Errorf("sqlite: counting items: %w", err)
 	}
 
-	dataQuery := "SELECT " + itemColumns + " FROM items " + joinSQL + " " + whereSQL + " " + buildOrderBy(filter.SortBy) + " LIMIT ? OFFSET ?"
+	orderSQL := buildOrderBy(filter.SortBy)
+	if filter.Resume && filter.UserID != nil && len(filter.SortBy) == 0 {
+		orderSQL = "ORDER BY ps.last_played_date DESC, items.sort_name ASC"
+	}
+	dataQuery := "SELECT " + itemColumns + " FROM items " + joinSQL + " " + whereSQL + " " + orderSQL + " LIMIT ? OFFSET ?"
 	dataArgs := append(append([]any{}, args...), filter.Limit, filter.Offset)
 
 	rows, err := s.ex.QueryContext(ctx, dataQuery, dataArgs...)
