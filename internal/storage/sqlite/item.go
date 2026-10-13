@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -399,11 +400,14 @@ func recomputeAncestors(ctx context.Context, ex dbtx, id storage.ItemID) error {
 }
 
 var sortColumns = map[storage.SortBy]string{
-	storage.SortByName:              "items.sort_name",
-	storage.SortByDateCreated:       "items.date_created",
-	storage.SortByPremiereDate:      "items.premiere_date",
+	storage.SortByName:        "items.sort_name",
+	storage.SortByDateCreated: "items.date_created",
+	// A missing premiere date falls back to January 1st of the production
+	// year, so items known only by year still order sensibly.
+	storage.SortByPremiereDate:      "COALESCE(items.premiere_date, printf('%04d-01-01', items.production_year))",
 	storage.SortByProductionYear:    "items.production_year",
 	storage.SortByCommunityRating:   "items.community_rating",
+	storage.SortByRuntime:           "items.run_time_ticks",
 	storage.SortByIndexNumber:       "items.index_number",
 	storage.SortByParentIndexNumber: "items.parent_index_number",
 	// series_sort.sort_name is only non-NULL when the series self-join
@@ -428,7 +432,7 @@ func needsSeriesSortJoin(fields []storage.SortField) bool {
 }
 
 func buildOrderBy(fields []storage.SortField) string {
-	parts := make([]string, 0, len(fields))
+	parts := make([]string, 0, len(fields)+1)
 	for _, sf := range fields {
 		if sf.By == storage.SortByRandom {
 			parts = append(parts, "RANDOM()")
@@ -444,9 +448,9 @@ func buildOrderBy(fields []storage.SortField) string {
 		}
 		parts = append(parts, col+" "+dir)
 	}
-	if len(parts) == 0 {
-		return "ORDER BY items.sort_name ASC"
-	}
+	// Ties are always broken by sort name ascending (then id, so paging is
+	// stable across requests).
+	parts = append(parts, "items.sort_name ASC", "items.id ASC")
 	return "ORDER BY " + strings.Join(parts, ", ")
 }
 
@@ -473,82 +477,255 @@ func boolToInt(b bool) int {
 	return 0
 }
 
+// sqlPlaceholders returns "?,?,..." for n values.
+func sqlPlaceholders(n int) string {
+	return strings.TrimSuffix(strings.Repeat("?,", n), ",")
+}
+
+// folderTypeSQL is the parenthesised IN list of storage.FolderItemTypes.
+func folderTypeSQL() string {
+	q := make([]string, len(storage.FolderItemTypes))
+	for i, t := range storage.FolderItemTypes {
+		q[i] = "'" + string(t) + "'"
+	}
+	return "(" + strings.Join(q, ",") + ")"
+}
+
+// videoStreamExists renders an EXISTS over the item's video streams with
+// an extra predicate on the stream's json fields.
+func videoStreamExists(pred string) string {
+	return "EXISTS (SELECT 1 FROM json_each(items.media_streams) vs WHERE json_extract(vs.value,'$.Type') = 'Video' AND " + pred + ")"
+}
+
 func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (storage.ItemPage, error) {
 	if filter.Limit <= 0 {
 		return storage.ItemPage{}, fmt.Errorf("sqlite: QueryItems: Limit must be > 0, got %d", filter.Limit)
+	}
+	if filter.NoMatch || (filter.RestrictToLibraries && len(filter.LibraryIDs) == 0) {
+		return storage.ItemPage{Offset: filter.Offset}, nil
 	}
 
 	var (
 		joins, wheres       []string
 		joinArgs, whereArgs []any
 	)
+	addWhere := func(sql string, args ...any) {
+		wheres = append(wheres, sql)
+		whereArgs = append(whereArgs, args...)
+	}
+	idArgs := func(ids []storage.ItemID) []any {
+		out := make([]any, len(ids))
+		for i, id := range ids {
+			out[i] = string(id)
+		}
+		return out
+	}
 
 	if filter.LibraryID != nil {
-		wheres = append(wheres, "items.library_id = ?")
-		whereArgs = append(whereArgs, string(*filter.LibraryID))
+		addWhere("items.library_id = ?", string(*filter.LibraryID))
+	}
+	if filter.RestrictToLibraries {
+		args := make([]any, len(filter.LibraryIDs))
+		for i, id := range filter.LibraryIDs {
+			args[i] = string(id)
+		}
+		addWhere("items.library_id IN ("+sqlPlaceholders(len(args))+")", args...)
+	}
+	if filter.TopLevelOnly {
+		addWhere("items.parent_id IS NULL AND items.type <> 'Folder'")
 	}
 
 	if filter.ParentID != nil {
 		if filter.Recursive {
 			joins = append(joins, "JOIN item_ancestors ia ON ia.item_id = items.id")
-			wheres = append(wheres, "ia.ancestor_id = ?")
-			whereArgs = append(whereArgs, string(*filter.ParentID))
+			addWhere("ia.ancestor_id = ?", string(*filter.ParentID))
 		} else {
-			wheres = append(wheres, "items.parent_id = ?")
-			whereArgs = append(whereArgs, string(*filter.ParentID))
+			addWhere("items.parent_id = ?", string(*filter.ParentID))
 		}
 	}
 
 	if filter.SeriesID != nil {
-		wheres = append(wheres, "items.series_id = ?")
-		whereArgs = append(whereArgs, string(*filter.SeriesID))
+		addWhere("items.series_id = ?", string(*filter.SeriesID))
+	}
+	if filter.Path != "" {
+		addWhere("items.path = ?", filter.Path)
 	}
 
-	if filter.Path != "" {
-		wheres = append(wheres, "items.path = ?")
-		whereArgs = append(whereArgs, filter.Path)
+	if len(filter.IDs) > 0 {
+		addWhere("items.id IN ("+sqlPlaceholders(len(filter.IDs))+")", idArgs(filter.IDs)...)
+	}
+	if len(filter.ExcludeIDs) > 0 {
+		addWhere("items.id NOT IN ("+sqlPlaceholders(len(filter.ExcludeIDs))+")", idArgs(filter.ExcludeIDs)...)
 	}
 
 	if len(filter.ItemTypes) > 0 {
-		ph := make([]string, len(filter.ItemTypes))
+		args := make([]any, len(filter.ItemTypes))
 		for i, t := range filter.ItemTypes {
-			ph[i] = "?"
-			whereArgs = append(whereArgs, string(t))
+			args[i] = string(t)
 		}
-		wheres = append(wheres, "items.type IN ("+strings.Join(ph, ",")+")")
+		addWhere("items.type IN ("+sqlPlaceholders(len(args))+")", args...)
 	}
-
 	if len(filter.ExcludeItemTypes) > 0 {
-		ph := make([]string, len(filter.ExcludeItemTypes))
+		args := make([]any, len(filter.ExcludeItemTypes))
 		for i, t := range filter.ExcludeItemTypes {
-			ph[i] = "?"
-			whereArgs = append(whereArgs, string(t))
+			args[i] = string(t)
 		}
-		wheres = append(wheres, "items.type NOT IN ("+strings.Join(ph, ",")+")")
+		addWhere("items.type NOT IN ("+sqlPlaceholders(len(args))+")", args...)
 	}
-
-	if filter.LibraryIDs != nil {
-		if len(filter.LibraryIDs) == 0 {
-			wheres = append(wheres, "0")
+	if filter.IsFolder != nil {
+		if *filter.IsFolder {
+			addWhere("items.type IN " + folderTypeSQL())
 		} else {
-			ph := make([]string, len(filter.LibraryIDs))
-			for i, l := range filter.LibraryIDs {
-				ph[i] = "?"
-				whereArgs = append(whereArgs, string(l))
-			}
-			wheres = append(wheres, "items.library_id IN ("+strings.Join(ph, ",")+")")
+			addWhere("items.type NOT IN " + folderTypeSQL())
 		}
 	}
 
 	for _, g := range filter.Genres {
-		wheres = append(wheres, "EXISTS (SELECT 1 FROM json_each(items.genres) WHERE value = ?)")
-		whereArgs = append(whereArgs, g)
+		addWhere("EXISTS (SELECT 1 FROM json_each(items.genres) WHERE value = ?)", g)
+	}
+	if len(filter.Tags) > 0 {
+		args := make([]any, len(filter.Tags))
+		for i, t := range filter.Tags {
+			args[i] = strings.ToLower(t)
+		}
+		addWhere("EXISTS (SELECT 1 FROM json_each(items.tags) WHERE lower(value) IN ("+sqlPlaceholders(len(args))+"))", args...)
+	}
+	if len(filter.BlockedTags) > 0 {
+		args := make([]any, len(filter.BlockedTags))
+		for i, t := range filter.BlockedTags {
+			args[i] = strings.ToLower(t)
+		}
+		addWhere("NOT EXISTS (SELECT 1 FROM json_each(items.tags) WHERE lower(value) IN ("+sqlPlaceholders(len(args))+"))", args...)
+	}
+	if len(filter.AllowedTags) > 0 {
+		args := make([]any, len(filter.AllowedTags))
+		for i, t := range filter.AllowedTags {
+			args[i] = strings.ToLower(t)
+		}
+		addWhere("EXISTS (SELECT 1 FROM json_each(items.tags) WHERE lower(value) IN ("+sqlPlaceholders(len(args))+"))", args...)
+	}
+	if len(filter.OfficialRatings) > 0 {
+		args := make([]any, len(filter.OfficialRatings))
+		for i, r := range filter.OfficialRatings {
+			args[i] = r
+		}
+		addWhere("items.official_rating IN ("+sqlPlaceholders(len(args))+")", args...)
+	}
+	if filter.PersonName != "" {
+		addWhere("EXISTS (SELECT 1 FROM json_each(items.people) WHERE lower(json_extract(value,'$.Name')) = ?)", strings.ToLower(filter.PersonName))
+	}
+	if len(filter.Years) > 0 {
+		args := make([]any, len(filter.Years))
+		for i, y := range filter.Years {
+			args[i] = y
+		}
+		addWhere("items.production_year IN ("+sqlPlaceholders(len(args))+")", args...)
 	}
 
+	if filter.NameStartsWith != "" {
+		addWhere("lower(items.sort_name) LIKE ? ESCAPE '\\'", escapeLike(strings.ToLower(filter.NameStartsWith))+"%")
+	}
+	if filter.NameStartsWithOrGreater != "" {
+		addWhere("lower(items.sort_name) >= ?", strings.ToLower(filter.NameStartsWithOrGreater))
+	}
+	if filter.NameLessThan != "" {
+		addWhere("lower(items.sort_name) < ?", strings.ToLower(filter.NameLessThan))
+	}
+
+	var searchTerm string
+	if filter.NameContains != "" {
+		searchTerm = strings.ToLower(filter.NameContains)
+		joins = append(joins, "LEFT JOIN items search_series ON search_series.id = items.series_id")
+		addWhere("(instr(lower(items.name), ?) > 0 OR instr(lower(COALESCE(search_series.name, '')), ?) > 0)", searchTerm, searchTerm)
+	}
 	if filter.SearchText != "" {
 		joins = append(joins, "JOIN items_fts ON items_fts.rowid = items.rowid")
-		wheres = append(wheres, "items_fts MATCH ?")
-		whereArgs = append(whereArgs, ftsMatchQuery(filter.SearchText))
+		addWhere("items_fts MATCH ?", ftsMatchQuery(filter.SearchText))
+	}
+
+	if filter.ParentIndexNumber != nil {
+		addWhere("items.parent_index_number = ?", *filter.ParentIndexNumber)
+	}
+	if filter.IndexNumber != nil {
+		addWhere("items.index_number = ?", *filter.IndexNumber)
+	}
+
+	if filter.MinWidth != nil {
+		addWhere(videoStreamExists("json_extract(vs.value,'$.Width') >= ?"), *filter.MinWidth)
+	}
+	if filter.MinHeight != nil {
+		addWhere(videoStreamExists("json_extract(vs.value,'$.Height') >= ?"), *filter.MinHeight)
+	}
+	if filter.MaxWidth != nil {
+		addWhere(videoStreamExists("json_extract(vs.value,'$.Width') <= ?"), *filter.MaxWidth)
+	}
+	if filter.MaxHeight != nil {
+		addWhere(videoStreamExists("json_extract(vs.value,'$.Height') <= ?"), *filter.MaxHeight)
+	}
+	if filter.IsHD != nil {
+		if *filter.IsHD {
+			addWhere(videoStreamExists("json_extract(vs.value,'$.Width') >= 1200"))
+		} else {
+			addWhere(videoStreamExists("json_extract(vs.value,'$.Width') < 1200"))
+		}
+	}
+	if filter.Is4K != nil {
+		if *filter.Is4K {
+			addWhere(videoStreamExists("(json_extract(vs.value,'$.Width') >= 3800 OR json_extract(vs.value,'$.Height') >= 2100)"))
+		} else {
+			// 4K=false without HD=true is not a satisfiable class of its own.
+			addWhere("0")
+		}
+	}
+
+	if filter.HasOverview != nil {
+		if *filter.HasOverview {
+			addWhere("items.overview <> ''")
+		} else {
+			addWhere("items.overview = ''")
+		}
+	}
+	if filter.HasSubtitles != nil {
+		sub := "EXISTS (SELECT 1 FROM json_each(items.media_streams) ss WHERE json_extract(ss.value,'$.Type') = 'Subtitle') OR EXISTS (SELECT 1 FROM subtitle_refs sr WHERE sr.item_id = items.id)"
+		if *filter.HasSubtitles {
+			addWhere("(" + sub + ")")
+		} else {
+			addWhere("NOT (" + sub + ")")
+		}
+	}
+	for _, pf := range []struct {
+		v    *bool
+		prov string
+	}{{filter.HasImdbID, "Imdb"}, {filter.HasTmdbID, "Tmdb"}} {
+		if pf.v == nil {
+			continue
+		}
+		expr := "COALESCE(json_extract(items.provider_ids, '$." + pf.prov + "'), '') <> ''"
+		if *pf.v {
+			addWhere(expr)
+		} else {
+			addWhere("NOT (" + expr + ")")
+		}
+	}
+	if filter.HasParentalRating != nil {
+		if *filter.HasParentalRating {
+			addWhere("items.official_rating <> ''")
+		} else {
+			addWhere("items.official_rating = ''")
+		}
+	}
+	if filter.MinCommunityRating != nil {
+		addWhere("items.community_rating >= ?", *filter.MinCommunityRating)
+	}
+	if filter.MinPremiereDate != nil {
+		addWhere("items.premiere_date >= ?", *filter.MinPremiereDate)
+	}
+	if len(filter.ImageTypes) > 0 {
+		args := make([]any, len(filter.ImageTypes))
+		for i, t := range filter.ImageTypes {
+			args[i] = t
+		}
+		addWhere("EXISTS (SELECT 1 FROM image_refs ir WHERE ir.item_id = items.id AND ir.kind IN ("+sqlPlaceholders(len(args))+"))", args...)
 	}
 
 	if needsSeriesSortJoin(filter.SortBy) {
@@ -563,16 +740,25 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 		joins = append(joins, "LEFT JOIN playstates ps ON ps.item_id = items.id AND ps.user_id = ?")
 		joinArgs = append(joinArgs, string(*filter.UserID))
 		if filter.Played != nil {
-			wheres = append(wheres, "COALESCE(ps.played, 0) = ?")
-			whereArgs = append(whereArgs, boolToInt(*filter.Played))
+			// A folder (series, season) is played only when it has at
+			// least one leaf and every leaf below it is played.
+			leaf := "SELECT 1 FROM item_ancestors fa JOIN items fl ON fl.id = fa.item_id WHERE fa.ancestor_id = items.id AND fl.type NOT IN " + folderTypeSQL()
+			played := "CASE WHEN items.type IN " + folderTypeSQL() + " THEN (EXISTS (" + leaf + ") AND NOT EXISTS (" + leaf +
+				" AND NOT EXISTS (SELECT 1 FROM playstates fp WHERE fp.item_id = fl.id AND fp.user_id = ? AND fp.played = 1)))" +
+				" ELSE COALESCE(ps.played, 0) = 1 END"
+			addWhere("("+played+") = ?", string(*filter.UserID), boolToInt(*filter.Played))
 		}
 		if filter.Favorite != nil {
-			wheres = append(wheres, "COALESCE(ps.is_favorite, 0) = ?")
-			whereArgs = append(whereArgs, boolToInt(*filter.Favorite))
+			addWhere("COALESCE(ps.is_favorite, 0) = ?", boolToInt(*filter.Favorite))
 		}
 		if filter.Resume {
-			wheres = append(wheres, "ps.playback_position_ticks > 0 AND COALESCE(ps.played, 0) = 0")
+			addWhere("ps.playback_position_ticks > 0 AND COALESCE(ps.played, 0) = 0")
 		}
+		if filter.Resumable {
+			addWhere("COALESCE(ps.playback_position_ticks, 0) > 0")
+		}
+	} else if filter.Resumable {
+		return storage.ItemPage{Offset: filter.Offset}, nil
 	}
 
 	joinSQL := strings.Join(joins, " ")
@@ -585,18 +771,84 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 	args = append(args, joinArgs...)
 	args = append(args, whereArgs...)
 
+	orderBy := buildOrderBy(filter.SortBy)
+	var orderArgs []any
+	switch {
+	case filter.OrderByIDs && len(filter.IDs) > 0 && len(filter.SortBy) == 0:
+		// Requested order: rank by position in the id list.
+		var b strings.Builder
+		b.WriteString("ORDER BY CASE items.id")
+		for i, id := range filter.IDs {
+			b.WriteString(" WHEN ? THEN ")
+			b.WriteString(strconv.Itoa(i))
+			orderArgs = append(orderArgs, string(id))
+		}
+		b.WriteString(" END, items.id ASC")
+		orderBy = b.String()
+	case searchTerm != "" && len(filter.SortBy) == 0:
+		// Best match first: exact name, then prefix, then inner match;
+		// ties by sort name.
+		orderBy = "ORDER BY CASE WHEN lower(items.name) = ? THEN 0 WHEN instr(lower(items.name), ?) = 1 THEN 1 " +
+			"WHEN instr(lower(items.name), ?) > 0 THEN 2 ELSE 3 END, items.sort_name ASC, items.id ASC"
+		orderArgs = []any{searchTerm, searchTerm, searchTerm}
+	}
+	return s.runItemQuery(ctx, filter, joinSQL, whereSQL, args, orderBy, orderArgs)
+}
+
+// escapeLike escapes LIKE wildcards in s for use with ESCAPE '\'.
+func escapeLike(s string) string {
+	r := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+	return r.Replace(s)
+}
+
+// runItemQuery executes the count and data queries assembled by QueryItems.
+// orderArgs are the bind values of orderBy (bound after the WHERE args).
+func (s *Store) runItemQuery(ctx context.Context, filter storage.ItemFilter, joinSQL, whereSQL string, args []any, orderBy string, orderArgs []any) (storage.ItemPage, error) {
+	if filter.Resume && filter.UserID != nil && len(filter.SortBy) == 0 && filter.SearchText == "" {
+		orderBy = "ORDER BY ps.last_played_date DESC, items.sort_name ASC, items.id ASC"
+		orderArgs = nil
+	}
 	var total int
 	countQuery := "SELECT COUNT(*) FROM items " + joinSQL + " " + whereSQL
 	if err := s.ex.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
 		return storage.ItemPage{}, fmt.Errorf("sqlite: counting items: %w", err)
 	}
 
-	orderSQL := buildOrderBy(filter.SortBy)
-	if filter.Resume && filter.UserID != nil && len(filter.SortBy) == 0 {
-		orderSQL = "ORDER BY ps.last_played_date DESC, items.sort_name ASC"
+	var dataQuery string
+	dataArgs := append([]any{}, args...)
+	if filter.AdjacentTo != nil {
+		// Rank the whole candidate set in the requested order, then keep
+		// the anchor and its neighbours.
+		dataQuery = "WITH ranked AS (SELECT items.id AS rid, ROW_NUMBER() OVER (" + orderBy + ") AS rn FROM items " + joinSQL + " " + whereSQL + ") " +
+			"SELECT " + itemColumns + " FROM items JOIN ranked ON ranked.rid = items.id " +
+			"WHERE ranked.rn BETWEEN (SELECT rn - 1 FROM ranked WHERE rid = ?) AND (SELECT rn + 1 FROM ranked WHERE rid = ?) " +
+			"ORDER BY ranked.rn ASC LIMIT ? OFFSET ?"
+		dataArgs = append(dataArgs, orderArgs...)
+		dataArgs = append(dataArgs, string(*filter.AdjacentTo), string(*filter.AdjacentTo), filter.Limit, filter.Offset)
+		// The count query above counted the candidate set; the page total
+		// is the number of items returned by the neighbour window.
+		rows, err := s.ex.QueryContext(ctx, dataQuery, dataArgs...)
+		if err != nil {
+			return storage.ItemPage{}, fmt.Errorf("sqlite: querying adjacent items: %w", err)
+		}
+		defer rows.Close()
+		var items []storage.Item
+		for rows.Next() {
+			item, err := scanItem(rows)
+			if err != nil {
+				return storage.ItemPage{}, fmt.Errorf("sqlite: scanning item row: %w", err)
+			}
+			items = append(items, item)
+		}
+		if err := rows.Err(); err != nil {
+			return storage.ItemPage{}, fmt.Errorf("sqlite: iterating item rows: %w", err)
+		}
+		return storage.ItemPage{Items: items, TotalCount: len(items), Offset: filter.Offset}, nil
 	}
-	dataQuery := "SELECT " + itemColumns + " FROM items " + joinSQL + " " + whereSQL + " " + orderSQL + " LIMIT ? OFFSET ?"
-	dataArgs := append(append([]any{}, args...), filter.Limit, filter.Offset)
+
+	dataQuery = "SELECT " + itemColumns + " FROM items " + joinSQL + " " + whereSQL + " " + orderBy + " LIMIT ? OFFSET ?"
+	dataArgs = append(dataArgs, orderArgs...)
+	dataArgs = append(dataArgs, filter.Limit, filter.Offset)
 
 	rows, err := s.ex.QueryContext(ctx, dataQuery, dataArgs...)
 	if err != nil {

@@ -241,6 +241,7 @@ func (s *Server) handleUserItemsResume(w http.ResponseWriter, r *http.Request) {
 		SearchText: q.Get("searchterm"),
 	}
 	if acc := libraryAccessFor(target); !acc.all {
+		filter.RestrictToLibraries = true
 		filter.LibraryIDs = acc.ids
 	}
 

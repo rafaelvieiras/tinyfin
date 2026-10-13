@@ -53,6 +53,7 @@ const (
 	SortByRandom            SortBy = "Random"
 	SortByIndexNumber       SortBy = "IndexNumber"
 	SortByParentIndexNumber SortBy = "ParentIndexNumber"
+	SortByRuntime           SortBy = "Runtime"
 
 	// SortBySeriesName sorts an Episode/Season by its owning series' SortName
 	// (falling back to the item's own SortName for a type with no series,

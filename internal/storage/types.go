@@ -1,5 +1,7 @@
 package storage
 
+import "time"
+
 // Identifier types referenced throughout the Store interfaces (docs/05,
 // O3). All are string-backed: SQLite mode stores them as TEXT primary
 // keys, and a networked scale-mode implementation is free to use UUIDs or
@@ -66,14 +68,8 @@ type ItemFilter struct {
 	// differently-derived ID (a prior devseed run, a since-changed hashing
 	// scheme, ...) gets updated in place on the next scan rather than
 	// duplicated alongside a second row for the same file.
-	Path      string
-	ItemTypes []ItemType
-	// ExcludeItemTypes removes the listed types from the result.
-	ExcludeItemTypes []ItemType
-	// LibraryIDs restricts the result to the listed libraries; nil means
-	// unrestricted and a non-nil empty slice matches nothing. Backs a
-	// user's folder access restriction.
-	LibraryIDs []LibraryID
+	Path       string
+	ItemTypes  []ItemType
 	Genres     []string
 	SearchText string // backs FTS5 search, 09
 	Recursive  bool
@@ -89,6 +85,84 @@ type ItemFilter struct {
 	SortBy []SortField
 	Limit  int
 	Offset int
+
+	// Listing/query filters (GET /Items). Every field is optional and
+	// ANDed with the rest; a zero value means "no restriction".
+
+	// RestrictToLibraries limits results to LibraryIDs. It is a separate
+	// flag because an empty LibraryIDs must mean "no accessible library,
+	// match nothing" for a restricted user, not "unrestricted".
+	RestrictToLibraries bool
+	LibraryIDs          []LibraryID
+
+	// TopLevelOnly keeps only the direct children of a library root:
+	// items with no parent, excluding the library's own root Folder item.
+	TopLevelOnly bool
+
+	// IDs selects specific items; OrderByIDs returns them in that order
+	// when no explicit SortBy is set. ExcludeIDs removes items.
+	IDs        []ItemID
+	OrderByIDs bool
+	ExcludeIDs []ItemID
+
+	ExcludeItemTypes []ItemType
+	// IsFolder keeps only folder-like items (true) or only leaves (false).
+	IsFolder *bool
+
+	Years                   []int
+	NameStartsWith          string
+	NameStartsWithOrGreater string
+	NameLessThan            string
+	// NameContains is a case-insensitive substring match on the item's name
+	// (and, for items of a series, the series' name). When set and no
+	// SortBy is given, results are ranked by match quality, then sort name.
+	NameContains string
+
+	ParentIndexNumber *int
+	IndexNumber       *int
+
+	// Video dimension filters, evaluated against the primary video stream.
+	MinWidth, MinHeight, MaxWidth, MaxHeight *int
+	IsHD                                     *bool
+	Is4K                                     *bool
+
+	Tags               []string
+	OfficialRatings    []string
+	PersonName         string
+	HasOverview        *bool
+	HasSubtitles       *bool
+	HasImdbID          *bool
+	HasTmdbID          *bool
+	HasParentalRating  *bool
+	MinCommunityRating *float64
+	MinPremiereDate    *time.Time
+	ImageTypes         []string
+	// NoMatch short-circuits the query to an empty result; used for
+	// filters nothing can satisfy (e.g. a user "likes" flag that is not
+	// stored).
+	NoMatch bool
+
+	// Resumable keeps items with a saved playback position greater than
+	// zero for UserID (played or not), unlike Resume.
+	Resumable bool
+
+	// BlockedTags hides items carrying any of these tags; AllowedTags, when
+	// non-empty, keeps only items carrying at least one. Matching is
+	// case-insensitive.
+	BlockedTags []string
+	AllowedTags []string
+
+	// AdjacentTo narrows the (otherwise ordered) result to the named item
+	// and its immediate previous/next neighbours.
+	AdjacentTo *ItemID
+}
+
+// FolderItemTypes are the item types that group other items (or are
+// container-like) and therefore count as folders for IsFolder filtering.
+var FolderItemTypes = []ItemType{
+	ItemTypeSeries, ItemTypeSeason, ItemTypeMusicArtist, ItemTypeMusicAlbum,
+	ItemTypeBoxSet, ItemTypePlaylist, ItemTypeFolder, ItemTypeCollectionFolder,
+	ItemTypeUserView,
 }
 
 // ItemPage is the result of a bounded QueryItems call. TotalCount is the
