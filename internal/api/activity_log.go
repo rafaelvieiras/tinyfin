@@ -14,7 +14,7 @@ import (
 // live against a real Jellyfin server (called twice by jellyfin-web's
 // Dashboard overview page — once per widget), e.g. a successful login:
 //
-//	{"Id":140,"Name":"admin está online em Chrome","ShortOverview":"Endereço IP: 172.20.0.1",
+//	{"Id":140,"Name":"admin is online on Chrome","ShortOverview":"IP Address: 203.0.113.7",
 //	 "Type":"SessionStarted","Date":"2026-09-04T23:24:40.095896Z","UserId":"b3017418aebd460699f4f2cadadcb542",
 //	 "Severity":"Information"}
 //

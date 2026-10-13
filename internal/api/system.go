@@ -106,7 +106,7 @@ func (s *Server) handleBrandingConfiguration(w http.ResponseWriter, r *http.Requ
 
 // handleConfigurationPages is GET /web/ConfigurationPages — the admin
 // Dashboard's plugin-supplied settings-page registry. Confirmed live
-// against a real Jellyfin server (staging, :8097): with no plugins
+// against a real Jellyfin server (reference server): with no plugins
 // installed there, the response is a bare empty array, not a 404 or an
 // object — so an empty array is the actually-correct answer for a server
 // with no plugin system at all (docs/01's out-of-scope list), not merely a
@@ -152,7 +152,7 @@ func (s *Server) handleSessionsCapabilitiesFull(w http.ResponseWriter, r *http.R
 }
 
 // endpointInfo mirrors the OpenAPI schema's EndpointInfo — confirmed
-// against a real Jellyfin server (staging, :8097), not assumed: a plain
+// against a real Jellyfin server (reference server), not assumed: a plain
 // GET with no request body came back exactly
 // {"IsLocal":false,"IsInNetwork":true} when curled from outside the
 // container (through the Docker port mapping, so the peer address the
@@ -179,7 +179,7 @@ type endpointInfo struct {
 // match that. IsInNetwork also covers link-local addresses
 // (net.IP.IsLinkLocalUnicast) in addition to RFC 1918 private ranges
 // (net.IP.IsPrivate) and loopback — not separately confirmed against the
-// real server (this project's staging setup has no way to originate a
+// real server (the test setup used had no way to originate a
 // request from a link-local source), but consistent with what "in
 // network" means everywhere else in networking, and strictly additive to
 // what was confirmed (it only ever makes this true in a case the real

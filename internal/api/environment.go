@@ -3,7 +3,7 @@
 // "Add Media Library") calls to let an admin navigate the server's real
 // filesystem instead of typing a path from memory. Route shapes and
 // response field names were confirmed against a running reference server
-// (jellyfin-real-staging, :8097 — AGENTS.md's clean-room requirement) and
+// (the reference server — AGENTS.md's clean-room requirement) and
 // cross-checked against the embedded jellyfin-apiclient bundle inside a
 // real jellyfin-web build (query param spelling: lowercase "path", camelCase
 // "includeDirectories"/"includeFiles"; ValidatePath's body field is spelled

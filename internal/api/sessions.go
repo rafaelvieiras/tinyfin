@@ -253,7 +253,7 @@ func (s *Server) handleSessionsList(w http.ResponseWriter, r *http.Request) {
 }
 
 // remoteEndPoint reports the request's TCP peer address as a bare IP string
-// (RemoteEndPoint's shape, confirmed live: "172.20.0.1", no port) — falling
+// (RemoteEndPoint's shape, confirmed live: "203.0.113.7", no port) — falling
 // back to the raw, unparsed RemoteAddr on the same defensive case
 // system.go's remoteIP already documents (a test harness's httptest.Request
 // might not set a parseable one).

@@ -359,7 +359,7 @@ func TestVideoStreamNotFoundForMissingItem(t *testing.T) {
 
 // TestBitrateTestRoundedSize unit-tests bitrateTestRoundedSize against every
 // value spread confirmed by binary search against a real Jellyfin server
-// (staging, :8097): every response length observed there was a power of
+// (reference server): every response length observed there was a power of
 // two, with a floor of 16 and Size itself passed through unchanged whenever
 // it was already an exact power of two.
 func TestBitrateTestRoundedSize(t *testing.T) {
@@ -386,7 +386,7 @@ func TestBitrateTestRoundedSize(t *testing.T) {
 // TestPlaybackBitrateTest regression-guards GET /Playback/BitrateTest end
 // to end: default size (Size omitted), an explicit Size, the rounding, the
 // Content-Type, and the min/max validation bounds — all confirmed against a
-// real Jellyfin server (staging, :8097) via handlePlaybackBitrateTest's doc
+// real Jellyfin server (reference server) via handlePlaybackBitrateTest's doc
 // comment.
 func TestPlaybackBitrateTest(t *testing.T) {
 	ts, st := newTestServer(t)
@@ -466,7 +466,7 @@ func TestPlaybackBitrateTest(t *testing.T) {
 
 // TestPlaybackBitrateTestRequiresAuth regression-guards that GET
 // /Playback/BitrateTest needs a valid token — confirmed against a real
-// Jellyfin server (staging, :8097): a request with no token comes back
+// Jellyfin server (reference server): a request with no token comes back
 // 401.
 func TestPlaybackBitrateTestRequiresAuth(t *testing.T) {
 	ts, _ := newTestServer(t)

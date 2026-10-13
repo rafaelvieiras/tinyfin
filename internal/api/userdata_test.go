@@ -9,8 +9,8 @@ import (
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
 
-// TestFavoriteItemsToggle regression-guards the "Adicionar aos favoritos"
-// button found silently broken via a live Playwright session against
+// TestFavoriteItemsToggle regression-guards the add-to-favorites button
+// (labeled "Adicionar aos favoritos" in a Portuguese-localized UI) found silently broken via a live Playwright session against
 // jellyfin-web (docs/11-jellyfin-web-route-coverage.md, "Users, sessions,
 // devices" section): the button responded and even updated optimistically,
 // but POST/DELETE /Users/{userId}/FavoriteItems/{itemId} 404'd, so nothing
@@ -186,7 +186,7 @@ func TestPlayedItemsToggle(t *testing.T) {
 }
 
 // TestPlayedItemResetsResumePosition regression-guards a real bug found via
-// curl against a real Jellyfin server (staging, :8097): marking an
+// curl against a real Jellyfin server (reference server): marking an
 // in-progress item watched resets PlaybackPositionTicks to 0, not just
 // Played/PlayCount. Before this fix, handlePlayedItemAdd left the position
 // untouched — invisible in the mark-played response itself (Resume already

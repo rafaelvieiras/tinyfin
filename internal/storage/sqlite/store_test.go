@@ -174,7 +174,7 @@ func TestSeedAndGetItem(t *testing.T) {
 // unchanged — even when the caller passes a different DateCreated (exactly
 // what every scan.go call site does today, stamping time.Now() on every
 // rescan of every already-cataloged file). Real Jellyfin's "recently added"
-// ordering depends on this: found live in staging, where every full rescan
+// ordering depends on this: found live on a long-lived test deployment, where every full rescan
 // was silently resetting every existing item's "date added" to the scan's
 // own wall-clock time, scrambling /Users/{userId}/Items/Latest into
 // scan/traversal order instead of true historical add order.
@@ -504,7 +504,7 @@ func TestUserDeviceAndPlaystate(t *testing.T) {
 	st := openTestStore(t)
 	ctx := context.Background()
 
-	userID, err := st.CreateUser(ctx, storage.User{Name: "rafael", IsAdministrator: true})
+	userID, err := st.CreateUser(ctx, storage.User{Name: "admin", IsAdministrator: true})
 	if err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
@@ -512,7 +512,7 @@ func TestUserDeviceAndPlaystate(t *testing.T) {
 		t.Fatal("CreateUser returned an empty ID")
 	}
 
-	got, err := st.GetUserByName(ctx, "rafael")
+	got, err := st.GetUserByName(ctx, "admin")
 	if err != nil {
 		t.Fatalf("GetUserByName: %v", err)
 	}

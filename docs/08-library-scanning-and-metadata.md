@@ -34,7 +34,7 @@ composes the result into the shape the API surface needs.
 When both a local source (a Kodi-style sidecar `.nfo`, folder-convention artwork) and the configured
 remote Provider have data for the same item, which one wins was originally a convention this project
 adopted from Kodi's own documented `.nfo` semantics, not something checked against the reference
-server. Rafael asked for that check explicitly (an explicit request is its own sufficient reason to
+server. The maintainer asked for that check explicitly (an explicit request is its own sufficient reason to
 read the reference server's C# source, AGENTS.md's clean-room requirement) once a real per-item
 refresh feature made the question concrete. Findings, from `jellyfin/jellyfin`'s metadata-refresh
 pipeline (extraction only — this describes observed behavior, no code/names/structure carried over):
@@ -85,8 +85,8 @@ re-scanning the same file upserts the same row instead of duplicating it. Every 
 season, episode — the four call sites in `scan.go`) now includes the scanning library's own ID, not
 just the file's path.
 
-This was found live in staging, not derived on paper: a leftover manually-created test library
-happened to point at the same host folder as the real "Filmes" library. Before this fix, the seed
+This was found live on a test deployment, not derived on paper: a leftover manually-created test library
+happened to point at the same host folder as a real movie library. Before this fix, the seed
 was path-only, and `reconcileItemID`'s existing-row lookup (the mechanism that lets a changed ID
 formula reconcile in place rather than duplicate, see its own doc comment) was scoped to *the
 library currently being scanned* — so it could never see that the other library had already claimed
@@ -94,7 +94,7 @@ that path. Both libraries' scans minted the identical ID for the identical file,
 `ON CONFLICT(id)` let whichever scan wrote last silently reassign that row's `LibraryID`. Because
 `Server.refreshAllLibraries` ("Scan All Libraries") launches one goroutine per library concurrently,
 this became a race, nondeterministically splitting one library's real catalog across both — the
-exact symptom Rafael observed (a partial "Filmes" library, with the missing titles showing up under
+exact symptom observed (a partial movie library, with the missing titles showing up under
 the leftover test library instead). Folding `LibraryID` into the hash means two libraries with
 overlapping `Paths` now each mint their own distinct ID for the same physical file, so there is
 nothing left to race over. Covered by `TestScanLibraryOverlappingPathsDoNotCollide`
@@ -111,7 +111,7 @@ already cataloged. The result: every full/scheduled rescan silently reset every 
 "date added" to that scan's own wall-clock time, in filesystem-traversal order. Since
 `/Users/{userId}/Items/Latest` (`handleItemsLatest`, `internal/api/library.go`) sorts by
 `date_created DESC`, "recently added" ended up reflecting scan/traversal order instead of true
-historical add order — noticed by Rafael comparing Tinyfin's ordering against the reference server's.
+historical add order — found by comparing Tinyfin's ordering against the reference server's.
 
 Real Jellyfin never re-stamps an item's add date on a rescan (only genuine first discovery sets it);
 Tinyfin's single-item `RefreshItem` path already matched this (it loads the existing row via
@@ -123,7 +123,7 @@ regardless of what the caller passes — only a genuinely new row takes the valu
 `time.Now()`, if the caller left it zero). Covered by `TestUpsertItemPreservesDateCreated`
 (`internal/storage/sqlite/store_test.go`).
 
-Staging note: this fix only stops *future* corruption — items already miscataloged by prior rescans
+Note: this fix only stops *future* corruption — items already miscataloged by prior rescans
 keep their now-wrong `date_created` until independently repaired (a rescan will not self-heal it,
 since the row already exists and the new code path deliberately leaves an existing row's
 `date_created` alone).
@@ -133,7 +133,7 @@ since the row already exists and the new code path deliberately leaves an existi
 Fixing the overwrite-on-rescan bug above exposed the next layer of the same symptom: even for a
 *brand-new* row, every `scan.go` call site stamped `DateCreated: time.Now().UTC()` — the moment the
 scan's goroutine happened to reach that file, not when the file was actually placed in the library.
-Rafael asked "é assim que o C# faz?" after noticing this while re-testing the previous fix by
+The question of whether the reference server does the same arose while re-testing the previous fix by
 deleting and rescanning a whole library from scratch: every item in that fresh scan ended up with
 nearly identical `date_created` values (all within the same second), which is exactly the
 "traversal order, not real add order" symptom this whole section is about — just moved one step

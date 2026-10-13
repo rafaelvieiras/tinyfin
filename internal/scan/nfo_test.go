@@ -140,8 +140,8 @@ func TestMovieNFOParsing(t *testing.T) {
 
 func TestTVShowNFOParsing(t *testing.T) {
 	data := `<tvshow>
-  <title>Dragon Ball</title>
-  <plot>A young monkey-tailed boy searches for the seven dragon balls.</plot>
+  <title>Example Show</title>
+  <plot>A young monkey-tailed boy searches for the seven example orbs.</plot>
   <year>1986</year>
   <genre>Anime</genre>
   <genre>Adventure</genre>
@@ -151,7 +151,7 @@ func TestTVShowNFOParsing(t *testing.T) {
 	if err := xml.Unmarshal([]byte(data), &n); err != nil {
 		t.Fatalf("Unmarshal: %v", err)
 	}
-	if n.Title != "Dragon Ball" {
+	if n.Title != "Example Show" {
 		t.Errorf("Title = %q", n.Title)
 	}
 	if n.Plot == "" {
@@ -171,7 +171,7 @@ func TestTVShowNFOParsing(t *testing.T) {
 
 func TestEpisodeNFOParsing(t *testing.T) {
 	data := `<episodedetails>
-  <title>The Secret of the Dragon Balls</title>
+  <title>The Secret of the Example Orbs</title>
   <plot>Bulma meets Goku.</plot>
   <aired>1986-02-26</aired>
   <season>1</season>
@@ -181,7 +181,7 @@ func TestEpisodeNFOParsing(t *testing.T) {
 	if err := xml.Unmarshal([]byte(data), &n); err != nil {
 		t.Fatalf("Unmarshal: %v", err)
 	}
-	if n.Title != "The Secret of the Dragon Balls" {
+	if n.Title != "The Secret of the Example Orbs" {
 		t.Errorf("Title = %q", n.Title)
 	}
 	if n.Plot != "Bulma meets Goku." {
@@ -207,6 +207,8 @@ func writeEpisodeNFO(t *testing.T, dir, data string) string {
 	return filepath.Join(dir, "episode.mkv")
 }
 
+// The Portuguese title and plot in the NFO fixtures below are deliberate
+// non-English test data (UTF-8 handling in NFO parsing).
 // TestApplyEpisodeNFO covers the real bug this task fixes: an
 // <episodedetails> .nfo used to only apply Title/Plot/Aired by hand,
 // silently dropping every other commonNFOFields tag (ProviderIds, Genres,
@@ -221,7 +223,7 @@ func TestApplyEpisodeNFO(t *testing.T) {
 		dir := t.TempDir()
 		video := writeEpisodeNFO(t, dir, `<?xml version="1.0" encoding="UTF-8"?>
 <episodedetails>
-  <title>Vigie as Esferas do Dragão</title>
+  <title>Vigie os Orbes Antigos</title>
   <plot>Está ficando tarde...</plot>
   <premiered>1986-04-02</premiered>
   <uniqueid type="tmdb" default="true">484774</uniqueid>
@@ -229,7 +231,7 @@ func TestApplyEpisodeNFO(t *testing.T) {
 		item := &storage.Item{}
 		s.applyEpisodeNFO(pool, item, video)
 
-		if item.Name != "Vigie as Esferas do Dragão" {
+		if item.Name != "Vigie os Orbes Antigos" {
 			t.Errorf("Name = %q", item.Name)
 		}
 		if item.Overview != "Está ficando tarde..." {
@@ -246,7 +248,7 @@ func TestApplyEpisodeNFO(t *testing.T) {
 	t.Run("aired tag used as fallback when premiered is absent", func(t *testing.T) {
 		dir := t.TempDir()
 		video := writeEpisodeNFO(t, dir, `<episodedetails>
-  <title>The Secret of the Dragon Balls</title>
+  <title>The Secret of the Example Orbs</title>
   <aired>1986-02-26</aired>
 </episodedetails>`)
 		item := &storage.Item{}

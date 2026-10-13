@@ -22,7 +22,7 @@
 .idea/
 .vscode/
 
-# Personal machine-specific staging environment (real host media path, local data)
+# Local deployment scratch directory (media paths, local data)
 /staging/
 
 # Playwright MCP session artifacts (screenshots/console logs from manual E2E checks)

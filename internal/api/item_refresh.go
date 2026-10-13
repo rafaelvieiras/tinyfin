@@ -3,7 +3,7 @@
 // calls, passing the library's own ItemId (the same ID GET
 // /Library/VirtualFolders hands out, per virtualFolderInfo.ItemId in
 // library_admin.go), not a separate library-scoped path. Confirmed live
-// against the reference server (staging, :8097): the exact call is
+// against the reference server: the exact call is
 // POST /Items/{itemId}/Refresh?Recursive=true&ImageRefreshMode=Default&
 // MetadataRefreshMode=Default&ReplaceAllImages=false&
 // RegenerateTrickplay=false&ReplaceAllMetadata=false. Of these,

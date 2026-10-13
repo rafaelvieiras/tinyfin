@@ -9,7 +9,7 @@ against Tinyfin (to measure conformance, and to drive TDD).
 ## Provenance and clean-room status
 
 The behaviors recorded here were extracted from a read of the reference
-server **on Rafael's explicit request** (phase 1 of the two-phase process in
+server **on the maintainer's explicit request** (phase 1 of the two-phase process in
 `AGENTS.md`, decision D12), cross-checked black-box against a running 12.2
 reference server and the official `jellyfin-web` 12.2 client. Nothing carries
 over the reference implementation's names, files, comments or structure. That

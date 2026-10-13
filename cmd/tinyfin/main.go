@@ -161,7 +161,7 @@ func main() {
 // decide whether the current session is valid, right after login. Found by
 // reading jellyfin-android's JellyfinWebViewClient.kt and
 // jellyfin-apiclient-javascript's credentials.js after repeated container
-// rebuilds during staging left stale, mismatched-Id entries in a real
+// rebuilds left stale, mismatched-Id entries in a real
 // device's WebView storage: server-side logs showed a fully successful
 // login on every rebuild, but the app kept reopening its native
 // "can't connect" screen anyway, because it was reading a leftover entry

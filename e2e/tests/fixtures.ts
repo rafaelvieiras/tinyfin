@@ -59,6 +59,8 @@ export async function login(page: Page) {
 	// always lands on this "pick a way to sign in" screen rather than a
 	// list of accounts — Manual Login is always the button to click here,
 	// not a maybe-present shortcut.
+	// The Portuguese labels ("Acesso Manual", "Usuário", "Senha", "Entrar") are deliberate:
+	// the web client localizes its UI from the browser locale, so the locators accept both.
 	await page.locator('role=button[name="Manual Login"]').or(page.locator('role=button[name="Acesso Manual"]')).click();
 
 	await page.locator('role=textbox[name="User"]').or(page.locator('role=textbox[name="Usuário"]')).fill(USERNAME);

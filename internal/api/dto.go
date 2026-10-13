@@ -99,7 +99,7 @@ type baseItemDto struct {
 	// corresponds to the tag for GET /Items/{itemId}/Images/Backdrop/N.
 	// Found missing, not just unpolished, by comparing a movie detail
 	// page's GET /Users/{userId}/Items/{itemId} response against a real
-	// Jellyfin server (staging, :8097) for a title whose fanart.jpg the
+	// Jellyfin server for a title whose fanart.jpg the
 	// scanner already indexed and Images/Backdrop/0 already served
 	// correctly: without this field a client has no way to know the
 	// backdrop exists at all, so it never requests it (same "tag absence
@@ -413,7 +413,7 @@ func (s *Server) unplayedItemCountFor(ctx context.Context, userID storage.UserID
 
 // mediaSourcesFor builds BaseItemDto.MediaSources for item — see that
 // field's doc comment on baseItemDto. Confirmed against the reference
-// server (staging, :8097): GET /Items/{itemId} embeds this same array
+// server (reference server): GET /Items/{itemId} embeds this same array
 // directly on the item response, not just on PlaybackInfo. nil for an item
 // with no playable file (item.Path empty — a folder-shaped item like a
 // Series/Season/BoxSet), matching PlaybackInfo's own 404 for such an item
@@ -820,7 +820,7 @@ func displayPreferencesIDFor(itemType storage.ItemType) string {
 // duplicated ad hoc in the first of those.
 //
 // Type is always "CollectionFolder", never storage.ItemTypeUserView —
-// confirmed against a real Jellyfin server (staging, :8097): GET /UserViews
+// confirmed against a real Jellyfin server (reference server): GET /UserViews
 // for an ordinary library (not a synthetic aggregate view like Favorites)
 // comes back with Type "CollectionFolder". storage.ItemTypeUserView exists
 // for a genuinely different kind of view this project doesn't emit here.

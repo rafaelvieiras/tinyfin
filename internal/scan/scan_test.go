@@ -97,7 +97,7 @@ func TestScanLibraryMovies(t *testing.T) {
 	s := New(st, provider, Config{ImageDir: imageDir})
 
 	lib := storage.Library{
-		ID: "lib-movies", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
+		ID: "lib-movies", Name: "Movies", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
 	}
 	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
 		t.Fatalf("UpsertLibrary: %v", err)
@@ -193,7 +193,7 @@ func TestScanLibraryMovieDateCreatedFollowsFileModTime(t *testing.T) {
 	st := newTestStore(t)
 	s := New(st, &fakeProvider{}, Config{})
 	lib := storage.Library{
-		ID: "lib-movies-mtime", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
+		ID: "lib-movies-mtime", Name: "Movies", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
 	}
 	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
 		t.Fatalf("UpsertLibrary: %v", err)
@@ -220,9 +220,9 @@ func TestScanLibraryMovieDateCreatedFollowsFileModTime(t *testing.T) {
 
 func TestScanLibraryTVShows(t *testing.T) {
 	root := t.TempDir()
-	base := filepath.Join(root, "Dragon Ball (1986)", "Season 01")
-	writeFile(t, filepath.Join(base, "Dragon Ball - S01E01 - The Secret of the Dragon Balls.mkv"), "ep1")
-	writeFile(t, filepath.Join(base, "Dragon Ball - S01E02 - Second Episode.mkv"), "ep2")
+	base := filepath.Join(root, "Example Show (1986)", "Season 01")
+	writeFile(t, filepath.Join(base, "Example Show - S01E01 - The Secret of the Example Orbs.mkv"), "ep1")
+	writeFile(t, filepath.Join(base, "Example Show - S01E02 - Second Episode.mkv"), "ep2")
 	// A non-matching file in the season folder should be skipped, not crash the scan.
 	writeFile(t, filepath.Join(base, "notes.txt"), "irrelevant")
 
@@ -231,7 +231,7 @@ func TestScanLibraryTVShows(t *testing.T) {
 	s := New(st, provider, Config{})
 
 	lib := storage.Library{
-		ID: "lib-tv", Name: "Séries", CollectionType: storage.CollectionTypeTVShows, Paths: []string{root},
+		ID: "lib-tv", Name: "Shows", CollectionType: storage.CollectionTypeTVShows, Paths: []string{root},
 	}
 	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
 		t.Fatalf("UpsertLibrary: %v", err)
@@ -256,8 +256,8 @@ func TestScanLibraryTVShows(t *testing.T) {
 		t.Fatalf("series query: err=%v, len=%d, want 1", err, len(seriesPage.Items))
 	}
 	series := seriesPage.Items[0]
-	if series.Name != "Dragon Ball" {
-		t.Errorf("series.Name = %q, want %q", series.Name, "Dragon Ball")
+	if series.Name != "Example Show" {
+		t.Errorf("series.Name = %q, want %q", series.Name, "Example Show")
 	}
 	if series.Overview == "" {
 		t.Error("series.Overview is empty, want provider enrichment applied")
@@ -294,8 +294,8 @@ func TestScanLibraryTVShows(t *testing.T) {
 		t.Fatalf("episode query: err=%v, len=%d, want 2", err, len(epPage.Items))
 	}
 	ep1 := epPage.Items[0]
-	if ep1.Name != "The Secret of the Dragon Balls" {
-		t.Errorf("ep1.Name = %q, want %q", ep1.Name, "The Secret of the Dragon Balls")
+	if ep1.Name != "The Secret of the Example Orbs" {
+		t.Errorf("ep1.Name = %q, want %q", ep1.Name, "The Secret of the Example Orbs")
 	}
 	if ep1.IndexNumber == nil || *ep1.IndexNumber != 1 {
 		t.Errorf("ep1.IndexNumber = %v, want 1", ep1.IndexNumber)
@@ -327,7 +327,7 @@ func TestScanLibraryNFOOverridesProvider(t *testing.T) {
 	s := New(st, provider, Config{})
 
 	lib := storage.Library{
-		ID: "lib-nfo", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
+		ID: "lib-nfo", Name: "Movies", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
 	}
 	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
 		t.Fatalf("UpsertLibrary: %v", err)
@@ -369,7 +369,7 @@ func TestScanLibraryFolderJPGDetected(t *testing.T) {
 	st := newTestStore(t)
 	s := New(st, metadata.NoopProvider{}, Config{})
 
-	lib := storage.Library{ID: "lib-folderjpg", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root}}
+	lib := storage.Library{ID: "lib-folderjpg", Name: "Movies", CollectionType: storage.CollectionTypeMovies, Paths: []string{root}}
 	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
 		t.Fatalf("UpsertLibrary: %v", err)
 	}
@@ -428,7 +428,7 @@ func TestScanLibraryMovieAppliesPeopleFromProvider(t *testing.T) {
 	st := newTestStore(t)
 	s := New(st, peopleProvider{}, Config{})
 
-	lib := storage.Library{ID: "lib-people", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root}}
+	lib := storage.Library{ID: "lib-people", Name: "Movies", CollectionType: storage.CollectionTypeMovies, Paths: []string{root}}
 	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
 		t.Fatalf("UpsertLibrary: %v", err)
 	}
@@ -467,7 +467,7 @@ func TestScanLibraryLogoAndBannerDetected(t *testing.T) {
 	st := newTestStore(t)
 	s := New(st, metadata.NoopProvider{}, Config{})
 
-	lib := storage.Library{ID: "lib-logobanner", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root}}
+	lib := storage.Library{ID: "lib-logobanner", Name: "Movies", CollectionType: storage.CollectionTypeMovies, Paths: []string{root}}
 	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
 		t.Fatalf("UpsertLibrary: %v", err)
 	}
@@ -511,20 +511,20 @@ func TestScanLibraryLogoAndBannerDetected(t *testing.T) {
 // the "Season NN" subfolder) must be recorded as that season item's Primary
 // image, the same way poster.jpg/folder.jpg already are for a movie/series
 // folder itself. Reproduces the real-world gap found comparing tinyfin's
-// Dragon Ball Season 1 card (no ImageTags.Primary) against the reference
+// Example Show Season 1 card (no ImageTags.Primary) against the reference
 // server for a library that has a real season01-poster.jpg on disk.
 func TestScanLibrarySeasonPosterDetected(t *testing.T) {
 	root := t.TempDir()
-	seriesDir := filepath.Join(root, "Dragon Ball (1986)")
+	seriesDir := filepath.Join(root, "Example Show (1986)")
 	base := filepath.Join(seriesDir, "Season 01")
-	writeFile(t, filepath.Join(base, "Dragon Ball - S01E01 - The Secret of the Dragon Balls.mkv"), "ep1")
+	writeFile(t, filepath.Join(base, "Example Show - S01E01 - The Secret of the Example Orbs.mkv"), "ep1")
 	writeFile(t, filepath.Join(seriesDir, "poster.jpg"), "series-poster-bytes")
 	writeFile(t, filepath.Join(seriesDir, "season01-poster.jpg"), "season-poster-bytes")
 
 	st := newTestStore(t)
 	s := New(st, metadata.NoopProvider{}, Config{})
 
-	lib := storage.Library{ID: "lib-seasonposter", Name: "Séries", CollectionType: storage.CollectionTypeTVShows, Paths: []string{root}}
+	lib := storage.Library{ID: "lib-seasonposter", Name: "Shows", CollectionType: storage.CollectionTypeTVShows, Paths: []string{root}}
 	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
 		t.Fatalf("UpsertLibrary: %v", err)
 	}
@@ -559,7 +559,7 @@ func TestScanLibraryNoProviderStillCatalogs(t *testing.T) {
 	st := newTestStore(t)
 	s := New(st, metadata.NoopProvider{}, Config{})
 
-	lib := storage.Library{ID: "lib-1", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root}}
+	lib := storage.Library{ID: "lib-1", Name: "Movies", CollectionType: storage.CollectionTypeMovies, Paths: []string{root}}
 	st.UpsertLibrary(context.Background(), lib)
 
 	stats, err := s.ScanLibrary(context.Background(), lib)
@@ -616,7 +616,7 @@ func TestScanLibraryRecordsPosterDimensions(t *testing.T) {
 	s := New(st, provider, Config{ImageDir: t.TempDir()})
 
 	lib := storage.Library{
-		ID: "lib-movies", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
+		ID: "lib-movies", Name: "Movies", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
 	}
 	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
 		t.Fatalf("UpsertLibrary: %v", err)
@@ -642,7 +642,7 @@ func TestScanLibraryRecordsPosterDimensions(t *testing.T) {
 }
 
 // TestScanLibraryReconcilesLegacyItemIDByPath reproduces the duplication
-// bug found via POST /Library/Refresh in staging: cmd/devseed (a throwaway
+// bug found via POST /Library/Refresh on a long-lived test deployment: cmd/devseed (a throwaway
 // manual-seeding tool, not part of the scanner) minted item IDs with its
 // own "item-"+slug(folder) scheme, distinct from the real scanner's
 // "item-movie-"+path. Rescanning a devseed-seeded library used to catalog
@@ -658,7 +658,7 @@ func TestScanLibraryReconcilesLegacyItemIDByPath(t *testing.T) {
 
 	st := newTestStore(t)
 	lib := storage.Library{
-		ID: "lib-legacy", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
+		ID: "lib-legacy", Name: "Movies", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
 	}
 	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
 		t.Fatalf("UpsertLibrary: %v", err)
@@ -699,7 +699,7 @@ func TestScanLibraryReconcilesLegacyItemIDByPath(t *testing.T) {
 	}
 }
 
-// TestScanLibraryOverlappingPathsDoNotCollide reproduces a real staging
+// TestScanLibraryOverlappingPathsDoNotCollide reproduces a real
 // incident: two libraries (e.g. a leftover manually-created test library)
 // pointing at the same host folder. Before the fix, deterministicID hashed
 // only the file's path, and reconcileItemID's existing-row lookup was
@@ -709,7 +709,7 @@ func TestScanLibraryReconcilesLegacyItemIDByPath(t *testing.T) {
 // row's LibraryID from libA to libB. Concurrent "Scan All Libraries" runs
 // (Server.refreshAllLibraries) turned this into a race that split one
 // library's catalog into two nondeterministically — the exact symptom
-// Rafael reported live against tinyfin-staging. Scoping the hash by
+// a reporter reported live against a test deployment. Scoping the hash by
 // LibraryID (scan.go's four deterministicID call sites) means the two
 // libraries now mint distinct IDs for the same physical file instead of
 // fighting over one row.
@@ -719,10 +719,10 @@ func TestScanLibraryOverlappingPathsDoNotCollide(t *testing.T) {
 
 	st := newTestStore(t)
 	libA := storage.Library{
-		ID: "lib-a", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
+		ID: "lib-a", Name: "Movies", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
 	}
 	libB := storage.Library{
-		ID: "lib-b", Name: "SmokeTestLibRenamed", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
+		ID: "lib-b", Name: "RenamedLibrary", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
 	}
 	if err := st.UpsertLibrary(context.Background(), libA); err != nil {
 		t.Fatalf("UpsertLibrary(libA): %v", err)
@@ -774,7 +774,7 @@ func TestRefreshItemMovie(t *testing.T) {
 	s := New(st, provider, Config{})
 
 	lib := storage.Library{
-		ID: "lib-movies", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
+		ID: "lib-movies", Name: "Movies", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
 	}
 	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
 		t.Fatalf("UpsertLibrary: %v", err)
@@ -821,15 +821,15 @@ func TestRefreshItemMovie(t *testing.T) {
 // in this project's Result shape, only the series does.
 func TestRefreshItemEpisodeUsesSeriesExternalID(t *testing.T) {
 	root := t.TempDir()
-	base := filepath.Join(root, "Dragon Ball (1986)", "Season 01")
-	writeFile(t, filepath.Join(base, "Dragon Ball - S01E01 - The Secret of the Dragon Balls.mkv"), "ep1")
+	base := filepath.Join(root, "Example Show (1986)", "Season 01")
+	writeFile(t, filepath.Join(base, "Example Show - S01E01 - The Secret of the Example Orbs.mkv"), "ep1")
 
 	st := newTestStore(t)
 	provider := &fakeProvider{}
 	s := New(st, provider, Config{})
 
 	lib := storage.Library{
-		ID: "lib-tv", Name: "Séries", CollectionType: storage.CollectionTypeTVShows, Paths: []string{root},
+		ID: "lib-tv", Name: "Shows", CollectionType: storage.CollectionTypeTVShows, Paths: []string{root},
 	}
 	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
 		t.Fatalf("UpsertLibrary: %v", err)
@@ -854,8 +854,8 @@ func TestRefreshItemEpisodeUsesSeriesExternalID(t *testing.T) {
 	if last.Kind != metadata.KindEpisode {
 		t.Fatalf("last query Kind = %q, want %q", last.Kind, metadata.KindEpisode)
 	}
-	if last.SeriesTitle != "Dragon Ball" {
-		t.Errorf("last query SeriesTitle = %q, want %q", last.SeriesTitle, "Dragon Ball")
+	if last.SeriesTitle != "Example Show" {
+		t.Errorf("last query SeriesTitle = %q, want %q", last.SeriesTitle, "Example Show")
 	}
 	if last.ExternalIDs["Tmdb"] != "12" {
 		t.Errorf("last query ExternalIDs[Tmdb] = %q, want %q (parent series' Tmdb ID, from the earlier scan's enrichment)", last.ExternalIDs["Tmdb"], "12")
@@ -871,7 +871,7 @@ func TestRefreshItemUnsupportedTypeNoOp(t *testing.T) {
 	provider := &fakeProvider{}
 	s := New(st, provider, Config{})
 
-	lib := storage.Library{ID: "lib-music", Name: "Música", CollectionType: storage.CollectionTypeMusic}
+	lib := storage.Library{ID: "lib-music", Name: "Music", CollectionType: storage.CollectionTypeMusic}
 	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
 		t.Fatalf("UpsertLibrary: %v", err)
 	}
@@ -900,15 +900,15 @@ func TestRefreshItemUnsupportedTypeNoOp(t *testing.T) {
 // seriesFolder's derive-from-a-child-episode path.
 func TestRefreshItemSeriesAppliesLocalNFOAndArtwork(t *testing.T) {
 	root := t.TempDir()
-	seriesDir := filepath.Join(root, "Mortal Kombat")
+	seriesDir := filepath.Join(root, "Omega Series")
 	base := filepath.Join(seriesDir, "Season 01")
-	writeFile(t, filepath.Join(base, "Mortal Kombat - S01E01 - Pilot.mkv"), "ep1")
+	writeFile(t, filepath.Join(base, "Omega Series - S01E01 - Pilot.mkv"), "ep1")
 
 	st := newTestStore(t)
 	s := New(st, metadata.NoopProvider{}, Config{})
 
 	lib := storage.Library{
-		ID: "lib-mk", Name: "Séries", CollectionType: storage.CollectionTypeTVShows, Paths: []string{root},
+		ID: "lib-mk", Name: "Shows", CollectionType: storage.CollectionTypeTVShows, Paths: []string{root},
 	}
 	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
 		t.Fatalf("UpsertLibrary: %v", err)
@@ -932,7 +932,7 @@ func TestRefreshItemSeriesAppliesLocalNFOAndArtwork(t *testing.T) {
 	// scan (or simply never having been read before) is exactly the bug
 	// report's scenario.
 	writeFile(t, filepath.Join(seriesDir, "tvshow.nfo"), `<tvshow>
-  <title>Mortal Kombat - Defensores da Terra</title>
+  <title>Omega Series - Defenders</title>
   <plot>A animated series from the local tvshow.nfo.</plot>
   <genre>Action</genre>
 </tvshow>`)
@@ -970,11 +970,11 @@ func TestRefreshItemSeriesAppliesLocalNFOAndArtwork(t *testing.T) {
 // series' own title.
 func TestScanLibraryAppliesNamedSeason(t *testing.T) {
 	root := t.TempDir()
-	seriesDir := filepath.Join(root, "Mortal Kombat")
+	seriesDir := filepath.Join(root, "Omega Series")
 	base := filepath.Join(seriesDir, "Season 01")
-	writeFile(t, filepath.Join(base, "Mortal Kombat - S01E01 - Pilot.mkv"), "ep1")
+	writeFile(t, filepath.Join(base, "Omega Series - S01E01 - Pilot.mkv"), "ep1")
 	writeFile(t, filepath.Join(seriesDir, "tvshow.nfo"), `<tvshow>
-  <title>Mortal Kombat - Defensores da Terra</title>
+  <title>Omega Series - Defenders</title>
   <namedseason number="1">Temporada Especial</namedseason>
 </tvshow>`)
 
@@ -982,7 +982,7 @@ func TestScanLibraryAppliesNamedSeason(t *testing.T) {
 	s := New(st, metadata.NoopProvider{}, Config{})
 
 	lib := storage.Library{
-		ID: "lib-namedseason", Name: "Séries", CollectionType: storage.CollectionTypeTVShows, Paths: []string{root},
+		ID: "lib-namedseason", Name: "Shows", CollectionType: storage.CollectionTypeTVShows, Paths: []string{root},
 	}
 	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
 		t.Fatalf("UpsertLibrary: %v", err)
@@ -1008,15 +1008,15 @@ func TestScanLibraryAppliesNamedSeason(t *testing.T) {
 // same lookup order as the reference server's SeriesNfoSeasonProvider.
 func TestRefreshItemSeasonAppliesNamedSeason(t *testing.T) {
 	root := t.TempDir()
-	seriesDir := filepath.Join(root, "Mortal Kombat")
+	seriesDir := filepath.Join(root, "Omega Series")
 	base := filepath.Join(seriesDir, "Season 01")
-	writeFile(t, filepath.Join(base, "Mortal Kombat - S01E01 - Pilot.mkv"), "ep1")
+	writeFile(t, filepath.Join(base, "Omega Series - S01E01 - Pilot.mkv"), "ep1")
 
 	st := newTestStore(t)
 	s := New(st, metadata.NoopProvider{}, Config{})
 
 	lib := storage.Library{
-		ID: "lib-namedseason-refresh", Name: "Séries", CollectionType: storage.CollectionTypeTVShows, Paths: []string{root},
+		ID: "lib-namedseason-refresh", Name: "Shows", CollectionType: storage.CollectionTypeTVShows, Paths: []string{root},
 	}
 	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
 		t.Fatalf("UpsertLibrary: %v", err)
@@ -1079,7 +1079,7 @@ func TestRefreshItemMovieAppliesLocalNFOAndArtwork(t *testing.T) {
 	s := New(st, metadata.NoopProvider{}, Config{})
 
 	lib := storage.Library{
-		ID: "lib-movies-nfo", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
+		ID: "lib-movies-nfo", Name: "Movies", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
 	}
 	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
 		t.Fatalf("UpsertLibrary: %v", err)
@@ -1147,7 +1147,7 @@ func TestRefreshItemImagesRespectReplaceAllImages(t *testing.T) {
 	s := New(st, provider, Config{ImageDir: imageDir})
 
 	lib := storage.Library{
-		ID: "lib-replace-images", Name: "Filmes", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
+		ID: "lib-replace-images", Name: "Movies", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
 	}
 	if err := st.UpsertLibrary(context.Background(), lib); err != nil {
 		t.Fatalf("UpsertLibrary: %v", err)

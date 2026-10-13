@@ -72,7 +72,7 @@ func seedTestSeries(t *testing.T, st storage.ItemStore, libID storage.LibraryID,
 
 // TestNextUpNothingWatched regression-guards the naive-but-wrong reading of
 // "next up" as "the first unwatched episode of every series" — confirmed
-// against a real Jellyfin server (staging, :8097) that a series with zero
+// against a real Jellyfin server (reference server) that a series with zero
 // playback activity produces no NextUp entry at all.
 func TestNextUpNothingWatched(t *testing.T) {
 	ts, st := newTestServer(t)
@@ -133,8 +133,7 @@ func TestNextUpAdvancesSequentially(t *testing.T) {
 }
 
 // TestNextUpSkipsAheadByOrderNotFirstUnwatched regression-guards a
-// non-obvious rule confirmed against a real Jellyfin server (staging,
-// :8097): marking episode 5 of an otherwise-untouched series played
+// non-obvious rule confirmed against a real Jellyfin server (reference server): marking episode 5 of an otherwise-untouched series played
 // advances NextUp straight to episode 6 — it does NOT fall back to episode
 // 1 (the first unwatched episode overall), even though 1-4 were never
 // watched. A naive "earliest unwatched" implementation of this endpoint

@@ -76,7 +76,7 @@ func (s *Server) touchSession(r *http.Request, force bool) {
 // status (that's UserPlayedItems, below).
 //
 // LastPlayedDate is stamped to now on every report — confirmed against a
-// real Jellyfin server (staging, :8097): a Sessions/Playing/Progress call
+// real Jellyfin server (reference server): a Sessions/Playing/Progress call
 // reporting a nonzero position came back (via the equivalent GetItem
 // UserData) with a fresh LastPlayedDate, before the item was ever marked
 // fully watched. GET /Shows/NextUp (nextup.go) depends on this being kept
@@ -176,7 +176,7 @@ type userItemDataDto struct {
 // doesn't try to infer it itself).
 //
 // PlaybackPositionTicks resets to 0 on the transition — confirmed against a
-// real Jellyfin server (staging, :8097): reporting a nonzero position via
+// real Jellyfin server (reference server): reporting a nonzero position via
 // Sessions/Playing/Progress and then marking the item played through this
 // route comes back with position 0. Same fix, same confirmation, as
 // userdata.go's handlePlayedItemAdd (the jellyfin-web-facing sibling of

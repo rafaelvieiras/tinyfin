@@ -152,7 +152,7 @@ func caseInsensitiveQuery(r *http.Request) url.Values {
 // should actually say: the real total behind the filter (enableParam absent,
 // or anything but exactly "false" — the default), or just how many items
 // this particular response carries. Confirmed against a real Jellyfin
-// server (staging, :8097), not assumed: favoriting 8 movies and requesting
+// server (reference server), not assumed: favoriting 8 movies and requesting
 // Limit=5&EnableTotalRecordCount=false came back with TotalRecordCount 5,
 // not 8 — the real total the same request with the param left off (or set
 // to true) does return. A second page (StartIndex=5) of the same query
@@ -677,7 +677,7 @@ func (s *Server) handleStudios(w http.ResponseWriter, r *http.Request) {
 // program listing, always empty) reads clearly at the call site.
 //
 // handleLiveTvPrograms serves GET /LiveTv/Programs. Confirmed live against
-// the reference server (staging, :8097) with no LiveTV tuner configured:
+// the reference server with no LiveTV tuner configured:
 // {"Items":[],"TotalRecordCount":0,"StartIndex":0} (200), not a 404 — same
 // "honest empty over 404" precedent as handleItemSimilar/handleStudios
 // above (this file's package doc comment): jellyfin-web's series detail

@@ -246,7 +246,7 @@ func (s *Server) runScan(lib storage.Library) {
 // does: an early version of this function did, on the reasoning that
 // item_refresh.go's single-item branch used to be an honest no-op and
 // sharing scanState would at least make *something* show as running once it
-// stopped being one. Rafael caught the real bug that introduced: GET
+// stopped being one. a reporter caught the real bug that introduced: GET
 // /ScheduledTasks reports exactly one synthetic task, "Scan Media
 // Libraries" (Key/Id "RefreshLibrary", scheduled_tasks.go), and
 // jellyfin-web's Dashboard "Scan All Libraries" button spins/disables

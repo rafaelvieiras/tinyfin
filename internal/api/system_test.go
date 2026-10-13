@@ -8,8 +8,7 @@ import (
 )
 
 // TestSystemEndpointRequiresAuth regression-guards that GET /System/Endpoint
-// needs a valid token — confirmed against a real Jellyfin server (staging,
-// :8097): a request with no token comes back 401, unlike GET
+// needs a valid token — confirmed against a real Jellyfin server (reference server): a request with no token comes back 401, unlike GET
 // /System/Info/Public.
 func TestSystemEndpointRequiresAuth(t *testing.T) {
 	ts, _ := newTestServer(t)
@@ -26,7 +25,7 @@ func TestSystemEndpointRequiresAuth(t *testing.T) {
 
 // TestSystemEndpointLoopback regression-guards the shape and the
 // loopback-is-local rule — confirmed against a real Jellyfin server
-// (staging, :8097): a request whose TCP peer is 127.0.0.1 comes back
+// (reference server): a request whose TCP peer is 127.0.0.1 comes back
 // {"IsLocal":true,"IsInNetwork":true}. httptest.Server listens on
 // 127.0.0.1, so a plain http.Client request against it already exercises
 // exactly this path — no header spoofing needed (and X-Forwarded-For is
@@ -65,7 +64,7 @@ func TestRemoteIPPrivateRanges(t *testing.T) {
 	}{
 		{"127.0.0.1:54321", "127.0.0.1"},
 		{"[::1]:54321", "::1"},
-		{"172.20.0.5:8096", "172.20.0.5"},
+		{"203.0.113.7:8096", "203.0.113.7"},
 		{"not-an-address", ""},
 	} {
 		req, err := http.NewRequest(http.MethodGet, "http://example.invalid/System/Endpoint", nil)

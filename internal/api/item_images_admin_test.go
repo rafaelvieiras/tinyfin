@@ -94,7 +94,7 @@ func authedRequest(t *testing.T, ts, token, method, path, contentType string, bo
 }
 
 // testPNGBase64 is a minimal valid 1x1 PNG, base64-encoded — the shape
-// confirmed live against jellyfin-real-staging for a POST .../Images/...
+// confirmed live against the reference server for a POST .../Images/...
 // body (raw base64, not multipart).
 func testPNGBase64(t *testing.T) []byte {
 	t.Helper()

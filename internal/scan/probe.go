@@ -50,7 +50,7 @@ type ffprobeStream struct {
 	// the container carries one (e.g. Matroska's TrackEntry/Name and
 	// Language elements) — confirmed load-bearing, not decorative, by
 	// comparing DisplayTitle output byte-for-byte against the reference
-	// server (staging, :8097) for a real staging file: its audio track's
+	// server for a real file: its audio track's
 	// embedded title ("Indefinido Estéreo") is exactly what puts that
 	// stream's DisplayTitle on docs/12's "explicit Title" merge-rule branch
 	// instead of the plain attribute-join branch — leaving these two

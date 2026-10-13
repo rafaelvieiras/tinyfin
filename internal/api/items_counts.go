@@ -8,7 +8,7 @@ import (
 )
 
 // itemCounts mirrors GET /Items/Counts's response shape, confirmed live
-// against jellyfin-real-staging (docs/04's sanctioned black-box
+// against the reference server (docs/04's sanctioned black-box
 // verification) with no query string at all: jellyfin-web's Dashboard
 // overview page calls this exact form. Field order/names match the
 // confirmed response byte-for-byte:

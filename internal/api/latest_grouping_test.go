@@ -82,7 +82,7 @@ func TestItemsLatestSeriesGroupingBulkSingleSeason(t *testing.T) {
 	token := loginToken(t, ts.URL, user.Name, "davepass")
 	get := authedClient(t, ts.URL, token)
 
-	libID := createTestLibrary(t, st, "Séries Infantis", storage.CollectionTypeTVShows)
+	libID := createTestLibrary(t, st, "Kids Shows", storage.CollectionTypeTVShows)
 	now := time.Now().UTC()
 
 	seriesID := upsertSeries(t, st, libID, "Bulk Season Show", now.Add(-100*24*time.Hour))
@@ -120,7 +120,7 @@ func TestItemsLatestSeriesGroupingBulkMultiSeason(t *testing.T) {
 	token := loginToken(t, ts.URL, user.Name, "davepass")
 	get := authedClient(t, ts.URL, token)
 
-	libID := createTestLibrary(t, st, "Séries Infantis", storage.CollectionTypeTVShows)
+	libID := createTestLibrary(t, st, "Kids Shows", storage.CollectionTypeTVShows)
 	now := time.Now().UTC()
 
 	seriesID := upsertSeries(t, st, libID, "Multi Season Burst Show", now.Add(-2*time.Hour))
@@ -151,7 +151,7 @@ func TestItemsLatestSeriesGroupingSingleEpisode(t *testing.T) {
 	token := loginToken(t, ts.URL, user.Name, "davepass")
 	get := authedClient(t, ts.URL, token)
 
-	libID := createTestLibrary(t, st, "Séries Infantis", storage.CollectionTypeTVShows)
+	libID := createTestLibrary(t, st, "Kids Shows", storage.CollectionTypeTVShows)
 	now := time.Now().UTC()
 
 	seriesID := upsertSeries(t, st, libID, "Single Episode Show", now.Add(-100*24*time.Hour))
@@ -183,7 +183,7 @@ func TestItemsLatestSeriesGroupingSingleSeasonShowBulk(t *testing.T) {
 	token := loginToken(t, ts.URL, user.Name, "davepass")
 	get := authedClient(t, ts.URL, token)
 
-	libID := createTestLibrary(t, st, "Séries Infantis", storage.CollectionTypeTVShows)
+	libID := createTestLibrary(t, st, "Kids Shows", storage.CollectionTypeTVShows)
 	now := time.Now().UTC()
 
 	seriesID := upsertSeries(t, st, libID, "Single Season Show", now.Add(-1*time.Hour))
@@ -211,7 +211,7 @@ func TestItemsLatestMoviesNotGrouped(t *testing.T) {
 	token := loginToken(t, ts.URL, user.Name, "davepass")
 	get := authedClient(t, ts.URL, token)
 
-	libID := createTestLibrary(t, st, "Filmes", storage.CollectionTypeMovies)
+	libID := createTestLibrary(t, st, "Movies", storage.CollectionTypeMovies)
 	now := time.Now().UTC()
 
 	for i, name := range []string{"Movie A", "Movie B", "Movie C"} {
@@ -245,7 +245,7 @@ func TestItemsLatestLimitCountsGroupsNotItems(t *testing.T) {
 	token := loginToken(t, ts.URL, user.Name, "davepass")
 	get := authedClient(t, ts.URL, token)
 
-	libID := createTestLibrary(t, st, "Séries Infantis", storage.CollectionTypeTVShows)
+	libID := createTestLibrary(t, st, "Kids Shows", storage.CollectionTypeTVShows)
 	now := time.Now().UTC()
 
 	// Series A: a genuine bulk addition of 12 episodes across two seasons —
@@ -299,7 +299,7 @@ func TestItemsLatestGroupItemsFalse(t *testing.T) {
 	token := loginToken(t, ts.URL, user.Name, "davepass")
 	get := authedClient(t, ts.URL, token)
 
-	libID := createTestLibrary(t, st, "Séries Infantis", storage.CollectionTypeTVShows)
+	libID := createTestLibrary(t, st, "Kids Shows", storage.CollectionTypeTVShows)
 	now := time.Now().UTC()
 
 	seriesID := upsertSeries(t, st, libID, "Ungrouped Show", now.Add(-1*time.Hour))
@@ -363,7 +363,7 @@ func TestItemsLatestSeriesGroupingExcludesFullyWatchedSeries(t *testing.T) {
 	token := loginToken(t, ts.URL, user.Name, "davepass")
 	get := authedClient(t, ts.URL, token)
 
-	libID := createTestLibrary(t, st, "Séries Infantis", storage.CollectionTypeTVShows)
+	libID := createTestLibrary(t, st, "Kids Shows", storage.CollectionTypeTVShows)
 	now := time.Now().UTC()
 
 	// Watched Show: newest addition of the two series below, but every
@@ -402,7 +402,7 @@ func TestItemsLatestSeriesGroupingPartiallyWatchedSeriesAppears(t *testing.T) {
 	token := loginToken(t, ts.URL, user.Name, "davepass")
 	get := authedClient(t, ts.URL, token)
 
-	libID := createTestLibrary(t, st, "Séries Infantis", storage.CollectionTypeTVShows)
+	libID := createTestLibrary(t, st, "Kids Shows", storage.CollectionTypeTVShows)
 	now := time.Now().UTC()
 
 	seriesID := upsertSeries(t, st, libID, "Partial Show", now.Add(-100*24*time.Hour))
@@ -432,7 +432,7 @@ func TestItemsLatestSeriesGroupingNeverWatchedSeriesAppears(t *testing.T) {
 	get := authedClient(t, ts.URL, token)
 	_ = user
 
-	libID := createTestLibrary(t, st, "Séries Infantis", storage.CollectionTypeTVShows)
+	libID := createTestLibrary(t, st, "Kids Shows", storage.CollectionTypeTVShows)
 	now := time.Now().UTC()
 
 	seriesID := upsertSeries(t, st, libID, "Never Watched Show", now.Add(-1*time.Hour))
@@ -462,7 +462,7 @@ func TestItemsLatestSeriesGroupingLimitCountsOnlyEligibleSeries(t *testing.T) {
 	token := loginToken(t, ts.URL, user.Name, "davepass")
 	get := authedClient(t, ts.URL, token)
 
-	libID := createTestLibrary(t, st, "Séries Infantis", storage.CollectionTypeTVShows)
+	libID := createTestLibrary(t, st, "Kids Shows", storage.CollectionTypeTVShows)
 	now := time.Now().UTC()
 
 	// Series A: newest addition, but fully watched — must be skipped and
@@ -506,7 +506,7 @@ func TestItemsLatestSeriesGroupingLimitCountsOnlyEligibleSeries(t *testing.T) {
 
 // TestItemsLatestSeriesGroupingHighEpisodeCountSeriesDoesNotHideOthers is a
 // regression test for a real production bug (reported live, reproduced
-// against staging with these exact episode counts): tvShowsLatestGrouped
+// against a long-lived test deployment with these exact episode counts): tvShowsLatestGrouped
 // used to build its candidate pool from a single raw-item-count-bounded
 // QueryItems call across the whole library (latestSeriesGroupingPoolSize,
 // ~200 items for the default limit=20). A handful of series scanned
@@ -525,7 +525,7 @@ func TestItemsLatestSeriesGroupingHighEpisodeCountSeriesDoesNotHideOthers(t *tes
 	token := loginToken(t, ts.URL, user.Name, "davepass")
 	get := authedClient(t, ts.URL, token)
 
-	libID := createTestLibrary(t, st, "Séries Infantis", storage.CollectionTypeTVShows)
+	libID := createTestLibrary(t, st, "Kids Shows", storage.CollectionTypeTVShows)
 	now := time.Now().UTC()
 
 	// Four single-season series scanned back-to-back (same real-world
@@ -534,7 +534,7 @@ func TestItemsLatestSeriesGroupingHighEpisodeCountSeriesDoesNotHideOthers(t *tes
 	// enough that the old 200-item pool would have been entirely consumed
 	// by the three larger shows before ever reaching the smallest/oldest
 	// one — 13 + 50 + 150 = 213, already past the pool's cap, leaving zero
-	// room for "Chapolin"'s 103 episodes even though it's a perfectly
+	// room for "Long Series"'s 103 episodes even though it's a perfectly
 	// legitimate 4th-most-recent addition among only four series total.
 	//
 	// Builds items with explicit, self-chosen IDs directly via
@@ -572,10 +572,10 @@ func TestItemsLatestSeriesGroupingHighEpisodeCountSeriesDoesNotHideOthers(t *tes
 		return seriesID
 	}
 
-	chapolinID := seedShow("chapolin", "Chapolin", 103, now.Add(-40*time.Second)) // scanned first (oldest)
-	dragonBallID := seedShow("dragonball", "Dragon Ball", 150, now.Add(-30*time.Second))
-	mibID := seedShow("mib", "MIB", 50, now.Add(-20*time.Second))
-	mortalKombatID := seedShow("mk", "Mortal Kombat", 13, now.Add(-10*time.Second)) // scanned last (newest)
+	longSeriesID := seedShow("longseries", "Long Series", 103, now.Add(-40*time.Second)) // scanned first (oldest)
+	exampleShowID := seedShow("exampleshow", "Example Show", 150, now.Add(-30*time.Second))
+	misID := seedShow("mis", "MIS", 50, now.Add(-20*time.Second))
+	omegaID := seedShow("omega", "Omega Series", 13, now.Add(-10*time.Second)) // scanned last (newest)
 
 	items := latestGrouped(t, get, libID, "&limit=4")
 	if len(items) != 4 {
@@ -586,7 +586,7 @@ func TestItemsLatestSeriesGroupingHighEpisodeCountSeriesDoesNotHideOthers(t *tes
 	for i, it := range items {
 		gotIDs[i] = it.ID
 	}
-	wantIDs := []string{string(mortalKombatID), string(mibID), string(dragonBallID), string(chapolinID)}
+	wantIDs := []string{string(omegaID), string(misID), string(exampleShowID), string(longSeriesID)}
 	for i, want := range wantIDs {
 		if gotIDs[i] != want {
 			t.Errorf("items[%d].ID = %q, want %q (newest-series-addition-first order: %v)", i, gotIDs[i], want, gotIDs)
@@ -595,11 +595,11 @@ func TestItemsLatestSeriesGroupingHighEpisodeCountSeriesDoesNotHideOthers(t *tes
 
 	found := false
 	for _, it := range items {
-		if it.ID == string(chapolinID) {
+		if it.ID == string(longSeriesID) {
 			found = true
 		}
 	}
 	if !found {
-		t.Errorf("Chapolin's 103-episode series never appeared despite being the 4th-most-recent of only 4 series — the crowding-out bug regressed: %+v", items)
+		t.Errorf("Long Series's 103-episode series never appeared despite being the 4th-most-recent of only 4 series — the crowding-out bug regressed: %+v", items)
 	}
 }

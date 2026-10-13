@@ -131,9 +131,11 @@ func TestMediaStreamsFromProbeAudio(t *testing.T) {
 	}
 }
 
+// "Indefinido Estéreo" is deliberate non-English test data (a captured
+// localized embedded title).
 // TestMediaStreamsFromProbeExtractsEmbeddedTitleAndLanguage covers a real
 // gap found while live-validating DisplayTitle against the reference
-// server (staging, :8097) for an actual staging file: its audio track
+// server for an actual file: its audio track
 // carries an embedded tags.title ("Indefinido Estéreo") that
 // mediaStreamsFromProbe used to never extract at all — storage.
 // MediaStreamRef.Title/Language existed as fields already, but nothing in
@@ -177,10 +179,11 @@ func TestMediaStreamsFromProbeAudioSampleRateMissing(t *testing.T) {
 
 // TestMediaStreamsFromProbeSubtitle covers a codec_type=subtitle stream —
 // found dropped entirely during byte-for-byte comparison against the
-// reference server (staging, :8097) for a real staging file that carries
+// reference server for a real file that carries
 // an embedded ASS subtitle track: mediaStreamsFromProbe used to only
 // switch on "video"/"audio", silently discarding "subtitle" streams, which
 // broke the reference client's Subtitles dropdown against tinyfin.
+// The Portuguese subtitle title is deliberate non-English test data.
 func TestMediaStreamsFromProbeSubtitle(t *testing.T) {
 	st := ffprobeStream{
 		CodecType: "subtitle",
@@ -218,7 +221,7 @@ func TestMediaStreamsFromProbeSubtitle(t *testing.T) {
 // TestMediaStreamsFromProbeIsDefaultPerStream covers disposition.default
 // being respected per-stream rather than hardcoded true for every kept
 // stream: found via byte-for-byte comparison against the reference server
-// (staging, :8097) for a real staging file with two audio tracks where
+// (reference server) for a real file with two audio tracks where
 // only the first has disposition.default=1 — the reference server's
 // MediaStreams response reflects that per-track, tinyfin used to mark
 // IsDefault true on both.

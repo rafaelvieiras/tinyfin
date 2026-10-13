@@ -36,7 +36,7 @@ what starting Phase 1 actually requires next.
 - [~] Direct Play negotiation against the device-profile set from O2 (`internal/deviceprofile`,
       `internal/playback`) — confirmed working against the `jellyfin-web` device profile via a
       real client (below). The `"Jellyfin Android"`/`"Jellyfin iOS"` `Client` strings are still
-      placeholders pending confirmation against real native-client traffic; a staging deployment
+      placeholders pending confirmation against real native-client traffic; a test deployment
       for that check is up (see below).
 - [x] Real-client verification (web): a real, unmodified `jellyfin-web` build (clean-room —
       AGENTS.md sanctions this as external client-behavior observation, not reference-server
@@ -49,19 +49,19 @@ what starting Phase 1 actually requires next.
       automated Playwright suite (`e2e/`, synthetic committed fixtures) so this doesn't require
       another manual click-through session per change.
 - [x] Real-client verification (native Android, connect/auth/browse): the official
-      `jellyfin-android` app, driven against the same staging deployment, found and fixed two
+      `jellyfin-android` app, driven against the same test deployment, found and fixed two
       more wire-compatibility bugs invisible to `jellyfin-web`/curl testing — both root-caused by
       reading `jellyfin-android`'s own source (`JellyfinWebViewClient.kt`) after server-side logs
       kept showing fully successful logins while the app kept reopening its native
       "can't connect" screen: (1) `Config.ServerID`, left to mint a fresh random value every
       process restart, broke jellyfin-web's local server-list cache (keyed by `ServerId`) across
-      the repeated rebuilds a staging session naturally does — now persisted to a sidecar file
+      the repeated rebuilds a test session naturally does — now persisted to a sidecar file
       next to the SQLite DB so it survives restarts; (2) every ID this project mints
       (`internal/storage/sqlite`'s `newID`, `internal/api`'s `randomID`) was plain hex with no
       hyphens — the app's post-login WebView credential check parses `User.Id` as a UUID and
       silently treats a non-UUID value as "no user" even with a valid token present, so every ID
       is now formatted as a canonical UUID. Confirmed end to end: the app reaches the logged-in
-      library view over both LAN and Netbird.
+      library view.
 - [x] Real-client verification (native Android, playback flow coverage pass): after two more
       individual native-only playback crashes surfaced one at a time (`DisplayPreferencesDto`'s
       `ScrollDirection`/`SortOrder` `MissingFieldException`, then a second failure past that
@@ -83,18 +83,18 @@ what starting Phase 1 actually requires next.
       Separately, found while re-checking IDs end to end for this pass: `BaseItemDto.id` is
       typed as Kotlin `UUID` with a deserializer that throws a plain `IllegalArgumentException`
       on a non-UUID string — NOT a `SerializationException`, so it isn't even caught by the
-      `ApiClientException` handling every native call site wraps itself in. The manual staging
+      `ApiClientException` handling every native call site wraps itself in. The manual
       dev-seed helper (`cmd/devseed`, not part of the shipped project) was minting
       human-readable slug ids (`item-a-arte-da-guerra--2000`) instead of UUIDs; switched it to
       deterministic UUIDs derived from the same slug (keeps re-seeding idempotent) and migrated
-      the existing staging DB's item/library ids by hand. All of the above is `go build`/`vet`/
+      the existing test DB's item/library ids by hand. All of the above is `go build`/`vet`/
       `test`- and curl-verified end to end (`PlaybackInfo` now returns a fully populated
       `MediaSources[0]` for a real Direct-Play-eligible file); on-device native playback
       confirmation is the next step.
 - [x] Real-client verification (native Android, on-device Direct Play confirmed): the root
-      cause of a "source error" playback failure turned out to be host infrastructure, not a
-      Tinyfin bug — the rclone Google Drive FUSE mount backing the movies library had gone into
-      a restart-crash loop (stale empty directories blocking the mountpoint), so the container's
+      cause of a "source error" playback failure turned out to be test-environment infrastructure, not a
+      Tinyfin bug — the network filesystem mount backing the movies library had failed to come up
+      (stale empty directories blocking the mountpoint), so the container's
       read-only bind mount was empty and every stream 404'd. Fixed by clearing the mountpoint and
       restarting the container; native Direct Play playback then worked end to end on-device,
       closing the Goal below. Found and fixed one real bug along the way, via the same
@@ -181,15 +181,15 @@ what starting Phase 1 actually requires next.
       line with the request's own query before serving the playlist, so the token propagates all
       the way to every `.ts` fetch.
 - [x] **Goal:** a client whose device profile forces a transcode gets a correct HLS stream. Verified
-      twice: once via curl against the real staging deployment with a real ~2.5GB movie file
+      twice: once via curl against a real test deployment with a real multi-GB movie file
       (`PlaybackInfo` → `master.m3u8` → `main.m3u8` → segment, `Sessions/Playing/Stopped` tearing the
       job down), and again through an actual browser driving the bundled jellyfin-web end to end —
       logged in, pressed Play on a real library item, watched real transcoded frames render and
       advance over multiple HLS segment fetches, then confirmed `Sessions/Playing/Stopped` fired on
       leaving the player. The browser pass is what caught the `api_key` bug above; the curl pass
       alone would not have, since curl requests carried the token as a header.
-      Verified end to end against the actual staging deployment (real bundled `jellyfin-ffmpeg`,
-      real ~2.5GB movie file over the rclone-mounted library, real HTTP requests through the
+      Verified end to end against a real test deployment (real bundled `jellyfin-ffmpeg`,
+      real multi-GB movie file over a network-mounted library, real HTTP requests through the
       published port) — `PlaybackInfo` correctly resolved Transcode mode for a real mkv/hevc/aac
       file against the conservative default profile, `master.m3u8`/`main.m3u8`/a segment all
       served correctly (segment content-type `video/mp2t`, real transcoded video bytes), and
@@ -257,9 +257,9 @@ what starting Phase 1 actually requires next.
       (`internal/storage/sqlite/store_test.go`), which reliably reproduced the bug before the fix.
 - [x] Dashboard library-management route mapping/diff and gap closure: a dedicated
       Playwright-driven pass over `/dashboard/libraries` and every modal it opens (`docs/11`'s
-      "Dashboard — Bibliotecas" section), captured live against both the reference server and
+      "Dashboard — Libraries" section), captured live against both the reference server and
       Tinyfin, found the highest-impact gap the whole `docs/11` route-coverage doc has surfaced so
-      far — jellyfin-web's real "Adicionar Biblioteca de Mídia" submission sends folder paths in
+      far — jellyfin-web's real "Add Media Library" submission sends folder paths in
       the `POST /Library/VirtualFolders` request body (`LibraryOptions.PathInfos`), not the `paths`
       query param `handleAddVirtualFolder` read, so a library added through the real admin
       dashboard silently ended up with zero folders (`204 No Content`, indistinguishable from
@@ -267,19 +267,19 @@ what starting Phase 1 actually requires next.
       no-op'ing: `POST /Library/VirtualFolders/LibraryOptions` (save an existing library's
       options — persisted as an opaque blob and echoed back, not modeled field-by-field, since
       Tinyfin doesn't act on most of them) and `POST /Library/VirtualFolders/Name` (rename);
-      `POST /Items/{itemId}/Refresh` (the per-library "Rastrear biblioteca" scan action, distinct
+      `POST /Items/{itemId}/Refresh` (the per-library "Scan library" scan action, distinct
       from the already-working whole-server `POST /Library/Refresh`); the `Environment/*` folder
       browser (`DefaultDirectoryBrowser`/`Drives`/`DirectoryContents`/`ParentPath`/`ValidatePath`);
       `Localization/cultures`/`countries` and `Libraries/AvailableOptions` (the Add/Manage modal's
-      "Configurações da Biblioteca" section is client-side gated on all three succeeding —
+      "Library Settings" section is client-side gated on all three succeeding —
       `AvailableOptions` honestly lists only TMDB as a fetcher, not the reference server's full
       plugin catalog Tinyfin doesn't have); and admin image management,
       `GET /Items/{itemId}/Images` (list) plus `POST`/`DELETE .../Images/{imageType}[/{imageIndex}]`
-      (upload/delete). All of it confirmed live end to end against a rebuilt `tinyfin-staging`, not
+      (upload/delete). All of it confirmed live end to end against a rebuilt test deployment, not
       just unit-tested.
-- [x] Dashboard overview (`/dashboard`, "Painel") route mapping and gap closure: the same
+- [x] Dashboard overview (`/dashboard`, home page) route mapping and gap closure: the same
       Playwright-driven live-capture method applied to the admin Dashboard's own overview page
-      (`docs/11`'s "Dashboard — Painel (overview)" section), against both the reference server and
+      (`docs/11`'s "Dashboard — overview" section), against both the reference server and
       Tinyfin. Black-box observation was sufficient for every gap this pass found — no reason to
       read the reference server's C# source at all (AGENTS.md's clean-room requirement treats that
       as a last resort, not a default step). Six routes 404d unconditionally on every page load;
@@ -303,12 +303,12 @@ what starting Phase 1 actually requires next.
       percent-decoded the `X-Emby-Authorization` header's fields, so a real jellyfin-web build's
       percent-encoded `Client="Jellyfin%20Web"` came back verbatim instead of decoded — invisible
       until `GET /Sessions` became the first route to ever echo `Client` back on the wire. All of it
-      confirmed live end to end against a rebuilt `tinyfin-staging`. WebSocket `/socket` remains this
+      confirmed live end to end against a rebuilt test deployment. WebSocket `/socket` remains this
       page's one still-404ing call — already tracked separately as `docs/06`'s realtime session
       channel, a larger feature this REST-focused pass didn't attempt.
 - [x] WebSocket `/socket` — the realtime session channel `docs/06` scopes as its own interface,
       closed as a follow-up to the Dashboard overview pass above. This one *did* need the C# source
-      (Rafael's explicit instruction), per the two-phase clean-room process — extracted into
+      (on the maintainer's explicit request), per the two-phase clean-room process — extracted into
       `docs/12`'s "Dashboard overview — the `GET /socket` realtime channel" section, including a
       review of `jellyfin/jellyfin`'s own public issue tracker for real, multi-year, recurring
       architecture bugs in its WebSocket implementation (concurrent unsynchronized writes to a
@@ -323,14 +323,14 @@ what starting Phase 1 actually requires next.
       not on a timer, reusing existing data sources (`sessionRegistry`, `scanState`,
       `ActivityLogStore`); `RefreshProgress` (per-item scan progress) deliberately left as a
       documented gap (`internal/scan` has no per-item progress hook yet). Confirmed live against a
-      rebuilt `tinyfin-staging` with a real jellyfin-web build: keep-alive handshake byte-for-byte,
+      rebuilt test deployment with a real jellyfin-web build: keep-alive handshake byte-for-byte,
       and a real `POST /Library/Refresh` producing the expected live `ScheduledTasksInfo` push
       sequence, no server error. Found and fixed one real bug along the way: `server.go`'s
       `withAccessLog` middleware's `statusRecorder` wrapper didn't forward `http.Hijacker` support,
       which silently 501'd every WebSocket upgrade attempt until a real end-to-end test (not just a
       handler-level unit test) caught it.
-- [x] Fixed: Dashboard's "Rastrear Todas as Bibliotecas" (Scan All Libraries) button spinning
-      forever, reported by Rafael. Root cause was in `GET /ScheduledTasks`'s response, not the
+- [x] Fixed: Dashboard's "Scan All Libraries" button spinning
+      forever, reported against a real client. Root cause was in `GET /ScheduledTasks`'s response, not the
       button itself: `internal/api/scheduled_tasks.go` reported the one synthetic task's `Id`/`Key`
       as an arbitrary string (`"library-scan"`), but jellyfin-web's Dashboard home widget locates
       "the library scan task" by filtering that list on `Key === 'RefreshLibrary'` — a value
@@ -342,18 +342,18 @@ what starting Phase 1 actually requires next.
       click producing no outgoing request. Fixed by reporting `"RefreshLibrary"` and implementing
       `POST /ScheduledTasks/Running/{taskId}` (`handleScheduledTaskStart`) — the route the button
       actually calls once it finds the task, previously catalog-only (`docs/11`). Confirmed live
-      against a rebuilt `tinyfin-staging` with a real jellyfin-web build via Playwright: clicking the
+      against a rebuilt test deployment with a real jellyfin-web build via Playwright: clicking the
       button now fires `POST /ScheduledTasks/Running/RefreshLibrary` → `204`, and a real scan runs to
       completion, no more permanent spinner.
 - [x] Fixed: per-item "Refresh metadata" (`POST /Items/{itemId}/Refresh` against an ordinary catalog
-      item, not a library) had no real effect, reported by Rafael after refreshing a series' metadata
+      item, not a library) had no real effect, reported after refreshing a series' metadata
       from the dashboard and seeing nothing change or run. Root cause: `internal/api/item_refresh.go`'s
       non-library branch was an intentional "honest no-op" — it confirmed the item existed and stopped
       there, never re-reading anything at all — a documented gap, not a bug, until this real client
       interaction motivated closing it. First pass added `scan.Scanner.RefreshItem`
       (`internal/scan/scan.go`) calling only the remote `metadata.Provider`, reusing each item's
       already-known `ProviderIDs` as the lookup's `ExternalIDs` (a Season/Episode query carries its
-      *parent series'* Tmdb ID, matching what `TMDBProvider.resolveSeriesID` expects). Rafael caught
+      *parent series'* Tmdb ID, matching what `TMDBProvider.resolveSeriesID` expects). Review caught
       that this missed the actual point: the reported series' media folder already had a `tvshow.nfo`
       and artwork — Tinyfin's own scanner already knows how to read both, no TMDB key needed at all —
       and RefreshItem never re-read either. Fixed by also re-running the same local-artwork-seed and
@@ -364,7 +364,7 @@ what starting Phase 1 actually requires next.
       `Path` instead (`seriesFolder`/`seasonFolder`). Wired into the same `scanState`/
       `GET /ScheduledTasks` tracking a library scan already uses (`Server.runItemRefresh`,
       `server.go`), so a real per-item refresh now shows as "Running" on the dashboard the same way a
-      library scan does. Rafael then asked whether this local-vs-remote precedence had actually been
+      library scan does. A follow-up check asked whether this local-vs-remote precedence had actually been
       validated against the reference server rather than just assumed — it hadn't, so this became an
       explicit clean-room C# extraction pass (AGENTS.md's clean-room requirement: an explicit request
       is its own sufficient reason), reading `jellyfin/jellyfin`'s `MetadataService.cs` and
@@ -381,12 +381,12 @@ what starting Phase 1 actually requires next.
       episodes, unsupported-type no-op, the actual bug report's scenario — a series with no provider
       configured picking up a `tvshow.nfo`/poster added to its media folder — and
       `ReplaceAllImages=false` vs. `true` behavior) and `internal/api/item_refresh_test.go`. Confirmed
-      live against `tinyfin-staging` end to end, including with a real TMDB key configured after the
-      fact: the exact reported series (`Mortal Kombat - Defensores da Terra`) went from `Overview`
+      live against a test deployment end to end, including with a real TMDB key configured after the
+      fact: the exact reported series went from `Overview`
       empty/`ProviderIds: null`/only a `Logo` image to a fully populated `Overview`/`Genres`/
       `ProviderIds`/`Primary`+`Backdrop` images after a single `POST /Items/{itemId}/Refresh`, verified
       both via the live HTTP response and directly against the SQLite row.
-      One more round: Rafael then asked whether a per-item refresh job would show up as "scanning
+      One more round: a follow-up check asked whether a per-item refresh job would show up as "scanning
       library" on the dashboard. It would have — `Server.runItemRefresh` shared `scanState` with
       `runScan` (the same tracker backing `GET /ScheduledTasks`'s one synthetic "Scan Media Libraries"
       task), so refreshing any single item's metadata made jellyfin-web's Dashboard "Scan All
@@ -400,7 +400,7 @@ what starting Phase 1 actually requires next.
       of its own yet (no `RefreshProgress`/`RefreshStatus` DTO fields, no per-item WebSocket push) —
       left as a documented gap (`docs/11`) rather than faked via the wrong tracker again. Regression-
       guarded by `TestItemRefreshDoesNotAffectScheduledTasks` (`internal/api/scheduled_tasks_test.go`).
-      One more round: Rafael reported a third real series (`MIB - Homens de Preto`) whose refresh
+      One more round: a third real series was reported whose refresh
       also seemed to do nothing. Investigation (SQLite + filesystem inspection of the real media
       folder) found its `tvshow.nfo` living inside `Season 01/` instead of the series root — a
       misplaced file, not a Tinyfin bug: the reference server's own `SeriesNfoProvider` only ever
@@ -411,21 +411,21 @@ what starting Phase 1 actually requires next.
       season folder's own `tvshow.nfo` (falling back to the series root) but extracts only a
       `<namedseason number="N">Custom Name</namedseason>` override for that one season's display
       name, ignoring every other field. Tinyfin had no season-level `.nfo` support of any kind.
-      Rafael asked for it to be implemented. Added `internal/scan/nfo.go`'s `applySeasonNFO`
+      It was then implemented on request. Added `internal/scan/nfo.go`'s `applySeasonNFO`
       (season-folder-then-series-root lookup, `<namedseason>`-only extraction, overlays only
       `item.Name`), wired into both a fresh scan (`walkSeasons`) and `RefreshItem`'s
       `refreshLocalNFO` (new Season case). See `docs/08`'s "Local-vs-remote precedence" section.
       Covered by `TestScanLibraryAppliesNamedSeason` and `TestRefreshItemSeasonAppliesNamedSeason`
       (`internal/scan/scan_test.go`), the latter also proving the season-folder-over-series-root
-      priority. This does not by itself fix `MIB - Homens de Preto`'s metadata gap — its misplaced
+      priority. This does not by itself fix that series' metadata gap — its misplaced
       `tvshow.nfo` has no `<namedseason>` tag, so it stays a no-op on both servers until the file is
-      moved to the series root, which was reported back to Rafael as the actual fix needed on the
+      moved to the series root, which is the actual fix needed on the
       media library side.
 - [x] Fixed: two libraries pointing at overlapping `Paths` corrupting each other's catalog on a
-      concurrent scan. Rafael noticed a leftover manually-created test library ("SmokeTestLibRenamed",
-      itself created earlier by manual Playwright-driven dashboard smoke-testing directly against
-      staging and never deleted) pointed at the same host folder as the real "Filmes" library, and
-      after running "Scan All Libraries," "Filmes" came back with a partial catalog — the missing
+      concurrent scan. A leftover manually-created test library (created earlier by manual
+      Playwright-driven dashboard smoke-testing and never deleted) pointed at the same host folder
+      as a real library, and
+      after running "Scan All Libraries," the real library came back with a partial catalog — the missing
       titles had ended up under the test library instead. Root cause: `internal/scan/id.go`'s
       `deterministicID` hashed only the file's path, and `reconcileItemID`'s existing-row lookup was
       scoped to the library currently being scanned, so it could never see the other library's row at
@@ -438,8 +438,8 @@ what starting Phase 1 actually requires next.
       for the same physical file, leaving nothing to race over. See `docs/08`'s "Item IDs are scoped
       per library" section. Covered by `TestScanLibraryOverlappingPathsDoNotCollide`
       (`internal/scan/scan_test.go`).
-- [x] Fixed: "recently added" ordering wrong compared to the reference server. Rafael noticed
-      newly-scanned items were not in the same order jellyfin-web shows for the real Jellyfin
+- [x] Fixed: "recently added" ordering wrong compared to the reference server. It was
+      noticed that newly-scanned items were not in the same order jellyfin-web shows for the real Jellyfin
       server. Root cause: every scan pass re-upserts every item it walks, not just newly discovered
       files, and `UpsertItem`'s `ON CONFLICT(id) DO UPDATE SET` unconditionally overwrote
       `date_created` with whatever the caller passed — and every `scan.go` call site stamped
@@ -456,7 +456,7 @@ what starting Phase 1 actually requires next.
       means a rescan will not self-heal an existing row's wrong `date_created`.
 - [x] Fixed: a brand-new item's `date_created` came from the scan's wall-clock time
       (`time.Now()`), not from the file itself — the same "recently added" symptom above, one layer
-      deeper, surfaced when Rafael asked "é assim que o C# faz?" after seeing a from-scratch rescan
+      deeper, surfaced when a follow-up check asked whether the reference server does it this way, after seeing a from-scratch rescan
       cluster every item's `date_created` within the same second. Read (extraction only,
       `jellyfin/jellyfin`'s clean-room rule) confirmed the reference server seeds a new item's
       `DateCreated` from the video file's own filesystem timestamp by default
@@ -470,9 +470,9 @@ what starting Phase 1 actually requires next.
 - [ ] TVDB provider — not implemented (see above).
 - [x] **Goal:** a freshly scanned library gets enriched metadata without Tinyfin implementing its
       own scraping. Verified via `internal/scan`'s test suite (movies and TV shows, with and
-      without a configured provider, including re-scan idempotency) and against the real staging
-      deployment: a `Series Infantis` library was added via `POST /Library/VirtualFolders`
-      (`collectionType=tvshows`, `refreshLibrary=true`) pointing at a real read-only-mounted host
+      without a configured provider, including re-scan idempotency) and against a real test
+      deployment: a `tvshows` library was added via `POST /Library/VirtualFolders`
+      (`collectionType=tvshows`, `refreshLibrary=true`) pointing at a real read-only-mounted
       folder, scanned, and its Series/Season/Episode hierarchy confirmed browsable through the API.
 
 ## Phase 4 — Scale mode

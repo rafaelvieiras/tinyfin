@@ -185,8 +185,8 @@ func (s *Server) handleSaveLibraryOptions(w http.ResponseWriter, r *http.Request
 // a library, addressed by its current name (?name=<current>&newName=<new>),
 // same addressing scheme as DELETE /Library/VirtualFolders. Not confirmed
 // live against the reference server (the dashboard itself warns renaming
-// drops metadata, too destructive to test against the persistent staging
-// fixture) — route shape is from static analysis of @jellyfin/sdk's
+// drops metadata, too destructive to test against a persistent
+// test fixture) — route shape is from static analysis of @jellyfin/sdk's
 // generated client, same sanctioned source as the rest of this file.
 func (s *Server) handleRenameVirtualFolder(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()

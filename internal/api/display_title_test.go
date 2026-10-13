@@ -192,18 +192,20 @@ func TestAudioDisplayTitleUnsetLanguageOmitted(t *testing.T) {
 // TestAudioDisplayTitleLanguageName covers docs/12's "Audio streams" point
 // 1's language-name lookup: the ISO 639-2/B code is converted to its English
 // display name, not shown raw — regression guard for a real gap found via
-// live comparison (a Dragon Ball (1986) S01E006 audio track, language "por",
-// title "Português (Álamo)"): the reference server's DisplayTitle included
+// live comparison (a Example Show (1986) S01E006 audio track, language "por",
+// title "Português (Alpha)"): the reference server's DisplayTitle included
 // "Portuguese" as an attribute; Tinyfin's did not, because it appended the
 // raw code "por" and that raw code disappeared into the merge-with-title
 // substring check ("por" is itself a substring of "Português").
+// The Portuguese title below is deliberate non-English test data: a captured
+// localized embedded track title.
 func TestAudioDisplayTitleLanguageName(t *testing.T) {
 	s := storage.MediaStreamRef{
 		Type: storage.StreamTypeAudio, Codec: "aac", Profile: "LC",
 		Language: "por", ChannelLayout: "stereo", IsDefault: true,
-		Title: "Português (Álamo)",
+		Title: "Português (Alpha)",
 	}
-	want := "Português (Álamo) - Portuguese - AAC - Stereo - Default"
+	want := "Português (Alpha) - Portuguese - AAC - Stereo - Default"
 	if got := displayTitleFor(s); got != want {
 		t.Errorf("displayTitleFor() = %q, want %q", got, want)
 	}
@@ -225,14 +227,16 @@ func TestAudioDisplayTitleUnknownLanguageCodeFallback(t *testing.T) {
 }
 
 // TestAudioDisplayTitleWithOwnTitleRealExample regression-guards live
-// validation against the reference server (staging, :8097) for a real
-// staging file (MIB - Homens de Preto S01E01): its audio track's embedded
+// validation against the reference server for a real
+// media file (a synthetic series, S01E01): its audio track's embedded
 // Title ("Indefinido Estéreo") isn't a substring match for either "AAC" or
 // "Stereo" (accented "Estéreo" != "stereo"), so both attributes append; the
 // reference server's own DisplayTitle for this exact stream was
 // "Indefinido Estéreo - AAC - Stereo - Padrão" — "Padrão" is Portuguese for
 // "Default", the one accepted divergence (docs/12's scope note: no
 // localization system here, "Default" stays English).
+// "Indefinido Estéreo" and "Padrão" are deliberate non-English test data
+// (captured localized wire values).
 func TestAudioDisplayTitleWithOwnTitleRealExample(t *testing.T) {
 	s := storage.MediaStreamRef{
 		Type: storage.StreamTypeAudio, Codec: "aac", Profile: "LC",

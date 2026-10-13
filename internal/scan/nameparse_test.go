@@ -9,7 +9,7 @@ func TestParseTitleYear(t *testing.T) {
 		wantYear  int
 	}{
 		{"The Matrix (1999)", "The Matrix", 1999},
-		{"Chapolin Colorado (1973)", "Chapolin Colorado", 1973},
+		{"Long Running Show (1973)", "Long Running Show", 1973},
 		{"No Year Here", "No Year Here", 0},
 		{"Weird (Not A Year)", "Weird (Not A Year)", 0},
 	}
@@ -50,13 +50,13 @@ func TestParseEpisode(t *testing.T) {
 		wantTitle  string
 		wantOK     bool
 	}{
-		{"Dragon Ball - S01E02 - The Secret of the Dragon Balls.mkv", 1, 2, "The Secret of the Dragon Balls", true},
-		{"Dragon Ball - 1x02 - The Secret of the Dragon Balls.mkv", 1, 2, "The Secret of the Dragon Balls", true},
+		{"Example Show - S01E02 - The Secret of the Example Orbs.mkv", 1, 2, "The Secret of the Example Orbs", true},
+		{"Example Show - 1x02 - The Secret of the Example Orbs.mkv", 1, 2, "The Secret of the Example Orbs", true},
 		{"S01E01.mkv", 1, 1, "", true},
 		{"s1e1.mkv", 1, 1, "", true},
 		{"Breaking Bad S05E14.mp4", 5, 14, "", true},
 		{"just a movie file.mkv", 0, 0, "", false},
-		{"MIB - Homens de Preto - S01E10 - Alien Invasion.mkv", 1, 10, "Alien Invasion", true},
+		{"MIS - Men in Suits - S01E10 - Alien Invasion.mkv", 1, 10, "Alien Invasion", true},
 	}
 	for _, c := range cases {
 		s, e, title, ok := ParseEpisode(c.filename)

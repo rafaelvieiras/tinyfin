@@ -248,7 +248,7 @@ func (s *Scanner) walkMovies(ctx context.Context, pool *jobPool, lib storage.Lib
 // its own "item-"+slug(folder) scheme before this project settled on
 // "item-movie-"+libraryID+"-"+path/"item-episode-"+libraryID+"-"+path;
 // running the real scanner over devseed-seeded data reproduced this exact
-// scenario, confirmed live in staging). Without this lookup, UpsertItem's
+// scenario, confirmed live in a long-lived test deployment). Without this lookup, UpsertItem's
 // ON CONFLICT(id) can only de-duplicate against a row sharing the same ID —
 // never against another row that is, by path, obviously the same file — so
 // every such mismatch silently doubles the catalog instead of updating it
@@ -263,7 +263,7 @@ func (s *Scanner) walkMovies(ctx context.Context, pool *jobPool, lib storage.Lib
 // (Server.refreshAllLibraries) racing on the same file's UpsertItem would
 // then silently steal that item's LibraryID back and forth, splitting one
 // library's catalog into two nondeterministically. Reproduced live in
-// staging: two movie libraries pointing at the same host folder, one ending
+// a long-lived test deployment: two movie libraries pointing at the same host folder, one ending
 // up with a random subset of the other's movies after a concurrent scan.
 // Folding libraryID into the hash means each library now mints its own
 // distinct ID for the same physical file, so there is nothing left to race

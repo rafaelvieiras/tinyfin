@@ -209,7 +209,7 @@ func itemSearchText(item storage.Item) string {
 // reset "date added" to the scan's wall-clock time on every single rescan,
 // scrambling the reference server's /Users/{userId}/Items/Latest ordering
 // into scan/traversal order instead of true historical add order (found live
-// in staging by Rafael). Once a row exists, its stored date_created always
+// on a long-lived test deployment). Once a row exists, its stored date_created always
 // wins; only a brand-new row takes the value passed in here (falling back to
 // time.Now() below if the caller left it zero).
 func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {

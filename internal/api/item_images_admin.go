@@ -1,7 +1,7 @@
 // item_images_admin.go implements the dashboard's "Edit images" flow for a
 // single item: list every image an item has (with metadata, not bytes),
 // upload a new one, and delete one. All three are admin-only, matching the
-// reference server (confirmed live against jellyfin-real-staging, :8097:
+// reference server (confirmed live against the reference server:
 // GET .../Images requires a valid token; unlike handleItemImage's byte-serving
 // GET, which is deliberately unauthenticated for <img src> compatibility —
 // see that handler's doc comment in library.go — this metadata/management
@@ -29,8 +29,8 @@ import (
 )
 
 // imageInfo mirrors the reference server's ImageInfo shape for
-// GET /Items/{itemId}/Images, confirmed live against jellyfin-real-staging
-// (:8097): a flat list, one entry per existing image, fields
+// GET /Items/{itemId}/Images, confirmed live against the reference server
+// (reference server): a flat list, one entry per existing image, fields
 // ImageType/ImageTag/Path/BlurHash/Height/Width/Size always present, and
 // ImageIndex present only on kinds that support more than one image
 // (Backdrop) — omitted entirely for single-instance kinds rather than sent
@@ -102,7 +102,7 @@ func (s *Server) handleListItemImages(w http.ResponseWriter, r *http.Request) {
 // handleUploadItemImage serves POST /Items/{itemId}/Images/{imageType} and
 // .../Images/{imageType}/{imageIndex}. The body is the raw image bytes
 // base64-encoded, not multipart (confirmed live against
-// jellyfin-real-staging: a base64 body with Content-Type: image/png
+// the reference server: a base64 body with Content-Type: image/png
 // succeeds with 204; the same bytes sent un-encoded 500s) — Content-Type
 // otherwise only informs the extension the file is saved under here.
 //
@@ -198,7 +198,7 @@ func (s *Server) handleUploadItemImage(w http.ResponseWriter, r *http.Request) {
 // handleDeleteItemImage serves DELETE /Items/{itemId}/Images/{imageType}
 // and .../Images/{imageType}/{imageIndex} — same index-matching search as
 // handleItemImage (library.go). Deleting an index with no matching ref is
-// 204, not 404 — confirmed live against jellyfin-real-staging: DELETE on a
+// 204, not 404 — confirmed live against the reference server: DELETE on a
 // nonexistent index there responds 204 idempotently, so a client retrying a
 // delete (or racing another admin) never sees a spurious failure.
 func (s *Server) handleDeleteItemImage(w http.ResponseWriter, r *http.Request) {

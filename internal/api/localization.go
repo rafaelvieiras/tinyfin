@@ -17,7 +17,7 @@
 // # Cultures/countries: real ISO 639-1/3166 reference data, not the
 // reference server's IP
 //
-// Confirmed live against jellyfin-real-staging (docs/04's sanctioned
+// Confirmed live against the reference server (docs/04's sanctioned
 // black-box verification): DisplayName/Name/TwoLetterISOLanguageName/
 // ThreeLetterISOLanguageName(s) for cultures, DisplayName/Name/
 // TwoLetterISORegionName/ThreeLetterISORegionName for countries. The
@@ -71,7 +71,7 @@ func (s *Server) handleLocalizationCountries(w http.ResponseWriter, r *http.Requ
 // libraryTypeOptions is one TypeOptions entry — per-BaseItem-kind metadata/
 // image fetcher availability plus the image-slot facts the dashboard's
 // image-options sub-panel renders (SupportedImageTypes/DefaultImageOptions).
-// Field names and nesting confirmed live against jellyfin-real-staging's
+// Field names and nesting confirmed live against the reference server's
 // GET /Libraries/AvailableOptions.
 type libraryTypeOptions struct {
 	Type                string               `json:"Type"`
@@ -296,7 +296,7 @@ var libraryContentTypeTypes = map[string][]string{
 // client-side from separate path segments rather than shipped as a single
 // generated operation, per this task's own briefing), so its route shape
 // (query params IsNewLibrary/LibraryContentType) and response shape were
-// both confirmed live against jellyfin-real-staging instead.
+// both confirmed live against the reference server instead.
 //
 // IsNewLibrary is accepted (matching the reference server's own query
 // param) but not read: this project's response never varies by it — every
@@ -337,7 +337,7 @@ func (s *Server) handleLibrariesAvailableOptions(w http.ResponseWriter, r *http.
 }
 
 // cultures is the confirmed live ISO 639-1/639-2 language dataset (see the
-// package doc comment) — 192 entries, matching jellyfin-real-staging's own
+// package doc comment) — 192 entries, matching the reference server's own
 // GET /Localization/cultures response count exactly.
 var cultures = []culture{
 	{Name: "Abkhazian", DisplayName: "Abkhazian", TwoLetterISOLanguageName: "ab", ThreeLetterISOLanguageName: "abk", ThreeLetterISOLanguageNames: []string{"abk"}},
@@ -444,7 +444,7 @@ var cultures = []culture{
 	{Name: "Lithuanian", DisplayName: "Lithuanian", TwoLetterISOLanguageName: "lt", ThreeLetterISOLanguageName: "lit", ThreeLetterISOLanguageNames: []string{"lit"}},
 	{Name: "Luba-Katanga", DisplayName: "Luba-Katanga", TwoLetterISOLanguageName: "lu", ThreeLetterISOLanguageName: "lub", ThreeLetterISOLanguageNames: []string{"lub"}},
 	{Name: "Luxembourgish; Letzeburgesch", DisplayName: "Luxembourgish; Letzeburgesch", TwoLetterISOLanguageName: "lb", ThreeLetterISOLanguageName: "ltz", ThreeLetterISOLanguageNames: []string{"ltz"}},
-	{Name: "Macedonian", DisplayName: "Macedonian", TwoLetterISOLanguageName: "mk", ThreeLetterISOLanguageName: "mkd", ThreeLetterISOLanguageNames: []string{"mkd", "mac"}},
+	{Name: "Macedonian", DisplayName: "Macedonian", TwoLetterISOLanguageName: "omega", ThreeLetterISOLanguageName: "mkd", ThreeLetterISOLanguageNames: []string{"mkd", "mac"}},
 	{Name: "Malagasy", DisplayName: "Malagasy", TwoLetterISOLanguageName: "mg", ThreeLetterISOLanguageName: "mlg", ThreeLetterISOLanguageNames: []string{"mlg"}},
 	{Name: "Malay", DisplayName: "Malay", TwoLetterISOLanguageName: "ms", ThreeLetterISOLanguageName: "msa", ThreeLetterISOLanguageNames: []string{"msa", "may"}},
 	{Name: "Malayalam", DisplayName: "Malayalam", TwoLetterISOLanguageName: "ml", ThreeLetterISOLanguageName: "mal", ThreeLetterISOLanguageNames: []string{"mal"}},
@@ -534,7 +534,7 @@ var cultures = []culture{
 	{Name: "Zulu", DisplayName: "Zulu", TwoLetterISOLanguageName: "zu", ThreeLetterISOLanguageName: "zul", ThreeLetterISOLanguageNames: []string{"zul"}}}
 
 // countries is the confirmed live ISO 3166 country dataset (see the package
-// doc comment) — 139 entries, matching jellyfin-real-staging's own GET
+// doc comment) — 139 entries, matching the reference server's own GET
 // /Localization/countries response count exactly.
 var countries = []country{
 	{Name: "AF", DisplayName: "Afghanistan", TwoLetterISORegionName: "AF", ThreeLetterISORegionName: "AFG"},

@@ -115,8 +115,8 @@ func main() {
 	log.Printf("devseed: created user %q (%s)", *username, userID)
 
 	lib := storage.Library{
-		ID:             storage.LibraryID(deterministicID("lib-filmes")),
-		Name:           "Filmes",
+		ID:             storage.LibraryID(deterministicID("lib-movies")),
+		Name:           "Movies",
 		CollectionType: storage.CollectionTypeMovies,
 		Paths:          []string{*containerDir},
 	}

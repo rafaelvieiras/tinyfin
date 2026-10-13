@@ -12,7 +12,7 @@
 //
 // The exact rule below was not guessed from the field names in the request
 // jellyfin-web sends — it was reverse-engineered by black-box testing
-// against a real Jellyfin server (staging, :8097, AGENTS.md's preferred
+// against a real Jellyfin server (reference server, AGENTS.md's preferred
 // verification method): marking episodes played/resumed in various orders
 // and diffing the NextUp response each time. See handleShowsNextUp and
 // nextUpCandidateForSeries below for what each test established.
@@ -32,7 +32,7 @@ import (
 // nextUpEpisodeScanLimit bounds how many of one series' episodes
 // nextUpCandidateForSeries reads to find the last-touched one. Deliberately
 // larger than defaultItemsLimit (100): a long-running series (recorded
-// during testing here — the staging catalog's own "Chapolin Colorado" has
+// during testing here — a test catalog's own long-running series has
 // 103 episodes across 3 seasons) can exceed that page size, and truncating
 // here would silently miss touched episodes past the cut, corrupting the
 // "last touched, by order" computation this whole handler depends on. Still
@@ -120,7 +120,7 @@ func (s *Server) handleShowsNextUp(w http.ResponseWriter, r *http.Request) {
 	// Several repeats of that test (different casing, with/without
 	// nextUpDateCutoff) all came back the same empty result, so this isn't
 	// a one-off fluke, but nothing in a black-box test can rule out some
-	// other precondition the reference server requires that this staging
+	// other precondition the reference server requires that this test
 	// catalog's data never happened to satisfy. Decision (not a guess left
 	// unflagged): implement the documented/standard interpretation anyway —
 	// enabled and the series has no next episode, restart at episode 1 —

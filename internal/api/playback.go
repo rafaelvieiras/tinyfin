@@ -279,7 +279,7 @@ func (s *Server) handleVideoStream(w http.ResponseWriter, r *http.Request) {
 
 // bitrateTestDefaultSize is the response size GET /Playback/BitrateTest
 // uses when the client omits Size — confirmed against a real Jellyfin
-// server (staging, :8097), not assumed: a request with no Size param at
+// server (reference server), not assumed: a request with no Size param at
 // all came back byte-for-byte the same Content-Length as an explicit
 // Size=100000, both landing on 131072 once bitrateTestRoundedSize's
 // rounding (below) is applied.
@@ -307,7 +307,7 @@ const bitrateTestFloor = 16
 
 // bitrateTestRoundedSize maps a validated Size query value to the actual
 // response length the real server sends — confirmed by requesting a wide
-// spread of values against it (staging, :8097) and finding every one of
+// spread of values against it (reference server) and finding every one of
 // them landed exactly on a power of two: 1..16 -> 16, 17..32 -> 32,
 // 33..64 -> 64, ..., 100000 -> 131072, 100000000 -> 134217728. Bandwidth
 // estimation only needs *some* fixed number of bytes downloaded in a

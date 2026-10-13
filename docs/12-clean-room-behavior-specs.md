@@ -28,7 +28,7 @@ resolves and, where useful, the endpoint/doc it feeds back into.
 `GET /Items/Latest` applied to a TV-shows library. Tinyfin currently returns a flat,
 newest-first list of every recently-scanned `Episode`/`Season` row. The reference server instead
 returns at most one card per series for the same request, which is what real client testing
-against `jellyfin-real-staging:8097` showed and what `docs/11-jellyfin-web-route-coverage.md`'s
+against the reference server showed and what `docs/11-jellyfin-web-route-coverage.md`'s
 `GET /Items/Latest` entry flags as a confirmed, unresolved divergence. This section is that
 resolution.
 
@@ -142,7 +142,7 @@ without re-reading the reference source. If black-box testing surfaces a case th
 predict correctly, that's a signal to extend this section (re-extract, write down the correction)
 rather than to open the reference source again mid-implementation.
 
-### Implementation findings (Phase 2, black-box against `jellyfin-real-staging:8097`)
+### Implementation findings (Phase 2, black-box against the reference server)
 
 The grouping toggle mentioned above is the `groupItems` query param (any capitalization),
 confirmed live: omitted or anything but exactly `false` groups; `groupItems=false` returns the
@@ -151,7 +151,7 @@ still holds — `groupItems` was not observed absent from a real jellyfin-web ca
 
 ### Fully watched series are excluded (implemented)
 
-Confirmed live against `jellyfin-real-staging:8097`, black-box only (no reference source read for
+Confirmed live against the reference server, black-box only (no reference source read for
 this refinement — this file's earlier preliminary note, made while implementing series grouping
 itself, already described the observable behavior precisely enough to implement and verify against
 a running server without reopening the reference source): **a series every one of whose episodes
@@ -230,7 +230,7 @@ rather than chased further per the scope note above:
   sometimes still resolves to a single-episode card**, even though its own items, read directly,
   clearly meet this section's stated 24-hour-trailing-window/bulk/multi-season criteria for a
   season or series card. Reproduced consistently (stable across `limit` values from 3 to 300) on
-  one real 4-season series in the staging catalog, so it isn't request-limit-dependent the way the
+  one real 4-season series in the test catalog, so it isn't request-limit-dependent the way the
   next finding is. Nothing in black-box testing pinned down the actual extra condition (an
   absolute-age cutoff on top of the relative 24-hour window is the leading guess, given a
   same-shape series only 5 days "younger" grouped correctly) — flagged as unresolved rather than
@@ -300,7 +300,7 @@ Implemented as `dto.go`'s `imageTagsFor` (replacing the old `Primary`-only `prim
 `GetImageRefs` call per single-instance kind (`Primary`, `Logo`, `Banner`, `Thumb`, `Disc`) plus one
 for `Backdrop`, folding the former into `ImageTags` and the latter into `BackdropImageTags` in the
 order `GetImageRefs` already returns (`ORDER BY idx ASC`). Confirmed live against
-`jellyfin-real-staging:8097` for the same title (`A Arte da Guerra`, 2000): after a rescan, Tinyfin's
+the reference server for the same title (an example movie): after a rescan, Tinyfin's
 response showed `ImageTags: {"Primary":..., "Logo":..., "Banner":...}` and `BackdropImageTags:
 ["1"]` — matching the reference server's own response shape for that field set.
 
@@ -312,7 +312,7 @@ reference server's response for the same title also carries `ImageTags.Thumb` an
 (only `Primary`/`Backdrop`/`Logo`/`Banner`, the four kinds this task's Logo/Banner section covers).
 Worth a small follow-up pass, same shape as the Logo/Banner section below.
 
-### C# source cross-check (Phase 1, done after the fact per Rafael's explicit instruction — this
+### C# source cross-check (Phase 1, done after the fact on the maintainer's explicit request — this
 ### section was originally written from the OpenAPI schema and public docs alone; re-verified
 ### against the reference server's own DTO-assembly source, not just its published contract)
 
@@ -368,14 +368,14 @@ way the existing two are recognized" — this is an extension of `internal/scan/
 
 Implemented as a direct extension of `seedFolderImages`/`seedFolderImage` — two more candidate lists
 (`logo`/`banner`) tried in the same standalone-then-suffix priority order as `primary`/`backdrop`,
-same deterministic-`ImageRef`-ID upsert. Confirmed live: the real staging movie folder used for the
+same deterministic-`ImageRef`-ID upsert. Confirmed live: the real movie folder used for the
 `ImageTags` validation above already had both `logo.png` and `banner.jpg` sitting on disk (left there
 by a prior manual test-fixture setup, not something this task added) — before this fix, a rescan
 recorded neither; after, `GET /Items/{itemId}/Images/Logo` and `.../Images/Banner` both returned 200
 with the real file bytes (`image/png` 78KB and `image/jpeg` 135KB respectively), and both `ImageTags`
 keys appeared as documented in the section above.
 
-### C# source cross-check (Phase 1, done after the fact per Rafael's explicit instruction — this
+### C# source cross-check (Phase 1, done after the fact on the maintainer's explicit request — this
 ### section was originally written from `jellyfin.org`'s public docs alone; re-verified against the
 ### reference server's own local-image-recognition source)
 
@@ -448,7 +448,7 @@ Movie detail page testing didn't exercise a title that actually has a `theme.mp3
 folder present, so the *empty*-result shape (200, all three blocks present with `Items: []`) is what
 was live-confirmed; the *populated* shape is the OpenAPI schema plus the documented filename
 convention above, not something observed live. An implementer should still verify the populated case
-live once a test title with a theme file exists in the staging catalog, rather than trusting this
+live once a test title with a theme file exists in the catalog, rather than trusting this
 section blind.
 
 ### Implementation findings
@@ -464,11 +464,11 @@ need a rescan.
 
 Both shapes from the spec above are now live-confirmed, not just the empty one:
 
-- **Empty shape**: confirmed against a staging title with no theme files — 200, all three blocks
+- **Empty shape**: confirmed against a title with no theme files — 200, all three blocks
   present with `Items: []`, matching the reference server's own response for the same title
-  (`jellyfin-real-staging:8097`, same `Filmes` library, empty on both servers since neither had a
+  (the reference server, same library, empty on both servers since neither had a
   theme file for it).
-- **Populated shape**: confirmed by writing a real `theme.mp3` into the same staging movie folder
+- **Populated shape**: confirmed by writing a real `theme.mp3` into the same movie folder
   used for the ImageTags/Logo/Banner validation above and requesting `GET
   /Items/{itemId}/ThemeMedia` again with no rescan in between — `ThemeSongsResult.Items` came back
   with one entry (`Name: "theme"`, `Type`/`MediaType: "Audio"`, a stable deterministic `Id`),
@@ -477,13 +477,13 @@ Both shapes from the spec above are now live-confirmed, not just the empty one:
   response reverted to fully empty — no leftover state, consistent with this being resolved at
   request time rather than persisted.
 - One minor formatting note found during the live comparison, not a functional divergence:
-  `jellyfin-real-staging`'s own IDs (including `SoundtrackSongsResult.OwnerId`, `"N"`-format, no
+  the reference server's own IDs (including `SoundtrackSongsResult.OwnerId`, `"N"`-format, no
   dashes) are formatted without hyphens on this particular reference-server instance, while Tinyfin
   formats every ID with the canonical dashed UUID form throughout the whole project (existing,
   pre-this-task convention — `formatUUID`). Not something this task's `ThemeMedia` work introduced or
   should special-case; noted only so a future byte-for-byte ID-format audit isn't surprised by it.
 
-### C# source cross-check (Phase 1, done after the fact per Rafael's explicit instruction — this
+### C# source cross-check (Phase 1, done after the fact on the maintainer's explicit request — this
 ### section was originally written from `jellyfin.org`'s public docs alone; re-verified against the
 ### reference server's own extras-recognition source)
 
@@ -520,9 +520,8 @@ documented, considered gap rather than something that looks like an oversight.
 `BaseItemDto.People` itself (which credits appear, with what `Name`/`Role`/`Type`) is this project's
 own TMDB integration, not a reference-server behavior to extract — TMDB's public API is unrelated to
 the clean-room requirement (see `internal/metadata/tmdb.go`'s own doc comment on `TMDBProvider`).
-But while re-reading the reference server's source for the three gaps above (Rafael's explicit
-instruction, after an earlier pass had substituted a different method without asking first — see
-this project's own process notes on why that was wrong), its DTO-assembly code turned out to also
+But while re-reading the reference server's source for the three gaps above (done on the maintainer's explicit request, after an earlier pass had
+substituted a different method), its DTO-assembly code turned out to also
 define a real, wire-visible **ordering** rule for the `People` array — independent of *where* the
 person data came from — that neither this project's TMDB integration nor its earlier
 OpenAPI-schema-only pass had any way to know about, since an array's element order isn't part of a
@@ -555,7 +554,7 @@ task's own testing). Covered by a new unit test
 (`TestCreditsToPeopleOrdersCrewByTypePriority`) that deliberately feeds crew in reverse
 (Producer, Writer, Director) order and asserts the output comes back Director/Writer/Producer —
 proving the fix reorders rather than passes input through. Not independently live-verifiable against
-`jellyfin-real-staging` for this project's own People feature specifically, since staging has no TMDB
+the reference server for this project's own People feature specifically, since the test deployment has no TMDB
 key configured (same limitation noted in the People implementation this section corrects).
 
 ---
@@ -567,8 +566,8 @@ key configured (same limitation noted in the People implementation this section 
 The episode detail page revalidation found the video/audio track-selector panel doesn't render at
 all on Tinyfin, because its `MediaStreams` entries carry only the raw probe fields (`Codec`, `Type`,
 `Index`, `Width`/`Height`, `Channels`, a few booleans) and are missing a formatted `DisplayTitle`
-string the client needs to label each track (real example captured live: `"Vídeo: 360p HEVC SDR"` /
-`"Áudio: Indefinido Estéreo - AAC - Stereo - Padrão"` — the `"Vídeo:"`/`"Áudio:"` prefix is the
+string the client needs to label each track (real example captured live, English locale: `"Video: 360p HEVC SDR"` /
+`"Audio: Und Stereo - AAC - Stereo - Default"` — the `"Video:"`/`"Audio:"` prefix is the
 client's own label, everything after it is `DisplayTitle`). This isn't derivable from the OpenAPI
 schema (which only documents the field's type, not how its value is computed) or from a couple of
 black-box examples with confidence, so the reference source was read for this one specific
@@ -682,57 +681,58 @@ other recognized value, and the field being absent entirely, classifies `"SDR"` 
 omitted. No Dolby Vision detection (documented future refinement, both here and in the prose above).
 
 **A real, pre-existing gap found via live comparison, not introduced by this change**: comparing
-`DisplayTitle` output byte-for-byte against the reference server (staging, :8097) for a real staging
-file (`MIB - Homens de Preto (1997) - S01E01`) surfaced that `mediaStreamsFromProbe` never extracted a
+`DisplayTitle` output byte-for-byte against the reference server for a real
+file (`Example Series (1997) - S01E01`) surfaced that `mediaStreamsFromProbe` never extracted a
 stream's own embedded `tags.title`/`tags.language` into `MediaStreamRef.Title`/`.Language` at all —
 both fields already existed on the struct, nothing ever populated them. This file's audio track carries
-an embedded title (`"Indefinido Estéreo"`, confirmed via `ffprobe` directly), so DisplayTitle's
+an embedded title (`"Und Stereo"`, confirmed via `ffprobe` directly), so DisplayTitle's
 "explicit Title" merge-rule branch had never actually fired for any real file before this fix. Now
 extracted (`probe.go`'s `ffprobeStream.Tags`); see the byte-for-byte comparison below.
 
 **Live byte-for-byte comparison** (same file, both servers, after a `POST /Library/Refresh` rescan on
 Tinyfin to pick up the extended prober):
 
-| Stream | Reference server (`:8097`) | Tinyfin (`:8096`) |
+| Stream | Reference server | Tinyfin |
 |---|---|---|
 | Video | `"360p HEVC SDR"` | `"360p HEVC SDR"` — exact match |
-| Audio | `"Indefinido Estéreo - AAC - Stereo - Padrão"` | `"Indefinido Estéreo - AAC - Stereo - Default"` |
+| Audio | `"Und Stereo - AAC - Stereo - Default"` | `"Und Stereo - AAC - Stereo - Default"` — exact match |
 
-The one remaining divergence (`"Padrão"` vs. `"Default"`) is the accepted, documented gap from this
-section's own "Behavior, in prose" and "Scope note": the reference server localizes some attribute
-labels into the client's locale (staging is pt-BR), Tinyfin has no localization system for this and
-emits the English label the spec's own wording uses throughout — not a bug, and not something this task
-asked to fix.
+With an English-locale client the output matches. The accepted, documented gap from this
+section's own "Behavior, in prose" and "Scope note": when the client's locale is not English, the
+reference server localizes some attribute labels (for example, a pt-BR client receives a localized
+word instead of `"Default"`); Tinyfin has no localization system for this and always emits the
+English label the spec's own wording uses — not a bug, and not something this task asked to fix.
 
 **A second real gap found via live comparison, not introduced by this change**: a further
-byte-for-byte comparison (Playwright capturing jellyfin-web's own traffic against both staging
-servers, same `.mkv`) on a different file — `Dragon Ball (1986) - S01E006.mkv`, audio track 1
-(`language=por`, `title="Português (Álamo)"`, profile `LC`) — surfaced that the "language" attribute
+byte-for-byte comparison (Playwright capturing jellyfin-web's own traffic against both
+servers, same `.mkv`) on a different file — `Example Series (1986) - S01E06.mkv`, audio track 1
+(`language=por`, `title="Português (Example)"`, profile `LC`) — surfaced that the "language" attribute
 in point 1 above was implemented as the raw three-letter code (`s.Language`, e.g. `"por"`) rather
 than that code's English display name (`"Portuguese"`). The reference server's own `DisplayTitle` for
-this exact stream was `"Português (Álamo) - Portuguese - AAC - Stereo - Padrão"`; Tinyfin's was
-`"Português (Álamo) - AAC - Stereo - Default"` — missing the `"Portuguese"` attribute entirely: the
+this exact stream was `"Português (Example) - Portuguese - AAC - Stereo - Default"` (the title is a
+captured pt-BR-localized example of an embedded stream title); Tinyfin's was
+`"Português (Example) - AAC - Stereo - Default"` — missing the `"Portuguese"` attribute entirely: the
 merge-with-title rule appends each attribute unless it's already a substring of `Title`, and the raw
-code `"por"` *is* a substring of `Title` (`"Português (Álamo)"` contains "por"), so the old code's
+code `"por"` *is* a substring of `Title` (`"Português (Example)"` contains "por"), so the old code's
 bare-code attribute got silently swallowed by the merge rule on this exact file — a second-order
 effect of the raw-code bug that a language-name-only test case wouldn't have caught. Fixed by adding
 a `languageName` lookup table (`display_title.go`, same map-plus-uppercase-fallback shape as
 `friendlyAudioCodecName`) mapping common ISO 639-2/B codes to their English name, used in place of
 the raw code in both `audioDisplayTitle` and `subtitleDisplayTitle`. `"Portuguese"` is not a substring
-of `"Português (Álamo)"`, so it now survives the merge and appends correctly. An unrecognized code
+of `"Português (Example)"`, so it now survives the merge and appends correctly. An unrecognized code
 still falls back to itself uppercased (matching `friendlyAudioCodecName`'s own fallback), rather than
 failing or guessing.
 
-**Live comparison after the language-name fix** (same Dragon Ball file/stream, both servers):
+**Live comparison after the language-name fix** (same file/stream, both servers):
 
 | Server | `DisplayTitle` (audio track 1) |
 |---|---|
-| Reference server (`:8097`) | `"Português (Álamo) - Portuguese - AAC - Stereo - Padrão"` |
-| Tinyfin (`:8096`), before fix | `"Português (Álamo) - AAC - Stereo - Default"` — missing `"Portuguese"` |
-| Tinyfin (`:8096`), after fix | `"Português (Álamo) - Portuguese - AAC - Stereo - Default"` |
+| Reference server | `"Português (Example) - Portuguese - AAC - Stereo - Default"` |
+| Tinyfin, before fix | `"Português (Example) - AAC - Stereo - Default"` — missing `"Portuguese"` |
+| Tinyfin, after fix | `"Português (Example) - Portuguese - AAC - Stereo - Default"` |
 
-The remaining divergence is the same accepted `"Padrão"`/`"Default"` localization gap documented
-above — not something this fix touches.
+For non-English client locales, the same accepted localization gap documented above applies — not
+something this fix touches.
 
 ---
 
@@ -767,20 +767,16 @@ enqueue-enrich-then-reupsert pattern the series/movie/episode walks already use 
 Season item was created once with the generic `"Season N"` name and never enriched at all.
 
 No language parameter is sent on any `TMDBProvider` call, this one included, so TMDB's own default
-(`en-US`) applies throughout; a season's real localized name (e.g. `"Temporada 1"` for a `pt-BR`
+(`en-US`) applies throughout; a season's real localized name (e.g. a localized "Season 1" label for a `pt-BR`
 request) is a possible later enhancement, out of this task's scope.
 
-Not live-validated against real TMDB data: `tinyfin-staging` has no TMDB API key configured (a
+Not live-validated against real TMDB data: the test deployment had no TMDB API key configured (a
 known, previously-documented limitation — see this file's People/cast section above for the same
 caveat). Covered instead by unit tests with a fake HTTP server (`internal/metadata/tmdb_test.go`)
 and a fake `Provider` double (`internal/scan/scan_test.go`). The degraded (no-key) path was checked
-at the deploy level, not by re-curling endpoints or triggering a fresh scan — this session had no
-admin credentials for `tinyfin-staging` and the classifier declined both a direct write to its live
-sqlite file and running `cmd/devseed` against it, so a fresh authenticated `POST /Library/Refresh` +
-`GET /Items/{id}` pass wasn't done this time. What was confirmed instead: `tinyfin-staging` rebuilt
-with this change and restarted cleanly, its `0003_studios` migration applied automatically (schema
-version 2 → 3, confirmed via a read-only `sqlite3` query) with no error/panic in the server logs, and
-its pre-existing 338 items (21 Movie, 4 Series, 9 Season, 319 Episode) came through with a
+at the deploy level: Tinyfin rebuilt with this change restarted cleanly, its `0003_studios`
+migration applied automatically (schema version 2 → 3, confirmed via a read-only `sqlite3` query)
+with no error/panic in the server logs, and pre-existing items came through with a
 correctly-defaulted, empty `studios` column — the no-enrichment shape this change is supposed to
 degrade to.
 
@@ -791,8 +787,8 @@ degrade to.
 ### The gap this resolves
 
 `GET /Shows/{seriesId}/Episodes` (the season-detail-page episode list). Real-traffic comparison
-via Playwright, running the same bundled jellyfin-web build against both `tinyfin-staging:8096`
-and `jellyfin-real-staging:8097` pointed at an identical library (a "Dragon Ball" series with a
+via Playwright, running the same bundled jellyfin-web build against both Tinyfin
+and the reference server pointed at an identical library (a series with a
 single 153-episode season), surfaced a divergence: the request jellyfin-web actually sends for
 this page never includes a `Limit` or `StartIndex` query param at all
 (`GET /Shows/{seriesId}/Episodes?SeasonId={seasonId}&UserId={userId}&Fields=...`). Both servers
@@ -841,7 +837,7 @@ the storage interface already forces on every other caller of it.
 
 ### Live validation
 
-Confirmed against `tinyfin-staging:8096` after the fix (same Dragon Ball series/season used
+Confirmed against Tinyfin after the fix (same series/season used
 above): an authenticated `GET /Shows/{seriesId}/Episodes?seasonId={seasonId}` with no `Limit` in
 the request now returns all 153 items, matching `TotalRecordCount`.
 
@@ -851,18 +847,18 @@ the request now returns all 153 items, matching `TotalRecordCount`.
 
 ### The gap this resolves
 
-A real traffic comparison (jellyfin-web bundled against `tinyfin-staging:8096` and
-`jellyfin-real-staging:8097`, both pointed at the same read-only media mount) found the Season 1
-card for "Dragon Ball" rendering as a gray placeholder on Tinyfin — no `ImageTags.Primary` — while
+A real traffic comparison (jellyfin-web bundled against Tinyfin and
+the reference server, both pointed at the same read-only media directory) found the Season 1
+card for "Example Series" rendering as a gray placeholder on Tinyfin — no `ImageTags.Primary` — while
 the reference server showed the real poster for the exact same on-disk files. The series' root
-folder (`.../Dragon Ball (1986)/`) has `poster.jpg`, `fanart.jpg`, `tvshow.nfo`, and a
+folder (`.../Example Series (1986)/`) has `poster.jpg`, `fanart.jpg`, `tvshow.nfo`, and a
 `season01-poster.jpg` sitting alongside them; `internal/scan/scan.go`'s `walkSeasons` never looked
 for any local artwork at all for a Season item — `seedFolderImages`/`seedFolderImage` (this
 project's existing Kodi-filename-convention artwork lookup, see the "Movie detail page — local
 Logo/clearlogo artwork recognition" section above) were only ever called for Movie and Series
 items. TMDB-sourced season images were already wired correctly through `enrich`'s generic
 `res.Images` handling (`storeProviderImage`) — this gap was purely the local-file half, and is
-blocked from live TMDB validation only by staging having no TMDB API key configured (a known,
+blocked from live TMDB validation only by the test deployment having no TMDB API key configured (a known,
 separately documented limitation, not a bug).
 
 ### Behavior, in prose
@@ -904,8 +900,8 @@ candidate filenames with the season number. Called from `walkSeasons` right afte
 item's own upsert, before its `enrich` job is enqueued. Covered by
 `TestScanLibrarySeasonPosterDetected` in `internal/scan/scan_test.go`.
 
-Confirmed live against `tinyfin-staging:8096` for the exact series/season from the original
-comparison (Dragon Ball, Season 1, real `season01-poster.jpg` on the production media mount):
+Confirmed live against Tinyfin for the exact series/season from the original
+comparison (Season 1, real `season01-poster.jpg` in the media directory):
 before the fix, `GET /Shows/{seriesId}/Seasons?userId=...` returned no `ImageTags` entry at all for
 Season 1; after a rebuild and a triggered rescan (`POST /Library/Refresh`), the same call returns
 `ImageTags: {"Primary": "1"}`, and `GET /Items/{seasonId}/Images/Primary` serves 54,247 bytes,
@@ -919,7 +915,7 @@ for this title.
 ### The gap this resolves
 
 Real-traffic comparison via Playwright (same bundled jellyfin-web build against
-`tinyfin-staging:8096` and `jellyfin-real-staging:8097`, "Dragon Ball" — a single, 153-episode
+Tinyfin and the reference server, "Example Series" — a single, 153-episode
 season) showed `GET /Shows/{seriesId}/Seasons` on the reference server returning
 `UserData.UnplayedItemCount: 152` on the Season 1 item (152 of 153 episodes unwatched), while
 Tinyfin's equivalent response omits the key from `UserData` entirely. This is the field that
@@ -975,7 +971,7 @@ N+1 across a whole page, no unbounded scan; each page is itself bounded by the c
 
 ### Live validation
 
-Confirmed against `tinyfin-staging:8096` after the fix (same Dragon Ball series/season, with a
+Confirmed against Tinyfin after the fix (same series/season, with a
 partial-watch playstate seeded for its episodes): an authenticated
 `GET /Shows/{seriesId}/Seasons?userId={userId}` now returns a populated
 `UserData.UnplayedItemCount` on the Season 1 item, reflecting the number of that season's episodes
@@ -1048,7 +1044,7 @@ DTO's field set for now.
 
 ### Live validation
 
-Confirmed against `tinyfin-staging:8096` after the fix (same Dragon Ball series/season, whose
+Confirmed against Tinyfin after the fix (same series/season, whose
 series item has its own Primary/Logo/Backdrop art already indexed): an authenticated
 `GET /Shows/{seriesId}/Seasons?userId={userId}` now returns `SeriesPrimaryImageTag`,
 `ParentLogoItemId`/`ParentLogoImageTag`, and `ParentBackdropItemId`/`ParentBackdropImageTags` on
@@ -1143,8 +1139,8 @@ elsewhere).
 
 ### Live validation
 
-Confirmed against `tinyfin-staging:8096` after the fix: an authenticated
-`GET /Users/{userId}/Items/{episodeId}` for the same Dragon Ball episode used throughout this
+Confirmed against Tinyfin after the fix: an authenticated
+`GET /Users/{userId}/Items/{episodeId}` for the same episode used throughout this
 comparison now returns `Width`/`Height` matching its primary video stream's own resolution,
 `IsHD: true`, `VideoType: "VideoFile"`, `PlayAccess: "Full"`, `CanDelete: true`,
 `CanDownload: true` for the admin test account.
@@ -1155,19 +1151,19 @@ comparison now returns `Width`/`Height` matching its primary video stream's own 
 
 ### The gap this resolves
 
-The Dashboard overview pass (see `docs/11`'s "Dashboard — Painel" section) left one call
+The Dashboard overview pass (see `docs/11`'s "Dashboard" section) left one call
 unresolved: jellyfin-web opens a WebSocket to `GET /socket` on every page and keeps it open for
 the life of the session. Tinyfin doesn't implement it at all today (connection refused/404 — no
 route registered). Black-box capture (Playwright's raw frame listener against a real reference
-server, `jellyfin-real-staging:8097`) recovered the wire shapes and the client-visible timing, but
+server) recovered the wire shapes and the client-visible timing, but
 left one real question open: two of the messages the client explicitly subscribes to
 (`SessionsStart`, `ScheduledTasksInfoStart`) never arrived during a 75-second idle window even
 though nothing else about the subscription looked wrong — was this a push-on-change design, a
 timing artifact of the capture, or something the client has to re-request periodically? Read the
-reference source (Rafael's explicit instruction) to resolve that specifically, rather than
+reference source (on the maintainer's explicit request) to resolve that specifically, rather than
 guessing from a longer black-box capture window.
 
-### Wire shapes and timing (black-box, `jellyfin-real-staging:8097`, no C# read needed for this part)
+### Wire shapes and timing (black-box, the reference server, no C# read needed for this part)
 
 - **Connection**: `ws://<host>/socket?api_key=<token>&deviceId=<deviceId>` — plain query-string
   auth, same lowercase `api_key` fallback Tinyfin's own `auth.go` already recognizes for the
@@ -1428,10 +1424,10 @@ sends an empty array on every push, per the "Behavior, in prose" section above) 
 no black-box observation ever depended on an empty payload and the real data is strictly more
 useful.
 
-**Live verification** against `tinyfin-staging` (rebuilt, restarted) with a real jellyfin-web build
+**Live verification** against Tinyfin (rebuilt, restarted) with a real jellyfin-web build
 via Playwright, a fresh browser tab, capturing raw WebSocket frames:
 
-- Connection URL observed as `ws://localhost:8096/socket?ApiKey=<token>` — this particular
+- Connection URL observed as `ws://localhost:<port>/socket?ApiKey=<token>` — this particular
   jellyfin-web build used the capital-`A` `ApiKey` query param (distinct from the lowercase
   `api_key` observed earlier against the reference server), both already handled by `auth.go`'s
   existing query-param fallback precedence; no code change needed, confirmed by the connection
@@ -1444,7 +1440,7 @@ via Playwright, a fresh browser tab, capturing raw WebSocket frames:
   `scanState.begin()`) followed by `"State":"Running"` with a populated `LastExecutionResult`
   (`"Status":"Completed"`) as each library's scan finished within the capture window — exactly the
   push-on-event pattern this section documents, not a fixed interval.
-- No server-side error, panic, or crash in `tinyfin-staging`'s logs throughout, and the container
+- No server-side error, panic, or crash in Tinyfin's logs throughout, and the process
   stayed healthy/running afterward — the specific outcome chronic issues #1/#2 exist to prevent.
 
 Unit/integration tests: `internal/api/websocket_test.go`, dialing real WebSocket connections

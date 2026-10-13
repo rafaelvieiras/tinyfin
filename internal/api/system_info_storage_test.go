@@ -142,7 +142,7 @@ func TestSystemInfoStorage_Libraries(t *testing.T) {
 
 	moviesDir := t.TempDir()
 	if err := st.UpsertLibrary(context.Background(), storage.Library{
-		Name:           "Filmes",
+		Name:           "Movies",
 		CollectionType: storage.CollectionTypeMovies,
 		Paths:          []string{moviesDir},
 	}); err != nil {
@@ -175,8 +175,8 @@ func TestSystemInfoStorage_Libraries(t *testing.T) {
 	if lib.Id != wantID {
 		t.Errorf("Libraries[0].Id = %q, want %q", lib.Id, wantID)
 	}
-	if lib.Name != "Filmes" {
-		t.Errorf("Libraries[0].Name = %q, want %q", lib.Name, "Filmes")
+	if lib.Name != "Movies" {
+		t.Errorf("Libraries[0].Name = %q, want %q", lib.Name, "Movies")
 	}
 	if len(lib.Folders) != 1 {
 		t.Fatalf("len(Libraries[0].Folders) = %d, want 1", len(lib.Folders))

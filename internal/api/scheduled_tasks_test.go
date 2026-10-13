@@ -278,7 +278,7 @@ func TestScheduledTaskStartRequiresAdmin(t *testing.T) {
 // item's metadata made this endpoint report the "Scan Media Libraries" task
 // as Running — which is exactly what makes jellyfin-web's Dashboard "Scan
 // All Libraries" button spin/disable itself (scheduledTaskLibraryScanID's
-// doc comment), with no library scan running at all. Rafael caught this by
+// doc comment), with no library scan running at all. a reporter caught this by
 // asking whether a per-item job would show up as "scanning library" on the
 // dashboard; checking jellyfin-web's own source confirmed the reference
 // server never conflates the two (an item refresh is tracked entirely

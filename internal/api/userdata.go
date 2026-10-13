@@ -89,8 +89,7 @@ func (s *Server) handleFavoriteItemRemove(w http.ResponseWriter, r *http.Request
 // file's package doc comment).
 //
 // PlayCount only increments on the actual unplayed -> played transition,
-// not on every call — confirmed against a real Jellyfin server (staging,
-// :8097) by POSTing this route three times in a row against the same item:
+// not on every call — confirmed against a real Jellyfin server (reference server) by POSTing this route three times in a row against the same item:
 // PlayCount went 0 -> 1 on the first call and then stayed at 1 for the
 // second and third, only moving again after an intervening DELETE reset it
 // to 0. This is a deliberate divergence from
@@ -127,7 +126,7 @@ func (s *Server) handlePlayedItemAdd(w http.ResponseWriter, r *http.Request) {
 	state.Played = true
 	state.PlaybackPositionTicks = 0
 	// LastPlayedDate stamped to now — confirmed against a real Jellyfin
-	// server (staging, :8097): the response to this exact route carries a
+	// server (reference server): the response to this exact route carries a
 	// fresh LastPlayedDate. Same fix as sessions_playback.go's
 	// handleUserPlayedItemsMark/reportPlaybackPosition (the native-player
 	// equivalents of this jellyfin-web-facing route) and load-bearing for
@@ -140,7 +139,7 @@ func (s *Server) handlePlayedItemAdd(w http.ResponseWriter, r *http.Request) {
 
 // handlePlayedItemRemove is DELETE /Users/{userId}/PlayedItems/{itemId} —
 // unmarks watched. PlayCount resets to 0, not left untouched — confirmed
-// against a real Jellyfin server (staging, :8097): DELETE PlayedItems
+// against a real Jellyfin server (reference server): DELETE PlayedItems
 // after a PlayCount of 1 came back with PlayCount 0, not 1. LastPlayedDate
 // is cleared the same way — confirmed the same way: the response carries
 // no LastPlayedDate at all after this call, not the prior value.

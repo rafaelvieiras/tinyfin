@@ -10,7 +10,7 @@ import (
 )
 
 // TestUserPlayedItemsMarkResetsPosition regression-guards a real bug found
-// via curl against a real Jellyfin server (staging, :8097): POST
+// via curl against a real Jellyfin server (reference server): POST
 // /UserPlayedItems/{itemId} — the SDK-shaped path the native player calls
 // once it reaches the end of an item (see this file's package doc comment)
 // — resets PlaybackPositionTicks to 0 on the unplayed -> played transition,

@@ -3,7 +3,7 @@
 // series grouping" section, produced under the clean-room process
 // (AGENTS.md's "Clean-room requirement", D12) — this file was written from
 // that spec plus black-box verification against a running reference server
-// (staging :8097), never with the reference server's own source open.
+// (reference server), never with the reference server's own source open.
 //
 // Confirmed live against the reference server, not assumed: the request's
 // grouping toggle is a `groupItems` query param (any capitalization —

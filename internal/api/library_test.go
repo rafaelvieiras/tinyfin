@@ -113,7 +113,7 @@ func TestUserViewsAndItems(t *testing.T) {
 		t.Fatalf("UserViews = %+v, want one item named Movies", views.Items)
 	}
 	// CollectionFolder, not UserView — confirmed against a real Jellyfin
-	// server (staging, :8097): GET /UserViews for an ordinary library comes
+	// server (reference server): GET /UserViews for an ordinary library comes
 	// back with Type "CollectionFolder" (dto.go's libraryBaseItemDto doc
 	// comment).
 	if views.Items[0].Type != "CollectionFolder" {
@@ -250,7 +250,7 @@ func TestItemGetEpisodeIncludesSeriesAndSeasonName(t *testing.T) {
 	token := loginToken(t, ts.URL, user.Name, "davepass")
 	get := authedClient(t, ts.URL, token)
 
-	libID := createTestLibrary(t, st, "Séries Infantis", storage.CollectionTypeTVShows)
+	libID := createTestLibrary(t, st, "Kids Shows", storage.CollectionTypeTVShows)
 
 	series := storage.Item{Type: storage.ItemTypeSeries, LibraryID: libID, Name: "Test Series", Path: "/media/series/Test Series"}
 	if err := st.UpsertItem(context.Background(), series); err != nil {
@@ -325,7 +325,7 @@ func TestShowSeasonsAndEpisodes(t *testing.T) {
 	token := loginToken(t, ts.URL, user.Name, "davepass")
 	get := authedClient(t, ts.URL, token)
 
-	libID := createTestLibrary(t, st, "Séries Infantis", storage.CollectionTypeTVShows)
+	libID := createTestLibrary(t, st, "Kids Shows", storage.CollectionTypeTVShows)
 
 	series := storage.Item{Type: storage.ItemTypeSeries, LibraryID: libID, Name: "Test Series", Path: "/media/series/Test Series"}
 	if err := st.UpsertItem(context.Background(), series); err != nil {
@@ -426,7 +426,7 @@ func TestShowSeasonsAndEpisodes(t *testing.T) {
 
 // TestShowEpisodesNoDefaultLimit regression-guards a real bug found via live
 // traffic comparison (Playwright, same jellyfin-web bundle against
-// tinyfin-staging and a real reference server, both pointed at a
+// a test deployment and a real reference server, both pointed at a
 // 153-episode single-season series): GET /Shows/{seriesId}/Episodes with no
 // Limit/StartIndex in the request was silently capped at defaultItemsLimit
 // (100) here, while the reference server returns every matching episode in
@@ -641,7 +641,7 @@ func TestItemsIncludesPrimaryImageAspectRatio(t *testing.T) {
 
 // TestItemImageTagsIncludesBackdropAndLogo regression-guards the gap found
 // comparing a movie detail page's GET /Users/{userId}/Items/{itemId}
-// against a real Jellyfin server (staging, :8097, docs/12's "Movie detail
+// against a real Jellyfin server (reference server, docs/12's "Movie detail
 // page — image tags for Backdrop and Logo"): a movie whose scanner already
 // recorded Backdrop and Logo image refs (both independently servable via
 // GET /Items/{itemId}/Images/{kind}) still came back with only
@@ -917,10 +917,10 @@ func TestLiveTvProgramsIsHonestEmpty(t *testing.T) {
 }
 
 // TestUsersItemsFavoritesFilter regression-guards a real bug found via a
-// live jellyfin-web session: clicking "Favoritos" in the navbar
+// live jellyfin-web session: clicking the favorites entry (labeled "Favoritos" in a Portuguese-localized UI) in the navbar
 // (#/home?tab=1) issues GET /Users/{userId}/Items?Filters=IsFavorite&
 // IncludeItemTypes=<Type>&... — capitalized exactly like that (confirmed via
-// Playwright network capture against this project's own staging server,
+// Playwright network capture against this project's own test server,
 // query keys included) — once per item type. Before this fix that 404'd
 // outright: GET /Users/{userId}/Items (the per-user listing form, distinct
 // from GET /Users/{userId}/Items/{itemId}) wasn't registered at all: and
@@ -988,8 +988,7 @@ func TestUsersItemsFavoritesFilter(t *testing.T) {
 }
 
 // TestUsersItemsEnableTotalRecordCountFalse regression-guards a real
-// divergence found via curl against a real Jellyfin server (staging,
-// :8097): with EnableTotalRecordCount=false — exactly what jellyfin-web's
+// divergence found via curl against a real Jellyfin server (reference server): with EnableTotalRecordCount=false — exactly what jellyfin-web's
 // Favorites screen (#/home?tab=1) and "Continue Watching" row send on every
 // call — TotalRecordCount comes back equal to how many items this response
 // actually carries, not the real total behind the filter. Confirmed on a
@@ -1062,14 +1061,14 @@ func TestUsersItemsEnableTotalRecordCountFalse(t *testing.T) {
 }
 
 // TestUsersItemsFavoritesSeriesSortName regression-guards a real divergence
-// found via curl against a real Jellyfin server (staging, :8097):
+// found via curl against a real Jellyfin server (reference server):
 // SortBy=SeriesSortName,SortName — exactly what jellyfin-web's Favorites
 // screen sends on its Episode/Season rows — groups results by their owning
 // series' SortName first, only falling back to the item's own SortName to
 // break ties within a series. Confirmed live: favoriting one episode of
-// series "Homens de Negro" and two episodes of series "MORTAL KOMBAT..."
-// came back with the "Homens de Negro" episode first and both "MORTAL
-// KOMBAT" episodes grouped together afterward — never split apart by the
+// series "Alpha Show" and two episodes of series "OMEGA SERIES"
+// came back with the "Alpha Show" episode first and both "OMEGA
+// SERIES" episodes grouped together afterward — never split apart by the
 // episodes' own titles the way sorting by SortName alone would. Before this
 // fix, SeriesSortName wasn't a recognized sortBy token at all
 // (parseSortFields silently dropped it), so this query effectively sorted
