@@ -5,20 +5,21 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
 
-const userColumns = `id, name, password_hash, is_administrator, is_disabled, enable_auto_login, last_login_date, last_activity_date`
+const userColumns = `id, name, password_hash, is_administrator, is_disabled, enable_auto_login, policy_json, last_login_date, last_activity_date`
 
 func scanUser(rs rowScanner) (storage.User, error) {
 	var (
-		id, name, passwordHash                  string
+		id, name, passwordHash, policyJSON      string
 		isAdministrator, isDisabled, enableAuto bool
 		lastLoginDate, lastActivityDate         sql.NullTime
 	)
-	if err := rs.Scan(&id, &name, &passwordHash, &isAdministrator, &isDisabled, &enableAuto, &lastLoginDate, &lastActivityDate); err != nil {
+	if err := rs.Scan(&id, &name, &passwordHash, &isAdministrator, &isDisabled, &enableAuto, &policyJSON, &lastLoginDate, &lastActivityDate); err != nil {
 		return storage.User{}, err
 	}
 	user := storage.User{
@@ -28,6 +29,7 @@ func scanUser(rs rowScanner) (storage.User, error) {
 		IsAdministrator: isAdministrator,
 		IsDisabled:      isDisabled,
 		EnableAutoLogin: enableAuto,
+		Policy:          policyJSON,
 	}
 	if lastLoginDate.Valid {
 		v := lastLoginDate.Time
@@ -92,11 +94,11 @@ func (s *Store) QueryUsers(ctx context.Context) ([]storage.User, error) {
 func (s *Store) CreateUser(ctx context.Context, user storage.User) (storage.UserID, error) {
 	id := storage.UserID(newID())
 
-	const query = `INSERT INTO users (id, name, password_hash, is_administrator, is_disabled, enable_auto_login, last_login_date, last_activity_date)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+	const query = `INSERT INTO users (id, name, password_hash, is_administrator, is_disabled, enable_auto_login, policy_json, last_login_date, last_activity_date)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	_, err := s.exec(ctx, query,
-		string(id), user.Name, user.PasswordHash, user.IsAdministrator, user.IsDisabled, user.EnableAutoLogin,
+		string(id), user.Name, user.PasswordHash, user.IsAdministrator, user.IsDisabled, user.EnableAutoLogin, user.Policy,
 		ptrToAny(user.LastLoginDate), ptrToAny(user.LastActivityDate),
 	)
 	if err != nil {
@@ -106,11 +108,11 @@ func (s *Store) CreateUser(ctx context.Context, user storage.User) (storage.User
 }
 
 func (s *Store) UpdateUser(ctx context.Context, user storage.User) error {
-	const query = `UPDATE users SET name = ?, password_hash = ?, is_administrator = ?, is_disabled = ?, enable_auto_login = ?, last_login_date = ?, last_activity_date = ?
+	const query = `UPDATE users SET name = ?, password_hash = ?, is_administrator = ?, is_disabled = ?, enable_auto_login = ?, policy_json = ?, last_login_date = ?, last_activity_date = ?
 		WHERE id = ?`
 
 	res, err := s.exec(ctx, query,
-		user.Name, user.PasswordHash, user.IsAdministrator, user.IsDisabled, user.EnableAutoLogin,
+		user.Name, user.PasswordHash, user.IsAdministrator, user.IsDisabled, user.EnableAutoLogin, user.Policy,
 		ptrToAny(user.LastLoginDate), ptrToAny(user.LastActivityDate),
 		string(user.ID),
 	)
@@ -169,6 +171,21 @@ func (s *Store) LookupToken(ctx context.Context, token string) (storage.AuthToke
 func (s *Store) RevokeToken(ctx context.Context, token string) error {
 	if _, err := s.exec(ctx, `DELETE FROM auth_tokens WHERE token = ?`, token); err != nil {
 		return fmt.Errorf("sqlite: revoking token: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) RevokeUserTokens(ctx context.Context, userID storage.UserID, keepDevices []storage.DeviceID) error {
+	query := `DELETE FROM auth_tokens WHERE user_id = ?`
+	args := []any{string(userID)}
+	if len(keepDevices) > 0 {
+		query += ` AND device_id NOT IN (?` + strings.Repeat(`, ?`, len(keepDevices)-1) + `)`
+		for _, d := range keepDevices {
+			args = append(args, string(d))
+		}
+	}
+	if _, err := s.exec(ctx, query, args...); err != nil {
+		return fmt.Errorf("sqlite: revoking tokens for user %q: %w", userID, err)
 	}
 	return nil
 }

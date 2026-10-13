@@ -70,6 +70,91 @@ type userPolicyDto struct {
 	SyncPlayAccess                  string `json:"SyncPlayAccess"`
 	AuthenticationProviderId        string `json:"AuthenticationProviderId"`
 	PasswordResetProviderId         string `json:"PasswordResetProviderId"`
+
+	EnableCollectionManagement       bool                `json:"EnableCollectionManagement"`
+	EnableSubtitleManagement         bool                `json:"EnableSubtitleManagement"`
+	EnableLyricManagement            bool                `json:"EnableLyricManagement"`
+	BlockUnratedItems                []string            `json:"BlockUnratedItems"`
+	BlockedTags                      []string            `json:"BlockedTags"`
+	AllowedTags                      []string            `json:"AllowedTags"`
+	EnabledFolders                   []string            `json:"EnabledFolders"`
+	EnabledChannels                  []string            `json:"EnabledChannels"`
+	EnabledDevices                   []string            `json:"EnabledDevices"`
+	BlockedMediaFolders              []string            `json:"BlockedMediaFolders"`
+	BlockedChannels                  []string            `json:"BlockedChannels"`
+	EnableContentDeletionFromFolders []string            `json:"EnableContentDeletionFromFolders"`
+	AccessSchedules                  []accessScheduleDto `json:"AccessSchedules"`
+	MaxParentalRating                *int                `json:"MaxParentalRating,omitempty"`
+	MaxParentalSubRating             *int                `json:"MaxParentalSubRating,omitempty"`
+}
+
+// accessScheduleDto is one entry of UserPolicy.AccessSchedules.
+type accessScheduleDto struct {
+	DayOfWeek string  `json:"DayOfWeek"`
+	StartHour float64 `json:"StartHour"`
+	EndHour   float64 `json:"EndHour"`
+}
+
+const defaultAuthProviderID = "Tinyfin.Auth.Default"
+
+// defaultUserPolicy is the policy of a newly created account (users.create.R1)
+// and the base every POSTed policy is decoded onto, so omitted fields take
+// these values (users.policy.R4). IsHidden is true: new accounts stay out
+// of the public list until an administrator clears it.
+func defaultUserPolicy() userPolicyDto {
+	return userPolicyDto{
+		IsHidden:                       true,
+		EnableUserPreferenceAccess:     true,
+		EnableSharedDeviceControl:      true,
+		EnableMediaPlayback:            true,
+		EnableAllFolders:               true,
+		EnableAllDevices:               true,
+		EnableAllChannels:              true,
+		EnableRemoteAccess:             true,
+		EnableContentDownloading:       true,
+		EnableLiveTvAccess:             true,
+		EnableAudioPlaybackTranscoding: true,
+		EnableVideoPlaybackTranscoding: true,
+		EnablePlaybackRemuxing:         true,
+		LoginAttemptsBeforeLockout:     -1,
+		SyncPlayAccess:                 "CreateAndJoinGroups",
+		AuthenticationProviderId:       defaultAuthProviderID,
+		PasswordResetProviderId:        defaultAuthProviderID,
+	}
+}
+
+// normalize replaces nil list members with empty slices so the wire value
+// is [] (clients declare these as non-nullable lists), never null.
+func (p *userPolicyDto) normalize() {
+	for _, l := range []*[]string{&p.BlockUnratedItems, &p.BlockedTags, &p.AllowedTags, &p.EnabledFolders,
+		&p.EnabledChannels, &p.EnabledDevices, &p.BlockedMediaFolders, &p.BlockedChannels, &p.EnableContentDeletionFromFolders} {
+		if *l == nil {
+			*l = []string{}
+		}
+	}
+	if p.AccessSchedules == nil {
+		p.AccessSchedules = []accessScheduleDto{}
+	}
+}
+
+// storedUserPolicy decodes the policy persisted for u. A user without a
+// stored policy (created before policies were persisted, or by the
+// bootstrap path) gets the defaults but is not hidden, so existing
+// accounts stay visible on the login screen. IsAdministrator and
+// IsDisabled always come from the account columns, which authentication
+// reads on every request.
+func storedUserPolicy(u storage.User) userPolicyDto {
+	p := defaultUserPolicy()
+	if u.Policy == "" {
+		p.IsHidden = false
+	} else if err := json.Unmarshal([]byte(u.Policy), &p); err != nil {
+		p = defaultUserPolicy()
+		p.IsHidden = false
+	}
+	p.IsAdministrator = u.IsAdministrator
+	p.IsDisabled = u.IsDisabled
+	p.normalize()
+	return p
 }
 
 // userConfigurationDto mirrors the OpenAPI schema's UserConfiguration.
@@ -162,19 +247,7 @@ func (s *Server) userDto(u storage.User) userDto {
 			LatestItemsExcludes:        []string{},
 			MyMediaExcludes:            []string{},
 		},
-		Policy: userPolicyDto{
-			IsAdministrator:            u.IsAdministrator,
-			IsDisabled:                 u.IsDisabled,
-			EnableUserPreferenceAccess: true,
-			EnableMediaPlayback:        true,
-			EnableAllFolders:           true,
-			EnableAllDevices:           true,
-			EnableRemoteAccess:         true,
-			EnableContentDownloading:   true,
-			SyncPlayAccess:             "None",
-			AuthenticationProviderId:   "Tinyfin.Auth.Default",
-			PasswordResetProviderId:    "Tinyfin.Auth.Default",
-		},
+		Policy: storedUserPolicy(u),
 	}
 }
 
@@ -201,6 +274,10 @@ func (s *Server) handleUsersPublic(w http.ResponseWriter, r *http.Request) {
 
 	dtos := make([]userDto, 0, len(users))
 	for _, u := range users {
+		// users.public.R2/R3: hidden and disabled accounts are not listed.
+		if p := storedUserPolicy(u); p.IsHidden || p.IsDisabled {
+			continue
+		}
 		dtos = append(dtos, s.userDto(u))
 	}
 	writeJSON(w, http.StatusOK, dtos)
@@ -250,9 +327,15 @@ func (s *Server) handleUsersCreate(w http.ResponseWriter, r *http.Request) {
 		hash = string(h)
 	}
 
+	policy, err := json.Marshal(defaultUserPolicy())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	id, err := s.store.CreateUser(r.Context(), storage.User{
 		Name:         req.Name,
 		PasswordHash: hash,
+		Policy:       string(policy),
 	})
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -290,6 +373,92 @@ func (s *Server) handleUsersDelete(w http.ResponseWriter, r *http.Request) {
 	if err := s.store.DeleteUser(r.Context(), storage.UserID(id)); err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// handleUsersPolicy is POST /Users/{userId}/Policy (users.policy.R1-R12):
+// administrator only, full replacement of the account's policy.
+func (s *Server) handleUsersPolicy(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Decode onto the new-user defaults so omitted fields take them (R4).
+	policy := defaultUserPolicy()
+	policy.AuthenticationProviderId = ""
+	policy.PasswordResetProviderId = ""
+	if err := json.NewDecoder(r.Body).Decode(&policy); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	target, err := s.store.GetUser(ctx, storage.UserID(r.PathValue("userId")))
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if policy.AuthenticationProviderId == "" || policy.PasswordResetProviderId == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if target.IsAdministrator {
+		// R7: an administrator cannot be disabled, even while being demoted.
+		if policy.IsDisabled {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		// R6: the last administrator (disabled ones count) keeps its rights.
+		if !policy.IsAdministrator {
+			users, err := s.store.QueryUsers(ctx)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			others := 0
+			for _, u := range users {
+				if u.ID != target.ID && u.IsAdministrator {
+					others++
+				}
+			}
+			if others == 0 {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+		}
+	}
+
+	wasDisabled := target.IsDisabled
+	target.IsAdministrator = policy.IsAdministrator
+	target.IsDisabled = policy.IsDisabled
+	policy.normalize()
+	raw, err := json.Marshal(policy)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	target.Policy = string(raw)
+	if err := s.store.UpdateUser(ctx, target); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// R8: disabling revokes every token of the account.
+	if policy.IsDisabled && !wasDisabled {
+		if err := s.store.RevokeUserTokens(ctx, target.ID, nil); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+	// users.auth.R17: tokens of devices that are no longer allowed go away.
+	if !policy.EnableAllDevices {
+		keep := make([]storage.DeviceID, 0, len(policy.EnabledDevices))
+		for _, d := range policy.EnabledDevices {
+			keep = append(keep, storage.DeviceID(d))
+		}
+		if err := s.store.RevokeUserTokens(ctx, target.ID, keep); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

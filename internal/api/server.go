@@ -374,6 +374,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /Users/New", requireAuth(s.handleUsersCreate))
 	s.mux.HandleFunc("GET /Users/{userId}", requireAuth(s.handleUsersGet))
 	s.mux.HandleFunc("DELETE /Users/{userId}", requireAuth(s.handleUsersDelete))
+	s.mux.HandleFunc("POST /Users/{userId}/Policy", requireAdmin(s.handleUsersPolicy))
 
 	// Library and item navigation (library.go) — docs/04's highest-priority
 	// group.

@@ -25,6 +25,13 @@ type User struct {
 	IsDisabled      bool
 	EnableAutoLogin bool
 
+	// Policy is the account's permission/restriction settings as an
+	// opaque JSON document (the API layer owns its schema, like
+	// PasswordHash's format). Empty means "never set"; IsAdministrator
+	// and IsDisabled stay separate columns because authentication reads
+	// them on every request.
+	Policy string
+
 	LastLoginDate    *time.Time
 	LastActivityDate *time.Time
 }

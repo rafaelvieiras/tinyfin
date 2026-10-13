@@ -110,6 +110,9 @@ type UserStore interface {
 	IssueToken(ctx context.Context, userID UserID, deviceID DeviceID) (AuthToken, error)
 	LookupToken(ctx context.Context, token string) (AuthToken, error)
 	RevokeToken(ctx context.Context, token string) error
+	// RevokeUserTokens removes the user's tokens issued to any device not
+	// listed in keepDevices; a nil/empty list removes all of them.
+	RevokeUserTokens(ctx context.Context, userID UserID, keepDevices []DeviceID) error
 
 	// GetDisplayPreferences/SetDisplayPreferences cover the per-user,
 	// per-client UI settings (sort order, view style, ...) the reference
