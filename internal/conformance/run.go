@@ -65,6 +65,12 @@ type Client struct {
 	// "docker exec ref cat". When empty the runner reads the local file system.
 	ReadFileCmd string
 
+	// Now overrides the runner clock used by the clock.* templates (tests).
+	Now func() time.Time
+
+	clockCalibrated bool
+	clockOffset     time.Duration // server local time minus UTC
+
 	mediaRoot string
 	lazyLibs  map[string]*lazyLibrary
 	apiKeyID  string // access token of the run's API key (for Teardown)
@@ -132,7 +138,27 @@ func (c *Client) expand(s string, scratch map[string]string) (string, error) {
 	out := tmplRE.ReplaceAllStringFunc(s, func(m string) string {
 		name := tmplRE.FindStringSubmatch(m)[1]
 		// "{{x|dashed}}" renders a 32-hex id in its 8-4-4-4-12 form.
-		name, dashed := strings.CutSuffix(name, "|dashed")
+		// Filters: |dashed (8-4-4-4-12 form), |upper, |num (see expandAny).
+		var dashed, upper bool
+		for {
+			if n, ok := strings.CutSuffix(name, "|dashed"); ok {
+				name, dashed = n, true
+			} else if n, ok := strings.CutSuffix(name, "|upper"); ok {
+				name, upper = n, true
+			} else if n, ok := strings.CutSuffix(name, "|num"); ok {
+				name = n
+			} else {
+				break
+			}
+		}
+		if spec, isClock := strings.CutPrefix(name, "clock."); isClock {
+			v, err := c.clockValue(spec)
+			if err != nil {
+				missing = append(missing, name+" ("+err.Error()+")")
+				return m
+			}
+			return v
+		}
 		v, ok := scratch[name]
 		if !ok {
 			v, ok = c.Vars[name]
@@ -147,6 +173,9 @@ func (c *Client) expand(s string, scratch map[string]string) (string, error) {
 		if dashed && len(v) == 32 {
 			v = v[:8] + "-" + v[8:12] + "-" + v[12:16] + "-" + v[16:20] + "-" + v[20:]
 		}
+		if upper {
+			v = strings.ToUpper(v)
+		}
 		return v
 	})
 	if len(missing) > 0 {
@@ -158,7 +187,19 @@ func (c *Client) expand(s string, scratch map[string]string) (string, error) {
 func (c *Client) expandAny(v any, scratch map[string]string) (any, error) {
 	switch t := v.(type) {
 	case string:
-		return c.expand(t, scratch)
+		out, err := c.expand(t, scratch)
+		if err != nil {
+			return nil, err
+		}
+		// "{{x|num}}" as the whole value is sent as a JSON number.
+		if strings.HasPrefix(t, "{{") && strings.HasSuffix(t, "|num}}") && strings.Count(t, "{{") == 1 {
+			f, perr := strconv.ParseFloat(out, 64)
+			if perr != nil {
+				return nil, &blockedError{"template " + t + " is not a number: " + out}
+			}
+			return f, nil
+		}
+		return out, nil
 	case []any:
 		out := make([]any, len(t))
 		for i := range t {

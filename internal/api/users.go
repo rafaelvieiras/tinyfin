@@ -3,9 +3,11 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -92,11 +94,99 @@ type userPolicyDto struct {
 	MaxParentalSubRating             *int                `json:"MaxParentalSubRating,omitempty"`
 }
 
-// accessScheduleDto is one entry of UserPolicy.AccessSchedules.
+// accessScheduleDto is one entry of UserPolicy.AccessSchedules. DayOfWeek
+// holds the canonical day name (users.schedule.R6-R7); an integer outside 0-9
+// is kept as its decimal text and is written back as a number.
 type accessScheduleDto struct {
 	DayOfWeek string  `json:"DayOfWeek"`
 	StartHour float64 `json:"StartHour"`
 	EndHour   float64 `json:"EndHour"`
+}
+
+// scheduleDayNames are the day values by their numeric code (0 = Sunday).
+var scheduleDayNames = []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
+	"Saturday", "Everyday", "Weekday", "Weekend"}
+
+// parseScheduleDay turns one wire DayOfWeek value (name in any case, integer,
+// or integer as a string) into its canonical form.
+func parseScheduleDay(raw json.RawMessage) (string, error) {
+	text := strings.TrimSpace(string(raw))
+	if text == "" || text == "null" {
+		return "", errors.New("DayOfWeek must not be null")
+	}
+	if text[0] == '"' {
+		var s string
+		if err := json.Unmarshal(raw, &s); err != nil {
+			return "", err
+		}
+		text = strings.TrimSpace(s)
+		if text == "" {
+			return "", errors.New("DayOfWeek must not be empty")
+		}
+		for _, n := range scheduleDayNames {
+			if strings.EqualFold(n, text) {
+				return n, nil
+			}
+		}
+	}
+	n, err := strconv.Atoi(text)
+	if err != nil {
+		return "", errors.New("DayOfWeek is not a day")
+	}
+	if n >= 0 && n < len(scheduleDayNames) {
+		return scheduleDayNames[n], nil
+	}
+	return strconv.Itoa(n), nil
+}
+
+// parseScheduleHour accepts a JSON number or a numeric string.
+func parseScheduleHour(raw json.RawMessage) (float64, error) {
+	text := strings.TrimSpace(string(raw))
+	if strings.HasPrefix(text, `"`) {
+		var s string
+		if err := json.Unmarshal(raw, &s); err != nil {
+			return 0, err
+		}
+		text = strings.TrimSpace(s)
+	}
+	return strconv.ParseFloat(text, 64)
+}
+
+func (a *accessScheduleDto) UnmarshalJSON(b []byte) error {
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(b, &m); err != nil {
+		return err
+	}
+	*a = accessScheduleDto{DayOfWeek: "Sunday"}
+	var err error
+	if raw, ok := m["DayOfWeek"]; ok {
+		if a.DayOfWeek, err = parseScheduleDay(raw); err != nil {
+			return err
+		}
+	}
+	if raw, ok := m["StartHour"]; ok {
+		if a.StartHour, err = parseScheduleHour(raw); err != nil {
+			return err
+		}
+	}
+	if raw, ok := m["EndHour"]; ok {
+		if a.EndHour, err = parseScheduleHour(raw); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (a accessScheduleDto) MarshalJSON() ([]byte, error) {
+	day := any(a.DayOfWeek)
+	if n, err := strconv.Atoi(a.DayOfWeek); err == nil {
+		day = n
+	}
+	return json.Marshal(struct {
+		DayOfWeek any     `json:"DayOfWeek"`
+		StartHour float64 `json:"StartHour"`
+		EndHour   float64 `json:"EndHour"`
+	}{day, a.StartHour, a.EndHour})
 }
 
 const defaultAuthProviderID = "Tinyfin.Auth.Default"
@@ -138,6 +228,10 @@ func (p *userPolicyDto) normalize() {
 	}
 	if p.AccessSchedules == nil {
 		p.AccessSchedules = []accessScheduleDto{}
+	}
+	// users.lockout.R1: zero is stored as the default threshold.
+	if p.LoginAttemptsBeforeLockout == 0 {
+		p.LoginAttemptsBeforeLockout = defaultLockoutAttempts
 	}
 	// Folder and channel ids are identifiers: always written canonically
 	// (wire.id.R1), whichever spelling the client posted or an older
@@ -212,7 +306,7 @@ func storedUserPolicy(u storage.User) userPolicyDto {
 type userConfigurationDto struct {
 	AudioLanguagePreference    string   `json:"AudioLanguagePreference,omitempty"`
 	PlayDefaultAudioTrack      bool     `json:"PlayDefaultAudioTrack"`
-	SubtitleLanguagePreference string   `json:"SubtitleLanguagePreference,omitempty"`
+	SubtitleLanguagePreference string   `json:"SubtitleLanguagePreference"`
 	DisplayMissingEpisodes     bool     `json:"DisplayMissingEpisodes"`
 	GroupedFolders             []string `json:"GroupedFolders"`
 	SubtitleMode               string   `json:"SubtitleMode"`
@@ -225,7 +319,7 @@ type userConfigurationDto struct {
 	RememberAudioSelections    bool     `json:"RememberAudioSelections"`
 	RememberSubtitleSelections bool     `json:"RememberSubtitleSelections"`
 	EnableNextEpisodeAutoPlay  bool     `json:"EnableNextEpisodeAutoPlay"`
-	CastReceiverId             string   `json:"CastReceiverId,omitempty"`
+	CastReceiverId             string   `json:"CastReceiverId"`
 }
 
 // userDto mirrors the OpenAPI schema's UserDto, trimmed to fields
@@ -240,17 +334,19 @@ type userConfigurationDto struct {
 //     duplicate of HasConfiguredPassword (kept below); "easy password"
 //     (PIN-based login) isn't a concept storage.User has at all.
 type userDto struct {
-	Name                  string               `json:"Name"`
-	ServerID              string               `json:"ServerId"`
-	ServerName            string               `json:"ServerName"`
-	ID                    string               `json:"Id"`
-	HasPassword           bool                 `json:"HasPassword"`
-	HasConfiguredPassword bool                 `json:"HasConfiguredPassword"`
-	EnableAutoLogin       bool                 `json:"EnableAutoLogin"`
-	LastLoginDate         *time.Time           `json:"LastLoginDate,omitempty"`
-	LastActivityDate      *time.Time           `json:"LastActivityDate,omitempty"`
-	Configuration         userConfigurationDto `json:"Configuration"`
-	Policy                userPolicyDto        `json:"Policy"`
+	Name                  string `json:"Name"`
+	ServerID              string `json:"ServerId"`
+	ServerName            string `json:"ServerName"`
+	ID                    string `json:"Id"`
+	HasPassword           bool   `json:"HasPassword"`
+	HasConfiguredPassword bool   `json:"HasConfiguredPassword"`
+	// HasConfiguredEasyPassword is always false: there is no PIN login.
+	HasConfiguredEasyPassword bool                 `json:"HasConfiguredEasyPassword"`
+	EnableAutoLogin           bool                 `json:"EnableAutoLogin"`
+	LastLoginDate             *time.Time           `json:"LastLoginDate,omitempty"`
+	LastActivityDate          *time.Time           `json:"LastActivityDate,omitempty"`
+	Configuration             userConfigurationDto `json:"Configuration"`
+	Policy                    userPolicyDto        `json:"Policy"`
 }
 
 // userDto builds the wire object of u, loading its stored preferences. It
@@ -454,13 +550,14 @@ func (s *Server) handleUsersGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleUsersDelete(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("userId")
-	if id == "" {
-		writeBadRequest(w)
+	// users.ids.R1: a non-GUID or all-zero id is a 400, not a 404.
+	id, ok := parseUserGUID(r.PathValue("userId"))
+	if !ok {
+		writeInvalidID(w, "userId", r.PathValue("userId"))
 		return
 	}
 	ctx := r.Context()
-	target, err := s.store.GetUser(ctx, storage.UserID(id))
+	target, err := s.store.GetUser(ctx, id)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -508,6 +605,13 @@ func (s *Server) handleUsersDelete(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleUsersPolicy(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
+	// users.ids.R1: a non-GUID or all-zero id is a 400, not a 404.
+	targetID, ok := parseUserGUID(r.PathValue("userId"))
+	if !ok {
+		writeInvalidID(w, "userId", r.PathValue("userId"))
+		return
+	}
+
 	// Decode onto the new-user defaults so omitted fields take them (R4).
 	policy := defaultUserPolicy()
 	policy.AuthenticationProviderId = ""
@@ -517,7 +621,7 @@ func (s *Server) handleUsersPolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	target, err := s.store.GetUser(ctx, storage.UserID(r.PathValue("userId")))
+	target, err := s.store.GetUser(ctx, targetID)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return

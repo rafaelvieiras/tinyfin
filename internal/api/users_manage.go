@@ -69,6 +69,7 @@ func (s *Server) userNameTaken(ctx context.Context, name string, except storage.
 // configuration is decoded onto, so omitted fields reset to it.
 func defaultUserConfiguration() userConfigurationDto {
 	c := userConfigurationDto{
+		CastReceiverId:             defaultCastReceiverID,
 		PlayDefaultAudioTrack:      true,
 		SubtitleMode:               "Default",
 		HidePlayedInLatest:         true,
@@ -80,7 +81,21 @@ func defaultUserConfiguration() userConfigurationDto {
 	return c
 }
 
+// defaultCastReceiverID is the stable cast receiver every account starts
+// with; knownCastReceiverIDs are the receivers a stock server offers
+// (users.prefs.R1-R2).
+const defaultCastReceiverID = "F007D354"
+
+var knownCastReceiverIDs = map[string]bool{"F007D354": true, "6F511C87": true}
+
 func (c *userConfigurationDto) normalize() {
+	if c.CastReceiverId == "" {
+		c.CastReceiverId = defaultCastReceiverID
+	}
+	c.normalizeLists()
+}
+
+func (c *userConfigurationDto) normalizeLists() {
 	for _, l := range []*[]string{&c.GroupedFolders, &c.OrderedViews, &c.LatestItemsExcludes, &c.MyMediaExcludes} {
 		if *l == nil {
 			*l = []string{}
@@ -102,6 +117,8 @@ func validSubtitleMode(m string) bool {
 // shape or that carries an invalid enum value.
 func decodeUserConfiguration(r io.Reader) (userConfigurationDto, bool) {
 	c := defaultUserConfiguration()
+	// Empty means "not supplied": the caller keeps the stored receiver.
+	c.CastReceiverId = ""
 	if err := json.NewDecoder(r).Decode(&c); err != nil {
 		return c, false
 	}
@@ -112,11 +129,30 @@ func validatedConfiguration(c userConfigurationDto) (userConfigurationDto, bool)
 	if !validSubtitleMode(c.SubtitleMode) {
 		return c, false
 	}
-	// CastReceiverId is only kept when it names a configured cast
-	// receiver; Tinyfin has none, so it is always dropped.
-	c.CastReceiverId = ""
-	c.normalize()
+	// users.prefs.R1-R2: CastReceiverId is only taken when it names a
+	// known receiver; otherwise it stays empty and the caller keeps the
+	// stored one (see withStoredCastReceiver).
+	if !knownCastReceiverIDs[c.CastReceiverId] {
+		c.CastReceiverId = ""
+	}
+	c.normalizeLists()
 	return c, true
+}
+
+// withStoredCastReceiver fills an unset CastReceiverId with the account's
+// current one (the default for an account that never set it).
+func (s *Server) withStoredCastReceiver(ctx context.Context, id storage.UserID, c userConfigurationDto) userConfigurationDto {
+	if c.CastReceiverId != "" {
+		return c
+	}
+	c.CastReceiverId = defaultCastReceiverID
+	if raw, err := s.store.GetUserConfiguration(ctx, id); err == nil && raw != "" {
+		var cur userConfigurationDto
+		if json.Unmarshal([]byte(raw), &cur) == nil && knownCastReceiverIDs[cur.CastReceiverId] {
+			c.CastReceiverId = cur.CastReceiverId
+		}
+	}
+	return c
 }
 
 func (s *Server) saveUserConfiguration(ctx context.Context, id storage.UserID, c userConfigurationDto) error {
@@ -176,6 +212,7 @@ func (s *Server) handleUsersConfiguration(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
+	cfg = s.withStoredCastReceiver(r.Context(), target.ID, cfg)
 	if err := s.saveUserConfiguration(r.Context(), target.ID, cfg); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -242,6 +279,7 @@ func (s *Server) handleUsersUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	// An omitted Configuration resets the preferences (users.update.R9).
 	cfg := defaultUserConfiguration()
+	cfg.CastReceiverId = ""
 	if req.Configuration != nil && string(req.Configuration) != "null" {
 		var ok bool
 		if cfg, ok = decodeUserConfiguration(bytes.NewReader(req.Configuration)); !ok {
@@ -286,6 +324,7 @@ func (s *Server) handleUsersUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 		renamed = true
 	}
+	cfg = s.withStoredCastReceiver(r.Context(), target.ID, cfg)
 	if err := s.saveUserConfiguration(r.Context(), target.ID, cfg); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

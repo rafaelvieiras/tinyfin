@@ -94,7 +94,7 @@ reference source open in the same session.
   `request.noAuth` is true.
 * Templates: `{{user.<key>.id|name|password}}`, `{{item.<key>.id|name}}`,
   `{{library.<key>.name}}`, `{{capture.<name>}}`, `{{server.mediaroot}}`.
-* `{{x|dashed}}` renders a 32-hex id in its 8-4-4-4-12 form;
+* `{{x|dashed}}` renders a 32-hex id in its 8-4-4-4-12 form, `{{x|upper}}` in upper case (filters combine);
   `{{device.<identity>}}` is the DeviceId the runner uses for an identity and
   `{{run.suffix}}` the per-run DeviceId suffix (see *Running*).
 * `expect.status` is a number or an array (any of); `expect.headers` values are
@@ -104,6 +104,19 @@ reference source open in the same session.
   lowercase hex digits without dashes; an empty wildcard result fails).
   `expect.problem: <status>` asserts an RFC 9110 problem document (`type`,
   `title`, `status` equal to the number).
+* Server-clock templates build time-of-day dependent state without depending
+  on when the suite runs: `{{clock.hour}}` is the server's *local* time of day
+  in fractional hours, `{{clock.hour+1}}` / `{{clock.hour-0.5}}` shift it
+  (no wrap), `{{clock.day}}` / `{{clock.day+1}}` are the local weekday name
+  (shifted, wrapping), `{{clock.daygroup}}` / `{{clock.otherdaygroup}}` are
+  `Weekday`/`Weekend` for today and the other one. A body value that is exactly
+  one template with the `|num` filter (`"{{clock.hour+1|num}}"`) is sent as a
+  JSON number. The runner cannot read the server's time zone, so on first use
+  it calibrates: it creates a throwaway account, bisects an access-schedule
+  end hour with logins to learn the server's local time, derives the zone
+  offset (to a quarter hour) and removes the account. Scenarios that use the
+  templates carry the tag `server-clock` (they need the administrator to be
+  able to create users and set policies).
 * `capture` stores a value (`$.json.path` or `header:Name`) for later steps.
 * Non-HTTP steps: `{"sleepMs": 1500}` pauses (time-based rules);
   `{"config": {"set": {"QuickConnectAvailable": false}}}` patches the
@@ -227,8 +240,8 @@ go run ./cmd/conformance progress
 * CI (`.github/workflows/ci.yml`, job `conformance`) builds Tinyfin, generates
   the media tree, starts a throwaway server with
   `scripts/conformance-tinyfin-up.sh` and runs the ratchet with
-  `-skip-tags time-dependent` (those scenarios assume they do not run in the
-  03:xx local hour). The server listens on the runner's own (non-loopback)
+  `-skip-tags time-dependent` (no scenario carries that tag any more; the
+  access-schedule scenarios build their windows from the server clock). The server listens on the runner's own (non-loopback)
   address and the run passes `-server-data-dir`, so the remote-access and PIN
   scenarios run; a second job step starts a fresh throwaway server and runs
   only the `risky` scenarios with `-risky -strict`.

@@ -2990,8 +2990,7 @@
     "spec": "users.md#authenticate-by-name",
     "scope": "modern",
     "tags": [
-      "auth",
-      "time-dependent"
+      "auth"
     ],
     "covers": [
       "users.auth.R18"
@@ -3031,7 +3030,7 @@
         }
       },
       {
-        "name": "allow only the 03:00 hour, every day",
+        "name": "allow only a window that starts in an hour (server clock), every day",
         "as": "admin",
         "request": {
           "method": "POST",
@@ -3041,39 +3040,9 @@
             "PasswordResetProviderId": "{{capture.rp}}",
             "AccessSchedules": [
               {
-                "DayOfWeek": "Sunday",
-                "StartHour": 3,
-                "EndHour": 3
-              },
-              {
-                "DayOfWeek": "Monday",
-                "StartHour": 3,
-                "EndHour": 3
-              },
-              {
-                "DayOfWeek": "Tuesday",
-                "StartHour": 3,
-                "EndHour": 3
-              },
-              {
-                "DayOfWeek": "Wednesday",
-                "StartHour": 3,
-                "EndHour": 3
-              },
-              {
-                "DayOfWeek": "Thursday",
-                "StartHour": 3,
-                "EndHour": 3
-              },
-              {
-                "DayOfWeek": "Friday",
-                "StartHour": 3,
-                "EndHour": 3
-              },
-              {
-                "DayOfWeek": "Saturday",
-                "StartHour": 3,
-                "EndHour": 3
+                "DayOfWeek": "Everyday",
+                "StartHour": "{{clock.hour+1|num}}",
+                "EndHour": "{{clock.hour+2|num}}"
               }
             ]
           }
@@ -5592,8 +5561,7 @@
     "spec": "users.md#get-current-user",
     "scope": "modern",
     "tags": [
-      "auth",
-      "time-dependent"
+      "auth"
     ],
     "covers": [
       "users.me.R5",
@@ -5655,7 +5623,7 @@
         }
       },
       {
-        "name": "restrict to the 03:00 hour",
+        "name": "allow only a window that starts in an hour (server clock), every day",
         "as": "admin",
         "request": {
           "method": "POST",
@@ -5665,39 +5633,9 @@
             "PasswordResetProviderId": "{{capture.rp}}",
             "AccessSchedules": [
               {
-                "DayOfWeek": "Sunday",
-                "StartHour": 3,
-                "EndHour": 3
-              },
-              {
-                "DayOfWeek": "Monday",
-                "StartHour": 3,
-                "EndHour": 3
-              },
-              {
-                "DayOfWeek": "Tuesday",
-                "StartHour": 3,
-                "EndHour": 3
-              },
-              {
-                "DayOfWeek": "Wednesday",
-                "StartHour": 3,
-                "EndHour": 3
-              },
-              {
-                "DayOfWeek": "Thursday",
-                "StartHour": 3,
-                "EndHour": 3
-              },
-              {
-                "DayOfWeek": "Friday",
-                "StartHour": 3,
-                "EndHour": 3
-              },
-              {
-                "DayOfWeek": "Saturday",
-                "StartHour": 3,
-                "EndHour": 3
+                "DayOfWeek": "Everyday",
+                "StartHour": "{{clock.hour+1|num}}",
+                "EndHour": "{{clock.hour+2|num}}"
               }
             ]
           }
@@ -18133,5 +18071,4590 @@
       }
     ],
     "cleanup": []
+  },
+  {
+    "id": "users.schedule.window-around-now",
+    "endpoint": "POST /Users/AuthenticateByName",
+    "spec": "users.md#access-schedules",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "schedule",
+      "server-clock"
+    ],
+    "covers": [
+      "users.schedule.R1"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-schedule-window-around-now",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-schedule-window-around-now",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "window around now",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Everyday",
+                "StartHour": "{{clock.hour-1|num}}",
+                "EndHour": "{{clock.hour+1|num}}"
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "inside the window",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-window-around-now",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-window-around-now{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "window starts in an hour",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Everyday",
+                "StartHour": "{{clock.hour+1|num}}",
+                "EndHour": "{{clock.hour+2|num}}"
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "before the window",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-window-around-now",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-window-around-now{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "window ended an hour ago",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Everyday",
+                "StartHour": "{{clock.hour-2|num}}",
+                "EndHour": "{{clock.hour-1|num}}"
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "after the window",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-window-around-now",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-window-around-now{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "window started a moment ago",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Everyday",
+                "StartHour": "{{clock.hour-0.01|num}}",
+                "EndHour": "{{clock.hour+1|num}}"
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "start is inclusive and fractional",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-window-around-now",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-window-around-now{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "window ends a moment from now",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Everyday",
+                "StartHour": "{{clock.hour-1|num}}",
+                "EndHour": "{{clock.hour+0.01|num}}"
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "end is fractional (not rounded up to the hour)",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-window-around-now",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-window-around-now{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "window ended seconds ago",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Everyday",
+                "StartHour": "{{clock.hour-1|num}}",
+                "EndHour": "{{clock.hour-0.01|num}}"
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "minutes count: ended 36 seconds ago",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-window-around-now",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-window-around-now{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "second entry rescues",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Everyday",
+                "StartHour": "{{clock.hour+1|num}}",
+                "EndHour": "{{clock.hour+2|num}}"
+              },
+              {
+                "DayOfWeek": "Everyday",
+                "StartHour": "{{clock.hour-1|num}}",
+                "EndHour": "{{clock.hour+1|num}}"
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "any matching entry is enough",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-window-around-now",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-window-around-now{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.schedule.day-matching",
+    "endpoint": "POST /Users/AuthenticateByName",
+    "spec": "users.md#access-schedules",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "schedule",
+      "server-clock"
+    ],
+    "covers": [
+      "users.schedule.R2"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-schedule-day-matching",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-schedule-day-matching",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "today by name (policy)",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "{{clock.day}}",
+                "StartHour": 0,
+                "EndHour": 24
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "today by name",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-day-matching",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-day-matching{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "tomorrow only (policy)",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "{{clock.day+1}}",
+                "StartHour": 0,
+                "EndHour": 24
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "tomorrow only",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-day-matching",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-day-matching{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "yesterday only (policy)",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "{{clock.day-1}}",
+                "StartHour": 0,
+                "EndHour": 24
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "yesterday only",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-day-matching",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-day-matching{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "Everyday (policy)",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Everyday",
+                "StartHour": 0,
+                "EndHour": 24
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "Everyday",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-day-matching",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-day-matching{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "Weekday or Weekend that holds today (policy)",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "{{clock.daygroup}}",
+                "StartHour": 0,
+                "EndHour": 24
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "Weekday or Weekend that holds today",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-day-matching",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-day-matching{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "the other of Weekday/Weekend (policy)",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "{{clock.otherdaygroup}}",
+                "StartHour": 0,
+                "EndHour": 24
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "the other of Weekday/Weekend",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-day-matching",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-day-matching{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "Everyday as the number 7 (policy)",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": 7,
+                "StartHour": 0,
+                "EndHour": 24
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "Everyday as the number 7",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-day-matching",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-day-matching{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "day name in lower case (policy)",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "everyday",
+                "StartHour": 0,
+                "EndHour": 24
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "day name in lower case",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-day-matching",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-day-matching{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.schedule.no-wraparound",
+    "endpoint": "POST /Users/AuthenticateByName",
+    "spec": "users.md#access-schedules",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "schedule",
+      "server-clock"
+    ],
+    "covers": [
+      "users.schedule.R3"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-schedule-no-wraparound",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-schedule-no-wraparound",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "start after end (evening to early morning)",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Everyday",
+                "StartHour": 23,
+                "EndHour": 1
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "a window whose start is after its end never matches",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-no-wraparound",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-no-wraparound{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "reversed window that would contain now if it wrapped",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Everyday",
+                "StartHour": "{{clock.hour-1|num}}",
+                "EndHour": "{{clock.hour-2|num}}"
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "still refused (no wrap-around)",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-no-wraparound",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-no-wraparound{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "empty window around now",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Everyday",
+                "StartHour": "{{clock.hour+1|num}}",
+                "EndHour": "{{clock.hour+1|num}}"
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "start equal to end in the future",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-no-wraparound",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-no-wraparound{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.schedule.out-of-range-hours",
+    "endpoint": "POST /Users/AuthenticateByName",
+    "spec": "users.md#access-schedules",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "schedule"
+    ],
+    "covers": [
+      "users.schedule.R4"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-schedule-out-of-range-hours",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-schedule-out-of-range-hours",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "negative start, end past 24",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Everyday",
+                "StartHour": -1,
+                "EndHour": 30
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "hours outside 0-24 are accepted and compared as numbers",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-out-of-range-hours",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-out-of-range-hours{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "read back",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.AccessSchedules[0].StartHour",
+              "op": "eq",
+              "value": -1
+            },
+            {
+              "path": "$.Policy.AccessSchedules[0].EndHour",
+              "op": "eq",
+              "value": 30
+            }
+          ]
+        }
+      },
+      {
+        "name": "window entirely above 24",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Everyday",
+                "StartHour": 30,
+                "EndHour": 40
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "never matches",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-out-of-range-hours",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-out-of-range-hours{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "full day with end 24",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Everyday",
+                "StartHour": 0,
+                "EndHour": 24
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "0 to 24 is always inside",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-out-of-range-hours",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-out-of-range-hours{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.schedule.authenticated-requests",
+    "endpoint": "GET /Users/Me",
+    "spec": "users.md#access-schedules",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "schedule",
+      "server-clock"
+    ],
+    "covers": [
+      "users.schedule.R5"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-schedule-authenticated-requests",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-schedule-authenticated-requests",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "login without a schedule",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-schedule-authenticated-requests",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-authenticated-requests{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "tok": "$.AccessToken"
+        }
+      },
+      {
+        "name": "window around now",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Everyday",
+                "StartHour": "{{clock.hour-1|num}}",
+                "EndHour": "{{clock.hour+1|num}}"
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "inside the window",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Me",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-authenticated-requests{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "window in an hour",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Everyday",
+                "StartHour": "{{clock.hour+1|num}}",
+                "EndHour": "{{clock.hour+2|num}}"
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "outside the window",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Me",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-authenticated-requests{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "window around now again",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Everyday",
+                "StartHour": "{{clock.hour-1|num}}",
+                "EndHour": "{{clock.hour+1|num}}"
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "allowed again without a new login",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Me",
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-schedule-authenticated-requests{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.schedule.day-forms-roundtrip",
+    "endpoint": "POST /Users/{userId}/Policy",
+    "spec": "users.md#access-schedules",
+    "scope": "modern",
+    "tags": [
+      "policy",
+      "schedule"
+    ],
+    "covers": [
+      "users.schedule.R6"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-schedule-day-forms-roundtrip",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-schedule-day-forms-roundtrip",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "set lower-case name",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "tuesday",
+                "StartHour": 1,
+                "EndHour": 2
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read lower-case name",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.AccessSchedules[0].DayOfWeek",
+              "op": "eq",
+              "value": "Tuesday"
+            },
+            {
+              "path": "$.Policy.AccessSchedules",
+              "op": "len",
+              "value": 1
+            }
+          ]
+        }
+      },
+      {
+        "name": "set upper-case name",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "SUNDAY",
+                "StartHour": 1,
+                "EndHour": 2
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read upper-case name",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.AccessSchedules[0].DayOfWeek",
+              "op": "eq",
+              "value": "Sunday"
+            },
+            {
+              "path": "$.Policy.AccessSchedules",
+              "op": "len",
+              "value": 1
+            }
+          ]
+        }
+      },
+      {
+        "name": "set number 2",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": 2,
+                "StartHour": 1,
+                "EndHour": 2
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read number 2",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.AccessSchedules[0].DayOfWeek",
+              "op": "eq",
+              "value": "Tuesday"
+            },
+            {
+              "path": "$.Policy.AccessSchedules",
+              "op": "len",
+              "value": 1
+            }
+          ]
+        }
+      },
+      {
+        "name": "set numeric string",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "3",
+                "StartHour": 1,
+                "EndHour": 2
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read numeric string",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.AccessSchedules[0].DayOfWeek",
+              "op": "eq",
+              "value": "Wednesday"
+            },
+            {
+              "path": "$.Policy.AccessSchedules",
+              "op": "len",
+              "value": 1
+            }
+          ]
+        }
+      },
+      {
+        "name": "set number 7",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": 7,
+                "StartHour": 1,
+                "EndHour": 2
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read number 7",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.AccessSchedules[0].DayOfWeek",
+              "op": "eq",
+              "value": "Everyday"
+            },
+            {
+              "path": "$.Policy.AccessSchedules",
+              "op": "len",
+              "value": 1
+            }
+          ]
+        }
+      },
+      {
+        "name": "set number 8",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": 8,
+                "StartHour": 1,
+                "EndHour": 2
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read number 8",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.AccessSchedules[0].DayOfWeek",
+              "op": "eq",
+              "value": "Weekday"
+            },
+            {
+              "path": "$.Policy.AccessSchedules",
+              "op": "len",
+              "value": 1
+            }
+          ]
+        }
+      },
+      {
+        "name": "set number 9",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": 9,
+                "StartHour": 1,
+                "EndHour": 2
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read number 9",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.AccessSchedules[0].DayOfWeek",
+              "op": "eq",
+              "value": "Weekend"
+            },
+            {
+              "path": "$.Policy.AccessSchedules",
+              "op": "len",
+              "value": 1
+            }
+          ]
+        }
+      },
+      {
+        "name": "set name Weekend",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "weekend",
+                "StartHour": 1,
+                "EndHour": 2
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read name Weekend",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.AccessSchedules[0].DayOfWeek",
+              "op": "eq",
+              "value": "Weekend"
+            },
+            {
+              "path": "$.Policy.AccessSchedules",
+              "op": "len",
+              "value": 1
+            }
+          ]
+        }
+      },
+      {
+        "name": "refuse unknown name",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Foo",
+                "StartHour": 1,
+                "EndHour": 2
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "refuse empty string",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "",
+                "StartHour": 1,
+                "EndHour": 2
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "refuse null",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": null,
+                "StartHour": 1,
+                "EndHour": 2
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "refuse fraction",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": 3.5,
+                "StartHour": 1,
+                "EndHour": 2
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.schedule.hour-forms",
+    "endpoint": "POST /Users/{userId}/Policy",
+    "spec": "users.md#access-schedules",
+    "scope": "modern",
+    "tags": [
+      "policy",
+      "schedule"
+    ],
+    "covers": [
+      "users.schedule.R7"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-schedule-hour-forms",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-schedule-hour-forms",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "hours as numeric strings, fractional end",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Monday",
+                "StartHour": "3",
+                "EndHour": 4.5
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read back",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.AccessSchedules[0].StartHour",
+              "op": "eq",
+              "value": 3
+            },
+            {
+              "path": "$.Policy.AccessSchedules[0].EndHour",
+              "op": "eq",
+              "value": 4.5
+            },
+            {
+              "path": "$.Policy.AccessSchedules[0].DayOfWeek",
+              "op": "eq",
+              "value": "Monday"
+            }
+          ]
+        }
+      },
+      {
+        "name": "omitted members",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Friday"
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "omitted hours are 0",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.AccessSchedules[0].StartHour",
+              "op": "eq",
+              "value": 0
+            },
+            {
+              "path": "$.Policy.AccessSchedules[0].EndHour",
+              "op": "eq",
+              "value": 0
+            }
+          ]
+        }
+      },
+      {
+        "name": "null start hour",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "AccessSchedules": [
+              {
+                "DayOfWeek": "Monday",
+                "StartHour": null,
+                "EndHour": 4
+              }
+            ]
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.lockout.zero-reads-back-three",
+    "endpoint": "POST /Users/{userId}/Policy",
+    "spec": "users.md#authenticate-by-name",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "lockout"
+    ],
+    "covers": [
+      "users.lockout.R1"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-lockout-zero-reads-back-three",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-lockout-zero-reads-back-three",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "default is no lockout",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.LoginAttemptsBeforeLockout",
+              "op": "eq",
+              "value": -1
+            },
+            {
+              "path": "$.Policy.InvalidLoginAttemptCount",
+              "op": "eq",
+              "value": 0
+            }
+          ]
+        }
+      },
+      {
+        "name": "post 0",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "LoginAttemptsBeforeLockout": 0
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "0 is stored as 3",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.LoginAttemptsBeforeLockout",
+              "op": "eq",
+              "value": 3
+            }
+          ]
+        }
+      },
+      {
+        "name": "post 7",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "LoginAttemptsBeforeLockout": 7
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "7 reads back",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.LoginAttemptsBeforeLockout",
+              "op": "eq",
+              "value": 7
+            }
+          ]
+        }
+      },
+      {
+        "name": "post -5",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "LoginAttemptsBeforeLockout": -5
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "other negatives read back unchanged",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.LoginAttemptsBeforeLockout",
+              "op": "eq",
+              "value": -5
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.lockout.counter-counts-every-failure",
+    "endpoint": "POST /Users/AuthenticateByName",
+    "spec": "users.md#authenticate-by-name",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "lockout"
+    ],
+    "covers": [
+      "users.lockout.R2"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-lockout-counter-counts-every-failure",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-lockout-counter-counts-every-failure",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "wrong password 1",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-lockout-counter-counts-every-failure",
+            "Pw": "w"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-lockout-counter-counts-every-failure{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "counter 1 although no lockout is configured",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.InvalidLoginAttemptCount",
+              "op": "eq",
+              "value": 1
+            },
+            {
+              "path": "$.Policy.IsDisabled",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "wrong password 2",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-lockout-counter-counts-every-failure",
+            "Pw": "w"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-lockout-counter-counts-every-failure{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "counter 2",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.InvalidLoginAttemptCount",
+              "op": "eq",
+              "value": 2
+            }
+          ]
+        }
+      },
+      {
+        "name": "unknown user touches nothing",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-lockout-nobody-here",
+            "Pw": "w"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-lockout-counter-counts-every-failure{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "counter still 2",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.InvalidLoginAttemptCount",
+              "op": "eq",
+              "value": 2
+            }
+          ]
+        }
+      },
+      {
+        "name": "success",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-lockout-counter-counts-every-failure",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-lockout-counter-counts-every-failure{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "success resets the counter",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.InvalidLoginAttemptCount",
+              "op": "eq",
+              "value": 0
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.lockout.trigger-counts-twice",
+    "endpoint": "POST /Users/AuthenticateByName",
+    "spec": "users.md#authenticate-by-name",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "lockout"
+    ],
+    "covers": [
+      "users.lockout.R3"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-lockout-trigger-counts-twice",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-lockout-trigger-counts-twice",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "lock after 3",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "LoginAttemptsBeforeLockout": 3
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "failure 1",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-lockout-trigger-counts-twice",
+            "Pw": "w"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-lockout-trigger-counts-twice{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "failure 2",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-lockout-trigger-counts-twice",
+            "Pw": "w"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-lockout-trigger-counts-twice{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "two failures counted once each",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.InvalidLoginAttemptCount",
+              "op": "eq",
+              "value": 2
+            },
+            {
+              "path": "$.Policy.IsDisabled",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "failure 3 triggers the lockout",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-lockout-trigger-counts-twice",
+            "Pw": "w"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-lockout-trigger-counts-twice{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "the triggering failure counted twice",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.InvalidLoginAttemptCount",
+              "op": "eq",
+              "value": 4
+            },
+            {
+              "path": "$.Policy.IsDisabled",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.Policy.LoginAttemptsBeforeLockout",
+              "op": "eq",
+              "value": 3
+            }
+          ]
+        }
+      },
+      {
+        "name": "refused with the right password",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-lockout-trigger-counts-twice",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-lockout-trigger-counts-twice{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "refused with a wrong password",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-lockout-trigger-counts-twice",
+            "Pw": "w"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-lockout-trigger-counts-twice{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "refusals do not count",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.InvalidLoginAttemptCount",
+              "op": "eq",
+              "value": 4
+            },
+            {
+              "path": "$.Policy.IsDisabled",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "administrator unlocks",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "LoginAttemptsBeforeLockout": 3,
+            "IsDisabled": false,
+            "InvalidLoginAttemptCount": 0
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "works again",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-lockout-trigger-counts-twice",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-lockout-trigger-counts-twice{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.lockout.limit-one",
+    "endpoint": "POST /Users/AuthenticateByName",
+    "spec": "users.md#authenticate-by-name",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "lockout"
+    ],
+    "covers": [
+      "users.lockout.R3"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-lockout-limit-one",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-lockout-limit-one",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "lock after 1",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "LoginAttemptsBeforeLockout": 1
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "first failure locks",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-lockout-limit-one",
+            "Pw": "w"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-lockout-limit-one{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "counter is 2",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.InvalidLoginAttemptCount",
+              "op": "eq",
+              "value": 2
+            },
+            {
+              "path": "$.Policy.IsDisabled",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.lockout.posted-counter",
+    "endpoint": "POST /Users/{userId}/Policy",
+    "spec": "users.md#authenticate-by-name",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "lockout"
+    ],
+    "covers": [
+      "users.lockout.R4"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-lockout-posted-counter",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-lockout-posted-counter",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "limit 5, counter posted as 3",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "LoginAttemptsBeforeLockout": 5,
+            "InvalidLoginAttemptCount": 3
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "posted counter is stored",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.InvalidLoginAttemptCount",
+              "op": "eq",
+              "value": 3
+            }
+          ]
+        }
+      },
+      {
+        "name": "failure",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-lockout-posted-counter",
+            "Pw": "w"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-lockout-posted-counter{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "4",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.InvalidLoginAttemptCount",
+              "op": "eq",
+              "value": 4
+            },
+            {
+              "path": "$.Policy.IsDisabled",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "failure reaches the limit",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-lockout-posted-counter",
+            "Pw": "w"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-lockout-posted-counter{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "6 and disabled",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.InvalidLoginAttemptCount",
+              "op": "eq",
+              "value": 6
+            },
+            {
+              "path": "$.Policy.IsDisabled",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "counter posted above the limit",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "LoginAttemptsBeforeLockout": 5,
+            "InvalidLoginAttemptCount": 9
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "failure above the limit locks",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-lockout-posted-counter",
+            "Pw": "w"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-lockout-posted-counter{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "11 and disabled",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.InvalidLoginAttemptCount",
+              "op": "eq",
+              "value": 11
+            },
+            {
+              "path": "$.Policy.IsDisabled",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.lockout.password-change-counts",
+    "endpoint": "POST /Users/{userId}/Password",
+    "spec": "users.md#change-password",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "lockout",
+      "password"
+    ],
+    "covers": [
+      "users.lockout.R5"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-lockout-password-change-counts",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-lockout-password-change-counts",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "login",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-lockout-password-change-counts",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-lockout-password-change-counts{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "tok": "$.AccessToken"
+        }
+      },
+      {
+        "name": "wrong current password",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u}}/Password",
+          "body": {
+            "CurrentPw": "nope",
+            "NewPw": "Other-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-lockout-password-change-counts{{run.suffix}}\", Version=\"1.0.0\", Token=\"{{capture.tok}}\""
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "counted as a failed attempt",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.InvalidLoginAttemptCount",
+              "op": "eq",
+              "value": 1
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.shape.user-object",
+    "endpoint": "GET /Users/{userId}",
+    "spec": "users.md#get-user",
+    "scope": "modern",
+    "tags": [
+      "users",
+      "shape"
+    ],
+    "covers": [
+      "users.shape.R1",
+      "users.shape.R2"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-shape-user-object",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-shape-user-object",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "fresh account",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Name",
+              "op": "eq",
+              "value": "tmp-shape-user-object"
+            },
+            {
+              "path": "$.Id",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.ServerId",
+              "op": "matches",
+              "value": "^[0-9a-f]{32}$"
+            },
+            {
+              "path": "$.HasPassword",
+              "op": "type",
+              "value": "boolean"
+            },
+            {
+              "path": "$.HasConfiguredPassword",
+              "op": "type",
+              "value": "boolean"
+            },
+            {
+              "path": "$.HasConfiguredEasyPassword",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$.EnableAutoLogin",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$.LastLoginDate",
+              "op": "absent"
+            },
+            {
+              "path": "$.LastActivityDate",
+              "op": "absent"
+            },
+            {
+              "path": "$.Configuration",
+              "op": "type",
+              "value": "object"
+            },
+            {
+              "path": "$.Policy",
+              "op": "type",
+              "value": "object"
+            }
+          ]
+        }
+      },
+      {
+        "name": "login",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-shape-user-object",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-users-shape-user-object{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.User.LastLoginDate",
+              "op": "matches",
+              "value": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?Z$"
+            },
+            {
+              "path": "$.User.LastActivityDate",
+              "op": "matches",
+              "value": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?Z$"
+            },
+            {
+              "path": "$.User.HasConfiguredEasyPassword",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        },
+        "capture": {
+          "ll": "$.User.LastLoginDate"
+        }
+      },
+      {
+        "name": "dates after login",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.LastLoginDate",
+              "op": "eq",
+              "value": "{{capture.ll}}"
+            },
+            {
+              "path": "$.LastActivityDate",
+              "op": "eq",
+              "value": "{{capture.ll}}"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.shape.configuration-defaults",
+    "endpoint": "GET /Users/{userId}",
+    "spec": "users.md#get-user",
+    "scope": "modern",
+    "tags": [
+      "users",
+      "shape"
+    ],
+    "covers": [
+      "users.shape.R3"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-shape-configuration-defaults",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-shape-configuration-defaults",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "defaults of a new account",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "Default"
+            },
+            {
+              "path": "$.Configuration.PlayDefaultAudioTrack",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.Configuration.HidePlayedInLatest",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.Configuration.DisplayMissingEpisodes",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$.Configuration.DisplayCollectionsView",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$.Configuration.EnableNextEpisodeAutoPlay",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.Configuration.RememberAudioSelections",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.Configuration.RememberSubtitleSelections",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.Configuration.EnableLocalPassword",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$.Configuration.SubtitleLanguagePreference",
+              "op": "eq",
+              "value": ""
+            },
+            {
+              "path": "$.Configuration.AudioLanguagePreference",
+              "op": "absent"
+            },
+            {
+              "path": "$.Configuration.OrderedViews",
+              "op": "len",
+              "value": 0
+            },
+            {
+              "path": "$.Configuration.GroupedFolders",
+              "op": "len",
+              "value": 0
+            },
+            {
+              "path": "$.Configuration.LatestItemsExcludes",
+              "op": "len",
+              "value": 0
+            },
+            {
+              "path": "$.Configuration.MyMediaExcludes",
+              "op": "len",
+              "value": 0
+            },
+            {
+              "path": "$.Configuration.CastReceiverId",
+              "op": "eq",
+              "value": "F007D354"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.shape.login-session",
+    "endpoint": "POST /Users/AuthenticateByName",
+    "spec": "users.md#authenticate-by-name",
+    "scope": "modern",
+    "tags": [
+      "auth",
+      "shape"
+    ],
+    "covers": [
+      "users.shape.R4"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-shape-login-session",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-shape-login-session",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "login with a percent-encoded device name",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "tmp-shape-login-session",
+            "Pw": "Tmp-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Shape Client\", Device=\"Shape%20Device\", DeviceId=\"sc-users-shape-login-session{{run.suffix}}\", Version=\"9.9.9\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.SessionInfo.UserId",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            },
+            {
+              "path": "$.SessionInfo.UserName",
+              "op": "eq",
+              "value": "tmp-shape-login-session"
+            },
+            {
+              "path": "$.SessionInfo.Client",
+              "op": "eq",
+              "value": "Shape Client"
+            },
+            {
+              "path": "$.SessionInfo.DeviceName",
+              "op": "eq",
+              "value": "Shape Device"
+            },
+            {
+              "path": "$.SessionInfo.DeviceId",
+              "op": "eq",
+              "value": "sc-users-shape-login-session{{run.suffix}}"
+            },
+            {
+              "path": "$.SessionInfo.ApplicationVersion",
+              "op": "eq",
+              "value": "9.9.9"
+            },
+            {
+              "path": "$.SessionInfo.ServerId",
+              "op": "matches",
+              "value": "^[0-9a-f]{32}$"
+            },
+            {
+              "path": "$.SessionInfo.Id",
+              "op": "hex32"
+            },
+            {
+              "path": "$.SessionInfo.IsActive",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.SessionInfo.PlayableMediaTypes",
+              "op": "len",
+              "value": 0
+            },
+            {
+              "path": "$.SessionInfo.SupportedCommands",
+              "op": "len",
+              "value": 0
+            },
+            {
+              "path": "$.SessionInfo.NowPlayingQueue",
+              "op": "len",
+              "value": 0
+            },
+            {
+              "path": "$.SessionInfo.AdditionalUsers",
+              "op": "len",
+              "value": 0
+            },
+            {
+              "path": "$.SessionInfo.Capabilities.PlayableMediaTypes",
+              "op": "len",
+              "value": 0
+            },
+            {
+              "path": "$.SessionInfo.Capabilities.SupportedCommands",
+              "op": "len",
+              "value": 0
+            },
+            {
+              "path": "$.SessionInfo.Capabilities.SupportsMediaControl",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$.SessionInfo.Capabilities.SupportsPersistentIdentifier",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.SessionInfo.PlayState.RepeatMode",
+              "op": "eq",
+              "value": "RepeatNone"
+            },
+            {
+              "path": "$.SessionInfo.PlayState.IsPaused",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$.AccessToken",
+              "op": "hex32"
+            },
+            {
+              "path": "$.ServerId",
+              "op": "matches",
+              "value": "^[0-9a-f]{32}$"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.prefs.cast-receiver",
+    "endpoint": "POST /Users/Configuration",
+    "spec": "users.md#update-user-configuration",
+    "scope": "modern",
+    "tags": [
+      "users",
+      "configuration"
+    ],
+    "covers": [
+      "users.prefs.R1"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-prefs-cast-receiver",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-prefs-cast-receiver",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "choose the unstable receiver",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "CastReceiverId": "6F511C87"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read after: choose the unstable receiver",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.CastReceiverId",
+              "op": "eq",
+              "value": "6F511C87"
+            }
+          ]
+        }
+      },
+      {
+        "name": "unknown receiver leaves it unchanged",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "CastReceiverId": "nope"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read after: unknown receiver leaves it unchanged",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.CastReceiverId",
+              "op": "eq",
+              "value": "6F511C87"
+            }
+          ]
+        }
+      },
+      {
+        "name": "omitted leaves it unchanged",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": "Always"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read after: omitted leaves it unchanged",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.CastReceiverId",
+              "op": "eq",
+              "value": "6F511C87"
+            }
+          ]
+        }
+      },
+      {
+        "name": "lower-case spelling is not a receiver",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "CastReceiverId": "6f511c87"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read after: lower-case spelling is not a receiver",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.CastReceiverId",
+              "op": "eq",
+              "value": "6F511C87"
+            }
+          ]
+        }
+      },
+      {
+        "name": "null leaves it unchanged",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "CastReceiverId": null
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read after: null leaves it unchanged",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.CastReceiverId",
+              "op": "eq",
+              "value": "6F511C87"
+            }
+          ]
+        }
+      },
+      {
+        "name": "back to the stable receiver",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "CastReceiverId": "F007D354"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read after: back to the stable receiver",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.CastReceiverId",
+              "op": "eq",
+              "value": "F007D354"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.prefs.update-keeps-cast-receiver",
+    "endpoint": "POST /Users",
+    "spec": "users.md#update-user",
+    "scope": "modern",
+    "tags": [
+      "users",
+      "configuration"
+    ],
+    "covers": [
+      "users.prefs.R2"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-prefs-update-keeps-cast-receiver",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-prefs-update-keeps-cast-receiver",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "choose the unstable receiver and a subtitle mode",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "CastReceiverId": "6F511C87",
+            "SubtitleMode": "Always"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "update without Configuration",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "Name": "tmp-prefs-update-keeps-cast-receiver",
+            "Policy": {
+              "AuthenticationProviderId": "{{capture.ap}}",
+              "PasswordResetProviderId": "{{capture.rp}}"
+            }
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "preferences reset, receiver kept",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "Default"
+            },
+            {
+              "path": "$.Configuration.CastReceiverId",
+              "op": "eq",
+              "value": "6F511C87"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
+  },
+  {
+    "id": "users.prefs.null-configuration",
+    "endpoint": "POST /Users",
+    "spec": "users.md#update-user",
+    "scope": "modern",
+    "tags": [
+      "users",
+      "configuration"
+    ],
+    "covers": [
+      "users.prefs.R3"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-prefs-null-configuration",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-prefs-null-configuration",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "choose a subtitle mode",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "SubtitleMode": "Always"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "update with Configuration null",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users",
+          "query": {
+            "userId": "{{capture.u}}"
+          },
+          "body": {
+            "Name": "tmp-prefs-null-configuration",
+            "Configuration": null,
+            "Policy": {
+              "AuthenticationProviderId": "{{capture.ap}}",
+              "PasswordResetProviderId": "{{capture.rp}}"
+            }
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "preferences reset",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Configuration.SubtitleMode",
+              "op": "eq",
+              "value": "Default"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ],
+    "divergence": {
+      "reason": "The reference answers 500 when Configuration is an explicit null. Tinyfin treats null like an omitted Configuration: 204 and the preferences reset to their defaults."
+    }
+  },
+  {
+    "id": "users.ids.non-guid-is-400",
+    "endpoint": "GET /Users/{userId}",
+    "spec": "users.md#get-user",
+    "scope": "modern",
+    "tags": [
+      "users",
+      "ids"
+    ],
+    "covers": [
+      "users.ids.R1"
+    ],
+    "steps": [
+      {
+        "name": "DELETE /Users/{id}: not a GUID",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/notaguid"
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "POST /Users/{id}/Policy: not a GUID",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/notaguid/Policy",
+          "body": {
+            "AuthenticationProviderId": "x",
+            "PasswordResetProviderId": "y"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "POST /Users/{id}/Configuration: not a GUID",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/notaguid/Configuration",
+          "body": {}
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "POST /Users/{id}/Password: not a GUID",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/notaguid/Password",
+          "body": {
+            "NewPw": "x"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "POST /Users/{id}: not a GUID",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/notaguid",
+          "body": {
+            "Name": "x",
+            "Policy": {
+              "AuthenticationProviderId": "x",
+              "PasswordResetProviderId": "y"
+            }
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "POST /Users?userId=: not a GUID",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users",
+          "query": {
+            "userId": "notaguid"
+          },
+          "body": {
+            "Name": "x",
+            "Policy": {
+              "AuthenticationProviderId": "x",
+              "PasswordResetProviderId": "y"
+            }
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "POST /Users/Configuration?userId=: not a GUID",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "notaguid"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "POST /Users/Password?userId=: not a GUID",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Password",
+          "query": {
+            "userId": "notaguid"
+          },
+          "body": {
+            "NewPw": "x"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "DELETE /Users/{id}: all-zero GUID",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/00000000000000000000000000000000"
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "POST /Users/{id}/Policy: all-zero GUID",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/00000000000000000000000000000000/Policy",
+          "body": {
+            "AuthenticationProviderId": "x",
+            "PasswordResetProviderId": "y"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "POST /Users/{id}/Configuration: all-zero GUID",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/00000000000000000000000000000000/Configuration",
+          "body": {}
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "POST /Users/{id}/Password: all-zero GUID",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/00000000000000000000000000000000/Password",
+          "body": {
+            "NewPw": "x"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "POST /Users/{id}: all-zero GUID",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/00000000000000000000000000000000",
+          "body": {
+            "Name": "x",
+            "Policy": {
+              "AuthenticationProviderId": "x",
+              "PasswordResetProviderId": "y"
+            }
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "POST /Users?userId=: all-zero GUID",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users",
+          "query": {
+            "userId": "00000000000000000000000000000000"
+          },
+          "body": {
+            "Name": "x",
+            "Policy": {
+              "AuthenticationProviderId": "x",
+              "PasswordResetProviderId": "y"
+            }
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "POST /Users/Configuration?userId=: all-zero GUID",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Configuration",
+          "query": {
+            "userId": "00000000000000000000000000000000"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "POST /Users/Password?userId=: all-zero GUID",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/Password",
+          "query": {
+            "userId": "00000000000000000000000000000000"
+          },
+          "body": {
+            "NewPw": "x"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "an unknown but well-formed id is still 404",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/11111111111111111111111111111111"
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "policy of an unknown well-formed id is 404",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/11111111111111111111111111111111/Policy",
+          "body": {
+            "AuthenticationProviderId": "x",
+            "PasswordResetProviderId": "y"
+          }
+        },
+        "expect": {
+          "status": 404
+        }
+      }
+    ],
+    "cleanup": []
+  },
+  {
+    "id": "users.ids.spellings",
+    "endpoint": "GET /Users/{userId}",
+    "spec": "users.md#get-user",
+    "scope": "modern",
+    "tags": [
+      "users",
+      "ids"
+    ],
+    "covers": [
+      "users.ids.R2"
+    ],
+    "steps": [
+      {
+        "name": "create tmp-ids-spellings",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "tmp-ids-spellings",
+            "Password": "Tmp-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "u": "$.Id"
+        }
+      },
+      {
+        "name": "read provider ids",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200
+        },
+        "capture": {
+          "ap": "$.Policy.AuthenticationProviderId",
+          "rp": "$.Policy.PasswordResetProviderId"
+        }
+      },
+      {
+        "name": "dashed spelling",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u|dashed}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Id",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            }
+          ]
+        }
+      },
+      {
+        "name": "upper-case spelling",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u|upper}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Id",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            }
+          ]
+        }
+      },
+      {
+        "name": "upper-case dashed spelling",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u|dashed|upper}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Id",
+              "op": "eq",
+              "value": "{{capture.u}}"
+            }
+          ]
+        }
+      },
+      {
+        "name": "policy by upper-case id",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{capture.u|upper}}/Policy",
+          "body": {
+            "AuthenticationProviderId": "{{capture.ap}}",
+            "PasswordResetProviderId": "{{capture.rp}}",
+            "MaxActiveSessions": 2
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "applied to the same account",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.MaxActiveSessions",
+              "op": "eq",
+              "value": 2
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "delete u",
+        "as": "admin",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.u}}"
+        },
+        "expect": {}
+      }
+    ]
   }
 ]

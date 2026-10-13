@@ -289,8 +289,8 @@ func TestUserConfiguration(t *testing.T) {
 		len(c.OrderedViews) != 1 || len(c.GroupedFolders) != 1 || len(c.MyMediaExcludes) != 1 || len(c.LatestItemsExcludes) != 1 {
 		t.Errorf("after update: %+v", c)
 	}
-	if c.CastReceiverId != "" {
-		t.Errorf("unconfigured CastReceiverId kept: %q", c.CastReceiverId)
+	if c.CastReceiverId != "F007D354" {
+		t.Errorf("unknown CastReceiverId not ignored: %q", c.CastReceiverId)
 	}
 
 	// Whole replacement.

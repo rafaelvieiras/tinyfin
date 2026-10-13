@@ -10,12 +10,12 @@ Routes **not** specified here (documented by the lead as excluded legacy): `POST
 - User and device identifiers: user ids are GUID strings. An id in a path or query that is not a GUID answers `400`.
 - **Roles.** `Administrator` is a user whose policy has `IsAdministrator=true` (or an API key). Role is re-evaluated on every request, so policy changes apply to existing tokens immediately.
 - **Status vocabulary.** `401` = no valid credential (none, unknown/revoked token, disabled account). `403` = authenticated but not allowed. `400` = malformed request or rejected value. `404` = unknown user or secret.
-- **Local-time rules.** `AccessSchedules` are evaluated in the server's local time zone.
+- **Local-time rules.** `AccessSchedules` are evaluated in the server's local time zone with fractional hours (see *Access schedules*).
 - **State between scenarios.** Scenarios create throw-away accounts (prefix `tmp-`) and delete them. A scenario that logs in itself uses its own `DeviceId` because a new login on a `DeviceId` revokes that device's previous token (`users.auth.R10`).
 
-The *user object* (returned by `GET /Users/{userId}`, `GET /Users/Me`, `GET /Users`, `GET /Users/Public`, `POST /Users/New` and inside the login answers) has these fields that clients rely on: `Id` (string), `Name`, `ServerId` (string), `HasPassword` (boolean), `HasConfiguredPassword` (boolean), `LastLoginDate` / `LastActivityDate` (ISO-8601, absent or null until the user has logged in), `Configuration` (object, see *Configuration* below) and `Policy` (object, see *Policy* below).
+The *user object* (returned by `GET /Users/{userId}`, `GET /Users/Me`, `GET /Users`, `GET /Users/Public`, `POST /Users/New` and inside the login answers) has these fields that clients rely on: `Id` (string), `Name`, `ServerId` (string), `HasPassword` (boolean), `HasConfiguredPassword` (boolean), `HasConfiguredEasyPassword` (boolean, always `false`), `EnableAutoLogin` (boolean, `false`), `LastLoginDate` / `LastActivityDate` (ISO-8601, absent until the user has logged in), `Configuration` (object, see *Configuration* below) and `Policy` (object, see *Policy* below). Field-by-field detail is in *User object, preferences and session shape*.
 
-Default **Configuration** (new accounts): `SubtitleMode="Default"`, `PlayDefaultAudioTrack=true`, `HidePlayedInLatest=true`, `DisplayMissingEpisodes=false`, `DisplayCollectionsView=false`, `EnableNextEpisodeAutoPlay=true`, `RememberAudioSelections=true`, `RememberSubtitleSelections=true`, `EnableLocalPassword=false`, language preferences null/empty.
+Default **Configuration** (new accounts): `SubtitleMode="Default"`, `PlayDefaultAudioTrack=true`, `HidePlayedInLatest=true`, `DisplayMissingEpisodes=false`, `DisplayCollectionsView=false`, `EnableNextEpisodeAutoPlay=true`, `RememberAudioSelections=true`, `RememberSubtitleSelections=true`, `EnableLocalPassword=false`, `SubtitleLanguagePreference=""`, `AudioLanguagePreference` absent, `CastReceiverId="F007D354"`, the four list members empty.
 
 The **Policy** object carries: `IsAdministrator`, `IsDisabled`, `IsHidden`, `EnableRemoteAccess`, `EnableAllFolders` / `EnabledFolders`, `EnableAllChannels` / `EnabledChannels`, `EnableAllDevices` / `EnabledDevices`, `BlockedTags`, `AllowedTags`, `BlockUnratedItems`, `MaxParentalRating` / `MaxParentalSubRating`, `AccessSchedules`, `EnableMediaPlayback`, `EnableAudioPlaybackTranscoding`, `EnableVideoPlaybackTranscoding`, `EnablePlaybackRemuxing`, `ForceRemoteSourceTranscoding`, `EnableContentDownloading`, `EnableContentDeletion`, `EnableContentDeletionFromFolders`, `EnableLiveTvAccess`, `EnableLiveTvManagement`, `EnableCollectionManagement`, `EnableSubtitleManagement`, `EnableLyricManagement`, `EnableMediaConversion`, `EnableSharedDeviceControl`, `EnableRemoteControlOfOtherUsers`, `EnablePublicSharing`, `EnableSyncTranscoding`, `EnableUserPreferenceAccess`, `LoginAttemptsBeforeLockout`, `InvalidLoginAttemptCount`, `MaxActiveSessions`, `RemoteClientBitrateLimit`, `SyncPlayAccess` (`CreateAndJoinGroups` | `JoinGroups` | `None`), `AuthenticationProviderId`, `PasswordResetProviderId`. The legacy fields `BlockedMediaFolders` and `BlockedChannels` are accepted but have no effect.
 
@@ -97,7 +97,7 @@ Index of routes:
 - **users.auth.R15** A successful login resets the consecutive-failure counter, so failures separated by a success do not accumulate towards the lockout.
 - **users.auth.R16** When the user's `MaxActiveSessions` is `n >= 1` and the user already has `n` active sessions, a login from another device answers `403`. `0` means unlimited.
 - **users.auth.R17** When the user's `EnableAllDevices` is `false`, a login from a `DeviceId` that is not in `EnabledDevices` answers `403`. Saving such a policy also revokes the user's tokens issued to devices that are not allowed.
-- **users.auth.R18** When the user has `AccessSchedules`, a login outside every allowed window answers `403` (day of week in the server's local time, `StartHour <= hour <= EndHour`). No schedule means no restriction. Unlike requests that are already authenticated, the login restriction applies to administrators too.
+- **users.auth.R18** When the user has `AccessSchedules`, a login outside every allowed window answers `403` (day of week and time of day in the server's local time; window semantics in *Access schedules*). No schedule means no restriction. Unlike requests that are already authenticated, the login restriction applies to administrators too.
 - **users.auth.R19** A body that is not valid JSON answers `400`.
 - **users.auth.R20** The password field is named `Pw`. A body that sends the password under another name (for example `Password`) is treated as having no `Pw`.
 - **users.auth.R21** A user with `EnableRemoteAccess=false` is refused with `403` when the login comes from outside the local network, even with correct credentials. "Local network" is loopback plus, when no `LocalNetworkSubnets` are configured, the private and link-local ranges; once the network configuration section (`GET`/`POST /System/Configuration/network`, administrator) lists subnets, only those and loopback are local, so a private address outside them is remote (confirmed on the reference: the runner's address, seen as a private container-gateway address, got `403` after `LocalNetworkSubnets` was set to a range not containing it; `X-Forwarded-For` has no effect). Observable from a runner whose peer address is not loopback (`users.auth.remote-access-disabled`).
@@ -338,7 +338,7 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 - **users.policy.R9** Policy changes take effect on the user's next request using existing tokens: promoting to administrator grants administrator-only routes immediately, demoting removes them immediately.
 - **users.policy.R10** An administrator can demote themselves when another administrator exists.
 - **users.policy.R11** A body that is not valid JSON answers `400`.
-- **users.policy.R12** `LoginAttemptsBeforeLockout`: `-1` means no lockout, `0` means the default of `3`, a positive `n` locks the account after `n` consecutive failures (see `users.auth.R14`). `InvalidLoginAttemptCount` from the body overwrites the stored counter, which lets an administrator unlock an account.
+- **users.policy.R12** `LoginAttemptsBeforeLockout`: `-1` means no lockout, `0` is stored as the default of `3` and reads back as `3` (`users.lockout.R1`), a positive `n` locks the account after `n` consecutive failures (see `users.auth.R14`). `InvalidLoginAttemptCount` from the body overwrites the stored counter, which lets an administrator unlock an account.
 - **users.policy.R13** A successful policy update sends a `UserUpdated` WebSocket message to the target user's own open sockets; `Data` is the updated user object (including the new `Policy`). See *Realtime socket*.
 - **users.policy.R14** A policy update writes no activity entry of its own (no "policy updated" entry), also when it changes values. Each token it revokes (disabling the account, `users.policy.R8`; devices no longer allowed, `users.auth.R17`) writes a `SessionEnded` entry (`users.token.R9`). The same holds for `POST /Users` and `POST /Users/Configuration`: renaming or saving preferences writes no entry.
 
@@ -545,6 +545,70 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 
 ---
 
+## Access schedules
+
+`Policy.AccessSchedules` is a list of `{DayOfWeek, StartHour, EndHour}` entries. The account may use the server only while at least one entry matches the server's local date and time; an empty list means no restriction. The check applies to logins (`users.auth.R18`, administrators included) and to authenticated requests of non-administrators (`users.me.R5`, `users.list.R7`; the own-profile route is exempt, `users.get.R7`).
+
+**Rules**
+
+- **users.schedule.R1** An entry's hours are compared with the server's local time of day expressed in hours **with minutes and seconds as a fraction** (15:36:30 is `15.6083`): the entry matches when `StartHour <= t <= EndHour`, both ends inclusive. `[15, 15]` therefore matches only at 15:00:00; `[0, 15.5]` stops matching at 15:30:00; a window that ended thirty-six seconds ago no longer matches. The time zone is the server process's local zone.
+- **users.schedule.R2** `DayOfWeek` selects the local weekday: `Sunday` ... `Saturday`, plus the groups `Everyday`, `Weekday` (Monday-Friday) and `Weekend` (Saturday, Sunday). An entry matches only when its day matches today and R1 holds.
+- **users.schedule.R3** There is no wrap-around: an entry whose `StartHour` is greater than its `EndHour` never matches (`[23, 1]` is never inside, not even at 00:30).
+- **users.schedule.R4** Hours are plain numbers and are not clamped: `-1` and `30` are accepted, stored and read back as posted; `[0, 24]` is always inside, `[30, 40]` never.
+- **users.schedule.R5** A window change applies to existing tokens on their next request; no new login is needed in either direction.
+- **users.schedule.R6** `DayOfWeek` is accepted as a name in any case, as an integer or as a numeric string (`0` = Sunday ... `6` = Saturday, `7` = Everyday, `8` = Weekday, `9` = Weekend) and always reads back as the canonical name. An integer outside `0`-`9` is stored and read back as that number (it never matches). An unknown name, an empty string, `null` or a non-integer number answers `400` and nothing changes.
+- **users.schedule.R7** `StartHour` and `EndHour` accept numbers or numeric strings and read back as numbers; omitted members default to `0` (and an omitted `DayOfWeek` to `Sunday`); `null` answers `400`. The entries read back carry extra members (`Id`, `UserId`) that clients must ignore and that are not specified.
+
+*Test technique.* Scenarios must not depend on the time of day. They build windows relative to the server clock with the runner's `{{clock.*}}` templates (see the contract README): `Everyday [hour-1, hour+1]` is always inside, `Everyday [hour+1, hour+2]` always outside, and `[hour-0.01, ...]` / `[..., hour-0.01]` probe the fractional boundaries.
+
+---
+
+## Failure counter and lockout
+
+`Policy.InvalidLoginAttemptCount` is the persisted count of consecutive failed password attempts and is readable by administrators (and any authenticated user, `users.get.R2`) in the user's policy.
+
+**Rules**
+
+- **users.lockout.R1** `LoginAttemptsBeforeLockout` is stored as posted, except that `0` is stored as `3`: reading the policy back answers `3`. `-1` (the default) and any other negative number are stored unchanged and mean no lockout; positive numbers are stored unchanged.
+- **users.lockout.R2** Every failed password attempt of an existing, enabled account increments `InvalidLoginAttemptCount` by one, also when no lockout is configured (the counter then just keeps growing). An unknown username touches nothing; a successful login sets the counter to `0`.
+- **users.lockout.R3** The failure that brings the counter to the threshold disables the account (`IsDisabled=true`, existing tokens revoked) and counts **twice**: with a threshold `n` the counter reads `n + 1` afterwards (`4` for `3`, `2` for `1`). Later logins answer `403` and do not change the counter.
+- **users.lockout.R4** `InvalidLoginAttemptCount` posted in the policy overwrites the stored counter (an administrator unlocks an account with `IsDisabled=false`, `InvalidLoginAttemptCount=0`). A counter posted at or above the threshold makes the next failure lock the account (`9` with threshold `5` becomes `11`).
+- **users.lockout.R5** A wrong `CurrentPw` in a password change counts as a failed attempt for the target exactly like a wrong login password (including the double count on the locking failure).
+
+---
+
+## User object, preferences and session shape
+
+The user object is the one of `GET /Users/{userId}` (also inside login answers, `GET /Users`, `POST /Users/New`). Members not listed are unspecified; clients must ignore unknown members.
+
+**Rules**
+
+- **users.shape.R1** `Id` is 32 lowercase hex digits, `ServerId` a 32-hex string identical to the login answer's `ServerId`. `HasPassword` and `HasConfiguredPassword` are booleans (their value is a reference defect, see `users.get.R8`). `HasConfiguredEasyPassword` is `false` and `EnableAutoLogin` is `false` for every account (there is no easy-password or auto-login feature to configure).
+- **users.shape.R2** `LastLoginDate` and `LastActivityDate` are **absent** (not `null`) for an account that never logged in. After a successful login both are the login time as an ISO-8601 UTC string ending in `Z` with up to 7 fractional digits (clients must accept any precision); the two are equal after a password login, and the value in the login answer's `User` is the one `GET /Users/{userId}` then returns.
+- **users.shape.R3** `Configuration` of a new account carries the defaults listed under *Conventions*; `SubtitleLanguagePreference` is `""` (also after a `null` is posted), `AudioLanguagePreference` is absent until set, the four list members are `[]` and never `null`.
+- **users.shape.R4** The login answer's `SessionInfo` has: `Id` (32 hex), `UserId` and `UserName` of the account, `Client`, `DeviceName` (percent-decoded), `DeviceId` and `ApplicationVersion` (`Version`) exactly as sent in the header, `ServerId`, `IsActive=true`, `LastActivityDate`, `LastPlaybackCheckIn` (zero date), `PlayState` (`RepeatMode="RepeatNone"`, `PlaybackOrder="Default"`, booleans `false`), `Capabilities` (`SupportsPersistentIdentifier=true`, `SupportsMediaControl=false`, `PlayableMediaTypes=[]`, `SupportedCommands=[]`) and the top-level lists `PlayableMediaTypes`, `SupportedCommands`, `NowPlayingQueue`, `AdditionalUsers`, all `[]` (never `null`).
+
+---
+
+## Preferences: cast receiver and omitted configuration
+
+**Rules**
+
+- **users.prefs.R1** `Configuration.CastReceiverId` defaults to the stable receiver `F007D354`; the server offers two receivers, `F007D354` and `6F511C87` (case-sensitive). A posted value that is one of them is stored; any other value, `null` or an omitted member leaves the stored value **unchanged** (it is not reset by a configuration post that omits it).
+- **users.prefs.R2** `POST /Users` without a `Configuration` member resets the other preferences to their defaults (`users.update.R9`) but keeps the stored `CastReceiverId`.
+- **users.prefs.R3** `POST /Users` with `"Configuration": null`: the reference answers `500` (a defect); Tinyfin treats it as an omitted `Configuration` (`204`, defaults). Divergence scenario.
+
+---
+
+## User ids in paths and queries
+
+**Rules**
+
+- **users.ids.R1** Every route that takes a user id answers `400` when the id is not a GUID or is the all-zero GUID: `GET`/`DELETE /Users/{userId}`, `POST /Users/{userId}`, `POST /Users/{userId}/Policy`, `.../Configuration`, `.../Password`, and the `userId` query parameter of `POST /Users`, `POST /Users/Configuration` and `POST /Users/Password`. A well-formed id that names no account stays `404`. Authorization (`403` for a non-administrator on administrator routes) is evaluated before the id.
+- **users.ids.R2** All GUID spellings (32 hex digits, dashed, upper case, in braces; surrounding whitespace is ignored) address the same account, on every route above.
+
+---
+
 ## Rule -> scenarios
 
 | Rule | Scenarios |
@@ -700,12 +764,34 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 | `users.socket.R3` | `users.socket.upgrade` |
 | `users.socket.R4` | `users.socket.legacy-api-key-param-refused` |
 
+| `users.schedule.R1` | `users.schedule.window-around-now` |
+| `users.schedule.R2` | `users.schedule.day-matching` |
+| `users.schedule.R3` | `users.schedule.no-wraparound` |
+| `users.schedule.R4` | `users.schedule.out-of-range-hours` |
+| `users.schedule.R5` | `users.schedule.authenticated-requests` |
+| `users.schedule.R6` | `users.schedule.day-forms-roundtrip` |
+| `users.schedule.R7` | `users.schedule.hour-forms` |
+| `users.lockout.R1` | `users.lockout.zero-reads-back-three` |
+| `users.lockout.R2` | `users.lockout.counter-counts-every-failure` |
+| `users.lockout.R3` | `users.lockout.trigger-counts-twice`, `users.lockout.limit-one` |
+| `users.lockout.R4` | `users.lockout.posted-counter` |
+| `users.lockout.R5` | `users.lockout.password-change-counts` |
+| `users.shape.R1` | `users.shape.user-object` |
+| `users.shape.R2` | `users.shape.user-object` |
+| `users.shape.R3` | `users.shape.configuration-defaults` |
+| `users.shape.R4` | `users.shape.login-session` |
+| `users.prefs.R1` | `users.prefs.cast-receiver` |
+| `users.prefs.R2` | `users.prefs.update-keeps-cast-receiver` |
+| `users.prefs.R3` | `users.prefs.null-configuration` (divergence) |
+| `users.ids.R1` | `users.ids.non-guid-is-400` |
+| `users.ids.R2` | `users.ids.spellings` |
 
 ## Divergences from the reference
 
 | Scenario | Reference behavior | Required behavior |
 |---|---|---|
 | `users.delete.last-admin-refused` | A refused deletion of the only administrator (`400`) still revokes all of that user's tokens (finding S13). | `400` and no side effect. |
+| `users.prefs.null-configuration` | `POST /Users` with `"Configuration": null` answers `500`. | `204`, preferences reset like an omitted `Configuration` (`users.prefs.R3`). |
 
 ## Behaviors replicated on purpose (security findings kept as-is)
 
@@ -718,14 +804,14 @@ Messages pushed to the sockets of the affected user: `UserUpdated` on rename and
 
 0. (resolved) Activity entries around authentication and account management: `UserLockedOut`, `SessionEnded`, `UserCreated`, `UserPasswordChanged` and `UserDeleted` are specified (`users.auth.R28`-`R32`, `users.token.R9`, `users.create.R10`, `users.password.R15`, `users.delete.R8`) and verified on the reference. Not written by the reference, so not specified: entries for policy updates, user renames, preference saves, `ResetPassword` revocations and lockout revocations.
 1. `EnableUserPreferenceAccess` (resolved): the policy endpoint persists it and a non-administrator without it is refused (`403`) when changing their own password or updating their own account; verified on the reference (`users.password.R13`, `users.update.R11`).
-2. Access-schedule hour semantics: `StartHour <= hour <= EndHour` is inclusive and uses the server's local time, but whether `hour` includes minutes (fractional hours) is not confirmed. Scenarios that depend on it use the 03:00 window and are tagged `time-dependent`; they would flip if run during the 03:xx hour.
-3. `LoginAttemptsBeforeLockout=0` reads back as `0` or `3`? Only the lockout behavior (`0` acts as `3`) is asserted.
-4. Failure counter double counting: the reference may increment the persisted counter twice on the failure that triggers a lockout. Only the externally visible lockout threshold is specified.
+2. Access-schedule hour semantics (resolved): hours are fractional (minutes and seconds count), both ends inclusive, in the server's local zone, no wrap-around, day groups `Everyday`/`Weekday`/`Weekend` (`users.schedule.R1`-`R7`). The scenarios no longer need the 03:00 window: they compute windows from the server clock with the runner's `{{clock.*}}` templates and the `time-dependent` tag is gone.
+3. `LoginAttemptsBeforeLockout=0` (resolved): stored and read back as `3` (`users.lockout.R1`).
+4. Failure counter double counting (resolved): the failure that reaches the threshold counts twice, `n + 1` afterwards; the counter also counts when no lockout is configured (`users.lockout.R2`-`R4`).
 5. `MaxParentalRating` round trip (resolved): the value posted is read back unchanged (`users.policy.parental-rating-roundtrip`).
-6. `HasPassword`, `HasConfiguredPassword`, `LastLoginDate` and `SessionInfo.{UserId,DeviceId,Client,DeviceName}` are part of the observed user/session objects but are not described field by field in the audit; they come from the shape of the official clients' use and must be confirmed against the reference.
-7. Path ids that are not GUIDs (`400`) follow from request binding and are not separately documented in the audit.
-8. A request whose body omits `Configuration` on `POST /Users` resets preferences to defaults (`users.update.R9`); the audit states the default but not the intent. Confirm on the reference.
-9. QuickConnect is specified in `quickconnect.md`; it is assumed enabled on the test server.
+6. User/session object shape (resolved): `HasConfiguredEasyPassword`/`EnableAutoLogin` are always `false`, the dates are absent until the first login, `SessionInfo` is described member by member (`users.shape.R1`-`R4`). `HasPassword`/`HasConfiguredPassword` carry no information on the reference (`users.get.R8`, divergence).
+7. Path ids that are not GUIDs (resolved): `400` on every route taking a user id, the all-zero GUID included; every GUID spelling is accepted (`users.ids.R1`-`R2`). Not covered: a trailing slash (`GET /Users/`) is served by the reference, Tinyfin answers `404`; this is a routing rule for all areas, not a users rule.
+8. Omitted `Configuration` on `POST /Users` (resolved): preferences reset to defaults, `CastReceiverId` kept (`users.update.R9`, `users.prefs.R2`); an explicit `null` is a reference `500` (`users.prefs.R3`).
+9. QuickConnect (resolved): enabled by default on a fresh reference server (`quickconnect.enabled.default`); scenarios that disable it restore the setting.
 10. Fixture `disabled` (in `fixtures.json`) is created and disabled through the policy endpoint, but the runner never logs in a user whose policy sets `IsDisabled` (login answers `403` by design), so it has no token: it is available for `{{user.disabled.id|name}}` templates and as a target, never as an `as` identity. Scenarios that need a disabled account with a token create it themselves and disable it mid-scenario.
 11. Remote-access restriction (`EnableRemoteAccess=false`, `users.auth.R21`) is exercised by making the runner's own address remote through `LocalNetworkSubnets`; that needs a peer address that is not loopback (a published container port reaches the reference from its gateway address; Tinyfin must be reached through one of the host's own addresses). The PIN scenarios (`users.forgot-pin.redeem`, `users.forgot-pin.throttle`) read the PIN from the server's file through the runner's server-file capability; without it they are BLOCKED, not failed.
 12. Admin self-service rules differ between the modern route (no `CurrentPw` without `userId`) and the alias (always required). They are replicated as observed.

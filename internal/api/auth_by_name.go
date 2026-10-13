@@ -219,20 +219,21 @@ func (s *Server) issueLogin(w http.ResponseWriter, r *http.Request, user storage
 }
 
 // recordLoginFailure counts one failed password attempt on a permitted
-// account (users.auth.R13-R14): no lockout when LoginAttemptsBeforeLockout
-// is negative, 0 behaves as 3, and reaching the limit disables the
-// account (its tokens are kept, users.auth.R30).
+// account (users.auth.R13-R14, R28, R30): no lockout when
+// LoginAttemptsBeforeLockout is negative, 0 behaves as 3, and reaching the
+// limit disables the account (its tokens are kept).
 func (s *Server) recordLoginFailure(r *http.Request, user storage.User, policy userPolicyDto) error {
+	// users.lockout.R2-R3: the persisted counter counts every failure, also when
+	// no lockout is configured, and the failure that reaches the threshold
+	// counts twice.
 	limit := policy.LoginAttemptsBeforeLockout
-	if limit < 0 {
-		return nil
-	}
 	if limit == 0 {
 		limit = defaultLockoutAttempts
 	}
 	policy.InvalidLoginAttemptCount++
-	locked := policy.InvalidLoginAttemptCount >= limit
+	locked := limit > 0 && policy.InvalidLoginAttemptCount >= limit
 	if locked {
+		policy.InvalidLoginAttemptCount++
 		policy.IsDisabled = true
 		user.IsDisabled = true
 	}

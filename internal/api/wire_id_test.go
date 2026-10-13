@@ -23,7 +23,7 @@ var (
 // or a value that is not an identifier of a Tinyfin object.
 var idKeyExempt = map[string]bool{
 	"DeviceId": true, "ClientId": true, "DisplayPreferencesId": true,
-	"AuthenticationProviderId": true, "PasswordResetProviderId": true,
+	"AuthenticationProviderId": true, "PasswordResetProviderId": true, "CastReceiverId": true,
 }
 
 // walkWireIDs reports every identifier in the decoded JSON value v that

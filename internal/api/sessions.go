@@ -217,6 +217,9 @@ func (r *sessionRegistry) loginSession(serverID, deviceID, userID, userName, cli
 	if cur, ok := r.byDevice[deviceID]; ok {
 		ts.id = cur.id
 		ts.capabilities = cur.capabilities
+	} else {
+		// users.shape.R4: a fresh login session reports persistent ids.
+		ts.capabilities.SupportsPersistentIdentifier = true
 	}
 	r.mu.Unlock()
 	ts.userID, ts.userName, ts.client = userID, userName, client
@@ -325,14 +328,22 @@ func (ts *trackedSession) dto(serverID string) sessionInfoDto {
 	if queue == nil {
 		queue = []nowPlayingQueueItemDto{}
 	}
+	// Wire lists are never null (clients declare them non-nullable).
+	caps := ts.capabilities
+	if caps.PlayableMediaTypes == nil {
+		caps.PlayableMediaTypes = []string{}
+	}
+	if caps.SupportedCommands == nil {
+		caps.SupportedCommands = []string{}
+	}
 	return sessionInfoDto{
 		PlayState:                playState,
 		NowPlayingItem:           nowPlaying,
 		LastPlaybackCheckIn:      checkIn,
 		AdditionalUsers:          []struct{}{},
-		Capabilities:             ts.capabilities,
+		Capabilities:             caps,
 		RemoteEndPoint:           ts.remoteEndPoint,
-		PlayableMediaTypes:       ts.capabilities.PlayableMediaTypes,
+		PlayableMediaTypes:       caps.PlayableMediaTypes,
 		ID:                       ts.id,
 		UserID:                   ts.userID,
 		UserName:                 ts.userName,
@@ -348,7 +359,7 @@ func (ts *trackedSession) dto(serverID string) sessionInfoDto {
 		NowPlayingQueueFullItems: []struct{}{},
 		HasCustomDeviceName:      false,
 		ServerID:                 serverID,
-		SupportedCommands:        ts.capabilities.SupportedCommands,
+		SupportedCommands:        caps.SupportedCommands,
 	}
 }
 
