@@ -51,6 +51,15 @@ func (s *Server) handleAuthenticateByName(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// users.auth.R8: a disabled account is refused with 403 whether or not
+	// the password is correct, and the refusal is not a failed attempt
+	// (no activity-log failure entry, no lockout counting). Lockout
+	// counting, device allow-list and schedules are separate rules.
+	if user.IsDisabled {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
 	if !passwordMatches(user.PasswordHash, req.Pw) {
 		s.logAuthFailure(r, req.Username)
 		w.WriteHeader(http.StatusUnauthorized)

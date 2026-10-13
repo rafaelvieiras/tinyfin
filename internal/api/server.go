@@ -364,16 +364,13 @@ func (s *Server) routes() {
 	// handleConfigurationPages' doc comment (system.go).
 	s.mux.HandleFunc("GET /web/ConfigurationPages", requireAuth(s.handleConfigurationPages))
 	s.mux.HandleFunc("GET /Users/Me", requireAuth(s.handleUsersMe))
-	// Admin-only in the reference server (UserController's [Authorize]
-	// policy requires elevation for the list/create/delete routes below).
-	// Tinyfin has no permissions system yet, so this only checks for a
-	// valid token — anyone logged in can list/create/delete users right
-	// now. Known simplification, not a silent gap: tighten this once a
-	// permissions model exists.
+	// Create and delete are administrator-only (users.create, users.delete.R2);
+	// list still only requires a valid token — a known simplification to be
+	// tightened with the rest of the permission rules.
 	s.mux.HandleFunc("GET /Users", requireAuth(s.handleUsersList))
-	s.mux.HandleFunc("POST /Users/New", requireAuth(s.handleUsersCreate))
+	s.mux.HandleFunc("POST /Users/New", requireAdmin(s.handleUsersCreate))
 	s.mux.HandleFunc("GET /Users/{userId}", requireAuth(s.handleUsersGet))
-	s.mux.HandleFunc("DELETE /Users/{userId}", requireAuth(s.handleUsersDelete))
+	s.mux.HandleFunc("DELETE /Users/{userId}", requireAdmin(s.handleUsersDelete))
 	s.mux.HandleFunc("POST /Users/{userId}/Policy", requireAdmin(s.handleUsersPolicy))
 
 	// Library and item navigation (library.go) — docs/04's highest-priority

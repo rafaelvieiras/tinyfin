@@ -370,8 +370,38 @@ func (s *Server) handleUsersDelete(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	if err := s.store.DeleteUser(r.Context(), storage.UserID(id)); err != nil {
+	ctx := r.Context()
+	target, err := s.store.GetUser(ctx, storage.UserID(id))
+	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	// users.delete.R5: validate before any side effect. The only
+	// administrator (disabled ones count) cannot be deleted.
+	if target.IsAdministrator {
+		users, err := s.store.QueryUsers(ctx)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		others := 0
+		for _, u := range users {
+			if u.ID != target.ID && u.IsAdministrator {
+				others++
+			}
+		}
+		if others == 0 {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+	// users.delete.R4: tokens of the deleted account stop working.
+	if err := s.store.RevokeUserTokens(ctx, target.ID, nil); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if err := s.store.DeleteUser(ctx, target.ID); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

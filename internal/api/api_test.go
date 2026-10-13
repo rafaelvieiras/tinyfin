@@ -284,7 +284,7 @@ func TestAuthenticateByNameFailureAppendsActivityLogEntry(t *testing.T) {
 
 func TestUsersListCreateDelete(t *testing.T) {
 	ts, st := newTestServer(t)
-	admin := createTestUser(t, st, "admin", "adminpass")
+	admin := createTestAdminUser(t, st, "admin", "adminpass")
 
 	resp := authenticate(t, ts.URL, admin.Name, "adminpass")
 	defer resp.Body.Close()

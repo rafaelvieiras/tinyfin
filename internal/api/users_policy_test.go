@@ -200,6 +200,48 @@ func TestUserPolicyDisableRevokesTokens(t *testing.T) {
 	if _, err := st.LookupToken(context.Background(), targetTok); err == nil {
 		t.Errorf("token still stored after disabling the account")
 	}
+
+	// users.auth.R8 / scenario users.policy.disable-revokes-tokens: a login
+	// with the correct password is refused with 403 while disabled, and
+	// works again once the account is re-enabled.
+	resp := authenticate(t, ts.URL, "target", "pw")
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusForbidden {
+		t.Errorf("login of disabled user: status %d, want 403", resp.StatusCode)
+	}
+	// users.auth.R8: also 403 with a wrong password.
+	resp = authenticate(t, ts.URL, "target", "wrong")
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusForbidden {
+		t.Errorf("wrong password for disabled user: status %d, want 403", resp.StatusCode)
+	}
+	code, _ = policyDo(t, ts.URL, adminTok, http.MethodPost, "/Users/"+string(target.ID)+"/Policy", `{`+providers+`,"IsDisabled":false}`)
+	if code != http.StatusNoContent {
+		t.Fatalf("re-enable: status %d", code)
+	}
+	if tok := policyLogin(t, ts.URL, "target", "pw"); tok == "" {
+		t.Errorf("no token after re-enable")
+	}
+}
+
+// users.create: POST /Users/New is administrator-only (scenarios
+// users.policy.promote-and-demote and users.policy.self-demotion).
+func TestUsersNewIsAdminOnly(t *testing.T) {
+	ts, st := newTestServer(t)
+	createTestAdminUser(t, st, "admin", "adminpass")
+	createTestUser(t, st, "plain", "pw")
+	plainTok := policyLogin(t, ts.URL, "plain", "pw")
+	adminTok := policyLogin(t, ts.URL, "admin", "adminpass")
+
+	if code, _ := policyDo(t, ts.URL, "", http.MethodPost, "/Users/New", `{"Name":"x"}`); code != http.StatusUnauthorized {
+		t.Errorf("anonymous: status %d, want 401", code)
+	}
+	if code, _ := policyDo(t, ts.URL, plainTok, http.MethodPost, "/Users/New", `{"Name":"x"}`); code != http.StatusForbidden {
+		t.Errorf("non-admin: status %d, want 403", code)
+	}
+	if code, _ := policyDo(t, ts.URL, adminTok, http.MethodPost, "/Users/New", `{"Name":"x"}`); code != http.StatusOK {
+		t.Errorf("admin: status %d, want 200", code)
+	}
 }
 
 func TestUserPolicyNewUserDefaultsAndPublicList(t *testing.T) {
@@ -260,5 +302,68 @@ func TestUserPolicyRevokesUnlistedDeviceTokens(t *testing.T) {
 	}
 	if _, err := st.LookupToken(ctx, drop.Token); err == nil {
 		t.Errorf("disallowed device token kept")
+	}
+}
+
+// users.delete.R2-R6: administrator-only, 404 for unknown ids, the only
+// administrator cannot be deleted (400, no side effects), tokens of a
+// deleted user stop working.
+func TestUsersDeleteRules(t *testing.T) {
+	ts, st := newTestServer(t)
+	admin := createTestAdminUser(t, st, "admin", "adminpass")
+	victim := createTestUser(t, st, "victim", "pw")
+	createTestUser(t, st, "plain", "pw")
+	adminTok := policyLogin(t, ts.URL, "admin", "adminpass")
+	plainTok := policyLogin(t, ts.URL, "plain", "pw")
+	victimTok := policyLogin(t, ts.URL, "victim", "pw")
+	del := func(tok, id string) int {
+		code, _ := policyDo(t, ts.URL, tok, http.MethodDelete, "/Users/"+id, "")
+		return code
+	}
+
+	if c := del("", string(victim.ID)); c != http.StatusUnauthorized {
+		t.Errorf("anonymous: %d, want 401", c)
+	}
+	if c := del(plainTok, string(victim.ID)); c != http.StatusForbidden {
+		t.Errorf("non-admin: %d, want 403", c)
+	}
+	if c := del(adminTok, "00000000-0000-0000-0000-000000000001"); c != http.StatusNotFound {
+		t.Errorf("unknown id: %d, want 404", c)
+	}
+	// The only administrator cannot be deleted and the refusal has no side effects.
+	if c := del(adminTok, string(admin.ID)); c != http.StatusBadRequest {
+		t.Errorf("only administrator: %d, want 400", c)
+	}
+	if c, _ := policyDo(t, ts.URL, adminTok, http.MethodGet, "/Users/Me", ""); c != http.StatusOK {
+		t.Errorf("caller token after refused deletion: %d, want 200", c)
+	}
+
+	if c := del(adminTok, string(victim.ID)); c != http.StatusNoContent {
+		t.Fatalf("delete: %d, want 204", c)
+	}
+	if c := del(adminTok, string(victim.ID)); c != http.StatusNotFound {
+		t.Errorf("repeated delete: %d, want 404", c)
+	}
+	if c, _ := policyDo(t, ts.URL, victimTok, http.MethodGet, "/Users/Me", ""); c != http.StatusUnauthorized {
+		t.Errorf("deleted user's token: %d, want 401", c)
+	}
+	if _, err := st.LookupToken(context.Background(), victimTok); err == nil {
+		t.Errorf("deleted user's token still stored")
+	}
+}
+
+// users.delete.R6: an administrator may delete themselves while another
+// administrator exists; their own tokens go away with the account.
+func TestUsersDeleteSelfWithOtherAdmin(t *testing.T) {
+	ts, st := newTestServer(t)
+	a := createTestAdminUser(t, st, "admin-a", "pw")
+	createTestAdminUser(t, st, "admin-b", "pw")
+	tok := policyLogin(t, ts.URL, "admin-a", "pw")
+	code, _ := policyDo(t, ts.URL, tok, http.MethodDelete, "/Users/"+string(a.ID), "")
+	if code != http.StatusNoContent {
+		t.Fatalf("self delete: %d, want 204", code)
+	}
+	if c, _ := policyDo(t, ts.URL, tok, http.MethodGet, "/Users/Me", ""); c != http.StatusUnauthorized {
+		t.Errorf("own token after self delete: %d, want 401", c)
 	}
 }
