@@ -285,7 +285,35 @@ type Item struct {
 	People []Person
 
 	DateCreated time.Time
+
+	// ExtraType and OwnerID mark an item that is not part of a library's
+	// own catalog but belongs to another item: a trailer, a featurette, a
+	// theme song or an additional part of a stacked movie. An extra has no
+	// ParentID (it never shows up in a folder listing or a count), OwnerID is
+	// the movie, series or season it hangs off, and ExtraType is one of the
+	// ExtraType* values. Empty for every ordinary item.
+	ExtraType string
+	OwnerID   *ItemID
 }
+
+// ExtraType values of Item.ExtraType (the reference server's ExtraType names;
+// ExtraTypePart is internal: an additional part of a stacked movie, which the
+// wire shows as a plain Video with no ExtraType).
+const (
+	ExtraTypeTrailer         = "Trailer"
+	ExtraTypeFeaturette      = "Featurette"
+	ExtraTypeBehindTheScenes = "BehindTheScenes"
+	ExtraTypeDeletedScene    = "DeletedScene"
+	ExtraTypeInterview       = "Interview"
+	ExtraTypeScene           = "Scene"
+	ExtraTypeShort           = "Short"
+	ExtraTypeSample          = "Sample"
+	ExtraTypeClip            = "Clip"
+	ExtraTypeUnknown         = "Unknown"
+	ExtraTypeThemeSong       = "ThemeSong"
+	ExtraTypeThemeVideo      = "ThemeVideo"
+	ExtraTypePart            = "Part"
+)
 
 // HasMediaFile reports whether Path names a playable file of the item's own.
 // A Series, Season or Folder stores its directory as Path (matching the

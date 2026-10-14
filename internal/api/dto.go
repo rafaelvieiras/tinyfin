@@ -110,6 +110,10 @@ type baseItemDto struct {
 	// Backdrop and Logo".
 	BackdropImageTags []string `json:"BackdropImageTags,omitempty"`
 
+	// ImageBlurHashes: for each image kind present, a map from the image's
+	// tag to its BlurHash placeholder.
+	ImageBlurHashes map[string]map[string]string `json:"ImageBlurHashes,omitempty"`
+
 	// PrimaryImageAspectRatio is the Primary image's width/height ratio.
 	// Found missing, not just unpolished, by reading jellyfin-web's
 	// cardBuilder image-loader module (the chunk exporting
@@ -237,10 +241,15 @@ type baseItemDto struct {
 	// locking as concepts yet — always the zero/empty value, present so a
 	// client expecting the keys doesn't have to special-case their
 	// absence (docs/12's same section).
-	LocalTrailerCount   int           `json:"LocalTrailerCount"`
-	SpecialFeatureCount int           `json:"SpecialFeatureCount"`
-	RemoteTrailers      []mediaURLDto `json:"RemoteTrailers,omitempty"`
-	LockedFields        []string      `json:"LockedFields,omitempty"`
+	LocalTrailerCount   *int `json:"LocalTrailerCount,omitempty"`
+	SpecialFeatureCount *int `json:"SpecialFeatureCount,omitempty"`
+	// PartCount: the number of files of a stacked movie, present only for
+	// one that has more than one.
+	PartCount *int `json:"PartCount,omitempty"`
+	// ExtraType: what a trailer, feature or theme item is.
+	ExtraType      string        `json:"ExtraType,omitempty"`
+	RemoteTrailers []mediaURLDto `json:"RemoteTrailers,omitempty"`
+	LockedFields   []string      `json:"LockedFields,omitempty"`
 
 	// SeriesPrimaryImageTag/Parent{Logo,Backdrop,Thumb}* are the
 	// image-inheritance fields docs/12's "Season/Episode DTO — inherited
@@ -660,7 +669,7 @@ func mediaTypeFor(t storage.ItemType) string {
 // docs/12's "Movie detail page — image tags for Backdrop and Logo").
 // Trickplay/Chapter images aren't image_refs kinds at all (separate
 // stores) and so aren't candidates here regardless.
-var singleInstanceImageKinds = []storage.ImageKind{"Primary", "Logo", "Banner", "Thumb", "Disc"}
+var singleInstanceImageKinds = []storage.ImageKind{"Primary", "Art", "Logo", "Banner", "Thumb", "Disc"}
 
 // imageTagsFor builds BaseItemDto.ImageTags, BackdropImageTags, and
 // PrimaryImageAspectRatio for id — one GetImageRefs call per candidate
@@ -682,7 +691,19 @@ var singleInstanceImageKinds = []storage.ImageKind{"Primary", "Logo", "Banner", 
 // contiguous indices starting at 0 (true of every writer in this
 // codebase today: storeProviderImage/seedFolderImage never set Index
 // explicitly, so it defaults to 0).
-func (s *Server) imageTagsFor(ctx context.Context, id storage.ItemID) (tags map[string]string, aspectRatio *float64, backdropTags []string) {
+func (s *Server) imageTagsFor(ctx context.Context, id storage.ItemID) (tags map[string]string, aspectRatio *float64, backdropTags []string, blurHashes map[string]map[string]string) {
+	addHash := func(kind storage.ImageKind, tag, hash string) {
+		if hash == "" {
+			return
+		}
+		if blurHashes == nil {
+			blurHashes = map[string]map[string]string{}
+		}
+		if blurHashes[string(kind)] == nil {
+			blurHashes[string(kind)] = map[string]string{}
+		}
+		blurHashes[string(kind)][tag] = hash
+	}
 	for _, kind := range singleInstanceImageKinds {
 		refs, err := s.store.GetImageRefs(ctx, id, kind)
 		if err != nil || len(refs) == 0 {
@@ -696,6 +717,7 @@ func (s *Server) imageTagsFor(ctx context.Context, id storage.ItemID) (tags map[
 			tags = make(map[string]string, len(singleInstanceImageKinds))
 		}
 		tags[string(kind)] = tag
+		addHash(kind, tag, refs[0].BlurHash)
 		if kind == storage.ImageKind("Primary") && refs[0].Width > 0 && refs[0].Height > 0 {
 			ratio := float64(refs[0].Width) / float64(refs[0].Height)
 			aspectRatio = &ratio
@@ -710,10 +732,11 @@ func (s *Server) imageTagsFor(ctx context.Context, id storage.ItemID) (tags map[
 				tag = "1"
 			}
 			backdropTags = append(backdropTags, tag)
+			addHash(storage.ImageKind("Backdrop"), tag, ref.BlurHash)
 		}
 	}
 
-	return tags, aspectRatio, backdropTags
+	return tags, aspectRatio, backdropTags, blurHashes
 }
 
 // parentImageInheritanceItemTypes are the ItemTypes SeriesPrimaryImageTag
@@ -758,7 +781,7 @@ func (s *Server) parentImageFieldsFor(ctx context.Context, ownTags map[string]st
 	var out parentImageInheritance
 
 	if series != nil {
-		if tags, _, _ := s.imageTagsFor(ctx, series.ID); tags != nil {
+		if tags, _, _, _ := s.imageTagsFor(ctx, series.ID); tags != nil {
 			if tag, ok := tags["Primary"]; ok {
 				out.SeriesPrimaryImageTag = tag
 			}
@@ -767,7 +790,7 @@ func (s *Server) parentImageFieldsFor(ctx context.Context, ownTags map[string]st
 
 	if _, ok := ownTags["Logo"]; !ok {
 		for _, anc := range ancestors {
-			tags, _, _ := s.imageTagsFor(ctx, anc.ID)
+			tags, _, _, _ := s.imageTagsFor(ctx, anc.ID)
 			if tag, ok := tags["Logo"]; ok {
 				out.ParentLogoItemID, out.ParentLogoImageTag = string(anc.ID), tag
 				break
@@ -777,7 +800,7 @@ func (s *Server) parentImageFieldsFor(ctx context.Context, ownTags map[string]st
 
 	if len(ownBackdropTags) == 0 {
 		for _, anc := range ancestors {
-			_, _, backdrops := s.imageTagsFor(ctx, anc.ID)
+			_, _, backdrops, _ := s.imageTagsFor(ctx, anc.ID)
 			if len(backdrops) > 0 {
 				out.ParentBackdropItemID, out.ParentBackdropImageTags = string(anc.ID), backdrops
 				break
@@ -787,7 +810,7 @@ func (s *Server) parentImageFieldsFor(ctx context.Context, ownTags map[string]st
 
 	if _, ok := ownTags["Thumb"]; !ok {
 		for _, anc := range ancestors {
-			tags, _, _ := s.imageTagsFor(ctx, anc.ID)
+			tags, _, _, _ := s.imageTagsFor(ctx, anc.ID)
 			if tag, ok := tags["Thumb"]; ok {
 				out.ParentThumbItemID, out.ParentThumbImageTag = string(anc.ID), tag
 				break
@@ -928,7 +951,7 @@ func (s *Server) userDataFor(ctx context.Context, userID storage.UserID, item st
 }
 
 func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto {
-	imageTags, primaryImageAspectRatio, backdropImageTags := s.imageTagsFor(ctx, item.ID)
+	imageTags, primaryImageAspectRatio, backdropImageTags, imageBlurHashes := s.imageTagsFor(ctx, item.ID)
 	dto := baseItemDto{
 		Name:                    item.Name,
 		ServerID:                s.cfg.ServerID,
@@ -963,6 +986,7 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		MediaStreams:            mediaStreamDtos(item.MediaStreams),
 		ImageTags:               imageTags,
 		BackdropImageTags:       backdropImageTags,
+		ImageBlurHashes:         imageBlurHashes,
 		PrimaryImageAspectRatio: primaryImageAspectRatio,
 		People:                  peopleDtos(item.People),
 		GenreItems:              genreItemsFor(item.Genres),
@@ -970,6 +994,9 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		ExternalUrls:            externalURLsFor(item.Type, item.ProviderIDs),
 		MediaSources:            mediaSourcesFor(item),
 		LocationType:            locationTypeFor(item),
+	}
+	if item.ExtraType != "" && item.ExtraType != storage.ExtraTypePart {
+		dto.ExtraType = item.ExtraType
 	}
 	if childCountItemTypes[item.Type] || item.Type == storage.ItemTypeFolder {
 		if n, err := s.childCountOf(ctx, item); err == nil {

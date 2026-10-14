@@ -222,6 +222,7 @@ var skippedFolderNames = map[string]bool{
 	"extras": true, "extra": true, "clips": true, "trailers": true, "backdrops": true, "theme-music": true,
 	"sample": true, "samples": true, "featurettes": true, "other": true, "subs": true,
 	"behind the scenes": true, "deleted scenes": true, "interviews": true, "scenes": true, "shorts": true,
+	"extrafanart": true, "extrathumbs": true,
 	"metadata": true, "@eadir": true, "#recycle": true, "lost+found": true,
 }
 

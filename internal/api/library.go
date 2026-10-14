@@ -650,17 +650,27 @@ func (s *Server) handleItemImage(w http.ResponseWriter, r *http.Request) {
 
 	index := 0
 	if v := r.PathValue("imageIndex"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			index = n
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
 		}
+		index = n
 	}
 
-	ref := refs[0]
+	// An index that names no image is a 404, whatever else the item has
+	// (images.api.R2).
+	var ref storage.ImageRef
+	found := false
 	for _, candidate := range refs {
 		if candidate.Index == index {
-			ref = candidate
+			ref, found = candidate, true
 			break
 		}
+	}
+	if !found {
+		w.WriteHeader(http.StatusNotFound)
+		return
 	}
 
 	if ref.Path == "" {
@@ -677,6 +687,11 @@ func (s *Server) handleItemImage(w http.ResponseWriter, r *http.Request) {
 
 	if ref.Tag != "" {
 		w.Header().Set("ETag", `"`+ref.Tag+`"`)
+	}
+	if r.URL.Query().Get("tag") != "" {
+		// A request that names a tag can be cached for good: the tag
+		// changes when the picture does.
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	}
 	// ref.Path is a trusted, already-resolved filesystem path from
 	// storage (see ImageStore's doc comment: refs point at files on disk,

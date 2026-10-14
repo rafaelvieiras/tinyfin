@@ -29,6 +29,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -273,7 +274,9 @@ func (s *Scanner) recordRootFolder(ctx context.Context, lib storage.Library, roo
 	}
 	if err := s.store.UpsertItem(ctx, item); err != nil {
 		log.Printf("scan: recording root folder %s: %v", root, err)
+		return
 	}
+	s.seedFolderArtwork(ctx, item.ID, root)
 }
 
 // walkHomeVideos handles a CollectionTypeHomeVideos path: every folder under
@@ -312,7 +315,7 @@ func (s *Scanner) walkHomeVideos(ctx context.Context, pool *jobPool, lib storage
 				log.Printf("scan: upserting folder %q: %v", path, err)
 				continue
 			}
-			s.seedFolderImages(ctx, id, path, "")
+			s.seedFolderArtwork(ctx, id, path)
 			if firstPhoto != "" {
 				s.seedPhotoImage(ctx, id, filepath.Join(path, firstPhoto))
 			}
@@ -447,9 +450,38 @@ func (s *Scanner) seedVideoImages(ctx context.Context, itemID storage.ItemID, vi
 type movieGroup struct {
 	primary string
 	size    int64
+	// parts are the other files of a stacked movie, in part order.
+	parts []movieFile
+	// sole is set for the only movie of a folder that is itself a Folder
+	// item (it also holds sub folders): the folder's artwork and extras are
+	// the movie's, but its name comes from its file.
+	sole bool
+}
+
+// movieFile is a video file of a movie folder.
+type movieFile struct {
+	name string
+	size int64
 }
 
 var stackPart = regexp.MustCompile(`(?i)^(.*?)[ ._-]*(?:cd|dvd|part|pt|disc|disk)[ ._-]?(\d{1,2})$`)
+
+// isVersionOf reports whether a file base name is another version of the
+// folder's movie: the movie's name followed by " - ", "-", "." or "_" and
+// whatever names the version ("Movie (2014) - 4K", "Movie (2014).3D",
+// "Movie (2014)-extras"). A space and a word is another movie.
+func isVersionOf(base, movie string) bool {
+	if len(base) <= len(movie) || !strings.EqualFold(base[:len(movie)], movie) {
+		return false
+	}
+	switch base[len(movie)] {
+	case '-', '.', '_':
+		return true
+	case ' ':
+		return strings.HasPrefix(base[len(movie):], " - ")
+	}
+	return false
+}
 
 // movieDirContent lists what a movie library folder holds: its movies and
 // the sub folders worth walking. dirIsFolderMovie names the folder whose own
@@ -475,7 +507,7 @@ func movieDirContent(dir string, versionsOfFolder bool) (groups []movieGroup, su
 			}
 			continue
 		}
-		if !IsVideoFile(e.Name()) || strings.HasPrefix(e.Name(), ".") || IsExtraVideo(e.Name()) {
+		if !IsVideoFile(e.Name()) || strings.HasPrefix(e.Name(), ".") || IsExtraFile(e.Name()) {
 			continue
 		}
 		info, err := e.Info()
@@ -490,21 +522,6 @@ func movieDirContent(dir string, versionsOfFolder bool) (groups []movieGroup, su
 		files = append(files, f)
 	}
 	used := make([]bool, len(files))
-	// The versions of the folder's movie.
-	if versionsOfFolder {
-		best := -1
-		for i, f := range files {
-			if f.base == dirName || strings.HasPrefix(f.base, dirName+" - ") {
-				used[i] = true
-				if best < 0 || (f.base == dirName && files[best].base != dirName) {
-					best = i
-				}
-			}
-		}
-		if best >= 0 {
-			groups = append(groups, movieGroup{primary: files[best].name, size: files[best].size})
-		}
-	}
 	// Stacked parts: two or more files whose names differ by the part number.
 	stacks := map[string][]int{}
 	var order []string
@@ -522,14 +539,34 @@ func movieDirContent(dir string, versionsOfFolder bool) (groups []movieGroup, su
 		if len(idx) < 2 {
 			continue
 		}
+		sort.SliceStable(idx, func(a, b int) bool { return files[idx[a]].part < files[idx[b]].part })
 		best := idx[0]
+		g := movieGroup{primary: files[best].name, size: files[best].size}
 		for _, i := range idx {
 			used[i] = true
-			if files[i].part < files[best].part {
-				best = i
+			if i != best {
+				g.parts = append(g.parts, movieFile{name: files[i].name, size: files[i].size})
 			}
 		}
-		groups = append(groups, movieGroup{primary: files[best].name, size: files[best].size})
+		groups = append(groups, g)
+	}
+	// The versions of the folder's movie.
+	if versionsOfFolder {
+		best := -1
+		for i, f := range files {
+			if used[i] {
+				continue
+			}
+			if f.base == dirName || isVersionOf(f.base, dirName) {
+				used[i] = true
+				if best < 0 || (f.base == dirName && files[best].base != dirName) {
+					best = i
+				}
+			}
+		}
+		if best >= 0 {
+			groups = append(groups, movieGroup{primary: files[best].name, size: files[best].size})
+		}
 	}
 	for i, f := range files {
 		if !used[i] {
@@ -553,22 +590,25 @@ func (s *Scanner) walkMovies(ctx context.Context, pool *jobPool, lib storage.Lib
 
 func (s *Scanner) walkMovieDir(ctx context.Context, pool *jobPool, lib storage.Library, dir string, parent *storage.ItemID, isRoot bool) {
 	groups, subdirs := movieDirContent(dir, !isRoot)
-	if !isRoot && len(groups) == 1 {
+	if !isRoot && len(groups) == 1 && len(subdirs) == 0 {
 		g := groups[0]
 		pool.enqueue(func() error {
-			return s.processMovie(ctx, pool, lib, dir, g.primary, g.size, parent, true)
+			return s.processMovie(ctx, pool, lib, dir, g, parent, true)
 		})
 	} else {
+		if !isRoot && len(groups) == 1 {
+			groups[0].sole = true
+		}
 		for _, g := range groups {
 			g := g
 			pool.enqueue(func() error {
-				return s.processMovie(ctx, pool, lib, dir, g.primary, g.size, parent, false)
+				return s.processMovie(ctx, pool, lib, dir, g, parent, false)
 			})
 		}
 	}
 	for _, sub := range subdirs {
-		subGroups, _ := movieDirContent(sub, true)
-		if len(subGroups) == 1 {
+		subGroups, subSubdirs := movieDirContent(sub, true)
+		if len(subGroups) == 1 && len(subSubdirs) == 0 {
 			s.walkMovieDir(ctx, pool, lib, sub, parent, false)
 			continue
 		}
@@ -581,7 +621,7 @@ func (s *Scanner) walkMovieDir(ctx context.Context, pool *jobPool, lib storage.L
 			log.Printf("scan: upserting folder %q: %v", sub, err)
 			continue
 		}
-		s.seedFolderImages(ctx, id, sub, "")
+		s.seedFolderArtwork(ctx, id, sub)
 		s.walkMovieDir(ctx, pool, lib, sub, &id, false)
 	}
 }
@@ -632,7 +672,8 @@ func (s *Scanner) reconcileItemID(ctx context.Context, libraryID storage.Library
 // only movie of its folder: the movie is then named after the folder, as
 // written, and the folder's movie.nfo and artwork apply; otherwise it is
 // named after the file (items.names.R9, R10).
-func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.Library, dir, videoFile string, size int64, parent *storage.ItemID, folderMovie bool) error {
+func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.Library, dir string, group movieGroup, parent *storage.ItemID, folderMovie bool) error {
+	videoFile, size := group.primary, group.size
 	itemPath := filepath.Join(dir, videoFile)
 	itemID := s.reconcileItemID(ctx, lib.ID, itemPath, storage.ItemID(deterministicID("item-movie-"+string(lib.ID)+"-"+itemPath)))
 
@@ -642,9 +683,10 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 	}
 	queryTitle, year := CleanTitle(source, true)
 	name := queryTitle
-	if folderMovie {
+	if folderMovie || (group.sole && source == filepath.Base(dir)) {
 		name = source
 	}
+	alone := folderMovie || group.sole
 
 	pr := s.probeOrReuse(ctx, pool, itemID, itemPath, size)
 	probeErr := pr.err
@@ -687,11 +729,7 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 	}
 	s.recordSignature(ctx, itemID, pr)
 
-	if folderMovie {
-		s.seedFolderImages(ctx, itemID, dir, videoFile)
-	} else {
-		s.seedVideoImages(ctx, itemID, itemPath)
-	}
+	s.seedMovieImages(ctx, itemID, dir, videoFile, alone)
 	s.enrich(ctx, pool, &item, metadata.Query{Kind: metadata.KindMovie, Title: queryTitle, Year: year}, false)
 	if folderMovie {
 		s.applyMovieNFO(pool, &item, dir, videoFile)
@@ -701,6 +739,8 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 	if err := s.store.UpsertItem(ctx, item); err != nil {
 		return fmt.Errorf("upserting enriched movie %q: %w", itemPath, err)
 	}
+	s.scanExtras(ctx, pool, lib, itemID, dir, []string{strings.TrimSuffix(videoFile, filepath.Ext(videoFile)), filepath.Base(dir)},
+		item.ProductionYear, alone, false, group.parts)
 
 	if probeErr != nil {
 		pool.addWarning(fmt.Sprintf("probing %q: %v (cataloged with no media stream info)", itemPath, probeErr))
@@ -742,7 +782,12 @@ func (s *Scanner) walkSeries(ctx context.Context, pool *jobPool, lib storage.Lib
 			log.Printf("scan: upserting series %q: %v", seriesFolder, err)
 			continue
 		}
-		s.seedFolderImages(ctx, seriesID, seriesPath, "")
+		s.seedSeriesImages(ctx, seriesID, seriesPath)
+		var seriesYearPtr *int
+		if seriesYear > 0 {
+			seriesYearPtr = &seriesYear
+		}
+		s.scanExtras(ctx, pool, lib, seriesID, seriesPath, []string{seriesFolder, seriesTitle}, seriesYearPtr, true, true, nil)
 
 		pool.enqueue(func() error {
 			enriched := seriesItem
@@ -811,6 +856,7 @@ func (ss *seasonSet) virtualSeason(ctx context.Context, number *int) (storage.It
 	if err := ss.s.store.UpsertItem(ctx, item); err != nil {
 		return "", fmt.Errorf("upserting season %q: %w", item.Name, err)
 	}
+	ss.s.seedSeasonImages(ctx, id, ss.dir, "", item.IndexNumber)
 	ss.virtual[key] = id
 	return id, nil
 }
@@ -908,9 +954,8 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 			log.Printf("scan: upserting season %q: %v", d.name, err)
 			continue
 		}
-		if seasonItem.IndexNumber != nil {
-			s.seedSeasonImage(ctx, d.id, seriesPath, *seasonItem.IndexNumber)
-		}
+		s.seedSeasonImages(ctx, d.id, seriesPath, d.path, seasonItem.IndexNumber)
+		s.scanExtras(ctx, pool, lib, d.id, d.path, []string{d.name}, nil, true, true, nil)
 		pool.enqueue(func() error {
 			enriched := seasonItem
 			num := 0
@@ -1010,7 +1055,7 @@ func (s *Scanner) walkEpisodeFiles(ctx context.Context, pool *jobPool, lib stora
 		return
 	}
 	for _, e := range entries {
-		if e.IsDir() || !IsVideoFile(e.Name()) || strings.HasPrefix(e.Name(), ".") {
+		if e.IsDir() || !IsVideoFile(e.Name()) || strings.HasPrefix(e.Name(), ".") || IsExtraFile(e.Name()) {
 			continue
 		}
 		info, err := e.Info()
@@ -1099,6 +1144,7 @@ func (s *Scanner) processEpisode(ctx context.Context, pool *jobPool, lib storage
 		return fmt.Errorf("upserting episode %q: %w", episodePath, err)
 	}
 	s.recordSignature(ctx, itemID, pr)
+	s.seedEpisodeImages(ctx, itemID, episodePath)
 	q := metadata.Query{Kind: metadata.KindEpisode, SeriesTitle: job.seriesTitle}
 	if season != nil {
 		q.SeasonNumber = *season
@@ -1284,22 +1330,51 @@ func (s *Scanner) refreshLocalImages(ctx context.Context, item *storage.Item) {
 		if item.Path == "" {
 			return
 		}
-		s.seedFolderImages(ctx, item.ID, filepath.Dir(item.Path), filepath.Base(item.Path))
+		s.seedMovieImages(ctx, item.ID, filepath.Dir(item.Path), filepath.Base(item.Path), s.movieIsAlone(ctx, *item))
+	case storage.ItemTypeEpisode:
+		if item.Path != "" {
+			s.seedEpisodeImages(ctx, item.ID, item.Path)
+		}
+	case storage.ItemTypeFolder:
+		if item.Path != "" {
+			s.seedFolderArtwork(ctx, item.ID, item.Path)
+		}
 	case storage.ItemTypeSeries:
 		if seriesPath, ok := s.seriesFolderOf(ctx, *item); ok {
-			s.seedFolderImages(ctx, item.ID, seriesPath, "")
+			s.seedSeriesImages(ctx, item.ID, seriesPath)
 		}
 	case storage.ItemTypeSeason:
 		seasonPath, ok := s.seasonFolderOf(ctx, *item)
 		if !ok {
 			return
 		}
-		seasonNum := 0
-		if item.IndexNumber != nil {
-			seasonNum = *item.IndexNumber
+		seriesPath := filepath.Dir(seasonPath)
+		if item.Path == "" {
+			// A season cataloged without a folder of its own has only the
+			// series-level pictures.
+			seasonPath = ""
 		}
-		s.seedSeasonImage(ctx, item.ID, filepath.Dir(seasonPath), seasonNum)
+		s.seedSeasonImages(ctx, item.ID, seriesPath, seasonPath, item.IndexNumber)
 	}
+}
+
+// movieIsAlone reports whether a movie is the only movie of its folder, the
+// case in which the folder's own pictures (poster.jpg, ...) are its artwork.
+func (s *Scanner) movieIsAlone(ctx context.Context, item storage.Item) bool {
+	dir := filepath.Dir(item.Path)
+	if item.ParentID == nil {
+		return item.Name == filepath.Base(dir)
+	}
+	parent, err := s.store.GetItem(ctx, *item.ParentID)
+	if err != nil || parent.Path != dir {
+		return true
+	}
+	// The movie's folder is a Folder item: the movie is alone when it is
+	// the only movie in it.
+	page, err := s.store.QueryItems(ctx, storage.ItemFilter{
+		ParentID: &parent.ID, ItemTypes: []storage.ItemType{storage.ItemTypeMovie}, Limit: 2,
+	})
+	return err == nil && page.TotalCount == 1
 }
 
 // refreshLocalNFO re-applies item's sidecar .nfo file, if any is present,
@@ -1521,44 +1596,6 @@ func (s *Scanner) storeProviderImage(ctx context.Context, itemID storage.ItemID,
 	}
 }
 
-// seedFolderImages picks up a movie/series folder's own local artwork, if
-// present — the Kodi/Jellyfin filename conventions documented at
-// kodi.wiki's "Artwork" guide (Primary/Backdrop) and Jellyfin's own
-// published movie-library naming guide, jellyfin.org (Logo/Banner —
-// docs/12's "Movie detail page — local Logo/clearlogo artwork
-// recognition"): poster.jpg, poster.png, folder.jpg, folder.png, and
-// "<video-basename>-poster.jpg" for the Primary image; fanart.jpg,
-// fanart.png, backdrop.jpg, and "<video-basename>-fanart.jpg" for
-// Backdrop; logo.png, logo.jpg, clearlogo.png, clearlogo.jpg, and their
-// "<video-basename>-logo.*" suffix forms for Logo; banner.png, banner.jpg,
-// and their "<video-basename>-banner.*" suffix forms for Banner. Each list
-// is tried in that priority order and the scan stops at the first match,
-// per file's own kind. This is a fallback that runs before provider
-// enrichment so a locally-provided image always exists even with no
-// Provider configured; storeProviderImage overwrites it (same
-// deterministic ImageRef ID) if the provider later returns a match.
-// videoFile is the item's video filename (with extension) so the
-// "<video-basename>-*" candidates can be built; pass "" when there's no
-// single associated video file (e.g. a series root folder) to skip those
-// candidates.
-func (s *Scanner) seedFolderImages(ctx context.Context, itemID storage.ItemID, folder, videoFile string) {
-	primary := []string{"poster.jpg", "poster.png", "folder.jpg", "folder.png"}
-	backdrop := []string{"fanart.jpg", "fanart.png", "backdrop.jpg"}
-	logo := []string{"logo.png", "logo.jpg", "clearlogo.png", "clearlogo.jpg"}
-	banner := []string{"banner.png", "banner.jpg"}
-	if videoFile != "" {
-		base := strings.TrimSuffix(videoFile, filepath.Ext(videoFile))
-		primary = append(primary, base+"-poster.jpg")
-		backdrop = append(backdrop, base+"-fanart.jpg")
-		logo = append(logo, base+"-logo.png", base+"-logo.jpg")
-		banner = append(banner, base+"-banner.png", base+"-banner.jpg")
-	}
-	s.seedFolderImage(ctx, itemID, folder, "Primary", primary)
-	s.seedFolderImage(ctx, itemID, folder, "Backdrop", backdrop)
-	s.seedFolderImage(ctx, itemID, folder, "Logo", logo)
-	s.seedFolderImage(ctx, itemID, folder, "Banner", banner)
-}
-
 // seedFolderImage stores the first of candidates (filenames relative to
 // folder) that actually exists as itemID's image of the given kind.
 func (s *Scanner) seedFolderImage(ctx context.Context, itemID storage.ItemID, folder, kind string, candidates []string) {
@@ -1583,31 +1620,6 @@ func (s *Scanner) seedFolderImage(ctx context.Context, itemID storage.ItemID, fo
 		}
 		return
 	}
-}
-
-// seedSeasonImage picks up a season's local Primary artwork — a distinct
-// Kodi filename convention from seedFolderImages above (kodi.wiki's
-// "Artwork" guide, "Season" section): unlike a movie/series poster, a
-// season poster is not stored inside the season's own subfolder — it lives
-// directly in the *series root* folder (the same folder that already holds
-// poster.jpg/fanart.jpg/tvshow.nfo for the series itself), named
-// season{NN}-poster.jpg where NN is the season number zero-padded to two
-// digits (season01-poster.jpg, season02-poster.jpg, ...). Kodi also accepts
-// season{NN}.jpg/seasonNN.tbn variants; this only covers the -poster.jpg/
-// .jpg forms (plus their .png equivalents), matching what's actually seen
-// on real libraries. Same "first match wins, local runs before provider
-// enrichment" fallback as seedFolderImage/seedFolderImages: a locally
-// provided season poster always exists even with no Provider configured,
-// and storeProviderImage overwrites it later (same deterministic ImageRef
-// ID) if the provider returns a Season image.
-func (s *Scanner) seedSeasonImage(ctx context.Context, seasonID storage.ItemID, seriesPath string, seasonNum int) {
-	candidates := []string{
-		fmt.Sprintf("season%02d-poster.jpg", seasonNum),
-		fmt.Sprintf("season%02d.jpg", seasonNum),
-		fmt.Sprintf("season%02d-poster.png", seasonNum),
-		fmt.Sprintf("season%02d.png", seasonNum),
-	}
-	s.seedFolderImage(ctx, seasonID, seriesPath, "Primary", candidates)
 }
 
 // imageDimensions decodes just r's header to get an image's pixel

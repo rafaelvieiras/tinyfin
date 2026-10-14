@@ -90,6 +90,12 @@ var routePaths = []string{
 	// theirs — same reasoning as the FavoriteItems/PlayedItems comment
 	// further down this list.
 	"/Items/{itemId}/ThemeMedia",
+	"/Items/{itemId}/LocalTrailers",
+	"/Items/{itemId}/SpecialFeatures",
+	"/Items/{itemId}/ThemeSongs",
+	"/Items/{itemId}/ThemeVideos",
+	"/Users/{userId}/Items/{itemId}/LocalTrailers",
+	"/Users/{userId}/Items/{itemId}/SpecialFeatures",
 	"/UserItems/Resume",
 	"/UserItems/{itemId}/UserData",
 	"/Shows/{seriesId}/Seasons",
@@ -119,6 +125,7 @@ var routePaths = []string{
 	// /Items/Latest above — these are the same segment count (3) as
 	// /Videos/{itemId}/{file}, and normalizePathCase stops at the first
 	// same-length match.
+	"/Videos/{itemId}/AdditionalParts",
 	"/Videos/{itemId}/master.m3u8",
 	"/Videos/{itemId}/main.m3u8",
 	"/Videos/{itemId}/{file}",

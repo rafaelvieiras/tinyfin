@@ -23,7 +23,7 @@ const itemColumns = `items.id, items.type, items.library_id, items.parent_id, it
 	items.collection_type,
 	items.media_streams,
 	items.people,
-	items.date_created`
+	items.date_created, items.extra_type, items.owner_id`
 
 // rowScanner is satisfied by both *sql.Row and *sql.Rows, so scanItem works
 // for both GetItem (a single row) and QueryItems (a cursor).
@@ -55,6 +55,8 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 		mediaStreamsJSON                        string
 		peopleJSON                              string
 		dateCreated                             time.Time
+		extraType                               string
+		ownerID                                 sql.NullString
 	)
 
 	if err := rs.Scan(
@@ -70,6 +72,7 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 		&mediaStreamsJSON,
 		&peopleJSON,
 		&dateCreated,
+		&extraType, &ownerID,
 	); err != nil {
 		return storage.Item{}, err
 	}
@@ -90,6 +93,11 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 		Size:           size,
 		CollectionType: storage.CollectionType(collectionType),
 		DateCreated:    dateCreated,
+		ExtraType:      extraType,
+	}
+	if ownerID.Valid {
+		v := storage.ItemID(ownerID.String)
+		item.OwnerID = &v
 	}
 
 	if parentID.Valid {
@@ -272,8 +280,9 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 		media_streams,
 		people,
 		search_text,
-		date_created
-	) VALUES (?,?,?,?,?,?,?,?, ?,?,?,?, ?,?,?,?,?,?,?, ?,?,?, ?,?, ?,?,?, ?, ?,?,?, ?, ?, ?, ?, ?)
+		date_created,
+		extra_type, owner_id
+	) VALUES (?,?,?,?,?,?,?,?, ?,?,?,?, ?,?,?,?,?,?,?, ?,?,?, ?,?, ?,?,?, ?, ?,?,?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(id) DO UPDATE SET
 		type=excluded.type, library_id=excluded.library_id, parent_id=excluded.parent_id, name=excluded.name,
 		original_title=excluded.original_title, sort_name=excluded.sort_name, overview=excluded.overview,
@@ -288,7 +297,8 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 		collection_type=excluded.collection_type,
 		media_streams=excluded.media_streams,
 		people=excluded.people,
-		search_text=excluded.search_text`
+		search_text=excluded.search_text,
+		extra_type=excluded.extra_type, owner_id=excluded.owner_id`
 
 	// The stored sort name is the normalized ordering key, not the raw
 	// title (items.sort.R8). Search text still sees the title as given.
@@ -310,6 +320,7 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 			peopleJSON,
 			searchText,
 			item.DateCreated,
+			item.ExtraType, idPtrToAny(item.OwnerID),
 		); err != nil {
 			return fmt.Errorf("sqlite: upserting item %q: %w", item.ID, err)
 		}
@@ -580,6 +591,23 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 
 	if len(filter.IDs) > 0 {
 		addWhere("items.id IN ("+sqlPlaceholders(len(filter.IDs))+")", idArgs(filter.IDs)...)
+	}
+	// Extras belong to the item that owns them, not to the catalog: a
+	// listing, count or search never returns them unless asked for by owner,
+	// by id or explicitly.
+	switch {
+	case filter.OwnerID != nil:
+		addWhere("items.owner_id = ?", string(*filter.OwnerID))
+		if len(filter.ExtraTypes) > 0 {
+			args := make([]any, len(filter.ExtraTypes))
+			for i, t := range filter.ExtraTypes {
+				args[i] = t
+			}
+			addWhere("items.extra_type IN ("+sqlPlaceholders(len(args))+")", args...)
+		}
+	case filter.IncludeExtras || len(filter.IDs) > 0:
+	default:
+		addWhere("items.extra_type = ''")
 	}
 	if len(filter.ExcludeIDs) > 0 {
 		addWhere("items.id NOT IN ("+sqlPlaceholders(len(filter.ExcludeIDs))+")", idArgs(filter.ExcludeIDs)...)

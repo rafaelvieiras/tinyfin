@@ -3,6 +3,7 @@ package scan
 import (
 	"context"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
@@ -80,45 +81,98 @@ func (s *Scanner) recordSignature(ctx context.Context, itemID storage.ItemID, re
 	}
 }
 
+// dirIndex is one directory listing, indexed for case-insensitive lookups of
+// the sidecar files (pictures, metadata) that may sit beside the media.
+type dirIndex struct {
+	// files and dirs map the lower-cased entry name to its real name (a
+	// real name that is already all lower case wins a case collision).
+	files map[string]string
+	dirs  map[string]string
+	// dirAll lists every real name of the folders that share a lower-cased
+	// name (two folders differing only in case), sorted.
+	dirAll map[string][]string
+	// names is the set of real file names.
+	names map[string]struct{}
+}
+
+func newDirIndex(entries []os.DirEntry) *dirIndex {
+	d := &dirIndex{files: map[string]string{}, dirs: map[string]string{}, dirAll: map[string][]string{}, names: map[string]struct{}{}}
+	put := func(m map[string]string, name string) {
+		l := strings.ToLower(name)
+		if old, ok := m[l]; ok && old == l {
+			return
+		}
+		m[l] = name
+	}
+	for _, e := range entries {
+		if e.IsDir() {
+			put(d.dirs, e.Name())
+			l := strings.ToLower(e.Name())
+			d.dirAll[l] = append(d.dirAll[l], e.Name())
+			continue
+		}
+		put(d.files, e.Name())
+		d.names[e.Name()] = struct{}{}
+	}
+	return d
+}
+
+// image returns the real name of the picture called base (any recognized
+// extension, tried in imageExts order, any case).
+func (d *dirIndex) image(base string) (string, bool) {
+	lb := strings.ToLower(base)
+	for _, ext := range imageExts {
+		if name, ok := d.files[lb+"."+ext]; ok {
+			return name, true
+		}
+	}
+	return "", false
+}
+
 // dirCache memoizes one directory listing per folder for the duration of a
-// ScanLibrary pass, so deciding which sidecar images exist costs one ReadDir
+// ScanLibrary pass, so deciding which sidecar files exist costs one ReadDir
 // per folder instead of one Stat per candidate filename.
 type dirCache struct {
-	m    map[string]map[string]struct{}
+	m    map[string]*dirIndex
 	lock chan struct{}
 }
 
 type dirCacheKey struct{}
 
 func withDirCache(ctx context.Context) context.Context {
-	c := &dirCache{m: map[string]map[string]struct{}{}, lock: make(chan struct{}, 1)}
+	c := &dirCache{m: map[string]*dirIndex{}, lock: make(chan struct{}, 1)}
 	return context.WithValue(ctx, dirCacheKey{}, c)
 }
 
-// dirNames returns the set of non-directory entry names in dir (nil when it
-// cannot be read). Uncached outside a ScanLibrary pass (e.g. RefreshItem).
-func dirNames(ctx context.Context, dir string) map[string]struct{} {
+// dirIndexOf returns the indexed listing of dir (nil when it cannot be read).
+// Uncached outside a ScanLibrary pass (e.g. RefreshItem).
+func dirIndexOf(ctx context.Context, dir string) *dirIndex {
 	c, _ := ctx.Value(dirCacheKey{}).(*dirCache)
 	if c != nil {
 		c.lock <- struct{}{}
-		names, ok := c.m[dir]
+		idx, ok := c.m[dir]
 		<-c.lock
 		if ok {
-			return names
+			return idx
 		}
 	}
-	names := map[string]struct{}{}
+	var idx *dirIndex
 	if entries, err := os.ReadDir(dir); err == nil {
-		for _, e := range entries {
-			if !e.IsDir() {
-				names[e.Name()] = struct{}{}
-			}
-		}
+		idx = newDirIndex(entries)
 	}
 	if c != nil {
 		c.lock <- struct{}{}
-		c.m[dir] = names
+		c.m[dir] = idx
 		<-c.lock
 	}
-	return names
+	return idx
+}
+
+// dirNames returns the set of non-directory entry names in dir (empty when it
+// cannot be read).
+func dirNames(ctx context.Context, dir string) map[string]struct{} {
+	if idx := dirIndexOf(ctx, dir); idx != nil {
+		return idx.names
+	}
+	return map[string]struct{}{}
 }

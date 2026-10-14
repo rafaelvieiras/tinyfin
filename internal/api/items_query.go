@@ -853,8 +853,13 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 	}
 	items := make([]baseItemDto, 0, len(page.Items))
 	if !countOnly {
+		wantExtras := iq.fields["localtrailercount"] || iq.fields["specialfeaturecount"] || iq.fields["partcount"]
 		for _, it := range page.Items {
-			items = append(items, shape(s.baseItemDto(ctx, it)))
+			dto := s.baseItemDto(ctx, it)
+			if wantExtras {
+				s.applyExtraInfo(ctx, &dto, it)
+			}
+			items = append(items, shape(dto))
 		}
 	}
 	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{
@@ -942,11 +947,16 @@ func shapeListItem(d baseItemDto, iq itemsQuery) baseItemDto {
 		d.UserData = nil
 	}
 	if !iq.images || (iq.imageLimit != nil && *iq.imageLimit == 0) {
-		d.ImageTags, d.BackdropImageTags, d.PrimaryImageAspectRatio = nil, nil, nil
+		d.ImageTags, d.BackdropImageTags, d.PrimaryImageAspectRatio, d.ImageBlurHashes = nil, nil, nil, nil
 	} else if iq.imageTypes != nil {
 		for k := range d.ImageTags {
 			if !iq.imageTypes[strings.ToLower(k)] {
 				delete(d.ImageTags, k)
+			}
+		}
+		for k := range d.ImageBlurHashes {
+			if !iq.imageTypes[strings.ToLower(k)] {
+				delete(d.ImageBlurHashes, k)
 			}
 		}
 		if !iq.imageTypes["backdrop"] {
@@ -1024,5 +1034,7 @@ func (s *Server) handleItemGet(w http.ResponseWriter, r *http.Request) {
 		notFound()
 		return
 	}
-	writeJSON(w, http.StatusOK, s.baseItemDto(ctx, item))
+	dto := s.baseItemDto(ctx, item)
+	s.applyExtraInfo(ctx, &dto, item)
+	writeJSON(w, http.StatusOK, dto)
 }

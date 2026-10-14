@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -132,6 +133,12 @@ func (s *Server) resolveDeviceProfile(r *http.Request) deviceprofile.DeviceProfi
 // decision.Container (a possibly profile-transcoded value) while
 // mediaSourcesFor wants the item's own on-disk container.
 func baseMediaSourceInfo(item storage.Item, container string) mediaSourceInfoDto {
+	// The reference names a media source after its file, not after the item.
+	name := item.Name
+	if item.Path != "" {
+		base := filepath.Base(item.Path)
+		name = strings.TrimSuffix(base, filepath.Ext(base))
+	}
 	return mediaSourceInfoDto{
 		ID:              string(item.ID),
 		Protocol:        "File",
@@ -139,7 +146,7 @@ func baseMediaSourceInfo(item storage.Item, container string) mediaSourceInfoDto
 		Type:            "Default",
 		Container:       container,
 		Size:            item.Size,
-		Name:            item.Name,
+		Name:            name,
 		RunTimeTicks:    item.RunTimeTicks,
 		SupportsProbing: true,
 		MediaStreams:    mediaStreamDtos(item.MediaStreams),

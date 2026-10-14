@@ -62,6 +62,11 @@ func walkWireIDs(t *testing.T, where string, v any) {
 			_ = i
 		}
 	case string:
+		if strings.Trim(x, "0") == "" {
+			// the all-zero id (an unowned result's OwnerId) is neither dashed
+			// nor upper case
+			return
+		}
 		if dashedRE.MatchString(x) || upperHexRE.MatchString(x) {
 			t.Errorf("%s: value %q embeds a dashed or upper-case id", where, x)
 		}

@@ -52,6 +52,18 @@ func TestThemeMediaFindsLocalFiles(t *testing.T) {
 		t.Fatalf("UpsertItem: %v", err)
 	}
 	itemID := mustFindItemByName(t, st, libID, "Themed Movie")
+	addExtra := func(path, name, extraType string, typ storage.ItemType) {
+		t.Helper()
+		owner := itemID
+		if err := st.UpsertItem(context.Background(), storage.Item{
+			Type: typ, LibraryID: libID, Name: name, Path: path, ExtraType: extraType, OwnerID: &owner,
+		}); err != nil {
+			t.Fatalf("UpsertItem(%s): %v", name, err)
+		}
+	}
+	addExtra(filepath.Join(movieDir, "theme.mp3"), "Theme Song", storage.ExtraTypeThemeSong, storage.ItemTypeAudio)
+	addExtra(filepath.Join(movieDir, "theme-music", "extra.flac"), "extra", storage.ExtraTypeThemeSong, storage.ItemTypeAudio)
+	addExtra(filepath.Join(movieDir, "backdrops", "clip.mp4"), "clip", storage.ExtraTypeThemeVideo, storage.ItemTypeVideo)
 
 	resp := get(http.MethodGet, "/Items/"+string(itemID)+"/ThemeMedia")
 	defer resp.Body.Close()
@@ -73,8 +85,8 @@ func TestThemeMediaFindsLocalFiles(t *testing.T) {
 			t.Errorf("theme song %q MediaType = %q, want Audio", dto.Name, dto.MediaType)
 		}
 	}
-	if !songNames["theme"] {
-		t.Error("ThemeSongsResult.Items missing theme.mp3 (as Name \"theme\")")
+	if !songNames["Theme Song"] {
+		t.Error("ThemeSongsResult.Items missing theme.mp3 (as Name \"Theme Song\")")
 	}
 	if !songNames["extra"] {
 		t.Error("ThemeSongsResult.Items missing theme-music/extra.flac (as Name \"extra\")")
@@ -148,8 +160,13 @@ func TestThemeMediaUnknownItem404s(t *testing.T) {
 
 	resp := get(http.MethodGet, "/Items/does-not-exist/ThemeMedia")
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusNotFound {
-		t.Errorf("GET /Items/{itemId}/ThemeMedia (unknown item) status = %d, want 404", resp.StatusCode)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("GET /Items/{itemId}/ThemeMedia (not a GUID) status = %d, want 400", resp.StatusCode)
+	}
+	resp2 := get(http.MethodGet, "/Items/11111111111111111111111111111111/ThemeMedia")
+	defer resp2.Body.Close()
+	if resp2.StatusCode != http.StatusNotFound {
+		t.Errorf("GET /Items/{itemId}/ThemeMedia (unknown item) status = %d, want 404", resp2.StatusCode)
 	}
 }
 
@@ -180,6 +197,13 @@ func TestFolderShapedItemWithPathHasNoFileBehavior(t *testing.T) {
 		t.Fatalf("UpsertItem: %v", err)
 	}
 	itemID := mustFindItemByName(t, st, libID, "Folder Show")
+	owner := itemID
+	if err := st.UpsertItem(context.Background(), storage.Item{
+		Type: storage.ItemTypeAudio, LibraryID: libID, Name: "Theme Song", Path: filepath.Join(seriesDir, "theme.mp3"),
+		ExtraType: storage.ExtraTypeThemeSong, OwnerID: &owner,
+	}); err != nil {
+		t.Fatalf("UpsertItem(theme): %v", err)
+	}
 
 	resp := get(http.MethodGet, "/Items/"+string(itemID))
 	defer resp.Body.Close()

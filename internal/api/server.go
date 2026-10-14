@@ -501,6 +501,13 @@ func (s *Server) routes() {
 	// by testing against a real jellyfin-web build (docs/11's route
 	// coverage table, docs/12's "Movie detail page — Theme Media" section).
 	s.mux.HandleFunc("GET /Items/{itemId}/ThemeMedia", requireAuth(s.handleThemeMedia))
+	s.mux.HandleFunc("GET /Items/{itemId}/LocalTrailers", requireAuth(s.handleLocalTrailers))
+	s.mux.HandleFunc("GET /Items/{itemId}/SpecialFeatures", requireAuth(s.handleSpecialFeatures))
+	s.mux.HandleFunc("GET /Items/{itemId}/ThemeSongs", requireAuth(s.handleThemeSongs))
+	s.mux.HandleFunc("GET /Items/{itemId}/ThemeVideos", requireAuth(s.handleThemeVideos))
+	s.mux.HandleFunc("GET /Users/{userId}/Items/{itemId}/LocalTrailers", requireAuth(s.handleLocalTrailers))
+	s.mux.HandleFunc("GET /Users/{userId}/Items/{itemId}/SpecialFeatures", requireAuth(s.handleSpecialFeatures))
+	s.mux.HandleFunc("GET /Videos/{itemId}/AdditionalParts", requireAuth(s.handleAdditionalParts))
 	s.mux.HandleFunc("GET /UserItems/Resume", requireAuth(s.handleUserItemsResume))
 	s.mux.HandleFunc("GET /UserItems/{itemId}/UserData", requireAuth(s.handleUserItemDataGet))
 	s.mux.HandleFunc("POST /UserItems/{itemId}/UserData", requireAuth(s.handleUserItemDataPost))

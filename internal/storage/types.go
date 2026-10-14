@@ -147,6 +147,14 @@ type ItemFilter struct {
 	MinCommunityRating *float64
 	MinPremiereDate    *time.Time
 	ImageTypes         []string
+	// OwnerID selects the extras (trailers, features, themes, additional
+	// parts) of one item; ExtraTypes narrows that to the given ExtraType
+	// values. Extras are otherwise left out of every query: they are not part
+	// of the catalog a listing, a count or a search shows, unless
+	// IncludeExtras is set or the query names them by IDs.
+	OwnerID       *ItemID
+	ExtraTypes    []string
+	IncludeExtras bool
 	// NoMatch short-circuits the query to an empty result; used for
 	// filters nothing can satisfy (e.g. a user "likes" flag that is not
 	// stored).
