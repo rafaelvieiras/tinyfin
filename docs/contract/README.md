@@ -272,9 +272,9 @@ scenario that is not pending or divergent; `risky` ones run only with
 
 | Area | Scenarios | Pass | Fail | Blocked | Skipped |
 |---|---|---|---|---|---|
-| items | 120 | 120 | 0 | 0 | 0 |
+| items | 121 | 121 | 0 | 0 | 0 |
 | playstate | 107 | 107 | 0 | 0 | 0 |
 | quickconnect | 16 | 16 | 0 | 0 | 0 |
 | users | 202 | 202 | 0 | 0 | 0 |
 | wire | 13 | 13 | 0 | 0 | 0 |
-| **Total** | 458 | 458 | 0 | 0 | 0 |
+| **Total** | 459 | 459 | 0 | 0 | 0 |

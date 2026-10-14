@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 458
+    "pass": 459
   },
   "scenarios": {
     "items.fields.enable-user-data": "pass",
@@ -103,6 +103,7 @@
     "items.sort.sort-name": "pass",
     "items.sort.sort-name-rules": "pass",
     "items.sort.tie-break": "pass",
+    "items.sort.transliteration": "pass",
     "items.user.admin-other-user-context": "pass",
     "items.user.malformed-user-id": "pass",
     "items.user.other-user-forbidden": "pass",
