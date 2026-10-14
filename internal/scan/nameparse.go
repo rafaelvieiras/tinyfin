@@ -35,11 +35,16 @@ func ParseTitleYear(name string) (title string, year int) {
 	return name, 0
 }
 
-// seasonFolder matches a season directory name — "Season 01", "Season 1",
-// "Season 00" (specials) — the Kodi/Jellyfin convention's standard season
-// folder shape. Case-insensitive: real libraries are inconsistent about
-// casing.
-var seasonFolder = regexp.MustCompile(`(?i)^\s*Season\s+(\d{1,4})\s*$`)
+// seasonFolder matches a season directory name: a season word (English and
+// the other languages observed on the reference) followed by the number
+// with any separator or none ("Season 1", "Season06", "Season_7",
+// "Staffel 10", "Series 11"), optionally followed by more text after a
+// non-alphanumeric ("Season 15 - Title", "Season 21 (2010)"); "S4" and
+// "S17 Complete"; or the bare number ("12"). Case-insensitive.
+var seasonFolder = regexp.MustCompile(`(?i)^\s*(?:(?:season|series|staffel|temporada|saison|stagione|seizoen)[\s._-]*(\d{1,5})(?:[^\p{L}\d].*)?|s(\d{1,4})(?:[\s._-].*)?|(\d{1,4}))\s*$`)
+
+// pureSeason matches a folder name that is only a season ("Season 3", "S04", "12").
+var pureSeason = regexp.MustCompile(`(?i)^\s*(?:(?:season|series|staffel|temporada|saison|stagione|seizoen)[\s._-]*\d{1,5}|s\d{1,4}|\d{1,4})\s*$`)
 
 // specialsFolder matches the folder name that stands for season 0.
 var specialsFolder = regexp.MustCompile(`(?i)^\s*Specials\s*$`)
@@ -55,11 +60,17 @@ func ParseSeasonFolder(name string) (season int, ok bool) {
 	if m == nil {
 		return 0, false
 	}
-	n, err := strconv.Atoi(m[1])
-	if err != nil {
-		return 0, false
+	for _, g := range m[1:] {
+		if g == "" {
+			continue
+		}
+		n, err := strconv.Atoi(g)
+		if err != nil {
+			return 0, false
+		}
+		return n, true
 	}
-	return n, true
+	return 0, false
 }
 
 // episodePattern matches the two dominant Kodi/Jellyfin episode-numbering
@@ -202,4 +213,58 @@ func ExtrasFolder(name string) bool {
 // media file to catalog, case-insensitively.
 func IsVideoFile(name string) bool {
 	return videoExtensions[strings.ToLower(filepath.Ext(name))]
+}
+
+// skippedFolderNames are folders no video scan walks into (sidecar, recycle
+// and extras folders): the reference leaves them out of a series or movie
+// library entirely.
+var skippedFolderNames = map[string]bool{
+	"extras": true, "extra": true, "clips": true, "trailers": true, "backdrops": true, "theme-music": true,
+	"sample": true, "samples": true, "featurettes": true, "other": true, "subs": true,
+	"behind the scenes": true, "deleted scenes": true, "interviews": true, "scenes": true, "shorts": true,
+	"metadata": true, "@eadir": true, "#recycle": true, "lost+found": true,
+}
+
+// SkippedFolder reports whether a folder is left out of a movie or series
+// library: hidden folders and the names above, in any case.
+func SkippedFolder(name string) bool {
+	return strings.HasPrefix(name, ".") || skippedFolderNames[strings.ToLower(name)]
+}
+
+// photoExtensions are the picture file extensions a home-videos library
+// catalogs as photos.
+var photoExtensions = map[string]bool{
+	".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".bmp": true, ".webp": true,
+	".tif": true, ".tiff": true, ".avif": true, ".heic": true,
+}
+
+// IsPhotoFile reports whether name has a picture extension (any case).
+func IsPhotoFile(name string) bool {
+	return photoExtensions[strings.ToLower(filepath.Ext(name))]
+}
+
+// artworkName matches the base names of folder artwork ("folder.jpg",
+// "poster.png", "fanart.jpg", "backdrop1.jpg"), which are images of the
+// folder, not photos.
+var artworkName = regexp.MustCompile(`(?i)^(folder|poster|cover|default|thumb|thumbnail|landscape|logo|fanart|backdrop)\d*$`)
+
+// isPhotoEntry reports whether the picture called name is a photo: not
+// hidden, not folder artwork and not the image of a video (named like it, or
+// like it plus a "-" suffix such as "-poster"); videoBases are the lower-case
+// base names of the folder's videos.
+func isPhotoEntry(name string, videoBases map[string]bool) bool {
+	if strings.HasPrefix(name, ".") {
+		return false
+	}
+	base := strings.TrimSuffix(name, filepath.Ext(name))
+	if artworkName.MatchString(base) {
+		return false
+	}
+	lower := strings.ToLower(base)
+	for vb := range videoBases {
+		if lower == vb || strings.HasPrefix(lower, vb+"-") {
+			return false
+		}
+	}
+	return true
 }

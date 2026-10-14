@@ -124,8 +124,8 @@ func TestScanLibraryMovies(t *testing.T) {
 		t.Fatalf("len(Items) = %d, want 1", len(page.Items))
 	}
 	item := page.Items[0]
-	if item.Name != "The Matrix" {
-		t.Errorf("Name = %q, want %q", item.Name, "The Matrix")
+	if item.Name != "The Matrix (1999)" {
+		t.Errorf("Name = %q, want %q", item.Name, "The Matrix (1999)")
 	}
 	if item.ProductionYear == nil || *item.ProductionYear != 1999 {
 		t.Errorf("ProductionYear = %v, want 1999", item.ProductionYear)
@@ -212,7 +212,7 @@ func TestScanLibraryMovieDateCreatedFollowsFileModTime(t *testing.T) {
 	if len(page.Items) != 2 {
 		t.Fatalf("len(Items) = %d, want 2", len(page.Items))
 	}
-	if page.Items[0].Name != "Z Newer Movie" || page.Items[1].Name != "A Older Movie" {
+	if page.Items[0].Name != "Z Newer Movie (2020)" || page.Items[1].Name != "A Older Movie (2000)" {
 		t.Errorf("DateCreated-descending order = [%q, %q], want [\"Z Newer Movie\", \"A Older Movie\"] (file mtime order, not alphabetical scan order)",
 			page.Items[0].Name, page.Items[1].Name)
 	}
@@ -585,8 +585,8 @@ func TestScanLibraryNoProviderStillCatalogs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("QueryItems: %v", err)
 	}
-	if len(page.Items) != 1 || page.Items[0].Name != "Some Movie" {
-		t.Fatalf("Items = %+v, want one item named %q", page.Items, "Some Movie")
+	if len(page.Items) != 1 || page.Items[0].Name != "Some Movie (2020)" {
+		t.Fatalf("Items = %+v, want one item named %q", page.Items, "Some Movie (2020)")
 	}
 }
 
@@ -702,8 +702,8 @@ func TestScanLibraryReconcilesLegacyItemIDByPath(t *testing.T) {
 	if item.ID != legacyID {
 		t.Errorf("Item.ID = %q, want %q (rescan must reuse the pre-existing row's ID, not mint a new one)", item.ID, legacyID)
 	}
-	if item.Name != "The Matrix" {
-		t.Errorf("Item.Name = %q, want %q (rescan must still refresh the reused row's fields)", item.Name, "The Matrix")
+	if item.Name != "The Matrix (1999)" {
+		t.Errorf("Item.Name = %q, want %q (rescan must still refresh the reused row's fields)", item.Name, "The Matrix (1999)")
 	}
 }
 

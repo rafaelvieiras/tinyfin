@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -110,6 +111,10 @@ type episodeNFO struct {
 	// leaves the file's other tags usable; nfoNumber converts them.
 	Season  string `xml:"season"`
 	Episode string `xml:"episode"`
+
+	// EpisodeEnd is the episode number of the last document of a file that
+	// holds several <episodedetails> (multi-episode files); nil for one.
+	EpisodeEnd *int `xml:"-"`
 }
 
 // nfoNumber converts a <season>/<episode> value; nil when the tag is absent
@@ -343,17 +348,92 @@ func (s *Scanner) applySeasonNFO(pool *jobPool, item *storage.Item, seasonPath, 
 // episodeNFOFor reads and parses "<episode-video-basename>.nfo" next to
 // episodePath. found is false when there is no readable file; a file that does
 // not parse is reported as a warning and treated as missing.
+//
+// A file may hold several <episodedetails> documents (a multi-episode file).
+// They are ordered by episode number (documents without one last); the first
+// one supplies every field, except that the titles of all documents are
+// joined with " / " (so are the plots), and the episode number of the last
+// document is the file's last episode (EpisodeEnd).
 func (s *Scanner) episodeNFOFor(pool *jobPool, episodePath string) (n episodeNFO, found bool) {
 	base := strings.TrimSuffix(episodePath, filepath.Ext(episodePath))
 	data, ok := readFirstExisting(base + ".nfo")
 	if !ok {
 		return n, false
 	}
-	if err := xml.Unmarshal(data, &n); err != nil {
+	docs, err := decodeEpisodeDocs(data)
+	if err != nil || len(docs) == 0 {
+		if err == nil {
+			err = fmt.Errorf("no <episodedetails> document")
+		}
 		pool.addWarning(fmt.Sprintf("parsing episode .nfo for %q: %v (ignored)", episodePath, err))
 		return n, false
 	}
-	return n, true
+	return mergeEpisodeDocs(docs), true
+}
+
+// decodeEpisodeDocs reads every <episodedetails> element of data, in order.
+// Text and processing instructions between the documents are skipped; a
+// document that does not parse ends the list (the ones before it are kept),
+// and a file whose first document does not parse is an error.
+func decodeEpisodeDocs(data []byte) ([]episodeNFO, error) {
+	dec := xml.NewDecoder(strings.NewReader(string(data)))
+	dec.Strict = false
+	var docs []episodeNFO
+	for {
+		tok, err := dec.Token()
+		if err != nil {
+			if len(docs) == 0 && err.Error() != "EOF" {
+				return nil, err
+			}
+			return docs, nil
+		}
+		start, ok := tok.(xml.StartElement)
+		if !ok || start.Name.Local != "episodedetails" {
+			continue
+		}
+		var d episodeNFO
+		if err := dec.DecodeElement(&d, &start); err != nil {
+			if len(docs) == 0 {
+				return nil, err
+			}
+			return docs, nil
+		}
+		docs = append(docs, d)
+	}
+}
+
+// mergeEpisodeDocs folds the documents of one file into one (see
+// episodeNFOFor).
+func mergeEpisodeDocs(docs []episodeNFO) episodeNFO {
+	if len(docs) == 1 {
+		return docs[0]
+	}
+	sort.SliceStable(docs, func(i, j int) bool {
+		a, b := nfoNumber(docs[i].Episode), nfoNumber(docs[j].Episode)
+		switch {
+		case a == nil:
+			return false
+		case b == nil:
+			return true
+		}
+		return *a < *b
+	})
+	out := docs[0]
+	var titles, plots []string
+	for _, d := range docs {
+		if t := trimSpace(d.Title); t != "" {
+			titles = append(titles, t)
+		}
+		if p := trimSpace(d.Plot); p != "" {
+			plots = append(plots, p)
+		}
+	}
+	out.Title = strings.Join(titles, " / ")
+	out.Plot = strings.Join(plots, " / ")
+	if end := nfoNumber(docs[len(docs)-1].Episode); end != nil {
+		out.EpisodeEnd = end
+	}
+	return out
 }
 
 // applyParsedEpisodeNFO overlays n onto item: the common fields, the air date
@@ -371,6 +451,9 @@ func applyParsedEpisodeNFO(item *storage.Item, n episodeNFO) {
 	}
 	if v := nfoNumber(n.Episode); v != nil {
 		item.IndexNumber = v
+	}
+	if n.EpisodeEnd != nil {
+		item.IndexNumberEnd = n.EpisodeEnd
 	}
 }
 

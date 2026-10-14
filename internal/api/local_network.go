@@ -74,6 +74,9 @@ func (s *Server) fromLocalNetwork(r *http.Request) bool {
 }
 
 func (s *Server) loadLocalNetwork() {
+	if v, ok, err := s.store.GetSetting(context.Background(), settingRemoteAccess); err == nil && ok {
+		s.remoteAccessOff.Store(v == "false")
+	}
 	v, ok, err := s.store.GetSetting(context.Background(), settingLocalNetworkSubnets)
 	if err != nil || !ok {
 		return
@@ -90,8 +93,9 @@ func (s *Server) loadLocalNetwork() {
 type networkConfigurationDto struct {
 	LocalNetworkSubnets []string `json:"LocalNetworkSubnets"`
 	// EnableRemoteAccess is stored by POST /Startup/RemoteAccess and the
-	// network section (default true). Tinyfin records it but does not yet
-	// enforce it as a network-wide gate.
+	// network section (default true). When false, a caller outside the
+	// local network is answered 503 on every route except the web client's
+	// static files (wire.network.R1).
 	EnableRemoteAccess bool `json:"EnableRemoteAccess"`
 	// EnableUPnP is always false: automatic port mapping is not implemented
 	// (startup.remote.R2).
@@ -129,6 +133,7 @@ func (s *Server) handleNetworkConfigurationPost(w http.ResponseWriter, r *http.R
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		s.remoteAccessOff.Store(!*body.EnableRemoteAccess)
 	}
 	if body.LocalNetworkSubnets != nil {
 		ln, ok := parseSubnets(*body.LocalNetworkSubnets)
@@ -144,4 +149,15 @@ func (s *Server) handleNetworkConfigurationPost(w http.ResponseWriter, r *http.R
 		s.localNet.Store(ln)
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// remoteAccessGated reports whether r must be refused because remote access
+// is off and the caller is outside the local network. The static web client
+// ("/", "/web/...", "/robots.txt") stays reachable.
+func (s *Server) remoteAccessGated(r *http.Request) bool {
+	if !s.remoteAccessOff.Load() || s.fromLocalNetwork(r) {
+		return false
+	}
+	p := r.URL.Path
+	return !(p == "/" || p == "/robots.txt" || p == "/web" || strings.HasPrefix(p, "/web/"))
 }

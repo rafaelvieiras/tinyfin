@@ -174,9 +174,19 @@ type ItemFilter struct {
 	RatingMin         *rating.Score
 	BlockUnratedTypes []ItemType
 
+	// SeasonMembers widens a ParentID that names a season to the episodes of
+	// the same series that carry the season's number, wherever they sit.
+	SeasonMembers *SeasonMembers
+
 	// AdjacentTo narrows the (otherwise ordered) result to the named item
 	// and its immediate previous/next neighbours.
 	AdjacentTo *ItemID
+}
+
+// SeasonMembers identifies the episodes that belong to a season by number.
+type SeasonMembers struct {
+	SeriesID ItemID
+	Index    int
 }
 
 // FolderItemTypes are the item types that group other items (or are
@@ -184,7 +194,7 @@ type ItemFilter struct {
 var FolderItemTypes = []ItemType{
 	ItemTypeSeries, ItemTypeSeason, ItemTypeMusicArtist, ItemTypeMusicAlbum,
 	ItemTypeBoxSet, ItemTypePlaylist, ItemTypeFolder, ItemTypeCollectionFolder,
-	ItemTypeUserView,
+	ItemTypeUserView, ItemTypePhotoAlbum,
 }
 
 // ItemPage is the result of a bounded QueryItems call. TotalCount is the

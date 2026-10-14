@@ -15,7 +15,7 @@ import (
 const itemColumns = `items.id, items.type, items.library_id, items.parent_id, items.name, items.original_title, items.sort_name, items.overview,
 	items.taglines, items.genres, items.tags, items.studios,
 	items.production_year, items.premiere_date, items.end_date, items.official_rating, items.community_rating, items.critic_rating, items.run_time_ticks,
-	items.index_number, items.parent_index_number,
+	items.index_number, items.parent_index_number, items.index_number_end,
 	items.series_id, items.season_id,
 	items.album, items.album_artist, items.artists,
 	items.provider_ids,
@@ -44,6 +44,7 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 		communityRating, criticRating           sql.NullFloat64
 		runTimeTicks                            sql.NullInt64
 		indexNumber, parentIndexNumber          sql.NullInt64
+		indexNumberEnd                          sql.NullInt64
 		seriesID, seasonID                      sql.NullString
 		album, albumArtist                      string
 		artistsJSON                             string
@@ -60,7 +61,7 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 		&id, &typ, &libraryID, &parentID, &name, &originalTitle, &sortName, &overview,
 		&taglinesJSON, &genresJSON, &tagsJSON, &studiosJSON,
 		&productionYear, &premiereDate, &endDate, &officialRating, &communityRating, &criticRating, &runTimeTicks,
-		&indexNumber, &parentIndexNumber,
+		&indexNumber, &parentIndexNumber, &indexNumberEnd,
 		&seriesID, &seasonID,
 		&album, &albumArtist, &artistsJSON,
 		&providerIDsJSON,
@@ -134,6 +135,10 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 	if parentIndexNumber.Valid {
 		v := int(parentIndexNumber.Int64)
 		item.ParentIndexNumber = &v
+	}
+	if indexNumberEnd.Valid {
+		v := int(indexNumberEnd.Int64)
+		item.IndexNumberEnd = &v
 	}
 
 	if err := unmarshalJSONInto(taglinesJSON, &item.Taglines); err != nil {
@@ -258,7 +263,7 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 		id, type, library_id, parent_id, name, original_title, sort_name, overview,
 		taglines, genres, tags, studios,
 		production_year, premiere_date, end_date, official_rating, community_rating, critic_rating, run_time_ticks,
-		index_number, parent_index_number,
+		index_number, parent_index_number, index_number_end,
 		series_id, season_id,
 		album, album_artist, artists,
 		provider_ids,
@@ -268,14 +273,14 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 		people,
 		search_text,
 		date_created
-	) VALUES (?,?,?,?,?,?,?,?, ?,?,?,?, ?,?,?,?,?,?,?, ?,?, ?,?, ?,?,?, ?, ?,?,?, ?, ?, ?, ?, ?)
+	) VALUES (?,?,?,?,?,?,?,?, ?,?,?,?, ?,?,?,?,?,?,?, ?,?,?, ?,?, ?,?,?, ?, ?,?,?, ?, ?, ?, ?, ?)
 	ON CONFLICT(id) DO UPDATE SET
 		type=excluded.type, library_id=excluded.library_id, parent_id=excluded.parent_id, name=excluded.name,
 		original_title=excluded.original_title, sort_name=excluded.sort_name, overview=excluded.overview,
 		taglines=excluded.taglines, genres=excluded.genres, tags=excluded.tags, studios=excluded.studios,
 		production_year=excluded.production_year, premiere_date=excluded.premiere_date, end_date=excluded.end_date,
 		official_rating=excluded.official_rating, community_rating=excluded.community_rating, critic_rating=excluded.critic_rating,
-		run_time_ticks=excluded.run_time_ticks, index_number=excluded.index_number, parent_index_number=excluded.parent_index_number,
+		run_time_ticks=excluded.run_time_ticks, index_number=excluded.index_number, parent_index_number=excluded.parent_index_number, index_number_end=excluded.index_number_end,
 		series_id=excluded.series_id, season_id=excluded.season_id,
 		album=excluded.album, album_artist=excluded.album_artist, artists=excluded.artists,
 		provider_ids=excluded.provider_ids,
@@ -295,7 +300,7 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 			string(item.ID), string(item.Type), string(item.LibraryID), idPtrToAny(item.ParentID), item.Name, item.OriginalTitle, sortKey, item.Overview,
 			taglinesJSON, genresJSON, tagsJSON, studiosJSON,
 			ptrToAny(item.ProductionYear), ptrToAny(item.PremiereDate), ptrToAny(item.EndDate), item.OfficialRating, ptrToAny(item.CommunityRating), ptrToAny(item.CriticRating), ptrToAny(item.RunTimeTicks),
-			ptrToAny(item.IndexNumber), ptrToAny(item.ParentIndexNumber),
+			ptrToAny(item.IndexNumber), ptrToAny(item.ParentIndexNumber), ptrToAny(item.IndexNumberEnd),
 			idPtrToAny(item.SeriesID), idPtrToAny(item.SeasonID),
 			item.Album, item.AlbumArtist, artistsJSON,
 			providerIDsJSON,
@@ -548,7 +553,16 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 		}
 	}
 
-	if filter.ParentID != nil {
+	if filter.ParentID != nil && filter.SeasonMembers != nil {
+		member := "(items.type = 'Episode' AND items.series_id = ? AND items.parent_index_number = ?)"
+		if filter.Recursive {
+			addWhere("(items.id IN (SELECT item_id FROM item_ancestors WHERE ancestor_id = ?) OR "+member+")",
+				string(*filter.ParentID), string(filter.SeasonMembers.SeriesID), filter.SeasonMembers.Index)
+		} else {
+			addWhere("(items.parent_id = ? OR "+member+")",
+				string(*filter.ParentID), string(filter.SeasonMembers.SeriesID), filter.SeasonMembers.Index)
+		}
+	} else if filter.ParentID != nil {
 		if filter.Recursive {
 			joins = append(joins, "JOIN item_ancestors ia ON ia.item_id = items.id")
 			addWhere("ia.ancestor_id = ?", string(*filter.ParentID))

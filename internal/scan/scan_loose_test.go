@@ -101,11 +101,11 @@ func TestScanLooseEpisodes(t *testing.T) {
 		parent   string
 	}
 	cases := map[string]want{
-		"Short One.mkv":                    {"Short One", "000 - Short One", 0, -1, "Season 00"},
-		"Holiday Special - Story Name.mkv": {"Holiday Special", "000 - Holiday Special", 0, -1, "Season 00"},
-		"S00E01 - Promo.mkv":               {"S00E01 - Promo", "000 - 0001 - S00E01 - Promo", 0, 1, "Season 00"},
-		"Zed NoNfo.mkv":                    {"Zed NoNfo", "Zed NoNfo", -1, -1, "Season 00"},
-		"Alpha WithEp.mkv":                 {"Alpha With Ep", "000 - 0005 - Alpha With Ep", 0, 5, "Season 00"},
+		"Short One.mkv":                    {"Short One", "000 - Short One", 0, -1, "Specials"},
+		"Holiday Special - Story Name.mkv": {"Holiday Special", "000 - Holiday Special", 0, -1, "Specials"},
+		"S00E01 - Promo.mkv":               {"S00E01 - Promo", "000 - 0001 - S00E01 - Promo", 0, 1, "Specials"},
+		"Zed NoNfo.mkv":                    {"Zed NoNfo", "Zed NoNfo", -1, -1, "Specials"},
+		"Alpha WithEp.mkv":                 {"Alpha With Ep", "000 - 0005 - Alpha With Ep", 0, 5, "Specials"},
 		"Spec Show S01E01.mkv":             {"Spec Show S01E01", "001 - 0001 - Spec Show S01E01", 1, 1, "Season 01"},
 		"Loose In Season.mkv":              {"Loose In Season", "Loose In Season", -1, -1, "Season 01"},
 		"Loose Conflict.mkv":               {"Loose Conflict Title", "003 - 0002 - Loose Conflict Title", 3, 2, "Season 01"},
@@ -148,9 +148,8 @@ func TestScanLooseEpisodes(t *testing.T) {
 		name, sort string
 		index      int
 	}{
-		"Season 00":              {"Specials", "0000", 0},
-		"Season 01":              {"Season 1", "0001", 1},
 		"Specials":               {"Specials", "0000", 0},
+		"Season 01":              {"Season 1", "0001", 1},
 		"virtual:Season Unknown": {"Season Unknown", "Season Unknown", -1},
 		"virtual:Season 2":       {"Season 2", "0002", 2},
 	}
@@ -211,7 +210,7 @@ func TestScanNFOTrimsSurroundingWhitespace(t *testing.T) {
 	if z := items["T Zws (2002).mkv"]; z.Name != "​Zws​" {
 		t.Errorf("zero width space was trimmed: %q", z.Name)
 	}
-	if b := items["T Blank (2003).mkv"]; b.Name != "T Blank" || b.Overview != "" {
+	if b := items["T Blank (2003).mkv"]; b.Name != "T Blank (2003)" || b.Overview != "" {
 		t.Errorf("blank title/plot: name %q overview %q", b.Name, b.Overview)
 	}
 	if p := items[" The Plain Lead .mkv"]; p.SortName != "plain lead" {

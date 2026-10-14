@@ -28,6 +28,10 @@ import (
 // Server.routes in server.go).
 func (s *Server) withAuthContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if s.remoteAccessGated(r) {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
 		ac := &AuthContext{}
 
 		// Only two credential channels are honored (decision D14,

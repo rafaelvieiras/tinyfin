@@ -459,6 +459,14 @@ func (s *Server) handleShowEpisodes(w http.ResponseWriter, r *http.Request) {
 	if v := q.Get("seasonid"); v != "" {
 		seasonID := storage.ItemID(v)
 		filter.ParentID = &seasonID
+		// The episodes below the season (also those inside its folders) and
+		// those of the series that carry its number.
+		filter.Recursive = true
+		filter.ItemTypes = []storage.ItemType{storage.ItemTypeEpisode}
+		if season, err := s.store.GetItem(r.Context(), seasonID); err == nil &&
+			season.Type == storage.ItemTypeSeason && season.IndexNumber != nil && season.SeriesID != nil {
+			filter.SeasonMembers = &storage.SeasonMembers{SeriesID: *season.SeriesID, Index: *season.IndexNumber}
+		}
 	} else {
 		filter.SeriesID = &seriesID
 	}

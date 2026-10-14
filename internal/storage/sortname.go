@@ -10,8 +10,9 @@ import (
 // SortName field carries) from a title (contract: items.sort.R8):
 //
 //  0. surrounding white space (any Unicode space) is dropped;
-//  1. one leading article ("the ", "a ", "an ", any case) is dropped, unless
-//     that would leave nothing;
+//  1. the articles "the", "a" and "an" (any case) are removed as whole
+//     words: at the start when a space follows, between two spaces, and at
+//     the end when a space precedes, in that order for each article;
 //  2. the characters , & - { } ' are removed and . + % become a space;
 //  3. every run of decimal digits (BMP, any script) shorter than ten digits
 //     is zero-padded to ten, so numbers order numerically under a plain byte
@@ -24,12 +25,8 @@ import (
 func NormalizeSortName(title string) string {
 	// Surrounding white space never takes part in the key.
 	s := strings.TrimFunc(title, unicode.IsSpace)
-	lower := strings.ToLower(s)
-	for _, art := range [...]string{"the ", "a ", "an "} {
-		if strings.HasPrefix(lower, art) && len(s) > len(art) {
-			s = s[len(art):]
-			break
-		}
+	for _, art := range [...]string{"the", "a", "an"} {
+		s = removeArticle(s, art)
 	}
 
 	// Steps 2 and 3 work on code points; the transliteration needs the
@@ -101,4 +98,31 @@ func (it Item) SortKey() string {
 		return raw
 	}
 	return NormalizeSortName(raw)
+}
+
+// removeArticle drops the ASCII word art (any case) from s the way the sort
+// key does: from the start when a space follows, from every position
+// between two spaces (the spaces collapse into one), and from the end when
+// a space precedes it. A string that is only the article is kept.
+func removeArticle(s, art string) string {
+	n := len(art)
+	if len(s) > n && s[n] == ' ' && strings.EqualFold(s[:n], art) {
+		s = s[n+1:]
+	}
+	// " art " -> " ", left to right without overlap.
+	var b strings.Builder
+	for i := 0; i < len(s); {
+		if s[i] == ' ' && i+n+2 <= len(s) && s[i+n+1] == ' ' && strings.EqualFold(s[i+1:i+1+n], art) {
+			b.WriteByte(' ')
+			i += n + 2
+			continue
+		}
+		b.WriteByte(s[i])
+		i++
+	}
+	s = b.String()
+	if len(s) > n && s[len(s)-n-1] == ' ' && strings.EqualFold(s[len(s)-n:], art) {
+		s = s[:len(s)-n-1]
+	}
+	return s
 }

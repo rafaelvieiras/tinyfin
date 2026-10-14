@@ -40,6 +40,7 @@ type baseItemDto struct {
 
 	IndexNumber       *int `json:"IndexNumber,omitempty"`
 	ParentIndexNumber *int `json:"ParentIndexNumber,omitempty"`
+	IndexNumberEnd    *int `json:"IndexNumberEnd,omitempty"`
 
 	ProviderIDs map[string]string `json:"ProviderIds,omitempty"`
 
@@ -180,6 +181,10 @@ type baseItemDto struct {
 	// present where it means something" convention for this field.
 	ChildCount *int `json:"ChildCount,omitempty"`
 
+	// RecursiveItemCount is how many items below a folder-shaped item are not
+	// folders themselves (episodes below a series, videos below a folder).
+	RecursiveItemCount *int `json:"RecursiveItemCount,omitempty"`
+
 	// MediaSources embeds the same per-source description
 	// GET /Items/{itemId}/PlaybackInfo returns (mediaSourceInfoDto,
 	// playback.go), minus that endpoint's device-profile transcode
@@ -196,6 +201,9 @@ type baseItemDto struct {
 	// (videoFileItemTypes below) that actually has a Path; nil/""/false
 	// (omitempty) otherwise, matching that section's "absent, not a
 	// guessed zero" convention.
+	// AlbumID is the album a Photo sits in.
+	AlbumID string `json:"AlbumId,omitempty"`
+
 	Width        *int   `json:"Width,omitempty"`
 	Height       *int   `json:"Height,omitempty"`
 	IsHD         bool   `json:"IsHD,omitempty"`
@@ -345,9 +353,10 @@ func externalURLsFor(itemType storage.ItemType, providerIDs map[string]string) [
 // childCountItemTypes are the ItemTypes ChildCount is ever populated for —
 // see baseItemDto.ChildCount's doc comment.
 var childCountItemTypes = map[storage.ItemType]bool{
-	storage.ItemTypeSeries: true,
-	storage.ItemTypeSeason: true,
-	storage.ItemTypeBoxSet: true,
+	storage.ItemTypeSeries:     true,
+	storage.ItemTypeSeason:     true,
+	storage.ItemTypeBoxSet:     true,
+	storage.ItemTypePhotoAlbum: true,
 }
 
 // childCountFor computes baseItemDto.ChildCount for id — how many items
@@ -369,6 +378,29 @@ func (s *Server) childCountOf(ctx context.Context, item storage.Item) (int, erro
 				if p == item.Path {
 					id := lib.ID
 					filter = storage.ItemFilter{LibraryID: &id, TopLevelOnly: true, RootFolderPaths: lib.Paths, Limit: 1}
+					break
+				}
+			}
+		}
+	}
+	page, err := s.store.QueryItems(ctx, filter)
+	if err != nil {
+		return 0, err
+	}
+	return page.TotalCount, nil
+}
+
+// recursiveItemCountOf counts the items below item that are not folders
+// themselves (RecursiveItemCount). A library's root folder counts everything
+// the library holds.
+func (s *Server) recursiveItemCountOf(ctx context.Context, item storage.Item) (int, error) {
+	filter := storage.ItemFilter{ParentID: &item.ID, Recursive: true, ExcludeItemTypes: storage.FolderItemTypes, Limit: 1}
+	if item.Type == storage.ItemTypeFolder && item.ParentID == nil && item.LibraryID != "" {
+		if lib, err := s.store.GetLibrary(ctx, item.LibraryID); err == nil {
+			for _, p := range lib.Paths {
+				if p == item.Path {
+					id := lib.ID
+					filter = storage.ItemFilter{LibraryID: &id, ExcludeItemTypes: storage.FolderItemTypes, Limit: 1}
 					break
 				}
 			}
@@ -593,7 +625,7 @@ func isFolderType(t storage.ItemType) bool {
 		storage.ItemTypeMusicArtist, storage.ItemTypeMusicAlbum,
 		storage.ItemTypeBoxSet, storage.ItemTypePlaylist,
 		storage.ItemTypeFolder, storage.ItemTypeCollectionFolder,
-		storage.ItemTypeUserView:
+		storage.ItemTypeUserView, storage.ItemTypePhotoAlbum:
 		return true
 	default:
 		return false
@@ -607,13 +639,16 @@ func isFolderType(t storage.ItemType) bool {
 // covers via omitempty.
 func mediaTypeFor(t storage.ItemType) string {
 	switch t {
-	case storage.ItemTypeMovie, storage.ItemTypeSeries, storage.ItemTypeSeason,
-		storage.ItemTypeEpisode, storage.ItemTypeTrailer, storage.ItemTypeVideo:
+	case storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeTrailer, storage.ItemTypeVideo:
 		return "Video"
+	case storage.ItemTypePhoto:
+		return "Photo"
 	case storage.ItemTypeMusicArtist, storage.ItemTypeMusicAlbum, storage.ItemTypeAudio:
 		return "Audio"
 	default:
-		return ""
+		// Folders, series, seasons, libraries and every other grouping item
+		// carry the schema's "Unknown" (items.fields.R6).
+		return "Unknown"
 	}
 }
 
@@ -915,6 +950,7 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		ProductionYear:          item.ProductionYear,
 		IndexNumber:             item.IndexNumber,
 		ParentIndexNumber:       item.ParentIndexNumber,
+		IndexNumberEnd:          item.IndexNumberEnd,
 		ProviderIDs:             item.ProviderIDs,
 		IsFolder:                isFolderType(item.Type),
 		Type:                    string(item.Type),
@@ -939,9 +975,21 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		if n, err := s.childCountOf(ctx, item); err == nil {
 			dto.ChildCount = &n
 		}
+		if n, err := s.recursiveItemCountOf(ctx, item); err == nil {
+			dto.RecursiveItemCount = &n
+		}
 	}
 	if item.ParentID != nil {
 		dto.ParentID = string(*item.ParentID)
+		if item.Type == storage.ItemTypePhoto {
+			dto.AlbumID = string(*item.ParentID)
+		}
+	}
+	if item.Type == storage.ItemTypePhoto {
+		if refs, err := s.store.GetImageRefs(ctx, item.ID, storage.ImageKind("Primary")); err == nil && len(refs) > 0 && refs[0].Width > 0 {
+			w, h := refs[0].Width, refs[0].Height
+			dto.Width, dto.Height = &w, &h
+		}
 	}
 
 	var seriesItem, seasonItem *storage.Item

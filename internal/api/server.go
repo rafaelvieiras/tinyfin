@@ -144,6 +144,9 @@ type Server struct {
 	pinLimit   *pinThrottle
 	// localNet is the runtime LocalNetworkSubnets setting (nil: unset).
 	localNet atomic.Pointer[localNetwork]
+	// remoteAccessOff is the network EnableRemoteAccess=false setting: a
+	// caller outside the local network is answered 503.
+	remoteAccessOff atomic.Bool
 	// serverName is the runtime ServerName setting (startup wizard or
 	// POST /System/Configuration); nil means cfg.ServerName applies.
 	serverName atomic.Pointer[string]

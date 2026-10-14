@@ -28,6 +28,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -243,6 +244,12 @@ func (s *Scanner) walkHomeVideos(ctx context.Context, pool *jobPool, lib storage
 		log.Printf("scan: reading home videos folder %s: %v", dir, err)
 		return
 	}
+	videoBases := map[string]bool{}
+	for _, e := range entries {
+		if !e.IsDir() && IsVideoFile(e.Name()) {
+			videoBases[strings.ToLower(strings.TrimSuffix(e.Name(), filepath.Ext(e.Name())))] = true
+		}
+	}
 	for _, e := range entries {
 		path := filepath.Join(dir, e.Name())
 		if e.IsDir() {
@@ -250,8 +257,13 @@ func (s *Scanner) walkHomeVideos(ctx context.Context, pool *jobPool, lib storage
 				continue
 			}
 			id := storage.ItemID(deterministicID("item-folder-" + string(lib.ID) + "-" + path))
+			typ := storage.ItemTypeFolder
+			firstPhoto := firstPhotoOf(path)
+			if firstPhoto != "" {
+				typ = storage.ItemTypePhotoAlbum
+			}
 			folder := storage.Item{
-				ID: id, Type: storage.ItemTypeFolder, LibraryID: lib.ID, ParentID: parent,
+				ID: id, Type: typ, LibraryID: lib.ID, ParentID: parent,
 				Name: e.Name(), SortName: e.Name(), Path: path, DateCreated: fileDateAdded(path),
 			}
 			if err := s.store.UpsertItem(ctx, folder); err != nil {
@@ -259,8 +271,17 @@ func (s *Scanner) walkHomeVideos(ctx context.Context, pool *jobPool, lib storage
 				continue
 			}
 			s.seedFolderImages(ctx, id, path, "")
+			if firstPhoto != "" {
+				s.seedPhotoImage(ctx, id, filepath.Join(path, firstPhoto))
+			}
 			if !ExtrasFolder(e.Name()) {
 				s.walkHomeVideos(ctx, pool, lib, path, &id)
+			}
+			continue
+		}
+		if IsPhotoFile(e.Name()) {
+			if isPhotoEntry(e.Name(), videoBases) {
+				s.processPhoto(ctx, lib, path, filepath.Base(dir), parent)
 			}
 			continue
 		}
@@ -273,6 +294,67 @@ func (s *Scanner) walkHomeVideos(ctx context.Context, pool *jobPool, lib storage
 		}
 		size := info.Size()
 		pool.enqueue(func() error { return s.processHomeVideo(ctx, pool, lib, path, parent, size) })
+	}
+}
+
+// firstPhotoOf returns the name of the first picture (by name) that sits
+// directly in dir, or "" when there is none.
+func firstPhotoOf(dir string) string {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return ""
+	}
+	videoBases := map[string]bool{}
+	for _, e := range entries {
+		if !e.IsDir() && IsVideoFile(e.Name()) {
+			videoBases[strings.ToLower(strings.TrimSuffix(e.Name(), filepath.Ext(e.Name())))] = true
+		}
+	}
+	for _, e := range entries {
+		if !e.IsDir() && IsPhotoFile(e.Name()) && isPhotoEntry(e.Name(), videoBases) {
+			return e.Name()
+		}
+	}
+	return ""
+}
+
+// processPhoto catalogs one picture of a home-videos library as a Photo named
+// after its file; the picture is its own Primary image.
+func (s *Scanner) processPhoto(ctx context.Context, lib storage.Library, path, album string, parent *storage.ItemID) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return
+	}
+	id := storage.ItemID(deterministicID("item-photo-" + string(lib.ID) + "-" + path))
+	name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+	item := storage.Item{
+		ID: id, Type: storage.ItemTypePhoto, LibraryID: lib.ID, ParentID: parent,
+		Name: name, SortName: name, Path: path, Container: videoExt(path), Size: info.Size(),
+		DateCreated: fileDateAdded(path),
+	}
+	if parent != nil {
+		item.Album = album
+	}
+	if err := s.store.UpsertItem(ctx, item); err != nil {
+		log.Printf("scan: upserting photo %q: %v", path, err)
+		return
+	}
+	s.seedPhotoImage(ctx, id, path)
+}
+
+// seedPhotoImage stores the picture at path as itemID's Primary image.
+func (s *Scanner) seedPhotoImage(ctx context.Context, itemID storage.ItemID, path string) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return
+	}
+	width, height := imageFileDimensions(path)
+	ref := storage.ImageRef{
+		ID:     storage.ImageRefID(deterministicID("image-" + string(itemID) + "-Primary")),
+		ItemID: itemID, Kind: "Primary", Path: path, Size: fi.Size(), Width: width, Height: height,
+	}
+	if err := s.store.UpsertImageRef(ctx, ref); err != nil {
+		log.Printf("scan: storing photo image %s: %v", path, err)
 	}
 }
 
@@ -315,30 +397,148 @@ func (s *Scanner) seedVideoImages(ctx context.Context, itemID storage.ItemID, vi
 		[]string{base + ".jpg", base + ".png", base + "-poster.jpg", base + "-poster.png"})
 }
 
-// walkMovies handles a CollectionTypeMovies path: one top-level directory
-// per movie, "Title (Year)" named, holding one video file (the largest one
-// present, same convention devseed used) plus optional poster.jpg/
-// fanart.jpg.
-func (s *Scanner) walkMovies(ctx context.Context, pool *jobPool, lib storage.Library, root string) {
-	entries, err := os.ReadDir(root)
+// movieGroup is one movie of a folder: a single file, the parts of a stacked
+// movie ("Name - part1.mkv", "Name - part2.mkv") or the versions of the folder's
+// movie ("Name (2014).mkv", "Name (2014) - 4K.mkv"). The primary file stands for it.
+type movieGroup struct {
+	primary string
+	size    int64
+}
+
+var stackPart = regexp.MustCompile(`(?i)^(.*?)[ ._-]*(?:cd|dvd|part|pt|disc|disk)[ ._-]?(\d{1,2})$`)
+
+// movieDirContent lists what a movie library folder holds: its movies and
+// the sub folders worth walking. dirIsFolderMovie names the folder whose own
+// name stands for versions of its movie (not the library root).
+func movieDirContent(dir string, versionsOfFolder bool) (groups []movieGroup, subdirs []string) {
+	entries, err := os.ReadDir(dir)
 	if err != nil {
+		return nil, nil
+	}
+	dirName := filepath.Base(dir)
+	type file struct {
+		base string
+		name string
+		size int64
+		part int
+		key  string
+	}
+	var files []file
+	for _, e := range entries {
+		if e.IsDir() {
+			if !SkippedFolder(e.Name()) {
+				subdirs = append(subdirs, filepath.Join(dir, e.Name()))
+			}
+			continue
+		}
+		if !IsVideoFile(e.Name()) || strings.HasPrefix(e.Name(), ".") || IsExtraVideo(e.Name()) {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		f := file{base: strings.TrimSuffix(e.Name(), filepath.Ext(e.Name())), name: e.Name(), size: info.Size()}
+		if m := stackPart.FindStringSubmatch(f.base); m != nil {
+			f.key = strings.ToLower(strings.TrimRight(m[1], " ._-"))
+			f.part, _ = strconv.Atoi(m[2])
+		}
+		files = append(files, f)
+	}
+	used := make([]bool, len(files))
+	// The versions of the folder's movie.
+	if versionsOfFolder {
+		best := -1
+		for i, f := range files {
+			if f.base == dirName || strings.HasPrefix(f.base, dirName+" - ") {
+				used[i] = true
+				if best < 0 || (f.base == dirName && files[best].base != dirName) {
+					best = i
+				}
+			}
+		}
+		if best >= 0 {
+			groups = append(groups, movieGroup{primary: files[best].name, size: files[best].size})
+		}
+	}
+	// Stacked parts: two or more files whose names differ by the part number.
+	stacks := map[string][]int{}
+	var order []string
+	for i, f := range files {
+		if used[i] || f.key == "" {
+			continue
+		}
+		if _, ok := stacks[f.key]; !ok {
+			order = append(order, f.key)
+		}
+		stacks[f.key] = append(stacks[f.key], i)
+	}
+	for _, k := range order {
+		idx := stacks[k]
+		if len(idx) < 2 {
+			continue
+		}
+		best := idx[0]
+		for _, i := range idx {
+			used[i] = true
+			if files[i].part < files[best].part {
+				best = i
+			}
+		}
+		groups = append(groups, movieGroup{primary: files[best].name, size: files[best].size})
+	}
+	for i, f := range files {
+		if !used[i] {
+			groups = append(groups, movieGroup{primary: f.name, size: f.size})
+		}
+	}
+	return groups, subdirs
+}
+
+// walkMovies handles a CollectionTypeMovies path. A folder that holds one
+// movie (a file, its parts or its versions) is that movie, named after the
+// folder; every other folder is a Folder item holding what is in it, and its
+// video files are movies named after the file (items.names.R9).
+func (s *Scanner) walkMovies(ctx context.Context, pool *jobPool, lib storage.Library, root string) {
+	if _, err := os.ReadDir(root); err != nil {
 		log.Printf("scan: reading movies root %s: %v", root, err)
 		return
 	}
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		folder := e.Name()
-		hostFolder := filepath.Join(root, folder)
-		videoFile, size := largestVideoFile(hostFolder)
-		if videoFile == "" {
-			continue
-		}
+	s.walkMovieDir(ctx, pool, lib, root, nil, true)
+}
 
+func (s *Scanner) walkMovieDir(ctx context.Context, pool *jobPool, lib storage.Library, dir string, parent *storage.ItemID, isRoot bool) {
+	groups, subdirs := movieDirContent(dir, !isRoot)
+	if !isRoot && len(groups) == 1 {
+		g := groups[0]
 		pool.enqueue(func() error {
-			return s.processMovie(ctx, pool, lib, hostFolder, folder, videoFile, size)
+			return s.processMovie(ctx, pool, lib, dir, g.primary, g.size, parent, true)
 		})
+	} else {
+		for _, g := range groups {
+			g := g
+			pool.enqueue(func() error {
+				return s.processMovie(ctx, pool, lib, dir, g.primary, g.size, parent, false)
+			})
+		}
+	}
+	for _, sub := range subdirs {
+		subGroups, _ := movieDirContent(sub, true)
+		if len(subGroups) == 1 {
+			s.walkMovieDir(ctx, pool, lib, sub, parent, false)
+			continue
+		}
+		id := storage.ItemID(deterministicID("item-folder-" + string(lib.ID) + "-" + sub))
+		folder := storage.Item{
+			ID: id, Type: storage.ItemTypeFolder, LibraryID: lib.ID, ParentID: parent,
+			Name: filepath.Base(sub), SortName: filepath.Base(sub), Path: sub, DateCreated: fileDateAdded(sub),
+		}
+		if err := s.store.UpsertItem(ctx, folder); err != nil {
+			log.Printf("scan: upserting folder %q: %v", sub, err)
+			continue
+		}
+		s.seedFolderImages(ctx, id, sub, "")
+		s.walkMovieDir(ctx, pool, lib, sub, &id, false)
 	}
 }
 
@@ -384,18 +584,32 @@ func (s *Scanner) reconcileItemID(ctx context.Context, libraryID storage.Library
 	return page.Items[0].ID
 }
 
-func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.Library, hostFolder, folder, videoFile string, size int64) error {
-	title, year := ParseTitleYear(folder)
-	itemPath := filepath.Join(hostFolder, videoFile)
+// processMovie catalogs one movie. folderMovie is true when the file is the
+// only movie of its folder: the movie is then named after the folder, as
+// written, and the folder's movie.nfo and artwork apply; otherwise it is
+// named after the file (items.names.R9, R10).
+func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.Library, dir, videoFile string, size int64, parent *storage.ItemID, folderMovie bool) error {
+	itemPath := filepath.Join(dir, videoFile)
 	itemID := s.reconcileItemID(ctx, lib.ID, itemPath, storage.ItemID(deterministicID("item-movie-"+string(lib.ID)+"-"+itemPath)))
+
+	source := strings.TrimSuffix(videoFile, filepath.Ext(videoFile))
+	if folderMovie {
+		source = filepath.Base(dir)
+	}
+	queryTitle, year := CleanTitle(source, true)
+	name := queryTitle
+	if folderMovie {
+		name = source
+	}
 
 	info, probeErr := s.probe(ctx, itemPath)
 	item := storage.Item{
 		ID:           itemID,
 		Type:         storage.ItemTypeMovie,
 		LibraryID:    lib.ID,
-		Name:         title,
-		SortName:     title,
+		ParentID:     parent,
+		Name:         name,
+		SortName:     name,
 		Path:         itemPath,
 		Container:    videoExt(videoFile),
 		Size:         size,
@@ -424,25 +638,34 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 	// filename/probe-derived item first, enrich in place, then upsert
 	// again to persist the enrichment.
 	if err := s.store.UpsertItem(ctx, item); err != nil {
-		return fmt.Errorf("upserting movie %q: %w", folder, err)
+		return fmt.Errorf("upserting movie %q: %w", itemPath, err)
 	}
 
-	s.seedFolderImages(ctx, itemID, hostFolder, videoFile)
-	s.enrich(ctx, pool, &item, metadata.Query{Kind: metadata.KindMovie, Title: title, Year: year}, false)
-	s.applyMovieNFO(pool, &item, hostFolder, videoFile)
+	if folderMovie {
+		s.seedFolderImages(ctx, itemID, dir, videoFile)
+	} else {
+		s.seedVideoImages(ctx, itemID, itemPath)
+	}
+	s.enrich(ctx, pool, &item, metadata.Query{Kind: metadata.KindMovie, Title: queryTitle, Year: year}, false)
+	if folderMovie {
+		s.applyMovieNFO(pool, &item, dir, videoFile)
+	} else {
+		s.applyVideoNFO(pool, &item, itemPath)
+	}
 	if err := s.store.UpsertItem(ctx, item); err != nil {
-		return fmt.Errorf("upserting enriched movie %q: %w", folder, err)
+		return fmt.Errorf("upserting enriched movie %q: %w", itemPath, err)
 	}
 
 	if probeErr != nil {
-		pool.addWarning(fmt.Sprintf("probing %q: %v (cataloged with no media stream info)", folder, probeErr))
+		pool.addWarning(fmt.Sprintf("probing %q: %v (cataloged with no media stream info)", itemPath, probeErr))
 	}
 	return nil
 }
 
-// walkSeries handles a CollectionTypeTVShows path: Series/Season NN/
-// episode-file, the Kodi/Jellyfin TV convention (nameparse.go), plus episode
-// files that sit directly in the series folder.
+// walkSeries handles a CollectionTypeTVShows path: every folder is a series.
+// Inside it, a folder named like a season is that season, any other folder
+// is a season named after it, and the episode files of the series folder
+// fall into the season of their number (nameparse.go, episodeparse.go).
 func (s *Scanner) walkSeries(ctx context.Context, pool *jobPool, lib storage.Library, root string) {
 	entries, err := os.ReadDir(root)
 	if err != nil {
@@ -454,6 +677,9 @@ func (s *Scanner) walkSeries(ctx context.Context, pool *jobPool, lib storage.Lib
 			continue
 		}
 		seriesFolder := e.Name()
+		if SkippedFolder(seriesFolder) {
+			continue
+		}
 		seriesPath := filepath.Join(root, seriesFolder)
 		seriesTitle, seriesYear := ParseSeriesTitleYear(seriesFolder)
 		seriesID := storage.ItemID(deterministicID("item-series-" + string(lib.ID) + "-" + seriesPath))
@@ -491,13 +717,14 @@ func (s *Scanner) walkSeries(ctx context.Context, pool *jobPool, lib storage.Lib
 // belongs to: the season folder of the same number when there is one,
 // otherwise a season without a folder (created once, on first use).
 type seasonSet struct {
-	s        *Scanner
-	lib      storage.Library
-	seriesID storage.ItemID
-	dir      string
-	real     map[int]storage.ItemID // season number -> season folder item
-	mu       sync.Mutex
-	virtual  map[string]storage.ItemID
+	s          *Scanner
+	lib        storage.Library
+	seriesID   storage.ItemID
+	dir        string
+	real       map[int]storage.ItemID // season number -> season folder item
+	unnumbered *storage.ItemID        // the first season folder whose name carries no number
+	mu         sync.Mutex
+	virtual    map[string]storage.ItemID
 }
 
 // resolve returns the season item for number (nil: the season is unknown).
@@ -506,7 +733,15 @@ func (ss *seasonSet) resolve(ctx context.Context, number *int) (storage.ItemID, 
 		if id, ok := ss.real[*number]; ok {
 			return id, nil
 		}
+	} else if ss.unnumbered != nil {
+		return *ss.unnumbered, nil
 	}
+	return ss.virtualSeason(ctx, number)
+}
+
+// virtualSeason returns the season without a folder for number, creating it
+// on first use.
+func (ss *seasonSet) virtualSeason(ctx context.Context, number *int) (storage.ItemID, error) {
 	key := "unknown"
 	if number != nil {
 		key = strconv.Itoa(*number)
@@ -534,6 +769,16 @@ func (ss *seasonSet) resolve(ctx context.Context, number *int) (storage.ItemID, 
 	return id, nil
 }
 
+// ensure makes sure a season of number exists (a folder season or a created
+// one) for an episode that says it belongs to it from inside another folder.
+func (ss *seasonSet) ensure(ctx context.Context, number int) error {
+	if _, ok := ss.real[number]; ok {
+		return nil
+	}
+	_, err := ss.virtualSeason(ctx, &number)
+	return err
+}
+
 // seasonName is the display name of a season: "Specials" for number 0,
 // "Season N", and "Season Unknown" for a season with no number.
 func seasonName(number *int) string {
@@ -556,51 +801,109 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 		log.Printf("scan: reading series folder %s: %v", seriesPath, err)
 		return seasons
 	}
+	type seasonDir struct {
+		name   string
+		path   string
+		number *int
+		id     storage.ItemID
+	}
+	var dirs []seasonDir
 	for _, e := range entries {
-		if !e.IsDir() {
+		if !e.IsDir() || SkippedFolder(e.Name()) {
 			continue
 		}
-		seasonNum, ok := ParseSeasonFolder(e.Name())
-		if !ok {
+		d := seasonDir{name: e.Name(), path: filepath.Join(seriesPath, e.Name())}
+		if n, ok := ParseSeasonFolder(e.Name()); ok {
+			v := n
+			d.number = &v
+		}
+		dirs = append(dirs, d)
+	}
+	// The season items first. Several folders may claim one number
+	// ("Season 1", "Season 1 Bonus"; "Season 0", "Specials"): one season
+	// item stands for them, taken from the last folder whose whole name is
+	// the season (no text after the number), else the first folder.
+	winner := map[int]int{}
+	for i, d := range dirs {
+		if d.number == nil {
 			continue
 		}
-		seasonPath := filepath.Join(seriesPath, e.Name())
-		seasonID := storage.ItemID(deterministicID("item-season-" + string(lib.ID) + "-" + seasonPath))
-		idx := seasonNum
-
+		pure := pureSeasonName(d.name)
+		if _, ok := winner[*d.number]; !ok || pure {
+			winner[*d.number] = i
+		}
+	}
+	for i := range dirs {
+		d := &dirs[i]
+		if d.number != nil && winner[*d.number] != i {
+			continue
+		}
+		d.id = storage.ItemID(deterministicID("item-season-" + string(lib.ID) + "-" + d.path))
 		seasonItem := storage.Item{
-			ID: seasonID, Type: storage.ItemTypeSeason, LibraryID: lib.ID,
+			ID: d.id, Type: storage.ItemTypeSeason, LibraryID: lib.ID,
 			ParentID: &seriesID, SeriesID: &seriesID,
-			Name: seasonName(&idx), SortName: fmt.Sprintf("%04d", seasonNum),
-			IndexNumber: &idx, DateCreated: fileDateAdded(seasonPath),
-			Path: seasonPath,
+			DateCreated: fileDateAdded(d.path), Path: d.path,
+		}
+		if d.number != nil {
+			idx := *d.number
+			seasonItem.Name = seasonName(&idx)
+			seasonItem.SortName = fmt.Sprintf("%04d", idx)
+			seasonItem.IndexNumber = &idx
+			seasons.real[idx] = d.id
+		} else {
+			seasonItem.Name = d.name
+			seasonItem.SortName = d.name
+			if seasons.unnumbered == nil {
+				id := d.id
+				seasons.unnumbered = &id
+			}
 		}
 		if err := s.store.UpsertItem(ctx, seasonItem); err != nil {
-			log.Printf("scan: upserting season %q: %v", e.Name(), err)
+			log.Printf("scan: upserting season %q: %v", d.name, err)
 			continue
 		}
-		if _, dup := seasons.real[seasonNum]; !dup {
-			seasons.real[seasonNum] = seasonID
+		if seasonItem.IndexNumber != nil {
+			s.seedSeasonImage(ctx, d.id, seriesPath, *seasonItem.IndexNumber)
 		}
-		s.seedSeasonImage(ctx, seasonID, seriesPath, seasonNum)
-
 		pool.enqueue(func() error {
 			enriched := seasonItem
-			s.enrich(ctx, pool, &enriched, metadata.Query{Kind: metadata.KindSeason, SeriesTitle: seriesTitle, SeasonNumber: seasonNum}, false)
-			s.applySeasonNFO(pool, &enriched, seasonPath, seriesPath, seasonNum)
+			num := 0
+			if enriched.IndexNumber != nil {
+				num = *enriched.IndexNumber
+				s.enrich(ctx, pool, &enriched, metadata.Query{Kind: metadata.KindSeason, SeriesTitle: seriesTitle, SeasonNumber: num}, false)
+				s.applySeasonNFO(pool, &enriched, enriched.Path, seriesPath, num)
+			}
 			if err := s.store.UpsertItem(ctx, enriched); err != nil {
-				return fmt.Errorf("upserting enriched season %q: %w", e.Name(), err)
+				return fmt.Errorf("upserting enriched season %q: %w", enriched.Name, err)
 			}
 			return nil
 		})
-
-		// walkEpisodes only needs seasonID (already set above), not the
-		// season's own enrichment, so it doesn't wait on the enqueue above
-		// — same "children don't block on their parent's enrich" ordering
-		// walkSeries already establishes for the series/season relationship.
-		s.walkEpisodes(ctx, pool, lib, seasonPath, seriesID, seasonID, seriesTitle, seasonNum, seasons)
+	}
+	// The folders that lost map onto the season of their number.
+	for i := range dirs {
+		if d := &dirs[i]; d.number != nil && d.id == "" {
+			d.id = seasons.real[*d.number]
+		}
+	}
+	for _, d := range dirs {
+		if d.id == "" {
+			continue
+		}
+		s.walkSeasonDir(ctx, pool, lib, d.path, episodeJob{
+			seriesID: seriesID, seriesTitle: seriesTitle, folderSeason: d.number,
+			seasonID: &d.id, parentID: d.id, seasons: seasons,
+		})
 	}
 	return seasons
+}
+
+// pureSeasonName reports whether a folder name is the season and nothing
+// else: "Season 3", "S04", "Specials" (not "Season 1 Bonus").
+func pureSeasonName(name string) bool {
+	if specialsFolder.MatchString(name) {
+		return true
+	}
+	return pureSeason.MatchString(name)
 }
 
 // episodeJob is one episode file to catalog.
@@ -609,15 +912,39 @@ type episodeJob struct {
 	size         int64
 	seriesID     storage.ItemID
 	seriesTitle  string
-	folderSeason *int            // the season folder's number; nil for a file in the series folder
-	folderID     *storage.ItemID // the season folder's item; nil for a file in the series folder
+	folderSeason *int            // the season folder's number; nil when it has none or for a file in the series folder
+	seasonID     *storage.ItemID // the season folder's item; nil for a file in the series folder
+	parentID     storage.ItemID  // the folder the file sits in (the season or a folder inside it)
 	seasons      *seasonSet
 }
 
-func (s *Scanner) walkEpisodes(ctx context.Context, pool *jobPool, lib storage.Library, seasonPath string, seriesID, seasonID storage.ItemID, seriesTitle string, seasonNum int, seasons *seasonSet) {
-	s.walkEpisodeFiles(ctx, pool, lib, seasonPath, episodeJob{
-		seriesID: seriesID, seriesTitle: seriesTitle, folderSeason: &seasonNum, folderID: &seasonID, seasons: seasons,
-	})
+// walkSeasonDir catalogs the video files of a season folder and, below it,
+// the folders it holds (each a Folder item holding what is in it).
+func (s *Scanner) walkSeasonDir(ctx context.Context, pool *jobPool, lib storage.Library, dir string, base episodeJob) {
+	s.walkEpisodeFiles(ctx, pool, lib, dir, base)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	for _, e := range entries {
+		if !e.IsDir() || SkippedFolder(e.Name()) {
+			continue
+		}
+		path := filepath.Join(dir, e.Name())
+		id := storage.ItemID(deterministicID("item-folder-" + string(lib.ID) + "-" + path))
+		parent := base.parentID
+		folder := storage.Item{
+			ID: id, Type: storage.ItemTypeFolder, LibraryID: lib.ID, ParentID: &parent,
+			Name: e.Name(), SortName: e.Name(), Path: path, DateCreated: fileDateAdded(path),
+		}
+		if err := s.store.UpsertItem(ctx, folder); err != nil {
+			log.Printf("scan: upserting folder %q: %v", path, err)
+			continue
+		}
+		child := base
+		child.parentID = id
+		s.walkSeasonDir(ctx, pool, lib, path, child)
+	}
 }
 
 // walkSeriesRootEpisodes catalogs the episode files that sit directly in the
@@ -637,7 +964,7 @@ func (s *Scanner) walkEpisodeFiles(ctx context.Context, pool *jobPool, lib stora
 		return
 	}
 	for _, e := range entries {
-		if e.IsDir() || !IsVideoFile(e.Name()) {
+		if e.IsDir() || !IsVideoFile(e.Name()) || strings.HasPrefix(e.Name(), ".") {
 			continue
 		}
 		info, err := e.Info()
@@ -656,10 +983,12 @@ func (s *Scanner) processEpisode(ctx context.Context, pool *jobPool, lib storage
 	episodePath := job.path
 	itemID := s.reconcileItemID(ctx, lib.ID, episodePath, storage.ItemID(deterministicID("item-episode-"+string(lib.ID)+"-"+episodePath)))
 
-	// Numbers: the file name first, then the .nfo over it. An episode-only
-	// pattern in a season folder belongs to that folder's season.
-	season, episode := ParseEpisodeNumbers(filepath.Base(episodePath))
-	if season == nil && episode != nil && job.folderSeason != nil {
+	// Numbers: the file name first, then the .nfo over it. A name that gives
+	// an episode number (or an air date) but no season belongs to the season
+	// of the folder it sits in.
+	ef := ParseEpisodeFile(filepath.Base(episodePath))
+	season, episode, episodeEnd := ef.Season, ef.Episode, ef.EpisodeEnd
+	if season == nil && (episode != nil || ef.Date != nil) && job.folderSeason != nil {
 		n := *job.folderSeason
 		season = &n
 	}
@@ -671,13 +1000,22 @@ func (s *Scanner) processEpisode(ctx context.Context, pool *jobPool, lib storage
 		if v := nfoNumber(nfo.Episode); v != nil {
 			episode = v
 		}
+		if nfo.EpisodeEnd != nil {
+			episodeEnd = nfo.EpisodeEnd
+		}
 	}
 
 	// The season an episode hangs under: its folder's, else the season of
-	// the same number, else the one without a number.
+	// the same number, else the one without a number. An explicit season
+	// number that no season has is created, empty, from inside a folder.
 	var seasonID storage.ItemID
-	if job.folderID != nil {
-		seasonID = *job.folderID
+	if job.seasonID != nil {
+		seasonID = *job.seasonID
+		if season != nil && (job.folderSeason == nil || *season != *job.folderSeason) {
+			if err := job.seasons.ensure(ctx, *season); err != nil {
+				return err
+			}
+		}
 	} else {
 		id, err := job.seasons.resolve(ctx, season)
 		if err != nil {
@@ -685,18 +1023,27 @@ func (s *Scanner) processEpisode(ctx context.Context, pool *jobPool, lib storage
 		}
 		seasonID = id
 	}
+	parentID := seasonID
+	if job.parentID != "" {
+		parentID = job.parentID
+	}
 	seriesID := job.seriesID
 
 	info, probeErr := s.probe(ctx, episodePath)
 	item := storage.Item{
 		ID: itemID, Type: storage.ItemTypeEpisode, LibraryID: lib.ID,
-		ParentID: &seasonID, SeriesID: &seriesID, SeasonID: &seasonID,
-		Name: job.name, SortName: job.name,
-		IndexNumber: episode, ParentIndexNumber: season,
-		Path: episodePath, Container: videoExt(episodePath), Size: job.size,
+		ParentID: &parentID, SeriesID: &seriesID, SeasonID: &seasonID,
+		Name: ef.Name, SortName: ef.Name,
+		IndexNumber: episode, ParentIndexNumber: season, IndexNumberEnd: episodeEnd,
+		PremiereDate: ef.Date,
+		Path:         episodePath, Container: videoExt(episodePath), Size: job.size,
 		MediaStreams: mediaStreamsFromProbe(info),
 		RunTimeTicks: runtimeTicksFromProbe(info),
 		DateCreated:  fileDateAdded(episodePath),
+	}
+	if ef.Year > 0 {
+		y := ef.Year
+		item.ProductionYear = &y
 	}
 
 	// Same ordering requirement as processMovie: upsert first so

@@ -277,6 +277,7 @@ func (s *Server) handleStartupRemoteAccess(w http.ResponseWriter, r *http.Reques
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	s.remoteAccessOff.Store(!body.EnableRemoteAccess)
 	w.WriteHeader(http.StatusNoContent)
 }
 

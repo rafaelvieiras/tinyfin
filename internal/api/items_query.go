@@ -49,7 +49,7 @@ var itemsKnownKinds = func() map[string]storage.ItemType {
 var mediaTypeKinds = map[string][]storage.ItemType{
 	"video":   {storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeTrailer, storage.ItemTypeVideo},
 	"audio":   {storage.ItemTypeAudio},
-	"photo":   nil,
+	"photo":   {storage.ItemTypePhoto},
 	"book":    nil,
 	"unknown": nil,
 }
@@ -797,6 +797,9 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 			}
 			pid := parent.ID
 			filter.ParentID = &pid
+			if parent.Type == storage.ItemTypeSeason && parent.IndexNumber != nil && parent.SeriesID != nil {
+				filter.SeasonMembers = &storage.SeasonMembers{SeriesID: *parent.SeriesID, Index: *parent.IndexNumber}
+			}
 			iq.hasParent = true
 			recursiveQuery = iq.recursive != nil && *iq.recursive
 			if !recursiveQuery {

@@ -34,6 +34,8 @@ const (
 	ItemTypeYear             ItemType = "Year"
 	ItemTypeVideo            ItemType = "Video" // a video file of a home-videos library
 	ItemTypeFolder           ItemType = "Folder"
+	ItemTypePhoto            ItemType = "Photo"            // a picture of a home-videos library
+	ItemTypePhotoAlbum       ItemType = "PhotoAlbum"       // a folder that directly holds pictures
 	ItemTypeCollectionFolder ItemType = "CollectionFolder" // a library root
 	ItemTypeUserView         ItemType = "UserView"         // a user's view of a library root
 )
@@ -238,6 +240,9 @@ type Item struct {
 	// on music items.
 	IndexNumber       *int
 	ParentIndexNumber *int
+	// IndexNumberEnd is the last episode number of a file that holds
+	// several episodes (BaseItemDto.IndexNumberEnd).
+	IndexNumberEnd *int
 
 	// SeriesID/SeasonID duplicate what ParentID's chain already encodes
 	// (episode -> season -> series) but let an Episode row answer "which
@@ -291,7 +296,7 @@ func (i Item) HasMediaFile() bool {
 		return false
 	}
 	switch i.Type {
-	case ItemTypeSeries, ItemTypeSeason, ItemTypeFolder, ItemTypeCollectionFolder:
+	case ItemTypeSeries, ItemTypeSeason, ItemTypeFolder, ItemTypeCollectionFolder, ItemTypePhotoAlbum:
 		return false
 	}
 	return true
