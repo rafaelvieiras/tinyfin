@@ -78,7 +78,20 @@ type ffprobeOutput struct {
 // catalog.
 func (s *Scanner) probe(ctx context.Context, path string) (ffprobeOutput, error) {
 	var out ffprobeOutput
-	cmd := exec.CommandContext(ctx, s.ffprobePath, "-v", "error", "-print_format", "json", "-show_format", "-show_streams", path)
+	// Global bound on simultaneous ffprobe processes (scans may overlap).
+	select {
+	case s.probeSem <- struct{}{}:
+		defer func() { <-s.probeSem }()
+	case <-ctx.Done():
+		return out, ctx.Err()
+	}
+	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
+	defer cancel()
+	// -probesize/-analyzeduration are pinned to FFmpeg's own defaults (5 MB,
+	// 5 s) so a remote file is never read further than that by a build with
+	// different defaults; output fields are unchanged.
+	cmd := exec.CommandContext(ctx, s.ffprobePath, "-v", "error", "-probesize", "5000000", "-analyzeduration", "5000000",
+		"-print_format", "json", "-show_format", "-show_streams", path)
 	data, err := cmd.Output()
 	if err != nil {
 		return out, err

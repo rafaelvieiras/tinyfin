@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -27,6 +28,16 @@ import (
 func envOrDefault(key, def string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
+	}
+	return def
+}
+
+// envInt reads a non-negative integer env var, 0 when unset or invalid.
+func envInt(key string, def int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			return n
+		}
 	}
 	return def
 }
@@ -58,6 +69,14 @@ func main() {
 			"filename-derived data alone (internal/scan's package doc comment). Overridable via TINYFIN_TMDB_API_KEY.")
 	noQuickConnect := flag.Bool("no-quickconnect", envOrDefault("TINYFIN_NO_QUICKCONNECT", "") != "",
 		"disable the QuickConnect sign-in flow (enabled by default). Set TINYFIN_NO_QUICKCONNECT to any non-empty value for the same effect.")
+	scanConc := flag.Int("scan-concurrency", envInt("TINYFIN_SCAN_CONCURRENCY", 0),
+		"library scan workers per library (default 8; I/O bound, raise for slow remote filesystems). Overridable via TINYFIN_SCAN_CONCURRENCY.")
+	scanProbeConc := flag.Int("scan-probe-concurrency", envInt("TINYFIN_SCAN_PROBE_CONCURRENCY", 0),
+		"max simultaneous ffprobe processes across all scans (default: same as scan concurrency). Overridable via TINYFIN_SCAN_PROBE_CONCURRENCY.")
+	scanLibPar := flag.Int("scan-library-parallelism", envInt("TINYFIN_SCAN_LIBRARY_PARALLELISM", 0),
+		"libraries scanned at the same time during a refresh (default 3). Overridable via TINYFIN_SCAN_LIBRARY_PARALLELISM.")
+	scanForceProbe := flag.Bool("scan-force-probe", envOrDefault("TINYFIN_SCAN_FORCE_PROBE", "") != "",
+		"re-run ffprobe on every file even when size and mtime are unchanged. Overridable via TINYFIN_SCAN_FORCE_PROBE.")
 	flag.Parse()
 
 	store, err := sqlite.New(*dataPath)
@@ -101,14 +120,18 @@ func main() {
 	}
 
 	server := api.NewServer(store, api.Config{
-		ServerID:             serverID,
-		TranscodeFFmpegPath:  resolvedFFmpegPath,
-		ScanFFprobePath:      resolvedFFprobePath,
-		ScanImageDir:         scanImageDir,
-		TMDBAPIKey:           *tmdbAPIKey,
-		DataDir:              filepath.Dir(*dataPath),
-		WebDir:               resolvedWebDir,
-		QuickConnectDisabled: *noQuickConnect,
+		ServerID:               serverID,
+		TranscodeFFmpegPath:    resolvedFFmpegPath,
+		ScanFFprobePath:        resolvedFFprobePath,
+		ScanImageDir:           scanImageDir,
+		ScanConcurrency:        *scanConc,
+		ScanProbeConcurrency:   *scanProbeConc,
+		ScanLibraryParallelism: *scanLibPar,
+		ScanForceProbe:         *scanForceProbe,
+		TMDBAPIKey:             *tmdbAPIKey,
+		DataDir:                filepath.Dir(*dataPath),
+		WebDir:                 resolvedWebDir,
+		QuickConnectDisabled:   *noQuickConnect,
 	})
 
 	handler := server.Handler()

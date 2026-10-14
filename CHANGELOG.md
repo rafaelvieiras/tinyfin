@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Library scans are much faster on slow filesystems: files whose size and
+  mtime are unchanged since their last successful probe reuse the stored media
+  info instead of running `ffprobe`; scan workers default to 8, `ffprobe`
+  processes are bounded globally, up to 3 libraries scan in parallel, and
+  sidecar images are found with one directory listing per folder. New options
+  `-scan-concurrency`, `-scan-probe-concurrency`, `-scan-library-parallelism`,
+  `-scan-force-probe` (env `TINYFIN_SCAN_*`). Each scan logs probed/skipped
+  counts and duration. New migration `0018_scan_signatures`.
+
 ### Added
 
 - Home-videos libraries are scanned: nested folders become `Folder` items and
