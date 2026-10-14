@@ -1,0 +1,366 @@
+{
+ "area": "scan",
+ "title": "Library scanning",
+ "summary": "How the scanner turns files on disk into catalog items: naming conventions, sidecar files, structure, options and incremental behavior.",
+ "features": [
+  {
+   "id": "scan.name.movie",
+   "title": "Movie names and years",
+   "status": "supported",
+   "description": "Folder or file text is the name; a trailing `(Year)` is read as the year; release tokens after the year are cut; versions and stacked parts become media sources.",
+   "reference": "Movie naming with year in parentheses; trailing release tags are removed.",
+   "notes": "Release token list is the probed subset (items.md, Known differences).",
+   "spec_rules": [
+    "items.names.R10"
+   ],
+   "scenarios": [
+    "items.names.file-derived-name-kept",
+    "items.names.movie-folder-with-subfolder"
+   ],
+   "code": [
+    "internal/scan/cleanname.go",
+    "internal/scan/nameparse.go"
+   ]
+  },
+  {
+   "id": "scan.name.episode-numbering",
+   "title": "Episode numbering forms",
+   "status": "supported",
+   "description": "`SxxExx`, `1x05`, `E05E06E07`, `S01E02E03`, `Show - 05`, bare and four digit numbers, `Season 2 Episode 13`, `[S02E15]`, dates; `IndexNumberEnd` for ranges.",
+   "reference": "Parses the same forms from names, folder and sidecar.",
+   "notes": "Exotic letter/digit combinations differ (items.md, Known differences).",
+   "spec_rules": [
+    "items.episodes.R1"
+   ],
+   "scenarios": [
+    "items.episodes.numbering-forms",
+    "items.episodes.loose-files-names-and-numbers"
+   ],
+   "code": [
+    "internal/scan/episodeparse.go"
+   ]
+  },
+  {
+   "id": "scan.name.season",
+   "title": "Season folders",
+   "status": "supported",
+   "description": "`Season N`, `Specials`, any other folder as a named season, folders sharing a number counted once, folders without videos plain `Folder`, episode-named folders plain `Folder`.",
+   "reference": "Seasons from folders; extras folders skipped.",
+   "scenarios": [
+    "items.seasons.merged-folders",
+    "items.seasons.episode-folder",
+    "items.seasons.folder-without-videos",
+    "items.episodes.specials-folder-and-series-without-seasons"
+   ],
+   "code": [
+    "internal/scan/scan.go"
+   ]
+  },
+  {
+   "id": "scan.video.extensions",
+   "title": "Video extensions",
+   "status": "supported",
+   "description": "`.mkv .mp4 .avi .webm .m4v .ts .mov .wmv .flv .mpg .mpeg .ogv .3gp .m2ts .vob .divx` (case-insensitive).",
+   "reference": "Broader list driven by the container probe.",
+   "notes": "No `.strm`, `.iso`, `.rmvb`, `.asf`, `.m2v`, `.mts`.",
+   "code": [
+    "internal/scan/nameparse.go"
+   ],
+   "unverified": true,
+   "unverified_reason": "Covered by Go unit tests in internal/scan, not by a contract scenario."
+  },
+  {
+   "id": "scan.disc.structures",
+   "title": "Disc structures (VIDEO_TS, BDMV, .iso)",
+   "status": "planned",
+   "description": "Not recognized: a `VIDEO_TS` folder is a plain folder of `.vob` files and `.iso` images are ignored.",
+   "reference": "Treats DVD/Blu-ray folders and ISO images as one movie.",
+   "notes": "No code path; gap found while seeding this tracker.",
+   "code": [
+    "internal/scan/nameparse.go"
+   ],
+   "priority": "low"
+  },
+  {
+   "id": "scan.strm",
+   "title": "`.strm` files",
+   "status": "planned",
+   "description": "Not recognized (not in the extension list).",
+   "reference": "A `.strm` text file pointing at a URL or path is a playable item.",
+   "notes": "No code path.",
+   "code": [
+    "internal/scan/nameparse.go"
+   ],
+   "priority": "low"
+  },
+  {
+   "id": "scan.sidecar.subtitles",
+   "title": "External subtitle files",
+   "status": "planned",
+   "description": "Not cataloged: `.srt/.ass/.vtt` next to a video are not found; only subtitle tracks inside the container are listed (via ffprobe).",
+   "reference": "Finds external subtitle files by name and language and lists them as MediaStreams.",
+   "notes": "The storage interface has a SubtitleStore, unused by the scanner; the subtitle routes do not exist (see API: playback).",
+   "code": [
+    "internal/scan/probe.go",
+    "internal/storage/subtitle.go"
+   ],
+   "priority": "high"
+  },
+  {
+   "id": "scan.sidecar.audio",
+   "title": "External audio tracks",
+   "status": "planned",
+   "description": "Not cataloged.",
+   "reference": "Lists external audio files next to the video.",
+   "notes": "Not on ROADMAP.md.",
+   "priority": "low"
+  },
+  {
+   "id": "scan.ignore",
+   "title": "`.ignore` and exclusion files",
+   "status": "partial",
+   "description": "Folders starting with `.` and `@eaDir`, `#recycle`, `metadata` are skipped; `.ignore` files and `.nomedia` are not read.",
+   "reference": "Honors `.ignore` (empty = whole folder, patterns inside) and `.nomedia`.",
+   "notes": "Only the fixed folder-name list is implemented.",
+   "code": [
+    "internal/scan/nameparse.go"
+   ],
+   "priority": "medium"
+  },
+  {
+   "id": "scan.stacking.versions",
+   "title": "Stacked parts and versions",
+   "status": "supported",
+   "description": "`Name - part1/part2` stack into one item with AdditionalParts; `Name - 4K` style extra files become media sources of one item.",
+   "reference": "Multi-part stacking and multiple versions of a movie.",
+   "scenarios": [
+    "extras.parts.stacked",
+    "extras.versions.movie"
+   ],
+   "code": [
+    "internal/scan/scan.go",
+    "internal/api/extras.go"
+   ],
+   "routes": [
+    "GET /Videos/{itemId}/AdditionalParts"
+   ]
+  },
+  {
+   "id": "scan.extras",
+   "title": "Trailers, specials, theme songs and videos",
+   "status": "supported",
+   "description": "Cataloged as items owned by their movie/series/season: `trailers/`, `extras/`, `behind the scenes/` and similar folders, `-trailer` and `-sample` suffixes, `theme.mp3` and `backdrops`-style theme folders.",
+   "reference": "Local trailers, special features and themes served by dedicated routes.",
+   "spec_rules": [
+    "extras.find.R1"
+   ],
+   "scenarios": [
+    "extras.local.trailers",
+    "extras.local.special-features",
+    "extras.theme.songs-and-videos",
+    "extras.item.hidden-from-listings"
+   ],
+   "code": [
+    "internal/scan/extras.go",
+    "internal/api/extras.go"
+   ],
+   "routes": [
+    "GET /Items/{itemId}/LocalTrailers",
+    "GET /Items/{itemId}/SpecialFeatures",
+    "GET /Items/{itemId}/ThemeSongs",
+    "GET /Items/{itemId}/ThemeVideos"
+   ]
+  },
+  {
+   "id": "scan.images.local",
+   "title": "Local artwork",
+   "status": "supported",
+   "description": "`poster`, `folder`, `cover`, `<video>-poster`, `fanart`, `backdrop<N>`, `extrafanart/`, `logo`, `banner`, `art`, `thumb`, `disc`; season and episode pictures; `png jpg jpeg webp tbn gif`; blurhash and change-tagged URLs.",
+   "reference": "Same name and extension rules.",
+   "spec_rules": [
+    "images.names.R1"
+   ],
+   "scenarios": [
+    "images.local.extensions-recognized",
+    "images.local.backdrops",
+    "images.series.names",
+    "images.season.names",
+    "images.episode.names"
+   ],
+   "code": [
+    "internal/scan/localimages.go",
+    "internal/scan/image.go",
+    "internal/scan/blurhash.go"
+   ]
+  },
+  {
+   "id": "scan.embedded.images",
+   "title": "Embedded artwork extraction",
+   "status": "not-planned",
+   "description": "Pictures are not extracted from video files; only sidecar files and provider artwork are used.",
+   "reference": "Extracts a Primary image from each video by grabbing a frame.",
+   "notes": "The reference extracts a frame; Tinyfin leaves the item without Primary art instead (idle cost, no ffmpeg run per file).",
+   "code": [
+    "internal/scan/image.go"
+   ]
+  },
+  {
+   "id": "scan.nfo",
+   "title": "NFO sidecars",
+   "status": "supported",
+   "description": "`<movie>`, `<tvshow>`, `<episodedetails>` (several documents merge), `<namedseason>`; title, originaltitle, sorttitle, plot, year, premiered/aired, genre, tag, mpaa, ratings, uniqueid, set, runtime, season/episode.",
+   "reference": "Reads the Kodi NFO schema including cast and studios.",
+   "notes": "Not read: `<actor>`, `<studio>`, `<director>`, `<credits>`, `<trailer>`, `<fileinfo>`, artist/album NFOs.",
+   "spec_rules": [
+    "items.names.R6"
+   ],
+   "scenarios": [
+    "items.names.series-nfo-and-named-season",
+    "items.names.nfo-trims-surrounding-whitespace",
+    "items.runtime.series-from-nfo"
+   ],
+   "code": [
+    "internal/scan/nfo.go"
+   ]
+  },
+  {
+   "id": "scan.provider.tmdb",
+   "title": "TMDB enrichment",
+   "status": "partial",
+   "description": "Movies, series, seasons and episodes are enriched (overview, genres, studios, people, ratings, artwork) when `-tmdb-api-key` is set; catalog-only scanning otherwise.",
+   "reference": "TMDB plus several other providers (TVDB, OMDb, MusicBrainz, AniDB, ...).",
+   "notes": "TVDB provider not implemented (ROADMAP.md); no other online provider.",
+   "code": [
+    "internal/metadata/tmdb.go",
+    "internal/metadata/metadata.go"
+   ],
+   "unverified": true,
+   "unverified_reason": "Needs a TMDB key and network; verified by Go unit tests with a fake server, never by the contract (the reference runs offline there)."
+  },
+  {
+   "id": "scan.provider.others",
+   "title": "Other metadata providers",
+   "status": "not-planned",
+   "description": "The provider interface is an in-process Go contract (decision D11); no TVDB, OMDb, MusicBrainz, AniDB, Fanart.",
+   "reference": "Many providers, extensible by plugins.",
+   "notes": "Plugins are out of scope; TVDB is listed in ROADMAP.md as not implemented.",
+   "code": [
+    "internal/metadata/metadata.go"
+   ]
+  },
+  {
+   "id": "scan.savers",
+   "title": "Metadata savers (write NFO/images to disk)",
+   "status": "not-planned",
+   "description": "The scanner never writes next to media files; library paths can be read-only.",
+   "reference": "Optionally saves NFO and images beside the media.",
+   "notes": "Read-only media mounts are a design goal; editing is left to external tools.",
+   "code": [
+    "internal/scan/scan.go"
+   ]
+  },
+  {
+   "id": "scan.remove-missing",
+   "title": "Remove items whose file disappeared",
+   "status": "planned",
+   "description": "No code path deletes catalog items when their file is gone; only extras are pruned on rescan.",
+   "reference": "A scan removes items whose files no longer exist.",
+   "notes": "Needs confirmation by a test; found while seeding this tracker, not in ROADMAP.md.",
+   "code": [
+    "internal/scan/extras.go",
+    "internal/scan/scan.go"
+   ],
+   "priority": "medium"
+  },
+  {
+   "id": "scan.monitor",
+   "title": "Realtime library monitor",
+   "status": "not-planned",
+   "description": "No filesystem watcher; libraries change only through a manual refresh or the scheduled scan task.",
+   "reference": "Watches folders (inotify) and refreshes on change.",
+   "notes": "Idle cost and unreliable on network mounts; not on ROADMAP.md.",
+   "code": [
+    "internal/api/scheduled_tasks.go"
+   ]
+  },
+  {
+   "id": "scan.incremental",
+   "title": "Incremental scan",
+   "status": "supported",
+   "description": "Files whose size and mtime match their stored signature reuse the stored media info instead of running `ffprobe`; `-scan-force-probe` re-probes everything.",
+   "reference": "Re-probes on a schedule or when the file changes.",
+   "code": [
+    "internal/scan/incremental.go",
+    "internal/storage/sqlite/scan_signature.go"
+   ],
+   "unverified": true,
+   "unverified_reason": "Covered by Go unit tests in internal/scan, not by a contract scenario."
+  },
+  {
+   "id": "scan.concurrency",
+   "title": "Parallel scanning",
+   "status": "supported",
+   "description": "Per-library worker pool, global ffprobe bound and up to three libraries at once; one directory listing per folder.",
+   "reference": "Sequential per library.",
+   "code": [
+    "internal/scan/scan.go",
+    "cmd/tinyfin/main.go"
+   ],
+   "unverified": true,
+   "unverified_reason": "Throughput is measured by hand, not asserted by a test."
+  },
+  {
+   "id": "scan.options",
+   "title": "LibraryOptions",
+   "status": "partial",
+   "description": "The object is persisted and returned as sent; only `PathInfos` (paths) and `AutomaticallyAddToCollection` change behavior. Other options (realtime monitor, savers, language, trickplay, subtitle fetchers, ...) are stored and ignored.",
+   "reference": "Every option changes scanner or provider behavior.",
+   "notes": "Most options are inert.",
+   "code": [
+    "internal/api/library_admin.go",
+    "internal/storage/library.go"
+   ],
+   "routes": [
+    "POST /Library/VirtualFolders/LibraryOptions"
+   ],
+   "priority": "medium"
+  },
+  {
+   "id": "scan.collections",
+   "title": "Automatic collections from NFO `<set>`",
+   "status": "supported",
+   "description": "Movies sharing a `<set>` name join a BoxSet when `AutomaticallyAddToCollection` is on and at least two movies share it.",
+   "reference": "Same behavior.",
+   "spec_rules": [
+    "collections.auto.R1"
+   ],
+   "scenarios": [
+    "collections.auto.build",
+    "collections.auto.option-off",
+    "collections.auto.rescan"
+   ],
+   "code": [
+    "internal/scan/scan.go",
+    "internal/collection/collection.go"
+   ]
+  },
+  {
+   "id": "scan.refresh",
+   "title": "Library and item refresh",
+   "status": "supported",
+   "description": "`POST /Library/Refresh` and `POST /Items/{id}/Refresh` start a scan; the scheduled task `RefreshLibrary` is the same job.",
+   "reference": "Same routes; refresh modes change what is re-fetched.",
+   "notes": "Refresh modes (`MetadataRefreshMode`, `ImageRefreshMode`, `ReplaceAllMetadata`) are accepted and ignored.",
+   "code": [
+    "internal/api/item_refresh.go",
+    "internal/api/library_admin.go"
+   ],
+   "routes": [
+    "POST /Library/Refresh",
+    "POST /Items/{itemId}/Refresh"
+   ],
+   "unverified": true,
+   "unverified_reason": "Scenarios use refresh only as a setup step."
+  }
+ ]
+}

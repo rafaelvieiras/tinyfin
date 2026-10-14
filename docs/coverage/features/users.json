@@ -1,0 +1,201 @@
+{
+ "area": "users",
+ "title": "Users, authentication and parental controls",
+ "summary": "Accounts, login paths, policy enforcement and setup.",
+ "features": [
+  {
+   "id": "users.auth.password",
+   "title": "Password login",
+   "status": "supported",
+   "description": "`POST /Users/AuthenticateByName` with bcrypt, lockout counter, device records and tokens; legacy `X-Emby-*` headers refused by design.",
+   "reference": "Same, plus legacy header schemes.",
+   "spec_rules": [
+    "users.auth.R3"
+   ],
+   "scenarios": [
+    "users.token.invalid-token",
+    "users.lockout.limit-one",
+    "users.token.logout-ends-session"
+   ],
+   "code": [
+    "internal/api/auth_by_name.go",
+    "internal/api/auth.go"
+   ],
+   "routes": [
+    "POST /Users/AuthenticateByName"
+   ]
+  },
+  {
+   "id": "users.auth.quickconnect",
+   "title": "QuickConnect",
+   "status": "supported",
+   "description": "Initiate, connect, authorize, exchange; secrets are single use (divergence).",
+   "reference": "Same, secret replayable for ten minutes.",
+   "spec_rules": [
+    "quickconnect.authorize.R1"
+   ],
+   "scenarios": [
+    "quickconnect.initiate.shape",
+    "users.quickconnect.exchange",
+    "users.quickconnect.secret-single-use"
+   ],
+   "code": [
+    "internal/api/quickconnect.go"
+   ],
+   "routes": [
+    "POST /QuickConnect/Initiate",
+    "POST /Users/AuthenticateWithQuickConnect"
+   ]
+  },
+  {
+   "id": "users.auth.apikeys",
+   "title": "API keys",
+   "status": "supported",
+   "description": "Create, list, revoke, use via `ApiKey` query or Authorization.",
+   "reference": "Same.",
+   "scenarios": [
+    "users.keys.use-and-revoke",
+    "users.keys.listing-shape"
+   ],
+   "code": [
+    "internal/api/auth_keys.go"
+   ],
+   "routes": [
+    "GET /Auth/Keys",
+    "POST /Auth/Keys",
+    "DELETE /Auth/Keys/{key}"
+   ]
+  },
+  {
+   "id": "users.auth.providers",
+   "title": "Alternative authentication providers (LDAP, SSO)",
+   "status": "not-planned",
+   "description": "Only the built-in password provider; no provider plugins.",
+   "reference": "Plugin-provided providers (LDAP, SSO, ...).",
+   "notes": "Plugins are out of scope (D8).",
+   "routes": [
+    "GET /Auth/Providers"
+   ]
+  },
+  {
+   "id": "users.password-reset",
+   "title": "Forgot password and PIN",
+   "status": "supported",
+   "description": "PIN file based reset with throttling and a bare file name (divergence).",
+   "reference": "Same flow, absolute PIN path, no throttling.",
+   "spec_rules": [
+    "users.forgot.R1"
+   ],
+   "scenarios": [
+    "users.forgot-pin.redeem",
+    "users.forgot.pinfile-bare-name"
+   ],
+   "code": [
+    "internal/api/forgot.go",
+    "internal/api/pin_throttle.go"
+   ],
+   "routes": [
+    "POST /Users/ForgotPassword",
+    "POST /Users/ForgotPassword/Pin"
+   ]
+  },
+  {
+   "id": "users.management",
+   "title": "User CRUD, password and configuration",
+   "status": "supported",
+   "description": "Create, read, list, update, delete, password change, per-user configuration, legacy per-user aliases the web client calls.",
+   "reference": "Same.",
+   "spec_rules": [
+    "users.create.R1",
+    "users.update.R1",
+    "users.password.R1"
+   ],
+   "scenarios": [
+    "users.create.defaults",
+    "users.password.change-own",
+    "users.configuration.update-own"
+   ],
+   "code": [
+    "internal/api/users.go",
+    "internal/api/users_manage.go",
+    "internal/api/password.go"
+   ],
+   "routes": [
+    "POST /Users/New",
+    "GET /Users",
+    "DELETE /Users/{userId}"
+   ]
+  },
+  {
+   "id": "users.policy",
+   "title": "User policy",
+   "status": "supported",
+   "description": "Administrator, disabled, library access (`EnabledFolders`), parental rating, tags, collection management, device restriction, lockout threshold and access schedules.",
+   "reference": "Same.",
+   "notes": "Not enforced: `EnableContentDeletion`, `EnableMediaConversion`, `MaxActiveSessions`, `RemoteClientBitrateLimit`, download permission (stored, ignored).",
+   "spec_rules": [
+    "users.policy.R1",
+    "users.schedule.R1"
+   ],
+   "scenarios": [
+    "users.policy.roundtrip",
+    "users.schedule.window-around-now",
+    "users.auth.device-restriction",
+    "users.policy.disable-revokes-tokens"
+   ],
+   "code": [
+    "internal/api/users.go"
+   ]
+  },
+  {
+   "id": "users.startup",
+   "title": "First-run wizard",
+   "status": "supported",
+   "description": "Configuration, user, remote access and complete; no default account is created (divergence).",
+   "reference": "Same flow with an empty-password root account.",
+   "spec_rules": [
+    "startup.state.R1"
+   ],
+   "scenarios": [
+    "startup.wizard.user-and-complete",
+    "startup.wizard.no-default-login"
+   ],
+   "code": [
+    "internal/api/startup.go"
+   ],
+   "routes": [
+    "POST /Startup/User",
+    "POST /Startup/Complete"
+   ],
+   "unverified": true,
+   "unverified_reason": "Fresh-server scenarios are run separately and are not in the baseline."
+  },
+  {
+   "id": "users.display-prefs",
+   "title": "Display preferences",
+   "status": "supported",
+   "description": "Per-user, per-client preferences are stored and returned.",
+   "reference": "Same.",
+   "code": [
+    "internal/api/displaypreferences.go"
+   ],
+   "routes": [
+    "GET /DisplayPreferences/{displayPreferencesId}"
+   ],
+   "unverified": true,
+   "unverified_reason": "No scenario; verified by the web client (docs/11)."
+  },
+  {
+   "id": "users.avatar",
+   "title": "User images",
+   "status": "planned",
+   "description": "No user image storage.",
+   "reference": "Upload, serve and delete a user avatar.",
+   "notes": "Not on ROADMAP.md.",
+   "routes": [
+    "GET /UserImage"
+   ],
+   "priority": "low"
+  }
+ ]
+}

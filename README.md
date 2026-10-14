@@ -121,6 +121,24 @@ implementations are in today.
   system, DLNA, and offline mobile sync are explicitly out of scope for the initial target — see
   [`docs/01-vision-and-scope.md`](docs/01-vision-and-scope.md) for the reasoning.
 
+## What Tinyfin does and doesn't do
+
+<!-- coverage:start -->
+![API routes](docs/coverage/badge-routes.svg) ![contract-verified](docs/coverage/badge-verified.svg)
+
+Measured against the Jellyfin 12.2.0 OpenAPI document (364 operations): **113 registered (31%)**, **66 with a passing contract scenario (18%)**.
+
+| Route status | Count | Non-route features | Count |
+|---|---|---|---|
+| ✅ supported | 95 | ✅ supported | 41 |
+| 🟡 partial | 9 | 🟡 partial | 17 |
+| 🗓️ planned | 135 | 🗓️ planned | 19 |
+| ⛔ not-planned | 116 | ⛔ not-planned | 19 |
+| ↔️ divergent-by-design | 9 | ↔️ divergent-by-design | 0 |
+
+Per controller and per subsystem, with what the reference does and what Tinyfin does: **[docs/COVERAGE.md](docs/COVERAGE.md)**.
+<!-- coverage:end -->
+
 ## Principles
 
 1. **Idle memory is a budget, not an afterthought.** No full-catalog in-memory cache, ever. Every

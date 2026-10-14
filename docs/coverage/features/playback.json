@@ -1,0 +1,174 @@
+{
+ "area": "playback",
+ "title": "Playback, streaming and transcoding",
+ "summary": "Playback negotiation, direct delivery, HLS and the transcode pipeline (docs/07).",
+ "features": [
+  {
+   "id": "playback.negotiation",
+   "title": "PlaybackInfo negotiation",
+   "status": "partial",
+   "description": "Picks Direct Play, Remux, Direct Stream or Transcode from a compiled-in device profile by container and codec lists.",
+   "reference": "Evaluates codec profiles, bitrate, level, audio channels, subtitle and HDR conditions.",
+   "notes": "`CodecProfile`/`ContainerProfile` conditions, MaxStreamingBitrate, AudioStreamIndex and SubtitleStreamIndex are not evaluated (docs/07 documented simplification).",
+   "code": [
+    "internal/playback/decision.go",
+    "internal/api/playback.go",
+    "internal/deviceprofile/deviceprofile.go"
+   ],
+   "routes": [
+    "POST /Items/{itemId}/PlaybackInfo"
+   ],
+   "unverified": true,
+   "unverified_reason": "No contract scenario covers PlaybackInfo; verified by Go unit tests and real clients (ROADMAP.md)."
+  },
+  {
+   "id": "playback.directplay",
+   "title": "Direct Play and file delivery",
+   "status": "supported",
+   "description": "`/Videos/{id}/stream` serves the file with Range and conditional requests.",
+   "reference": "Same.",
+   "code": [
+    "internal/api/playback.go"
+   ],
+   "routes": [
+    "GET /Videos/{itemId}/stream",
+    "GET /Videos/{itemId}/stream.{container}"
+   ],
+   "unverified": true,
+   "unverified_reason": "No contract scenario; verified by real clients (ROADMAP.md)."
+  },
+  {
+   "id": "playback.hls",
+   "title": "HLS transcoding",
+   "status": "partial",
+   "description": "One rendition: master playlist, growing media playlist, MPEG-TS segments through `jellyfin-ffmpeg`; first audio track only; scale by MaxHeight.",
+   "reference": "Adaptive ladders, fMP4, multiple audio tracks, subtitle burn-in, hardware acceleration, tone mapping.",
+   "notes": "H.264/HEVC targets only; no VAAPI/NVENC/QSV flags; no subtitle burn-in; stream index selection ignored.",
+   "code": [
+    "internal/transcode/args.go",
+    "internal/api/hls.go",
+    "internal/transcode/transcode.go"
+   ],
+   "routes": [
+    "GET /Videos/{itemId}/master.m3u8",
+    "GET /Videos/{itemId}/main.m3u8"
+   ],
+   "priority": "medium",
+   "unverified": true,
+   "unverified_reason": "Verified end to end by hand and by an ffmpeg smoke test, not by a contract scenario."
+  },
+  {
+   "id": "playback.hwaccel",
+   "title": "Hardware acceleration",
+   "status": "planned",
+   "description": "No hardware encoder arguments are built.",
+   "reference": "VAAPI, NVENC, QSV, V4L2, AMF, VideoToolbox and tone mapping.",
+   "notes": "docs/07 lists it as the next step of the ladder.",
+   "code": [
+    "internal/transcode/args.go"
+   ],
+   "priority": "medium"
+  },
+  {
+   "id": "playback.subtitles",
+   "title": "Subtitle delivery and conversion",
+   "status": "planned",
+   "description": "No subtitle routes; embedded subtitle tracks are listed but cannot be fetched or converted.",
+   "reference": "SRT/ASS/VTT delivery, conversion, burn-in.",
+   "notes": "In scope for v1 (docs/01); actively called by the web client.",
+   "routes": [
+    "GET /Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/Stream.{routeFormat}"
+   ],
+   "priority": "high"
+  },
+  {
+   "id": "playback.trickplay",
+   "title": "Trickplay thumbnails",
+   "status": "planned",
+   "description": "Not generated or served.",
+   "reference": "Tile sheets generated at scan time and listed in the item.",
+   "notes": "Storage interface has a trickplay store, unused.",
+   "routes": [
+    "GET /Videos/{itemId}/Trickplay/{width}/{index}.jpg"
+   ],
+   "priority": "low"
+  },
+  {
+   "id": "playback.segments",
+   "title": "Media segments",
+   "status": "partial",
+   "description": "Route registered; no segment data is produced (no intro/credits detection).",
+   "reference": "Segments from providers or plugins.",
+   "notes": "Always an honest empty list.",
+   "code": [
+    "internal/api/playback.go"
+   ],
+   "routes": [
+    "GET /MediaSegments/{itemId}"
+   ],
+   "unverified": true,
+   "unverified_reason": "Registered; no scenario."
+  },
+  {
+   "id": "playback.bitrate-test",
+   "title": "Bitrate test",
+   "status": "supported",
+   "description": "`GET /Playback/BitrateTest` returns random bytes sized as the reference.",
+   "reference": "Same.",
+   "code": [
+    "internal/api/playback.go"
+   ],
+   "routes": [
+    "GET /Playback/BitrateTest"
+   ],
+   "unverified": true,
+   "unverified_reason": "Shape checked by hand against the reference; no scenario."
+  },
+  {
+   "id": "playback.lyrics",
+   "title": "Lyrics",
+   "status": "not-planned",
+   "description": "No lyric files cataloged or served.",
+   "reference": "LRC/TXT lyrics for audio.",
+   "notes": "Music is not cataloged.",
+   "code": [
+    "internal/storage/lyric.go"
+   ]
+  },
+  {
+   "id": "playback.audio",
+   "title": "Audio streaming and universal endpoint",
+   "status": "not-planned",
+   "description": "No audio items.",
+   "reference": "`/Audio/{id}/stream`, `/universal`.",
+   "notes": "Music is not cataloged.",
+   "routes": [
+    "GET /Audio/{itemId}/universal"
+   ]
+  },
+  {
+   "id": "playback.worker-split",
+   "title": "Transcode worker on a separate machine",
+   "status": "planned",
+   "description": "The transcode manager is an in-process component; no remote worker role.",
+   "reference": "n/a (the reference is single-process).",
+   "notes": "Phase 4 in ROADMAP.md.",
+   "code": [
+    "internal/transcode/transcode.go"
+   ],
+   "priority": "low"
+  },
+  {
+   "id": "playback.device-profiles",
+   "title": "Device profile database",
+   "status": "supported",
+   "description": "Profiles for known clients are compiled in and chosen from the client's declared profile or name.",
+   "reference": "Profiles come from the client and a built-in database.",
+   "code": [
+    "internal/deviceprofile/deviceprofile.go"
+   ],
+   "unverified": true,
+   "unverified_reason": "Covered by Go unit tests in internal/scan, not by a contract scenario."
+  }
+ ]
+}

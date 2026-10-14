@@ -1,0 +1,105 @@
+{
+ "area": "platform",
+ "title": "Platform features and out-of-scope subsystems",
+ "summary": "Subsystems of the reference that are not HTTP routes of the browse/play path, and the storage/scale options.",
+ "features": [
+  {
+   "id": "platform.livetv",
+   "title": "Live TV, DVR, EPG, tuners",
+   "status": "not-planned",
+   "description": "Nothing implemented; `/LiveTv/Programs` answers an empty result for the web client.",
+   "reference": "Tuner hosts, listing providers, guide, timers, recordings.",
+   "notes": "Decision D8.",
+   "routes": [
+    "GET /LiveTv/Programs",
+    "GET /LiveTv/Channels"
+   ]
+  },
+  {
+   "id": "platform.plugins",
+   "title": "Plugins, repositories and packages",
+   "status": "not-planned",
+   "description": "No plugin loader; the metadata provider interface is a fixed Go contract.",
+   "reference": "Runtime .NET plugins and a package catalog.",
+   "notes": "Decisions D8, D11.",
+   "routes": [
+    "GET /Plugins",
+    "GET /Packages"
+   ]
+  },
+  {
+   "id": "platform.dlna",
+   "title": "DLNA and SSDP",
+   "status": "not-planned",
+   "description": "No UPnP server, no SSDP discovery.",
+   "reference": "DLNA server and discovery, device profiles.",
+   "notes": "Decision D8."
+  },
+  {
+   "id": "platform.autodiscovery",
+   "title": "UDP autodiscovery (port 7359)",
+   "status": "planned",
+   "description": "Not implemented; clients need the address.",
+   "reference": "Answers client discovery broadcasts.",
+   "notes": "Cheap to add; not on ROADMAP.md.",
+   "priority": "low"
+  },
+  {
+   "id": "platform.notifications",
+   "title": "Notifications and webhooks",
+   "status": "not-planned",
+   "description": "No notification subsystem.",
+   "reference": "Notification providers (plugin-based) and webhooks.",
+   "notes": "Plugin territory."
+  },
+  {
+   "id": "platform.offline-sync",
+   "title": "Offline sync",
+   "status": "not-planned",
+   "description": "No sync jobs.",
+   "reference": "Download for offline.",
+   "notes": "Decision D8."
+  },
+  {
+   "id": "platform.storage.sqlite",
+   "title": "Embedded SQLite storage",
+   "status": "supported",
+   "description": "Single-file store with migrations (`0001` to `0021`).",
+   "reference": "SQLite plus EF Core migrations.",
+   "code": [
+    "internal/storage/sqlite/store.go",
+    "internal/storage/sqlite/migrations.go"
+   ],
+   "unverified": true,
+   "unverified_reason": "Exercised by every scenario indirectly."
+  },
+  {
+   "id": "platform.storage.scale",
+   "title": "Scale-mode storage driver",
+   "status": "planned",
+   "description": "Interface exists; no networked driver.",
+   "reference": "n/a",
+   "notes": "Phase 4 in ROADMAP.md.",
+   "code": [
+    "internal/storage/store.go"
+   ],
+   "priority": "low"
+  },
+  {
+   "id": "platform.remote-access",
+   "title": "Remote access and network settings",
+   "status": "partial",
+   "description": "`EnableRemoteAccess` and local-network detection; no HTTPS, bind addresses or published URIs settings.",
+   "reference": "Full network configuration, HTTPS, base URL, published server URIs.",
+   "notes": "TLS is left to a reverse proxy.",
+   "spec_rules": [
+    "wire.network.R1"
+   ],
+   "code": [
+    "internal/api/local_network.go"
+   ],
+   "unverified": true,
+   "unverified_reason": "Unit tested only."
+  }
+ ]
+}

@@ -54,6 +54,7 @@ reference source open in the same session.
 | `scenarios/<area>.json` | Executable scenarios (array per file) |
 | `fixtures.json` | Declarative server state (users, libraries, items) applied via the public API |
 | `baseline.json` | Committed per-scenario status of Tinyfin (the ratchet, see *Baseline and ratchet*); never edited by hand |
+| `../coverage/`, `../COVERAGE.md` | Coverage tracker built on top of the contract (what is and is not supported, per route and per subsystem); see `../coverage/README.md` |
 | `scope-excluded.md` | Legacy routes excluded from the contract, with their replacement |
 | `../../internal/conformance` | Runner, assertions, fixtures, clean-room lint |
 | `../../cmd/conformance` | CLI |

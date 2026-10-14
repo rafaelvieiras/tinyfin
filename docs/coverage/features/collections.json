@@ -1,0 +1,103 @@
+{
+ "area": "collections",
+ "title": "Collections",
+ "summary": "BoxSets: creation, membership, derived metadata and visibility.",
+ "features": [
+  {
+   "id": "collections.manage",
+   "title": "Create, add, remove, delete",
+   "status": "supported",
+   "description": "`POST /Collections`, `POST/DELETE /Collections/{id}/Items`, `DELETE /Items/{id}`, gated on `EnableCollectionManagement`.",
+   "reference": "Same.",
+   "spec_rules": [
+    "collections.create.R1",
+    "collections.add.R1",
+    "collections.remove.R1",
+    "collections.delete.R1"
+   ],
+   "scenarios": [
+    "collections.create.basic",
+    "collections.add.appends",
+    "collections.remove.basic",
+    "collections.delete.basic",
+    "collections.auth.no-permission"
+   ],
+   "code": [
+    "internal/api/collections.go",
+    "internal/collection/collection.go"
+   ],
+   "routes": [
+    "POST /Collections",
+    "POST /Collections/{collectionId}/Items",
+    "DELETE /Collections/{collectionId}/Items"
+   ]
+  },
+  {
+   "id": "collections.derived",
+   "title": "Derived metadata and played state",
+   "status": "supported",
+   "description": "Year, genres and lowest rating derived from members; played state aggregated from leaves and written through.",
+   "reference": "Same.",
+   "spec_rules": [
+    "collections.item.R1",
+    "collections.userdata.R1"
+   ],
+   "scenarios": [
+    "collections.item.derived-metadata",
+    "collections.userdata.leaves"
+   ],
+   "code": [
+    "internal/collection/collection.go"
+   ]
+  },
+  {
+   "id": "collections.listing",
+   "title": "Listing and visibility",
+   "status": "supported",
+   "description": "`IncludeItemTypes=BoxSet`, `CollapseBoxSetItems`, library views, per-user visibility of partial members.",
+   "reference": "Same.",
+   "spec_rules": [
+    "collections.list.R1",
+    "collections.visibility.R1"
+   ],
+   "scenarios": [
+    "collections.list.collapse",
+    "collections.visibility.restricted-user"
+   ],
+   "code": [
+    "internal/api/collections.go"
+   ]
+  },
+  {
+   "id": "collections.auto",
+   "title": "Automatic collections",
+   "status": "supported",
+   "description": "Built from NFO `<set>` during a movie scan.",
+   "reference": "Same, plus TMDB collection ids.",
+   "notes": "TMDB `belongs_to_collection` is not used.",
+   "spec_rules": [
+    "collections.auto.R1"
+   ],
+   "scenarios": [
+    "collections.auto.build",
+    "collections.auto.rescan"
+   ],
+   "code": [
+    "internal/scan/scan.go"
+   ]
+  },
+  {
+   "id": "collections.playlists",
+   "title": "Playlists",
+   "status": "planned",
+   "description": "No playlist storage or routes.",
+   "reference": "User playlists, shared playlists, reorder, instant mix.",
+   "notes": "In scope for v1 (docs/01), not built.",
+   "routes": [
+    "POST /Playlists",
+    "GET /Playlists/{playlistId}/Items"
+   ],
+   "priority": "medium"
+  }
+ ]
+}

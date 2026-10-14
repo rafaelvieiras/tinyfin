@@ -36,6 +36,8 @@ jobs:
         run: go test ./...
       - name: Contract clean-room lint
         run: go run ./cmd/conformance lint
+      - name: Coverage tracker is valid and up to date
+        run: go run ./cmd/conformance coverage -check
 
   conformance:
     name: Conformance ratchet

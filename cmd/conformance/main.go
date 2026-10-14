@@ -10,6 +10,8 @@
 //	conformance progress [-baseline docs/contract/baseline.json]
 //	conformance lint [-dir docs/contract]
 //	conformance seed-admin -db tinyfin.db -user admin -pass '...'
+//	conformance coverage [-root .] [-check]            regenerate docs/COVERAGE.md and docs/coverage/ (or verify them)
+//	conformance coverage import-openapi <openapi.json> [-root .] [-source text]
 //
 // -reference marks the target as the reference server: scenarios with an
 // intentional divergence are skipped, so a failure there means the scenario
@@ -32,6 +34,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/rafaelvieiras/tinyfin/internal/conformance"
+	"github.com/rafaelvieiras/tinyfin/internal/coverage"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 	"github.com/rafaelvieiras/tinyfin/internal/storage/sqlite"
 )
@@ -49,13 +52,15 @@ func main() {
 		os.Exit(progress(os.Args[2:]))
 	case "seed-admin":
 		os.Exit(seedAdmin(os.Args[2:]))
+	case "coverage":
+		os.Exit(coverageCmd(os.Args[2:]))
 	default:
 		usage()
 	}
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: conformance run|lint|progress|seed-admin [flags]")
+	fmt.Fprintln(os.Stderr, "usage: conformance run|lint|progress|coverage|seed-admin [flags]")
 	os.Exit(2)
 }
 
@@ -360,5 +365,73 @@ func seedAdmin(args []string) int {
 		return 2
 	}
 	fmt.Println("seeded administrator", *user, id)
+	return 0
+}
+
+// coverageCmd regenerates (or, with -check, verifies) the coverage tracker:
+// docs/COVERAGE.md, docs/coverage/*.md and docs/coverage/status.json. See
+// docs/coverage/README.md. "import-openapi <file>" refreshes the snapshot of
+// the reference's OpenAPI operations.
+func coverageCmd(args []string) int {
+	fs := flag.NewFlagSet("coverage", flag.ExitOnError)
+	root := fs.String("root", ".", "repository root")
+	check := fs.Bool("check", false, "validate the sources and fail when a generated file is out of date; write nothing")
+	source := fs.String("source", "jellyfin/jellyfin:12.2 /api-docs/openapi.json", "with import-openapi: where the document came from")
+	if len(args) > 0 && args[0] == "import-openapi" {
+		_ = fs.Parse(args[1:])
+		if fs.NArg() != 1 {
+			fmt.Fprintln(os.Stderr, "usage: conformance coverage import-openapi <openapi.json> [-root .] [-source text]")
+			return 2
+		}
+		doc, err := os.ReadFile(fs.Arg(0))
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 2
+		}
+		out, err := coverage.ImportOpenAPI(doc, *source)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 2
+		}
+		dst := *root + "/docs/coverage/openapi-ops.json"
+		if err := os.WriteFile(dst, out, 0o644); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 2
+		}
+		fmt.Println("wrote", dst)
+		return 0
+	}
+	_ = fs.Parse(args)
+	m, err := coverage.Load(*root)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 2
+	}
+	if *check {
+		errs := coverage.Check(*root, m)
+		for _, e := range errs {
+			fmt.Println(e)
+		}
+		if len(errs) > 0 {
+			fmt.Printf("%d coverage problem(s)\n", len(errs))
+			return 1
+		}
+		t := m.Totals()
+		fmt.Printf("coverage: ok (%d operations, %d registered, %d verified; %d features)\n", t.Routes, t.Registered, t.Verified, t.Features.Total())
+		return 0
+	}
+	if len(m.Errors) > 0 {
+		for _, e := range m.Errors {
+			fmt.Println(e)
+		}
+		fmt.Printf("%d coverage problem(s); nothing written\n", len(m.Errors))
+		return 1
+	}
+	if err := coverage.Write(*root, m.Render()); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 2
+	}
+	t := m.Totals()
+	fmt.Printf("coverage: wrote docs/COVERAGE.md and docs/coverage/ (%d operations, %d registered, %d verified)\n", t.Routes, t.Registered, t.Verified)
 	return 0
 }

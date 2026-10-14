@@ -23,6 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Coverage tracker: `docs/COVERAGE.md` (overview, per controller and per
+  subsystem) and `docs/coverage/` (every operation of the Jellyfin 12.2
+  OpenAPI document with a status computed from the registered routes and the
+  passing contract scenarios, plus hand-written subsystem features), generated
+  by `go run ./cmd/conformance coverage` and validated in CI with `-check`.
+  The README carries a generated summary and badges.
 - Local artwork follows the reference: `png`, `jpg`, `jpeg`, `webp`, `tbn` and
   `gif` pictures in any case; `<video>`/`<video>-poster`/`poster`/`folder`/
   `cover`/`default`/`movie` for `Primary`; `Logo`, `Banner`, `Art`, `Thumb` and

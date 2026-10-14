@@ -1,0 +1,186 @@
+{
+ "area": "system",
+ "title": "System, configuration and operations",
+ "summary": "Server information, configuration, tasks, logs and branding.",
+ "features": [
+  {
+   "id": "system.info",
+   "title": "System info",
+   "status": "supported",
+   "description": "Public info, full info (open until set up), endpoint info, storage info.",
+   "reference": "Same.",
+   "spec_rules": [
+    "wire.identity.R1"
+   ],
+   "scenarios": [
+    "wire.identity.version"
+   ],
+   "code": [
+    "internal/api/system.go",
+    "internal/api/system_info_storage.go"
+   ],
+   "routes": [
+    "GET /System/Info/Public",
+    "GET /System/Info",
+    "GET /System/Info/Storage"
+   ]
+  },
+  {
+   "id": "system.config",
+   "title": "Server configuration",
+   "status": "partial",
+   "description": "`GET/POST /System/Configuration` and the `network` key; `EnableRemoteAccess=false` answers 503 to non-local requests.",
+   "reference": "Typed named configurations (encoding, metadata, xbmc, branding) and the full object.",
+   "notes": "Other named keys missing.",
+   "spec_rules": [
+    "wire.network.R1"
+   ],
+   "code": [
+    "internal/api/system_config.go",
+    "internal/api/local_network.go"
+   ],
+   "routes": [
+    "GET /System/Configuration",
+    "GET /System/Configuration/{key}"
+   ],
+   "priority": "low",
+   "unverified": true,
+   "unverified_reason": "Network behavior is unit tested only (items.md, Known differences)."
+  },
+  {
+   "id": "system.tasks",
+   "title": "Scheduled tasks",
+   "status": "partial",
+   "description": "One task (library scan) with start; reported over the socket.",
+   "reference": "Many tasks (cleanup, trickplay, subtitles, plugins) with triggers.",
+   "notes": "No triggers API, no other tasks.",
+   "code": [
+    "internal/api/scheduled_tasks.go"
+   ],
+   "routes": [
+    "GET /ScheduledTasks",
+    "POST /ScheduledTasks/Running/{taskId}"
+   ],
+   "priority": "low",
+   "unverified": true,
+   "unverified_reason": "No scenario."
+  },
+  {
+   "id": "system.activity",
+   "title": "Activity log",
+   "status": "partial",
+   "description": "Login, failed login, lockout and playback entries.",
+   "reference": "Also library, plugin and task events.",
+   "notes": "Deliberately narrow.",
+   "scenarios": [
+    "users.auth.activity-login-entries",
+    "playstate.start.activity-log"
+   ],
+   "code": [
+    "internal/api/activity_log.go"
+   ],
+   "routes": [
+    "GET /System/ActivityLog/Entries"
+   ]
+  },
+  {
+   "id": "system.logs",
+   "title": "Server logs",
+   "status": "planned",
+   "description": "No log routes.",
+   "reference": "List and download server log files.",
+   "notes": "Not on ROADMAP.md.",
+   "routes": [
+    "GET /System/Logs"
+   ],
+   "priority": "low"
+  },
+  {
+   "id": "system.restart",
+   "title": "Restart and shutdown",
+   "status": "planned",
+   "description": "Not implemented.",
+   "reference": "Restart and shut down the process.",
+   "notes": "A supervisor handles restarts.",
+   "routes": [
+    "POST /System/Restart",
+    "POST /System/Shutdown"
+   ],
+   "priority": "low"
+  },
+  {
+   "id": "system.localization",
+   "title": "Localization and cultures",
+   "status": "partial",
+   "description": "Cultures, countries and library option metadata; no UI string tables.",
+   "reference": "Same plus localization options and parental rating lists.",
+   "notes": "Options and ParentalRatings routes missing.",
+   "code": [
+    "internal/api/localization.go"
+   ],
+   "routes": [
+    "GET /Localization/cultures"
+   ],
+   "priority": "medium",
+   "unverified": true,
+   "unverified_reason": "No scenario."
+  },
+  {
+   "id": "system.branding",
+   "title": "Branding",
+   "status": "partial",
+   "description": "`/Branding/Configuration` defaults only.",
+   "reference": "Custom CSS, login disclaimer and splash screen.",
+   "notes": "Only defaults are returned.",
+   "code": [
+    "internal/api/server.go"
+   ],
+   "routes": [
+    "GET /Branding/Configuration"
+   ],
+   "priority": "low",
+   "unverified": true,
+   "unverified_reason": "No scenario."
+  },
+  {
+   "id": "system.backup",
+   "title": "Backup and restore",
+   "status": "not-planned",
+   "description": "No archive format; the SQLite file is the backup.",
+   "reference": "Backup archive of config and database.",
+   "notes": "Decision-free: not on ROADMAP.md.",
+   "routes": [
+    "POST /Backup/Create"
+   ]
+  },
+  {
+   "id": "system.web",
+   "title": "Bundled web client",
+   "status": "supported",
+   "description": "Official `jellyfin-web` served at `/web/` when built with `WITH_WEB=true`.",
+   "reference": "Bundled.",
+   "code": [
+    "cmd/tinyfin/main.go"
+   ],
+   "unverified": true,
+   "unverified_reason": "Build option; verified by the browser end-to-end suite in e2e/."
+  },
+  {
+   "id": "system.casing",
+   "title": "Path case and trailing slash",
+   "status": "supported",
+   "description": "Routes match case-insensitively and with a trailing slash.",
+   "reference": "Same.",
+   "spec_rules": [
+    "wire.path.R1"
+   ],
+   "scenarios": [
+    "wire.path.case-insensitive",
+    "wire.path.trailing-slash-reads"
+   ],
+   "code": [
+    "internal/api/routing.go"
+   ]
+  }
+ ]
+}

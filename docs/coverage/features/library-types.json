@@ -1,0 +1,153 @@
+{
+ "area": "library-types",
+ "title": "Library types",
+ "summary": "Which library content types (CollectionType) Tinyfin can create and scan. Any value is accepted when a library is created; only the types below are scanned, the rest are skipped with a log line.",
+ "features": [
+  {
+   "id": "library-types.movies",
+   "title": "Movies",
+   "status": "supported",
+   "description": "Scanned: movie folders, loose files, stacked parts and versions.",
+   "reference": "Movie library: one item per movie, grouped by folder or file name.",
+   "scenarios": [
+    "items.list.shape-recursive-movies",
+    "items.names.file-derived-name-kept"
+   ],
+   "code": [
+    "internal/scan/scan.go",
+    "internal/scan/nameparse.go"
+   ]
+  },
+  {
+   "id": "library-types.tvshows",
+   "title": "TV shows",
+   "status": "supported",
+   "description": "Scanned: series, seasons and episodes from folders and file names, `.nfo` and TMDB.",
+   "reference": "TV library: Series/Season/Episode hierarchy.",
+   "scenarios": [
+    "items.episodes.numbering-forms",
+    "items.names.series-folder-and-season-folder"
+   ],
+   "code": [
+    "internal/scan/scan.go",
+    "internal/scan/episodeparse.go"
+   ]
+  },
+  {
+   "id": "library-types.homevideos",
+   "title": "Home videos and photos",
+   "status": "supported",
+   "description": "Every folder becomes a Folder (PhotoAlbum when it holds pictures), videos become Video items and pictures Photo items; no name parsing or provider lookup.",
+   "reference": "Home videos library with the same folder/photo shapes.",
+   "scenarios": [
+    "items.homevideos.library-view",
+    "items.homevideos.photo-types",
+    "items.homevideos.recursive-listing-and-filters"
+   ],
+   "code": [
+    "internal/scan/scan.go"
+   ]
+  },
+  {
+   "id": "library-types.boxsets",
+   "title": "Collections library",
+   "status": "supported",
+   "description": "The Collections library is created with the first collection and shown as a view only while a collection is visible; its scan step is a no-op.",
+   "reference": "Collections library of BoxSets.",
+   "scenarios": [
+    "collections.list.library-view-appears",
+    "collections.list.library"
+   ],
+   "code": [
+    "internal/scan/scan.go",
+    "internal/api/collections.go"
+   ]
+  },
+  {
+   "id": "library-types.mixed",
+   "title": "Mixed content",
+   "status": "planned",
+   "description": "Accepted as a library type but not scanned: the scan logs `collection type not scanned yet` and skips the path.",
+   "reference": "Mixed (unset) libraries scan movies, series and videos in one tree.",
+   "notes": "Needs a per-folder decision between the movie and series walkers.",
+   "code": [
+    "internal/scan/scan.go"
+   ],
+   "priority": "low"
+  },
+  {
+   "id": "library-types.music",
+   "title": "Music",
+   "status": "not-planned",
+   "description": "Accepted as a library type but not scanned; no audio file extensions, no Audio/MusicAlbum/MusicArtist items, no audio playback decision.",
+   "reference": "Music library with artists, albums, tracks, lyrics and instant mixes.",
+   "notes": "Video-first scope (docs/01); not on ROADMAP.md.",
+   "code": [
+    "internal/scan/scan.go",
+    "internal/scan/nameparse.go"
+   ]
+  },
+  {
+   "id": "library-types.musicvideos",
+   "title": "Music videos",
+   "status": "not-planned",
+   "description": "Accepted as a library type but not scanned.",
+   "reference": "MusicVideo items grouped with artists.",
+   "notes": "Not on ROADMAP.md; use homevideos for loose clips.",
+   "code": [
+    "internal/scan/scan.go"
+   ]
+  },
+  {
+   "id": "library-types.books",
+   "title": "Books",
+   "status": "not-planned",
+   "description": "Accepted as a library type but not scanned; there are no Book items.",
+   "reference": "Book/AudioBook libraries.",
+   "notes": "Not on ROADMAP.md.",
+   "code": [
+    "internal/scan/scan.go"
+   ]
+  },
+  {
+   "id": "library-types.photos",
+   "title": "Photos library",
+   "status": "partial",
+   "description": "Pictures are cataloged only inside a homevideos library (Photo, PhotoAlbum); there is no separate `photos` library type.",
+   "reference": "Photos library type with albums.",
+   "notes": "Covered through homevideos; a dedicated type would only add the view name.",
+   "scenarios": [
+    "items.homevideos.photo-types"
+   ],
+   "code": [
+    "internal/scan/scan.go"
+   ],
+   "priority": "low"
+  },
+  {
+   "id": "library-types.playlists",
+   "title": "Playlists library",
+   "status": "not-planned",
+   "description": "A `playlists` library view is listed (empty); playlists themselves do not exist.",
+   "reference": "Playlists library holding user playlists.",
+   "notes": "Depends on the Playlist API (see API: collections-playlists).",
+   "code": [
+    "internal/api/items_query.go"
+   ],
+   "routes": [
+    "POST /Playlists"
+   ]
+  },
+  {
+   "id": "library-types.livetv",
+   "title": "Live TV",
+   "status": "not-planned",
+   "description": "No Live TV library or channels.",
+   "reference": "Live TV view with channels, guide and recordings.",
+   "notes": "Decision D8 (docs/01).",
+   "routes": [
+    "GET /LiveTv/Channels"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,106 @@
+{
+ "area": "realtime",
+ "title": "Sessions, WebSocket and play reporting",
+ "summary": "Session tracking, the `/socket` channel and play-state reporting.",
+ "features": [
+  {
+   "id": "realtime.playstate",
+   "title": "Play start/progress/stop reporting",
+   "status": "supported",
+   "description": "`/Sessions/Playing*` update user data, now-playing state and the activity log.",
+   "reference": "Same.",
+   "spec_rules": [
+    "playstate.start.R1",
+    "playstate.progress.R1",
+    "playstate.stopped.R1"
+   ],
+   "scenarios": [
+    "playstate.start.basic",
+    "playstate.stopped.mid-short-video",
+    "playstate.session.now-playing-and-state",
+    "playstate.session.defaults"
+   ],
+   "code": [
+    "internal/api/playstate.go",
+    "internal/api/sessions_playback.go"
+   ],
+   "routes": [
+    "POST /Sessions/Playing",
+    "POST /Sessions/Playing/Progress",
+    "POST /Sessions/Playing/Stopped"
+   ]
+  },
+  {
+   "id": "realtime.sessions",
+   "title": "Session registry",
+   "status": "partial",
+   "description": "In-process registry fed by authentication and playback; `GET /Sessions` is admin-only.",
+   "reference": "Registry also carries remote-control state, capabilities and additional users.",
+   "notes": "Remote control routes missing.",
+   "code": [
+    "internal/api/sessions.go"
+   ],
+   "routes": [
+    "GET /Sessions"
+   ],
+   "unverified": true,
+   "unverified_reason": "No scenario on GET /Sessions."
+  },
+  {
+   "id": "realtime.websocket",
+   "title": "WebSocket `/socket`",
+   "status": "partial",
+   "description": "Upgrade with `ApiKey`; server messages: ForceKeepAlive, Sessions, ScheduledTasksInfo, ActivityLogEntry, UserUpdated; client messages: KeepAlive and the *Start/*Stop subscriptions.",
+   "reference": "Also UserDataChanged, LibraryChanged, PlaybackStart/Stop, GeneralCommand, Play/Playstate, RestartRequired, PackageInstalling.",
+   "notes": "Library and user-data change pushes are not sent; remote commands do not exist.",
+   "spec_rules": [
+    "users.socket.R1"
+   ],
+   "scenarios": [
+    "users.socket.upgrade",
+    "users.socket.refused-without-credential"
+   ],
+   "code": [
+    "internal/api/websocket.go"
+   ],
+   "routes": [
+    "GET /socket"
+   ]
+  },
+  {
+   "id": "realtime.syncplay",
+   "title": "SyncPlay",
+   "status": "not-planned",
+   "description": "No groups, no routes (404 on /SyncPlay/List, which the web client tolerates).",
+   "reference": "Group watch with shared queue and playback sync.",
+   "notes": "Not in v1 scope.",
+   "routes": [
+    "GET /SyncPlay/List"
+   ]
+  },
+  {
+   "id": "realtime.remote-control",
+   "title": "Remote control (commands, messages)",
+   "status": "planned",
+   "description": "Not implemented although the transport exists.",
+   "reference": "Send play/pause/seek/message commands to a session.",
+   "notes": "Transport (/socket) exists; command routes do not.",
+   "routes": [
+    "POST /Sessions/{sessionId}/Command"
+   ],
+   "priority": "low"
+  },
+  {
+   "id": "realtime.state-driver",
+   "title": "Scale-mode session state (Redis/Valkey)",
+   "status": "planned",
+   "description": "Only the in-process driver exists.",
+   "reference": "n/a",
+   "notes": "Phase 4 in ROADMAP.md.",
+   "code": [
+    "internal/api/sessions.go"
+   ],
+   "priority": "low"
+  }
+ ]
+}

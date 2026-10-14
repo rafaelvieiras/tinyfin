@@ -1,0 +1,474 @@
+{
+ "groups": {
+  "users-auth": {
+   "title": "Users, authentication and first-run setup",
+   "summary": "Accounts, login, QuickConnect, API keys, the startup wizard and device management.",
+   "tags": [
+    "User",
+    "Authentication",
+    "Startup",
+    "Device"
+   ]
+  },
+  "library-browse": {
+   "title": "Library browsing and metadata queries",
+   "summary": "Item listing, single items, genres/people/studios, search and the other browse endpoints.",
+   "tags": [
+    "Library",
+    "UserView",
+    "Filter",
+    "Genre",
+    "MusicGenre",
+    "Studio",
+    "Person",
+    "Year",
+    "Artist",
+    "Search",
+    "Suggestion",
+    "Movie",
+    "Show",
+    "Trailer"
+   ]
+  },
+  "collections-playlists": {
+   "title": "Collections, playlists and mixes",
+   "summary": "BoxSets, playlists and instant mixes.",
+   "tags": [
+    "Collection",
+    "Playlist",
+    "InstantMix"
+   ]
+  },
+  "library-admin": {
+   "title": "Library administration",
+   "summary": "Virtual folders, remote metadata search/apply, metadata editing, the file-system browser and scheduled tasks.",
+   "tags": [
+    "LibraryStructure",
+    "ItemLookup",
+    "ItemUpdate",
+    "Environment",
+    "ScheduledTask"
+   ]
+  },
+  "images": {
+   "title": "Images",
+   "summary": "Item, person, genre and user images; remote image providers.",
+   "tags": [
+    "Image",
+    "RemoteImage"
+   ]
+  },
+  "playback": {
+   "title": "Playback, streaming and subtitles",
+   "summary": "Playback negotiation, direct/HLS streaming, subtitles, lyrics, trickplay and media segments.",
+   "tags": [
+    "MediaInfo",
+    "Video",
+    "Audio",
+    "TrickPlay",
+    "MediaSegment",
+    "Subtitle",
+    "Lyric"
+   ]
+  },
+  "sessions-realtime": {
+   "title": "Sessions, play state and realtime",
+   "summary": "Sessions, remote control, per-user item data, display preferences and SyncPlay.",
+   "tags": [
+    "Session",
+    "UserData",
+    "DisplayPreference",
+    "SyncPlay"
+   ]
+  },
+  "live-tv": {
+   "title": "Live TV and channels",
+   "summary": "Tuners, guide, timers, recordings and channel plugins.",
+   "tags": [
+    "LiveTv",
+    "Channel"
+   ]
+  },
+  "system": {
+   "title": "System, branding, localization and plugins",
+   "summary": "Server information and configuration, logs, backup, branding, localization, plugins and packages.",
+   "tags": [
+    "System",
+    "Branding",
+    "Localization",
+    "Backup",
+    "Plugin"
+   ]
+  }
+ },
+ "tags": {
+  "Authentication": {
+   "status": "planned",
+   "notes": "Only the built-in password provider exists; the admin dashboard lists providers, so these two answer 404.",
+   "priority": "low"
+  },
+  "Device": {
+   "status": "planned",
+   "notes": "Devices are stored (internal/storage/device.go) and appear in sessions, but there are no device-management routes, so the dashboard's Devices page 404s.",
+   "priority": "medium"
+  },
+  "Library": {
+   "status": "planned",
+   "notes": "Library notification hooks and file/download endpoints are not implemented.",
+   "priority": "low"
+  },
+  "UserView": {
+   "status": "planned",
+   "notes": "Not implemented.",
+   "priority": "low"
+  },
+  "Genre": {
+   "status": "planned",
+   "notes": "Genres are read from NFO and TMDB and stored on items, but there is no genre browse route (docs/11 gap).",
+   "priority": "medium"
+  },
+  "MusicGenre": {
+   "status": "not-planned",
+   "notes": "Music libraries are not scanned (video-first scope, docs/01).",
+   "priority": "low"
+  },
+  "Person": {
+   "status": "planned",
+   "notes": "People are stored from TMDB, but there is no person browse route (docs/11: the search screen's cast query 404s).",
+   "priority": "medium"
+  },
+  "Year": {
+   "status": "planned",
+   "notes": "Not implemented (year filter on /Items works; the Years browse routes do not).",
+   "priority": "low"
+  },
+  "Studio": {
+   "status": "planned",
+   "notes": "Studios are stored from TMDB; the per-studio detail route is not implemented.",
+   "priority": "low"
+  },
+  "Artist": {
+   "status": "not-planned",
+   "notes": "Music libraries are not scanned (video-first scope, docs/01); not on ROADMAP.md.",
+   "priority": "low"
+  },
+  "Search": {
+   "status": "planned",
+   "notes": "In scope for v1 (docs/01) but not built; clients fall back to /Items?SearchTerm.",
+   "priority": "high"
+  },
+  "Suggestion": {
+   "status": "planned",
+   "notes": "Not implemented.",
+   "priority": "low"
+  },
+  "Movie": {
+   "status": "planned",
+   "notes": "Recommendation carousel not implemented.",
+   "priority": "low"
+  },
+  "Show": {
+   "status": "planned",
+   "notes": "Not implemented.",
+   "priority": "low"
+  },
+  "Trailer": {
+   "status": "not-planned",
+   "notes": "Deprecated in the reference and served by a plugin there; local trailers are served by /Items/{id}/LocalTrailers.",
+   "priority": "low"
+  },
+  "Playlist": {
+   "status": "planned",
+   "notes": "Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage.",
+   "priority": "medium"
+  },
+  "InstantMix": {
+   "status": "not-planned",
+   "notes": "Mixes are built from audio items; Tinyfin catalogs video only.",
+   "priority": "low"
+  },
+  "LibraryStructure": {
+   "status": "planned",
+   "notes": "Adding, removing and updating the paths of an existing library is not implemented; a library's paths are set when it is created.",
+   "priority": "medium"
+  },
+  "ItemLookup": {
+   "status": "planned",
+   "notes": "Remote search/identify needs a search API on the metadata provider interface (docs/08); TMDB is used only during scans.",
+   "priority": "low"
+  },
+  "ItemUpdate": {
+   "status": "not-planned",
+   "notes": "Metadata editing is left to an external cataloging tool (README, 'Not a media organizer').",
+   "priority": "low"
+  },
+  "ScheduledTask": {
+   "status": "planned",
+   "notes": "Only the library-scan task and its start route exist.",
+   "priority": "low"
+  },
+  "Image": {
+   "status": "planned",
+   "notes": "Not implemented.",
+   "priority": "low"
+  },
+  "RemoteImage": {
+   "status": "planned",
+   "notes": "Not implemented; the dashboard's image editor 404s on /RemoteImages/Providers (docs/11).",
+   "priority": "low"
+  },
+  "MediaInfo": {
+   "status": "not-planned",
+   "notes": "Out of scope for v1 (docs/01, decision D8). Live streams belong to tuners.",
+   "priority": "low"
+  },
+  "Video": {
+   "status": "not-planned",
+   "notes": "Version merging/splitting is not offered; versions are grouped by file naming at scan time.",
+   "priority": "low"
+  },
+  "Audio": {
+   "status": "not-planned",
+   "notes": "Music is not cataloged or streamed (video-first scope, docs/01).",
+   "priority": "low"
+  },
+  "TrickPlay": {
+   "status": "planned",
+   "notes": "The storage interface has a trickplay store, but nothing generates or serves tiles.",
+   "priority": "low"
+  },
+  "Subtitle": {
+   "status": "planned",
+   "notes": "Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged.",
+   "priority": "high"
+  },
+  "Lyric": {
+   "status": "not-planned",
+   "notes": "Music is not cataloged (video-first scope, docs/01).",
+   "priority": "low"
+  },
+  "Session": {
+   "status": "planned",
+   "notes": "Remote control of other sessions is not implemented (the /socket transport exists).",
+   "priority": "low"
+  },
+  "UserData": {
+   "status": "planned",
+   "notes": "Star ratings are not implemented (likes are, through UserData).",
+   "priority": "low"
+  },
+  "SyncPlay": {
+   "status": "not-planned",
+   "notes": "Not in scope for v1; the web client treats 404 on /SyncPlay/List as 'unavailable'.",
+   "priority": "low"
+  },
+  "LiveTv": {
+   "status": "not-planned",
+   "notes": "Out of scope for v1 (docs/01, decision D8).",
+   "priority": "low"
+  },
+  "Channel": {
+   "status": "not-planned",
+   "notes": "Out of scope for v1 (docs/01, decision D8). Channels are a plugin concept in the reference.",
+   "priority": "low"
+  },
+  "System": {
+   "status": "planned",
+   "notes": "Not implemented.",
+   "priority": "low"
+  },
+  "Branding": {
+   "status": "planned",
+   "notes": "Not implemented; /Branding/Configuration returns the defaults.",
+   "priority": "low"
+  },
+  "Localization": {
+   "status": "planned",
+   "notes": "Not implemented; clients fall back to built-in lists.",
+   "priority": "medium"
+  },
+  "Backup": {
+   "status": "not-planned",
+   "notes": "State is one SQLite file (docs/05), so a backup is a file copy; the reference's archive format is specific to it.",
+   "priority": "low"
+  },
+  "Plugin": {
+   "status": "not-planned",
+   "notes": "No plugin system (decisions D8, D11).",
+   "priority": "low"
+  }
+ },
+ "routes": {
+  "GET /Items/{itemId}/Similar": {
+   "status": "partial",
+   "notes": "Always returns an empty list (honest empty instead of 404, so the web client hides 'More like this').",
+   "reference": "Ranks similar items by shared genres, tags, people and rating.",
+   "priority": "low"
+  },
+  "GET /Items/Filters": {
+   "status": "partial",
+   "notes": "Always returns empty facets.",
+   "reference": "Lists the genres, tags, ratings and years present.",
+   "priority": "medium"
+  },
+  "GET /Items/Filters2": {
+   "status": "partial",
+   "notes": "Always returns empty facets.",
+   "reference": "Lists the genres, tags, ratings and years present.",
+   "priority": "medium"
+  },
+  "GET /Studios": {
+   "status": "partial",
+   "notes": "Always returns an empty list although studios are stored from TMDB.",
+   "priority": "medium"
+  },
+  "GET /LiveTv/Programs": {
+   "status": "partial",
+   "notes": "Always returns an empty result so the series detail page does not break; no Live TV exists."
+  },
+  "GET /web/ConfigurationPages": {
+   "status": "partial",
+   "notes": "Always []: there is no plugin system."
+  },
+  "GET /Sessions": {
+   "status": "partial",
+   "notes": "In-process registry fed by authentication and playback reports; admin only."
+  },
+  "GET /System/Configuration/{key}": {
+   "status": "partial",
+   "via": "GET /System/Configuration/network",
+   "notes": "Only the network key is served (GET /System/Configuration/network)."
+  },
+  "POST /System/Configuration/{key}": {
+   "status": "partial",
+   "via": "POST /System/Configuration/network",
+   "notes": "Only the network key is served (POST /System/Configuration/network)."
+  },
+  "GET /Videos/{itemId}/stream": {
+   "via": "GET /Videos/{itemId}/{file}",
+   "notes": "Served by the wildcard file route."
+  },
+  "GET /Videos/{itemId}/stream.{container}": {
+   "via": "GET /Videos/{itemId}/{file}",
+   "notes": "Served by the wildcard file route."
+  },
+  "HEAD /Videos/{itemId}/stream": {
+   "via": "GET /Videos/{itemId}/{file}",
+   "notes": "Served by the wildcard file route."
+  },
+  "HEAD /Videos/{itemId}/stream.{container}": {
+   "via": "GET /Videos/{itemId}/{file}",
+   "notes": "Served by the wildcard file route."
+  },
+  "GET /Items/{itemId}/Collections": {
+   "status": "planned",
+   "notes": "Called on every item detail page ('part of a collection'); 404 today (docs/11).",
+   "priority": "medium"
+  },
+  "GET /Items/{itemId}/Intros": {
+   "status": "planned",
+   "notes": "Pre-roll trailers; the reference answers an empty list unless a plugin supplies intros. 404 today (docs/11); the player just skips.",
+   "priority": "low"
+  },
+  "GET /Items/{itemId}/Download": {
+   "status": "planned",
+   "notes": "Download permission exists in the user policy but no download route is served.",
+   "priority": "medium"
+  },
+  "GET /Items/{itemId}/File": {
+   "status": "planned",
+   "notes": "Raw file delivery is not implemented.",
+   "priority": "low"
+  },
+  "GET /Items/{itemId}/InstantMix": {
+   "status": "not-planned",
+   "notes": "Mixes are built from audio items; Tinyfin catalogs video only."
+  },
+  "POST /Sessions/Capabilities": {
+   "status": "planned",
+   "notes": "The Full variant is served; the plain one is the older form of the same report.",
+   "priority": "low"
+  },
+  "POST /System/Restart": {
+   "status": "planned",
+   "notes": "Not implemented; a supervisor restarts the process.",
+   "priority": "low"
+  },
+  "POST /System/Shutdown": {
+   "status": "planned",
+   "notes": "Not implemented.",
+   "priority": "low"
+  },
+  "GET /System/Ping": {
+   "status": "planned",
+   "notes": "Trivial and used by some clients for reachability; not implemented.",
+   "priority": "medium"
+  },
+  "POST /System/Ping": {
+   "status": "planned",
+   "notes": "Trivial and used by some clients for reachability; not implemented.",
+   "priority": "medium"
+  },
+  "GET /GetUtcTime": {
+   "status": "planned",
+   "notes": "Used by clients for clock sync; not implemented.",
+   "priority": "medium"
+  },
+  "GET /Items/{itemId}/Images/{imageType}/{imageIndex}/{tag}/{format}/{maxWidth}/{maxHeight}/{percentPlayed}/{unplayedCount}": {
+   "status": "planned",
+   "notes": "The long resize form; Tinyfin serves the originals through the two short forms and ignores resize parameters.",
+   "priority": "medium"
+  },
+  "GET /UserImage": {
+   "status": "planned",
+   "notes": "User avatars are not stored.",
+   "priority": "low"
+  },
+  "GET /Localization/Options": {
+   "status": "planned",
+   "notes": "Setup wizard and profile pages call it; clients fall back to a built-in list.",
+   "priority": "medium"
+  },
+  "GET /Localization/ParentalRatings": {
+   "status": "planned",
+   "notes": "Used by the user policy page; not implemented.",
+   "priority": "medium"
+  },
+  "POST /Users/AuthenticateWithQuickConnect": {
+   "status": "divergent-by-design",
+   "notes": "A secret is single use and a disabled account is refused (the reference replays secrets and logs disabled accounts in). Recorded as a divergence in the contract scenarios."
+  },
+  "GET /Users/{userId}": {
+   "status": "divergent-by-design",
+   "notes": "HasPassword reflects whether a password is set (the reference reports true for everyone). Recorded as a divergence in the contract scenarios."
+  },
+  "DELETE /Users/{userId}": {
+   "status": "divergent-by-design",
+   "notes": "A refused deletion of the last administrator revokes nothing (the reference logs them out first). Recorded as a divergence in the contract scenarios."
+  },
+  "POST /Users/ForgotPassword": {
+   "status": "divergent-by-design",
+   "notes": "PinFile carries the bare file name, not the absolute server path. Recorded as a divergence in the contract scenarios."
+  },
+  "POST /Users/ForgotPassword/Pin": {
+   "status": "divergent-by-design",
+   "notes": "Redeem attempts are rate limited (the reference does not throttle). Recorded as a divergence in the contract scenarios."
+  },
+  "POST /Users": {
+   "status": "divergent-by-design",
+   "notes": "An explicit null Configuration resets preferences (the reference answers 500). Recorded as a divergence in the contract scenarios."
+  },
+  "POST /Startup/User": {
+   "status": "divergent-by-design",
+   "notes": "No default administrator is created when the wizard's user page opens (the reference creates an empty-password root). Recorded as a divergence in the contract scenarios."
+  },
+  "POST /Collections": {
+   "status": "divergent-by-design",
+   "notes": "Input is validated before anything is created and bad input is 400 (the reference creates an empty collection and answers 500). Recorded as a divergence in the contract scenarios."
+  },
+  "GET /Items": {
+   "status": "divergent-by-design",
+   "notes": "The library-access restriction also applies when items are requested by Ids (the reference skips it). Recorded as a divergence in the contract scenarios."
+  }
+ }
+}

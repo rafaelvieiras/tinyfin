@@ -1,0 +1,150 @@
+{
+ "area": "metadata",
+ "title": "Item metadata and DTO fields",
+ "summary": "What an item carries and what the browse API can filter and sort by.",
+ "features": [
+  {
+   "id": "metadata.fields.basic",
+   "title": "Names, dates, ratings, runtime",
+   "status": "supported",
+   "description": "Name, SortName (with article removal and transliteration), year, PremiereDate, OfficialRating, CommunityRating, RunTimeTicks.",
+   "reference": "Same fields.",
+   "notes": "Transliteration residue is listed in items.md (Known differences).",
+   "spec_rules": [
+    "items.sort.R8"
+   ],
+   "scenarios": [
+    "items.sort.sort-name-rules",
+    "items.sort.transliteration",
+    "items.rating.policy-max-value"
+   ],
+   "code": [
+    "internal/storage/item.go",
+    "internal/storage/sortname.go",
+    "internal/rating/"
+   ]
+  },
+  {
+   "id": "metadata.fields.genres",
+   "title": "Genres, tags, studios, people",
+   "status": "partial",
+   "description": "Stored from NFO and TMDB and returned on items; `Genres`/`Studios` filters on `/Items` are accepted but the facet and browse routes (`/Genres`, `/Persons`, `/Studios`) are missing or empty.",
+   "reference": "Browse, filter and image routes for each.",
+   "notes": "Facets and browse routes are the gap.",
+   "code": [
+    "internal/storage/item.go"
+   ],
+   "routes": [
+    "GET /Genres",
+    "GET /Persons",
+    "GET /Studios"
+   ],
+   "priority": "medium"
+  },
+  {
+   "id": "metadata.parental",
+   "title": "Parental rating enforcement",
+   "status": "supported",
+   "description": "MaxParentalRating, MaxParentalSubRating, BlockUnratedItems, AllowedTags and BlockedTags restrict listings and single reads.",
+   "reference": "Same policy.",
+   "spec_rules": [
+    "items.rating.R1"
+   ],
+   "scenarios": [
+    "items.rating.policy-max-value",
+    "items.rating.block-unrated",
+    "items.rating.policy-max-sub-rating"
+   ],
+   "code": [
+    "internal/api/items_query.go",
+    "internal/rating/"
+   ]
+  },
+  {
+   "id": "metadata.userdata",
+   "title": "Per-user item data",
+   "status": "supported",
+   "description": "Played, PlayCount, favorite, likes, resume position, folder aggregates and played propagation.",
+   "reference": "Same.",
+   "spec_rules": [
+    "items.userdata.R1"
+   ],
+   "scenarios": [
+    "items.userdata.post-partial-merge",
+    "items.userdata.folder-unplayed-count",
+    "playstate.folder.season-mark-played"
+   ],
+   "code": [
+    "internal/api/userdata.go",
+    "internal/api/userdata_api.go"
+   ]
+  },
+  {
+   "id": "metadata.media-streams",
+   "title": "Media streams from ffprobe",
+   "status": "supported",
+   "description": "Video, audio and embedded subtitle streams, container, bitrate, dimensions and chapters-free media info are probed and returned in MediaSources.",
+   "reference": "Same, plus chapters and attachments.",
+   "notes": "Chapters, chapter images and attachments are not extracted.",
+   "code": [
+    "internal/scan/probe.go"
+   ],
+   "unverified": true,
+   "unverified_reason": "Probing needs ffprobe; the fixtures only assert dimensions and runtime."
+  },
+  {
+   "id": "metadata.chapters",
+   "title": "Chapters and chapter images",
+   "status": "planned",
+   "description": "Chapter markers are not stored or returned.",
+   "reference": "Chapters from the container or from sidecar files, with generated thumbnails.",
+   "notes": "Not on ROADMAP.md; the web chapter menu stays empty.",
+   "priority": "low"
+  },
+  {
+   "id": "metadata.search",
+   "title": "Search",
+   "status": "partial",
+   "description": "`SearchTerm` on `/Items` matches names; the dedicated `/Search/Hints` route does not exist.",
+   "reference": "Hint search across items, people and genres.",
+   "notes": "Hints route missing; web search falls back to /Items.",
+   "spec_rules": [
+    "items.search.R1"
+   ],
+   "scenarios": [
+    "items.search.term",
+    "items.search.scoped"
+   ],
+   "code": [
+    "internal/api/items_query.go"
+   ],
+   "routes": [
+    "GET /Search/Hints"
+   ],
+   "priority": "high"
+  },
+  {
+   "id": "metadata.sort-filter",
+   "title": "Sorting, filtering and paging on /Items",
+   "status": "supported",
+   "description": "The documented filter, sort and paging parameters of the spec (items.filter, items.sort, items.paging).",
+   "reference": "Same.",
+   "spec_rules": [
+    "items.filter.R1",
+    "items.sort.R3",
+    "items.paging.R1"
+   ],
+   "scenarios": [
+    "items.sort.multi-key",
+    "items.filter.include-item-types",
+    "items.paging.limit"
+   ],
+   "code": [
+    "internal/api/items_query.go"
+   ],
+   "routes": [
+    "GET /Items"
+   ]
+  }
+ ]
+}
