@@ -82,6 +82,30 @@ sorting "Premiere Early" 2020 "" "2001-03-04"
 sorting "Premiere Late" 2005 "" "2019-07-08"
 sorting "Premiere Mid" 2012 "" "2012-06-15"
 
+# Transliteration movies (own library "Translit", lazy): titles in non-Latin
+# scripts, carried by an .nfo so every server reads the same name; the folder
+# name is ASCII. Used by items.sort.transliteration.
+translit() { # <folder> <year> <title>
+  local dir="$ROOT/Translit/$1 ($2)"
+  clip "$dir/$1 ($2).mp4" 1 $((600 + $2 % 100)) 4
+  printf '<movie><title>%s</title><year>%s</year></movie>\n' "$3" "$2" >"$dir/$1 ($2).nfo"
+}
+translit "Tr Cyrillic" 2101 "Привет"
+translit "Tr Cyrillic Punct" 2102 "Привет, мир! (1)"
+translit "Tr Slavic" 2103 "Ђорђе Їжак Щастие"
+translit "Tr Greek" 2104 "Άγγελος Ευρώ"
+translit "Tr Hebrew" 2105 "שלום"
+translit "Tr Arabic" 2106 "مرحبا ٣"
+translit "Tr Devanagari" 2107 "नमस्ते"
+translit "Tr Thai" 2108 "สวัสดี"
+translit "Tr Kana" 2109 "ガギグ テスト"
+translit "Tr Hangul" 2110 "한국어 제목"
+translit "Tr Han" 2111 "東京 2020 中文"
+translit "Tr Han Mixed" 2112 "Tokyo東京"
+translit "Tr Latin Punct" 2113 "Café! (2)"
+translit "Tr Sharp S" 2114 "Straße!"
+translit "Tr Mixed" 2115 "Éclair Привет!"
+
 # A series whose names exercise the sort-name rules (own library "SortShows", lazy): leading
 # article on the series and on an episode title, episodes in two seasons.
 SS="$ROOT/SortShows/The Sort Show (2024)"

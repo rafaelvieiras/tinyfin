@@ -12393,6 +12393,280 @@
   ]
  },
  {
+  "id": "items.sort.transliteration",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.sort.R8",
+   "items.sort.R11",
+   "items.sort.R12",
+   "items.sort.R13",
+   "items.sort.R14"
+  ],
+  "requires": [
+   "item:tr-cyr",
+   "item:tr-cyr-punct",
+   "item:tr-slavic",
+   "item:tr-greek",
+   "item:tr-hebrew",
+   "item:tr-arabic",
+   "item:tr-devanagari",
+   "item:tr-thai",
+   "item:tr-kana",
+   "item:tr-hangul",
+   "item:tr-han",
+   "item:tr-han-mixed",
+   "item:tr-latin-punct",
+   "item:tr-sharp-s",
+   "item:tr-mixed",
+   "library:translit"
+  ],
+  "steps": [
+   {
+    "name": "transliterated sort names order the items",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.tr-cyr.id}},{{item.tr-cyr-punct.id}},{{item.tr-slavic.id}},{{item.tr-greek.id}},{{item.tr-hebrew.id}},{{item.tr-arabic.id}},{{item.tr-devanagari.id}},{{item.tr-thai.id}},{{item.tr-kana.id}},{{item.tr-hangul.id}},{{item.tr-han.id}},{{item.tr-han-mixed.id}},{{item.tr-latin-punct.id}},{{item.tr-sharp-s.id}},{{item.tr-mixed.id}}",
+      "SortBy": "SortName",
+      "Fields": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 15
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.tr-greek.id}}"
+      },
+      {
+       "path": "$.Items[0].SortName",
+       "op": "eq",
+       "value": "angelos euro"
+      },
+      {
+       "path": "$.Items[1].Id",
+       "op": "eq",
+       "value": "{{item.tr-latin-punct.id}}"
+      },
+      {
+       "path": "$.Items[1].SortName",
+       "op": "eq",
+       "value": "cafe! (0000000002)"
+      },
+      {
+       "path": "$.Items[2].Id",
+       "op": "eq",
+       "value": "{{item.tr-han.id}}"
+      },
+      {
+       "path": "$.Items[2].SortName",
+       "op": "eq",
+       "value": "dong jing 0000002020 zhong wen"
+      },
+      {
+       "path": "$.Items[3].Id",
+       "op": "eq",
+       "value": "{{item.tr-slavic.id}}"
+      },
+      {
+       "path": "$.Items[3].SortName",
+       "op": "eq",
+       "value": "dorde izak sastie"
+      },
+      {
+       "path": "$.Items[4].Id",
+       "op": "eq",
+       "value": "{{item.tr-mixed.id}}"
+      },
+      {
+       "path": "$.Items[4].SortName",
+       "op": "eq",
+       "value": "eclair privet"
+      },
+      {
+       "path": "$.Items[5].Id",
+       "op": "eq",
+       "value": "{{item.tr-kana.id}}"
+      },
+      {
+       "path": "$.Items[5].SortName",
+       "op": "eq",
+       "value": "gagigu tesuto"
+      },
+      {
+       "path": "$.Items[6].Id",
+       "op": "eq",
+       "value": "{{item.tr-hangul.id}}"
+      },
+      {
+       "path": "$.Items[6].SortName",
+       "op": "eq",
+       "value": "hangugeo jemog"
+      },
+      {
+       "path": "$.Items[7].Id",
+       "op": "eq",
+       "value": "{{item.tr-arabic.id}}"
+      },
+      {
+       "path": "$.Items[7].SortName",
+       "op": "eq",
+       "value": "mrhba 0000000003"
+      },
+      {
+       "path": "$.Items[8].Id",
+       "op": "eq",
+       "value": "{{item.tr-devanagari.id}}"
+      },
+      {
+       "path": "$.Items[8].SortName",
+       "op": "eq",
+       "value": "namaste"
+      },
+      {
+       "path": "$.Items[9].Id",
+       "op": "eq",
+       "value": "{{item.tr-cyr.id}}"
+      },
+      {
+       "path": "$.Items[9].SortName",
+       "op": "eq",
+       "value": "privet"
+      },
+      {
+       "path": "$.Items[10].Id",
+       "op": "eq",
+       "value": "{{item.tr-cyr-punct.id}}"
+      },
+      {
+       "path": "$.Items[10].SortName",
+       "op": "eq",
+       "value": "privet mir 0000000001"
+      },
+      {
+       "path": "$.Items[11].Id",
+       "op": "eq",
+       "value": "{{item.tr-hebrew.id}}"
+      },
+      {
+       "path": "$.Items[11].SortName",
+       "op": "eq",
+       "value": "slwm"
+      },
+      {
+       "path": "$.Items[12].Id",
+       "op": "eq",
+       "value": "{{item.tr-sharp-s.id}}"
+      },
+      {
+       "path": "$.Items[12].SortName",
+       "op": "eq",
+       "value": "strasse"
+      },
+      {
+       "path": "$.Items[13].Id",
+       "op": "eq",
+       "value": "{{item.tr-thai.id}}"
+      },
+      {
+       "path": "$.Items[13].SortName",
+       "op": "eq",
+       "value": "swasdi"
+      },
+      {
+       "path": "$.Items[14].Id",
+       "op": "eq",
+       "value": "{{item.tr-han-mixed.id}}"
+      },
+      {
+       "path": "$.Items[14].SortName",
+       "op": "eq",
+       "value": "tokyo dong jing"
+      },
+      {
+       "path": "$.Items[9].Name",
+       "op": "eq",
+       "value": "\u041f\u0440\u0438\u0432\u0435\u0442"
+      }
+     ]
+    }
+   },
+   {
+    "name": "NameStartsWith matches the transliterated name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.tr-cyr.id}},{{item.tr-cyr-punct.id}},{{item.tr-slavic.id}},{{item.tr-greek.id}},{{item.tr-hebrew.id}},{{item.tr-arabic.id}},{{item.tr-devanagari.id}},{{item.tr-thai.id}},{{item.tr-kana.id}},{{item.tr-hangul.id}},{{item.tr-han.id}},{{item.tr-han-mixed.id}},{{item.tr-latin-punct.id}},{{item.tr-sharp-s.id}},{{item.tr-mixed.id}}",
+      "NameStartsWith": "privet",
+      "SortBy": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.tr-cyr.id}}"
+      },
+      {
+       "path": "$.Items[1].Id",
+       "op": "eq",
+       "value": "{{item.tr-cyr-punct.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "NameStartsWith on a Han title uses its reading",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.tr-cyr.id}},{{item.tr-cyr-punct.id}},{{item.tr-slavic.id}},{{item.tr-greek.id}},{{item.tr-hebrew.id}},{{item.tr-arabic.id}},{{item.tr-devanagari.id}},{{item.tr-thai.id}},{{item.tr-kana.id}},{{item.tr-hangul.id}},{{item.tr-han.id}},{{item.tr-han-mixed.id}},{{item.tr-latin-punct.id}},{{item.tr-sharp-s.id}},{{item.tr-mixed.id}}",
+      "NameStartsWith": "dong"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.tr-han.id}}"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
   "id": "items.sort.series-and-episode-sort-names",
   "endpoint": "GET /Items",
   "spec": "items.md#list",

@@ -1,0 +1,5837 @@
+00A1	
+00A7	
+00A9	c
+00AA	a
+00AB	<<
+00AD	
+00AE	r
+00B6	
+00B7	
+00BA	o
+00BB	>>
+00BC	 14
+00BD	 12
+00BE	 34
+00BF	
+00C0	a
+00C1	a
+00C2	a
+00C3	a
+00C4	a
+00C5	a
+00C6	ae
+00C7	c
+00C8	e
+00C9	e
+00CA	e
+00CB	e
+00CC	i
+00CD	i
+00CE	i
+00CF	i
+00D0	d
+00D1	n
+00D2	o
+00D3	o
+00D4	o
+00D5	o
+00D6	o
+00D7	
+00D8	o
+00D9	u
+00DA	u
+00DB	u
+00DC	u
+00DD	y
+00DE	th
+00DF	ss
+00E0	a
+00E1	a
+00E2	a
+00E3	a
+00E4	a
+00E5	a
+00E6	ae
+00E7	c
+00E8	e
+00E9	e
+00EA	e
+00EB	e
+00EC	i
+00ED	i
+00EE	i
+00EF	i
+00F0	d
+00F1	n
+00F2	o
+00F3	o
+00F4	o
+00F5	o
+00F6	o
+00F7	
+00F8	o
+00F9	u
+00FA	u
+00FB	u
+00FC	u
+00FD	y
+00FE	th
+00FF	y
+0100	a
+0101	a
+0102	a
+0103	a
+0104	a
+0105	a
+0106	c
+0107	c
+0108	c
+0109	c
+010A	c
+010B	c
+010C	c
+010D	c
+010E	d
+010F	d
+0110	d
+0111	d
+0112	e
+0113	e
+0114	e
+0115	e
+0116	e
+0117	e
+0118	e
+0119	e
+011A	e
+011B	e
+011C	g
+011D	g
+011E	g
+011F	g
+0120	g
+0121	g
+0122	g
+0123	g
+0124	h
+0125	h
+0126	h
+0127	h
+0128	i
+0129	i
+012A	i
+012B	i
+012C	i
+012D	i
+012E	i
+012F	i
+0130	I
+0131	i
+0132	ij
+0133	ij
+0134	j
+0135	j
+0136	k
+0137	k
+0138	q
+0139	l
+013A	l
+013B	l
+013C	l
+013D	l
+013E	l
+013F	l
+0140	l
+0141	l
+0142	l
+0143	n
+0144	n
+0145	n
+0146	n
+0147	n
+0148	n
+0149	n
+014A	n
+014B	n
+014C	o
+014D	o
+014E	o
+014F	o
+0150	o
+0151	o
+0152	oe
+0153	oe
+0154	r
+0155	r
+0156	r
+0157	r
+0158	r
+0159	r
+015A	s
+015B	s
+015C	s
+015D	s
+015E	s
+015F	s
+0160	s
+0161	s
+0162	t
+0163	t
+0164	t
+0165	t
+0166	t
+0167	t
+0168	u
+0169	u
+016A	u
+016B	u
+016C	u
+016D	u
+016E	u
+016F	u
+0170	u
+0171	u
+0172	u
+0173	u
+0174	w
+0175	w
+0176	y
+0177	y
+0178	y
+0179	z
+017A	z
+017B	z
+017C	z
+017D	z
+017E	z
+017F	s
+0180	b
+0181	b
+0182	b
+0183	b
+0187	c
+0188	c
+0189	d
+018A	d
+018B	d
+018C	d
+018F	a
+0190	e
+0191	f
+0192	f
+0193	g
+0195	hv
+0197	i
+0198	k
+0199	k
+019A	l
+019D	n
+019E	n
+01A0	o
+01A1	o
+01A2	oi
+01A3	oi
+01A4	p
+01A5	p
+01A6	r
+01AB	t
+01AC	t
+01AD	t
+01AE	t
+01AF	u
+01B0	u
+01B2	v
+01B3	y
+01B4	y
+01B5	z
+01B6	z
+01C4	dz
+01C5	dz
+01C6	dz
+01C7	lj
+01C8	lj
+01C9	lj
+01CA	nj
+01CB	nj
+01CC	nj
+01CD	a
+01CE	a
+01CF	i
+01D0	i
+01D1	o
+01D2	o
+01D3	u
+01D4	u
+01D5	u
+01D6	u
+01D7	u
+01D8	u
+01D9	u
+01DA	u
+01DB	u
+01DC	u
+01DE	a
+01DF	a
+01E0	a
+01E1	a
+01E2	ae
+01E3	ae
+01E4	g
+01E5	g
+01E6	g
+01E7	g
+01E8	k
+01E9	k
+01EA	o
+01EB	o
+01EC	o
+01ED	o
+01EE	ʒ
+01EF	ʒ
+01F0	j
+01F1	dz
+01F2	dz
+01F3	dz
+01F4	g
+01F5	g
+01F6	hv
+01F8	n
+01F9	n
+01FA	a
+01FB	a
+01FC	ae
+01FD	ae
+01FE	o
+01FF	o
+0200	a
+0201	a
+0202	a
+0203	a
+0204	e
+0205	e
+0206	e
+0207	e
+0208	i
+0209	i
+020A	i
+020B	i
+020C	o
+020D	o
+020E	o
+020F	o
+0210	r
+0211	r
+0212	r
+0213	r
+0214	u
+0215	u
+0216	u
+0217	u
+0218	s
+0219	s
+021A	t
+021B	t
+021E	h
+021F	h
+0220	n
+0221	d
+0224	z
+0225	z
+0226	a
+0227	a
+0228	e
+0229	e
+022A	o
+022B	o
+022C	o
+022D	o
+022E	o
+022F	o
+0230	o
+0231	o
+0232	y
+0233	y
+0234	l
+0235	n
+0236	t
+0237	j
+0238	db
+0239	qp
+023B	c
+023C	c
+023D	l
+023F	s
+0240	z
+0243	b
+0244	u
+0246	e
+0247	e
+0248	j
+0249	j
+024C	r
+024D	r
+024E	y
+024F	y
+0253	b
+0255	c
+0256	d
+0257	d
+0259	a
+025B	e
+025F	j
+0260	g
+0261	g
+0262	g
+0266	h
+0267	h
+0268	i
+026A	i
+026B	l
+026C	l
+026D	l
+0271	m
+0272	n
+0273	n
+0274	n
+0276	oe
+027C	r
+027D	r
+027E	r
+0280	r
+0282	s
+0288	t
+0289	u
+028B	v
+028F	y
+0290	z
+0291	z
+0299	b
+029B	g
+029C	h
+029D	j
+029F	l
+02A0	q
+02A3	dz
+02A5	dz
+02A6	ts
+02AA	ls
+02AB	lz
+02B9	
+02BA	
+02BB	
+02BC	
+02BD	
+02C2	<
+02C3	>
+02C4	^
+02C6	^
+02C8	
+02CB	`
+02D0	
+02D6	+
+02D7	
+02DC	~
+0300	
+0301	
+0302	
+0303	
+0304	
+0305	
+0306	
+0307	
+0308	
+0309	
+030A	
+030B	
+030C	
+030D	
+030E	
+030F	
+0310	
+0311	
+0312	
+0313	
+0314	
+0315	
+0316	
+0317	
+0318	
+0319	
+031A	
+031B	
+031C	
+031D	
+031E	
+031F	
+0320	
+0321	
+0322	
+0323	
+0324	
+0325	
+0326	
+0327	
+0328	
+0329	
+032A	
+032B	
+032C	
+032D	
+032E	
+032F	
+0330	
+0331	
+0332	
+0333	
+0334	
+0335	
+0336	
+0337	
+0338	
+0339	
+033A	
+033B	
+033C	
+033D	
+033E	
+033F	
+0340	
+0341	
+0342	
+0343	
+0344	
+0345	
+0346	
+0347	
+0348	
+0349	
+034A	
+034B	
+034C	
+034D	
+034E	
+034F	
+0350	
+0351	
+0352	
+0353	
+0354	
+0355	
+0356	
+0357	
+0358	
+0359	
+035A	
+035B	
+035C	
+035D	
+035E	
+035F	
+0360	
+0361	
+0362	
+0363	
+0364	
+0365	
+0366	
+0367	
+0368	
+0369	
+036A	
+036B	
+036C	
+036D	
+036E	
+036F	
+0374	
+037A	i
+037E	
+037F	j
+0385	¨
+0386	a
+0387	
+0388	e
+0389	e
+038A	i
+038C	o
+038E	y
+038F	o
+0390	i
+0391	a
+0392	b
+0393	g
+0394	d
+0395	e
+0396	z
+0397	e
+0398	th
+0399	i
+039A	k
+039B	l
+039C	m
+039D	n
+039E	x
+039F	o
+03A0	p
+03A1	r
+03A3	s
+03A4	t
+03A5	y
+03A6	ph
+03A7	ch
+03A8	ps
+03A9	o
+03AA	i
+03AB	y
+03AC	a
+03AD	e
+03AE	e
+03AF	i
+03B0	y
+03B1	a
+03B2	b
+03B3	g
+03B4	d
+03B5	e
+03B6	z
+03B7	e
+03B8	th
+03B9	i
+03BA	k
+03BB	l
+03BC	m
+03BD	n
+03BE	x
+03BF	o
+03C0	p
+03C1	r
+03C2	s
+03C3	s
+03C4	t
+03C5	y
+03C6	ph
+03C7	ch
+03C8	ps
+03C9	o
+03CA	i
+03CB	y
+03CC	o
+03CD	y
+03CE	o
+03D0	b
+03D1	th
+03D2	y
+03D3	y
+03D4	y
+03D5	ph
+03D6	p
+03F0	k
+03F1	r
+03F2	s
+03F3	j
+03F4	th
+03F5	e
+03F7	s
+03F8	s
+03F9	s
+03FA	s
+03FB	s
+0400	e
+0401	e
+0402	d
+0403	g
+0404	e
+0405	z
+0406	i
+0407	i
+0408	j
+0409	l
+040A	n
+040B	c
+040C	k
+040D	i
+040E	u
+040F	d
+0410	a
+0411	b
+0412	v
+0413	g
+0414	d
+0415	e
+0416	z
+0417	z
+0418	i
+0419	i
+041A	k
+041B	l
+041C	m
+041D	n
+041E	o
+041F	p
+0420	r
+0421	s
+0422	t
+0423	u
+0424	f
+0425	h
+0426	c
+0427	c
+0428	s
+0429	s
+042A	
+042B	y
+042C	
+042D	e
+042E	u
+042F	a
+0430	a
+0431	b
+0432	v
+0433	g
+0434	d
+0435	e
+0436	z
+0437	z
+0438	i
+0439	i
+043A	k
+043B	l
+043C	m
+043D	n
+043E	o
+043F	p
+0440	r
+0441	s
+0442	t
+0443	u
+0444	f
+0445	h
+0446	c
+0447	c
+0448	s
+0449	s
+044A	
+044B	y
+044C	
+044D	e
+044E	u
+044F	a
+0450	e
+0451	e
+0452	d
+0453	g
+0454	e
+0455	z
+0456	i
+0457	i
+0458	j
+0459	l
+045A	n
+045B	c
+045C	k
+045D	i
+045E	u
+045F	d
+0476	ѵ
+0477	ѵ
+0483	
+0484	
+0485	
+0486	
+0487	
+0490	g
+0491	g
+0492	g
+0493	g
+0494	g
+0495	g
+0498	z
+0499	z
+049A	kˌ
+049B	kˌ
+04C1	z
+04C2	z
+04D0	a
+04D1	a
+04D2	a
+04D3	a
+04D4	ae
+04D5	ae
+04D6	e
+04D7	e
+04D8	ə
+04D9	ə
+04DA	ə
+04DB	ə
+04DC	z
+04DD	z
+04DE	z
+04DF	z
+04E2	i
+04E3	i
+04E4	i
+04E5	i
+04E6	o
+04E7	o
+04EA	ө
+04EB	ө
+04EC	e
+04ED	e
+04EE	u
+04EF	u
+04F0	u
+04F1	u
+04F2	u
+04F3	u
+04F4	c
+04F5	c
+04F8	y
+04F9	y
+0531	a
+0532	b
+0533	g
+0534	d
+0535	e
+0536	z
+0537	e
+0538	ə
+0539	t
+053A	z
+053B	i
+053C	l
+053D	x
+053E	c
+053F	k
+0540	h
+0541	j
+0542	g
+0543	c
+0544	m
+0545	y
+0546	n
+0547	s
+0548	o
+0549	c
+054A	p
+054B	j
+054C	r
+054D	s
+054E	v
+054F	t
+0550	r
+0551	c
+0552	w
+0553	p
+0554	k
+0555	o
+0556	f
+055A	
+055B	
+055C	
+055D	
+055E	
+055F	
+0561	a
+0562	b
+0563	g
+0564	d
+0565	e
+0566	z
+0567	e
+0568	ə
+0569	t
+056A	z
+056B	i
+056C	l
+056D	x
+056E	c
+056F	k
+0570	h
+0571	j
+0572	g
+0573	c
+0574	m
+0575	y
+0576	n
+0577	s
+0578	o
+0579	c
+057A	p
+057B	j
+057C	r
+057D	s
+057E	v
+057F	t
+0580	r
+0581	c
+0582	w
+0583	p
+0584	k
+0585	o
+0586	f
+0587	ev
+0589	
+058A	
+0591	
+0592	
+0593	
+0594	
+0595	
+0596	
+0597	
+0598	
+0599	
+059A	
+059B	
+059C	
+059D	
+059E	
+059F	
+05A0	
+05A1	
+05A2	
+05A3	
+05A4	
+05A5	
+05A6	
+05A7	
+05A8	
+05A9	
+05AA	
+05AB	
+05AC	
+05AD	
+05AE	
+05AF	
+05B0	e
+05B1	e
+05B2	a
+05B3	o
+05B4	i
+05B5	e
+05B6	e
+05B7	a
+05B8	a
+05B9	o
+05BA	
+05BB	u
+05BC	
+05BD	
+05BE	
+05BF	
+05C0	
+05C1	
+05C2	
+05C3	
+05C4	
+05C5	
+05C6	
+05C7	
+05D0	
+05D1	b
+05D2	g
+05D3	d
+05D4	h
+05D5	w
+05D6	z
+05D7	h
+05D8	t
+05D9	y
+05DA	k
+05DB	k
+05DC	l
+05DD	m
+05DE	m
+05DF	n
+05E0	n
+05E1	s
+05E2	
+05E3	p
+05E4	p
+05E5	z
+05E6	z
+05E7	q
+05E8	r
+05E9	s
+05EA	t
+05F0	ww
+05F1	wy
+05F2	yy
+05F3	
+05F4	
+0609	
+060A	
+060C	
+060D	
+0610	
+0611	
+0612	
+0613	
+0614	
+0615	
+0616	
+0617	
+0618	
+0619	
+061A	
+061B	
+061E	
+061F	
+0621	ʾ
+0622	a
+0623	a
+0624	w
+0625	a
+0626	y
+0627	a
+0628	b
+0629	t
+062A	t
+062B	th
+062C	j
+062D	h
+062E	kh
+062F	d
+0630	dh
+0631	r
+0632	z
+0633	s
+0634	sh
+0635	s
+0636	d
+0637	t
+0638	z
+0639	ʿ
+063A	gh
+0641	f
+0642	q
+0643	k
+0644	l
+0645	m
+0646	n
+0647	h
+0648	w
+0649	y
+064A	y
+064B	
+064C	
+064D	
+064E	
+064F	
+0650	
+0651	
+0652	
+0653	
+0654	
+0655	
+0656	
+0657	
+0658	
+0659	
+065A	
+065B	
+065C	
+065D	
+065E	
+065F	
+0660	0
+0661	1
+0662	2
+0663	3
+0664	4
+0665	5
+0666	6
+0667	7
+0668	8
+0669	9
+066A	
+066B	
+066C	
+066D	
+0670	
+0671	a
+0675	aٴ
+0676	wٴ
+0677	ۇٴ
+0678	yٴ
+067E	p
+0686	ch
+0698	zh
+069A	sˌ
+06A4	v
+06A9	k
+06AD	ng
+06AF	g
+06C0	ە
+06C2	ہ
+06CB	v
+06CC	y
+06D3	ے
+06D4	
+06D6	
+06D7	
+06D8	
+06D9	
+06DA	
+06DB	
+06DC	
+06DF	
+06E0	
+06E1	
+06E2	
+06E3	
+06E4	
+06E7	
+06E8	
+06EA	
+06EB	
+06EC	
+06ED	
+06F0	0
+06F1	1
+06F2	2
+06F3	3
+06F4	4
+06F5	5
+06F6	6
+06F7	7
+06F8	8
+06F9	9
+0700	
+0701	
+0702	
+0703	
+0704	
+0705	
+0706	
+0707	
+0708	
+0709	
+070A	
+070B	
+070C	
+070D	
+0711	
+0730	
+0731	
+0732	
+0733	
+0734	
+0735	
+0736	
+0737	
+0738	
+0739	
+073A	
+073B	
+073C	
+073D	
+073E	
+073F	
+0740	
+0741	
+0742	
+0743	
+0744	
+0745	
+0746	
+0747	
+0748	
+0749	
+074A	
+0780	h
+0781	s
+0782	n
+0783	r
+0784	b
+0785	l
+0786	k
+0787	
+0788	v
+0789	m
+078A	f
+078B	d
+078C	t
+078D	l
+078E	g
+078F	n
+0790	s
+0791	d
+0792	z
+0793	t
+0794	y
+0795	p
+0796	j
+0797	c
+0798	tt
+0799	h
+079A	kh
+079B	dh
+079D	s
+079E	s
+079F	d
+07A0	t
+07A2	ʿ
+07A3	g
+07A4	q
+07A6	a
+07A7	a
+07A8	i
+07A9	i
+07AA	u
+07AB	u
+07AC	e
+07AD	e
+07AE	o
+07AF	o
+07B0	
+07EB	
+07EC	
+07ED	
+07EE	
+07EF	
+07F0	
+07F1	
+07F2	
+07F3	
+07F7	
+07F8	
+07F9	
+0816	
+0817	
+0818	
+0819	
+081B	
+081C	
+081D	
+081E	
+081F	
+0820	
+0821	
+0822	
+0823	
+0825	
+0826	
+0827	
+0829	
+082A	
+082B	
+082C	
+082D	
+0830	
+0831	
+0832	
+0833	
+0834	
+0835	
+0836	
+0837	
+0838	
+0839	
+083A	
+083B	
+083C	
+083D	
+083E	
+0859	
+085A	
+085B	
+085E	
+08D4	
+08D5	
+08D6	
+08D7	
+08D8	
+08D9	
+08DA	
+08DB	
+08DC	
+08DD	
+08DE	
+08DF	
+08E0	
+08E1	
+08E3	
+08E4	
+08E5	
+08E6	
+08E7	
+08E8	
+08E9	
+08EA	
+08EB	
+08EC	
+08ED	
+08EE	
+08EF	
+08F0	
+08F1	
+08F2	
+08F3	
+08F4	
+08F5	
+08F6	
+08F7	
+08F8	
+08F9	
+08FA	
+08FB	
+08FC	
+08FD	
+08FE	
+08FF	
+0900	
+0901	m
+0902	m
+0903	h
+0904	
+0905	a
+0906	a
+0907	i
+0908	i
+0909	u
+090A	u
+090B	r
+090C	l
+090D	e
+090E	e
+090F	e
+0910	ai
+0911	o
+0912	o
+0913	o
+0914	au
+0915	ka
+0916	kha
+0917	ga
+0918	gha
+0919	na
+091A	ca
+091B	cha
+091C	ja
+091D	jha
+091E	na
+091F	ta
+0920	tha
+0921	da
+0922	dha
+0923	na
+0924	ta
+0925	tha
+0926	da
+0927	dha
+0928	na
+0929	na
+092A	pa
+092B	pha
+092C	ba
+092D	bha
+092E	ma
+092F	ya
+0930	ra
+0931	ra
+0932	la
+0933	la
+0934	la
+0935	va
+0936	sa
+0937	sa
+0938	sa
+0939	ha
+093A	
+093C	
+093D	
+093E	a
+093F	i
+0940	i
+0941	u
+0942	u
+0943	r
+0944	r
+0945	e
+0946	e
+0947	e
+0948	ai
+0949	o
+094A	o
+094B	o
+094C	au
+094D	
+0950	om
+0951	
+0952	
+0953	
+0954	
+0955	
+0956	
+0957	
+0958	qa
+0959	kha
+095A	ga
+095B	za
+095C	ra
+095D	rha
+095E	fa
+095F	ya
+0960	r
+0961	l
+0962	l
+0963	l
+0964	
+0965	
+0966	0
+0967	1
+0968	2
+0969	3
+096A	4
+096B	5
+096C	6
+096D	7
+096E	8
+096F	9
+0970	
+097D	ʔ
+0981	m
+0982	m
+0983	h
+0985	a
+0986	a
+0987	i
+0988	i
+0989	u
+098A	u
+098B	r
+098C	l
+098F	e
+0990	ai
+0993	o
+0994	au
+0995	ka
+0996	kha
+0997	ga
+0998	gha
+0999	na
+099A	ca
+099B	cha
+099C	ja
+099D	jha
+099E	na
+099F	ta
+09A0	tha
+09A1	da
+09A2	dha
+09A3	na
+09A4	ta
+09A5	tha
+09A6	da
+09A7	dha
+09A8	na
+09AA	pa
+09AB	pha
+09AC	ba
+09AD	bha
+09AE	ma
+09AF	ya
+09B0	ra
+09B2	la
+09B6	sa
+09B7	sa
+09B8	sa
+09B9	ha
+09BC	
+09BD	
+09BE	a
+09BF	i
+09C0	i
+09C1	u
+09C2	u
+09C3	r
+09C4	r
+09C7	e
+09C8	ai
+09CB	o
+09CC	au
+09CD	
+09CE	t
+09D7	
+09DC	ra
+09DD	rha
+09DF	ya
+09E0	r
+09E1	l
+09E2	l
+09E3	l
+09E6	0
+09E7	1
+09E8	2
+09E9	3
+09EA	4
+09EB	5
+09EC	6
+09ED	7
+09EE	8
+09EF	9
+09F0	ra
+09F1	ra
+09F2	
+09F3	
+09F4	
+09F5	
+09F6	
+09F7	
+09F8	
+09F9	
+09FA	
+09FD	
+0A01	m
+0A02	m
+0A05	a
+0A06	a
+0A07	i
+0A08	i
+0A09	u
+0A0A	u
+0A0F	e
+0A10	ai
+0A13	o
+0A14	au
+0A15	ka
+0A16	kha
+0A17	ga
+0A18	gha
+0A19	na
+0A1A	ca
+0A1B	cha
+0A1C	ja
+0A1D	jha
+0A1E	na
+0A1F	ta
+0A20	tha
+0A21	da
+0A22	dha
+0A23	na
+0A24	ta
+0A25	tha
+0A26	da
+0A27	dha
+0A28	na
+0A2A	pa
+0A2B	pha
+0A2C	ba
+0A2D	bha
+0A2E	ma
+0A2F	ya
+0A30	ra
+0A32	la
+0A33	la
+0A35	va
+0A36	sa
+0A38	sa
+0A39	ha
+0A3C	
+0A3E	a
+0A3F	i
+0A40	i
+0A41	u
+0A42	u
+0A47	e
+0A48	ai
+0A4B	o
+0A4C	au
+0A4D	
+0A51	
+0A59	kha
+0A5A	ga
+0A5B	za
+0A5C	ra
+0A5E	fa
+0A66	0
+0A67	1
+0A68	2
+0A69	3
+0A6A	4
+0A6B	5
+0A6C	6
+0A6D	7
+0A6E	8
+0A6F	9
+0A70	
+0A71	
+0A72	
+0A73	
+0A74	
+0A75	
+0A81	m
+0A82	m
+0A83	h
+0A85	a
+0A86	a
+0A87	i
+0A88	i
+0A89	u
+0A8A	u
+0A8B	r
+0A8C	l
+0A8D	e
+0A8F	e
+0A90	ai
+0A91	o
+0A93	o
+0A94	au
+0A95	ka
+0A96	kha
+0A97	ga
+0A98	gha
+0A99	na
+0A9A	ca
+0A9B	cha
+0A9C	ja
+0A9D	jha
+0A9E	na
+0A9F	ta
+0AA0	tha
+0AA1	da
+0AA2	dha
+0AA3	na
+0AA4	ta
+0AA5	tha
+0AA6	da
+0AA7	dha
+0AA8	na
+0AAA	pa
+0AAB	pha
+0AAC	ba
+0AAD	bha
+0AAE	ma
+0AAF	ya
+0AB0	ra
+0AB2	la
+0AB3	la
+0AB5	va
+0AB6	sa
+0AB7	sa
+0AB8	sa
+0AB9	ha
+0ABC	
+0ABD	
+0ABE	a
+0ABF	i
+0AC0	i
+0AC1	u
+0AC2	u
+0AC3	r
+0AC4	r
+0AC5	e
+0AC7	e
+0AC8	ai
+0AC9	o
+0ACB	o
+0ACC	au
+0ACD	
+0AD0	om
+0AE0	r
+0AE1	l
+0AE2	
+0AE3	
+0AE6	0
+0AE7	1
+0AE8	2
+0AE9	3
+0AEA	4
+0AEB	5
+0AEC	6
+0AED	7
+0AEE	8
+0AEF	9
+0AF0	
+0AFA	
+0AFB	
+0AFC	
+0AFD	
+0AFE	
+0AFF	
+0B01	m
+0B02	m
+0B03	h
+0B05	a
+0B06	a
+0B07	i
+0B08	i
+0B09	u
+0B0A	u
+0B0B	r
+0B0C	l
+0B0F	e
+0B10	ai
+0B13	o
+0B14	au
+0B15	ka
+0B16	kha
+0B17	ga
+0B18	gha
+0B19	na
+0B1A	ca
+0B1B	cha
+0B1C	ja
+0B1D	jha
+0B1E	na
+0B1F	ta
+0B20	tha
+0B21	da
+0B22	dha
+0B23	na
+0B24	ta
+0B25	tha
+0B26	da
+0B27	dha
+0B28	na
+0B2A	pa
+0B2B	pha
+0B2C	ba
+0B2D	bha
+0B2E	ma
+0B2F	ya
+0B30	ra
+0B32	la
+0B33	la
+0B35	va
+0B36	sa
+0B37	sa
+0B38	sa
+0B39	ha
+0B3C	
+0B3D	
+0B3E	a
+0B3F	i
+0B40	i
+0B41	u
+0B42	u
+0B43	r
+0B44	
+0B47	e
+0B48	ai
+0B4B	o
+0B4C	au
+0B4D	
+0B56	
+0B57	
+0B5C	ra
+0B5D	rha
+0B5F	ya
+0B60	r
+0B61	l
+0B62	
+0B63	
+0B66	0
+0B67	1
+0B68	2
+0B69	3
+0B6A	4
+0B6B	5
+0B6C	6
+0B6D	7
+0B6E	8
+0B6F	9
+0B70	
+0B71	wa
+0B82	m
+0B83	h
+0B85	a
+0B86	a
+0B87	i
+0B88	i
+0B89	u
+0B8A	u
+0B8E	e
+0B8F	e
+0B90	ai
+0B92	o
+0B93	o
+0B94	o
+0B95	ka
+0B99	na
+0B9A	ca
+0B9C	ja
+0B9E	na
+0B9F	ta
+0BA3	na
+0BA4	ta
+0BA8	na
+0BA9	na
+0BAA	pa
+0BAE	ma
+0BAF	ya
+0BB0	ra
+0BB1	ra
+0BB2	la
+0BB3	la
+0BB4	la
+0BB5	va
+0BB6	sa
+0BB7	sa
+0BB8	sa
+0BB9	ha
+0BBE	a
+0BBF	i
+0BC0	i
+0BC1	u
+0BC2	u
+0BC6	e
+0BC7	e
+0BC8	ai
+0BCA	o
+0BCB	o
+0BCC	au
+0BCD	
+0BD7	
+0BE6	0
+0BE7	1
+0BE8	2
+0BE9	3
+0BEA	4
+0BEB	5
+0BEC	6
+0BED	7
+0BEE	8
+0BEF	9
+0BF0	10
+0BF1	100
+0BF2	1000
+0C00	
+0C01	m
+0C02	m
+0C03	h
+0C05	a
+0C06	a
+0C07	i
+0C08	i
+0C09	u
+0C0A	u
+0C0B	r
+0C0C	l
+0C0E	e
+0C0F	e
+0C10	ai
+0C12	o
+0C13	o
+0C14	au
+0C15	ka
+0C16	kha
+0C17	ga
+0C18	gha
+0C19	na
+0C1A	ca
+0C1B	cha
+0C1C	ja
+0C1D	jha
+0C1E	na
+0C1F	ta
+0C20	tha
+0C21	da
+0C22	dha
+0C23	na
+0C24	ta
+0C25	tha
+0C26	da
+0C27	dha
+0C28	na
+0C2A	pa
+0C2B	pha
+0C2C	ba
+0C2D	bha
+0C2E	ma
+0C2F	ya
+0C30	ra
+0C31	ra
+0C32	la
+0C33	la
+0C35	va
+0C36	sa
+0C37	sa
+0C38	sa
+0C39	ha
+0C3E	a
+0C3F	i
+0C40	i
+0C41	u
+0C42	u
+0C43	r
+0C44	r
+0C46	e
+0C47	e
+0C48	ai
+0C4A	o
+0C4B	o
+0C4C	au
+0C4D	
+0C55	
+0C56	
+0C60	r
+0C61	l
+0C62	
+0C63	
+0C66	0
+0C67	1
+0C68	2
+0C69	3
+0C6A	4
+0C6B	5
+0C6C	6
+0C6D	7
+0C6E	8
+0C6F	9
+0C81	
+0C82	m
+0C83	h
+0C85	a
+0C86	a
+0C87	i
+0C88	i
+0C89	u
+0C8A	u
+0C8B	r
+0C8C	l
+0C8E	e
+0C8F	e
+0C90	ai
+0C92	o
+0C93	o
+0C94	au
+0C95	ka
+0C96	kha
+0C97	ga
+0C98	gha
+0C99	na
+0C9A	ca
+0C9B	cha
+0C9C	ja
+0C9D	jha
+0C9E	na
+0C9F	ta
+0CA0	tha
+0CA1	da
+0CA2	dha
+0CA3	na
+0CA4	ta
+0CA5	tha
+0CA6	da
+0CA7	dha
+0CA8	na
+0CAA	pa
+0CAB	pha
+0CAC	ba
+0CAD	bha
+0CAE	ma
+0CAF	ya
+0CB0	ra
+0CB1	ra
+0CB2	la
+0CB3	la
+0CB5	va
+0CB6	sa
+0CB7	sa
+0CB8	sa
+0CB9	ha
+0CBC	
+0CBD	
+0CBE	a
+0CBF	i
+0CC0	i
+0CC1	u
+0CC2	u
+0CC3	r
+0CC4	r
+0CC6	e
+0CC7	e
+0CC8	ai
+0CCA	o
+0CCB	o
+0CCC	au
+0CCD	
+0CD5	
+0CD6	
+0CDE	la
+0CE0	r
+0CE1	l
+0CE2	
+0CE3	
+0CE6	0
+0CE7	1
+0CE8	2
+0CE9	3
+0CEA	4
+0CEB	5
+0CEC	6
+0CED	7
+0CEE	8
+0CEF	9
+0D00	
+0D01	
+0D02	m
+0D03	h
+0D05	a
+0D06	a
+0D07	i
+0D08	i
+0D09	u
+0D0A	u
+0D0B	r
+0D0C	l
+0D0E	e
+0D0F	e
+0D10	ai
+0D12	o
+0D13	o
+0D14	au
+0D15	ka
+0D16	kha
+0D17	ga
+0D18	gha
+0D19	na
+0D1A	ca
+0D1B	cha
+0D1C	ja
+0D1D	jha
+0D1E	na
+0D1F	ta
+0D20	tha
+0D21	da
+0D22	dha
+0D23	na
+0D24	ta
+0D25	tha
+0D26	da
+0D27	dha
+0D28	na
+0D2A	pa
+0D2B	pha
+0D2C	ba
+0D2D	bha
+0D2E	ma
+0D2F	ya
+0D30	ra
+0D31	ra
+0D32	la
+0D33	la
+0D34	la
+0D35	va
+0D36	sa
+0D37	sa
+0D38	sa
+0D39	ha
+0D3B	
+0D3C	
+0D3E	a
+0D3F	i
+0D40	i
+0D41	u
+0D42	u
+0D43	r
+0D44	
+0D46	e
+0D47	e
+0D48	ai
+0D4A	ea
+0D4B	ea
+0D4C	e
+0D4D	
+0D57	
+0D60	r
+0D61	l
+0D62	
+0D63	
+0D66	0
+0D67	1
+0D68	2
+0D69	3
+0D6A	4
+0D6B	5
+0D6C	6
+0D6D	7
+0D6E	8
+0D6F	9
+0DCA	
+0DD2	
+0DD3	
+0DD4	
+0DD6	
+0DDA	ෙ
+0DDC	ො
+0DDD	ො
+0DDE	ෞ
+0DF4	
+0E01	k
+0E02	kh
+0E03	kh
+0E04	kh
+0E05	kh
+0E06	kh
+0E07	ng
+0E08	c
+0E09	ch
+0E0A	ch
+0E0B	s
+0E0C	ch
+0E0D	y
+0E0E	d
+0E0F	t
+0E10	th
+0E11	th
+0E12	th
+0E13	n
+0E14	d
+0E15	t
+0E16	th
+0E17	th
+0E18	th
+0E19	n
+0E1A	b
+0E1B	p
+0E1C	ph
+0E1D	f
+0E1E	ph
+0E1F	f
+0E20	ph
+0E21	m
+0E22	y
+0E23	r
+0E24	v
+0E25	l
+0E26	l
+0E27	w
+0E28	s
+0E29	s
+0E2A	s
+0E2B	h
+0E2C	l
+0E2D	x
+0E2E	h
+0E2F	
+0E30	a
+0E31	a
+0E32	a
+0E33	a
+0E34	i
+0E35	i
+0E36	u
+0E37	u
+0E38	u
+0E39	u
+0E3A	ˌ
+0E40	e
+0E41	ae
+0E42	o
+0E43	i
+0E44	i
+0E45	i
+0E46	<<
+0E47	
+0E48	
+0E49	
+0E4A	
+0E4B	
+0E4C	
+0E4D	
+0E4E	~
+0E4F	
+0E50	0
+0E51	1
+0E52	2
+0E53	3
+0E54	4
+0E55	5
+0E56	6
+0E57	7
+0E58	8
+0E59	9
+0E5A	||
+0E5B	>>
+0EB1	
+0EB4	
+0EB5	
+0EB6	
+0EB7	
+0EB8	
+0EB9	
+0EBB	
+0EBC	
+0EC8	
+0EC9	
+0ECA	
+0ECB	
+0ECC	
+0ECD	
+0F04	
+0F05	
+0F06	
+0F07	
+0F08	
+0F09	
+0F0A	
+0F0B	
+0F0C	
+0F0D	
+0F0E	
+0F0F	
+0F10	
+0F11	
+0F12	
+0F14	
+0F18	
+0F19	
+0F35	
+0F37	
+0F39	
+0F3A	
+0F3B	
+0F3C	
+0F3D	
+0F43	ག
+0F4D	ཌ
+0F52	ད
+0F57	བ
+0F5C	ཛ
+0F69	ཀ
+0F71	
+0F72	
+0F73	
+0F74	
+0F75	
+0F76	
+0F77	
+0F78	
+0F79	
+0F7A	
+0F7B	
+0F7C	
+0F7D	
+0F7E	
+0F80	
+0F81	
+0F82	
+0F83	
+0F84	
+0F85	
+0F86	
+0F87	
+0F8D	
+0F8E	
+0F8F	
+0F90	
+0F91	
+0F92	
+0F93	
+0F94	
+0F95	
+0F96	
+0F97	
+0F99	
+0F9A	
+0F9B	
+0F9C	
+0F9D	
+0F9E	
+0F9F	
+0FA0	
+0FA1	
+0FA2	
+0FA3	
+0FA4	
+0FA5	
+0FA6	
+0FA7	
+0FA8	
+0FA9	
+0FAA	
+0FAB	
+0FAC	
+0FAD	
+0FAE	
+0FAF	
+0FB0	
+0FB1	
+0FB2	
+0FB3	
+0FB4	
+0FB5	
+0FB6	
+0FB7	
+0FB8	
+0FB9	
+0FBA	
+0FBB	
+0FBC	
+0FC6	
+0FD0	
+0FD1	
+0FD2	
+0FD3	
+0FD4	
+0FD9	
+0FDA	
+1026	ဥ
+102D	
+102E	
+102F	
+1030	
+1032	
+1033	
+1034	
+1035	
+1036	
+1037	
+1039	
+103A	
+103D	
+103E	
+104A	
+104B	
+104C	
+104D	
+104E	
+104F	
+1058	
+1059	
+105E	
+105F	
+1060	
+1071	
+1072	
+1073	
+1074	
+1082	
+1085	
+1086	
+108D	
+109D	
+10D0	a
+10D1	b
+10D2	g
+10D3	d
+10D4	e
+10D5	v
+10D6	z
+10D7	t
+10D8	i
+10D9	k
+10DA	l
+10DB	m
+10DC	n
+10DD	o
+10DE	p
+10DF	zh
+10E0	r
+10E1	s
+10E2	t
+10E3	u
+10E4	p
+10E5	k
+10E6	gh
+10E7	q
+10E8	sh
+10E9	ch
+10EA	ts
+10EB	dz
+10EC	ts
+10ED	ch
+10EE	kh
+10EF	j
+10F0	h
+10F3	ui
+10F4	q
+10FB	
+1100	g
+1101	kk
+1102	n
+1103	d
+1104	tt
+1105	l
+1106	m
+1107	b
+1108	pp
+1109	s
+110A	ss
+110B	
+110C	j
+110D	jj
+110E	ch
+110F	k
+1110	t
+1111	p
+1112	h
+1161	a
+1162	ae
+1163	ya
+1164	yae
+1165	eo
+1166	e
+1167	yeo
+1168	ye
+1169	o
+116A	wa
+116B	wae
+116C	oe
+116D	yo
+116E	u
+116F	wo
+1170	we
+1171	wi
+1172	yu
+1173	eu
+1174	ui
+1175	i
+11A8	g
+11A9	kk
+11AA	gs
+11AB	n
+11AC	nj
+11AD	nh
+11AE	d
+11AF	l
+11B0	lg
+11B1	lm
+11B2	lb
+11B3	ls
+11B4	lt
+11B5	lp
+11B6	lh
+11B7	m
+11B8	b
+11B9	bs
+11BA	s
+11BB	ss
+11BC	ng
+11BD	j
+11BE	ch
+11BF	k
+11C0	t
+11C1	p
+11C2	h
+135D	
+135E	
+135F	
+1360	
+1361	
+1362	
+1363	
+1364	
+1365	
+1366	
+1367	
+1368	
+1400	
+166D	
+166E	
+169B	
+169C	
+16EB	
+16EC	
+16ED	
+1712	
+1713	
+1714	
+1732	
+1733	
+1734	
+1735	
+1736	
+1752	
+1753	
+1772	
+1773	
+17B4	
+17B5	
+17B7	
+17B8	
+17B9	
+17BA	
+17BB	
+17BC	
+17BD	
+17C6	
+17C9	
+17CA	
+17CB	
+17CC	
+17CD	
+17CE	
+17CF	
+17D0	
+17D1	
+17D2	
+17D3	
+17D4	
+17D5	
+17D6	
+17D8	
+17D9	
+17DA	
+17DD	
+1800	
+1801	
+1802	
+1803	
+1804	
+1805	
+1806	
+1807	
+1808	
+1809	
+180A	
+180B	
+180C	
+180D	
+1885	
+1886	
+18A9	
+1920	
+1921	
+1922	
+1927	
+1928	
+1932	
+1939	
+193A	
+193B	
+1944	
+1945	
+1A17	
+1A18	
+1A1B	
+1A1E	
+1A1F	
+1A56	
+1A58	
+1A59	
+1A5A	
+1A5B	
+1A5C	
+1A5D	
+1A5E	
+1A60	
+1A62	
+1A65	
+1A66	
+1A67	
+1A68	
+1A69	
+1A6A	
+1A6B	
+1A6C	
+1A73	
+1A74	
+1A75	
+1A76	
+1A77	
+1A78	
+1A79	
+1A7A	
+1A7B	
+1A7C	
+1A7F	
+1AA0	
+1AA1	
+1AA2	
+1AA3	
+1AA4	
+1AA5	
+1AA6	
+1AA8	
+1AA9	
+1AAA	
+1AAB	
+1AAC	
+1AAD	
+1AB0	
+1AB1	
+1AB2	
+1AB3	
+1AB4	
+1AB5	
+1AB6	
+1AB7	
+1AB8	
+1AB9	
+1ABA	
+1ABB	
+1ABC	
+1ABD	
+1B00	
+1B01	
+1B02	
+1B03	
+1B06	ᬆ
+1B08	ᬈ
+1B0A	ᬊ
+1B0C	ᬌ
+1B0E	ᬎ
+1B12	ᬒ
+1B34	
+1B36	
+1B37	
+1B38	
+1B39	
+1B3A	
+1B3B	ᬵ
+1B3C	
+1B3D	ᬵ
+1B40	ᭀ
+1B41	ᭁ
+1B42	
+1B43	ᬵ
+1B5A	
+1B5B	
+1B5C	
+1B5D	
+1B5E	
+1B5F	
+1B60	
+1B6B	
+1B6C	
+1B6D	
+1B6E	
+1B6F	
+1B70	
+1B71	
+1B72	
+1B73	
+1B80	
+1B81	
+1BA2	
+1BA3	
+1BA4	
+1BA5	
+1BA8	
+1BA9	
+1BAB	
+1BAC	
+1BAD	
+1BE6	
+1BE8	
+1BE9	
+1BED	
+1BEF	
+1BF0	
+1BF1	
+1BFC	
+1BFD	
+1BFE	
+1BFF	
+1C2C	
+1C2D	
+1C2E	
+1C2F	
+1C30	
+1C31	
+1C32	
+1C33	
+1C36	
+1C37	
+1C3B	
+1C3C	
+1C3D	
+1C3E	
+1C3F	
+1C7E	
+1C7F	
+1C89	ᲊ
+1C90	a
+1C91	b
+1C92	g
+1C93	d
+1C94	e
+1C95	v
+1C96	z
+1C97	t
+1C98	i
+1C99	k
+1C9A	l
+1C9B	m
+1C9C	n
+1C9D	o
+1C9E	p
+1C9F	zh
+1CA0	r
+1CA1	s
+1CA2	t
+1CA3	u
+1CA4	p
+1CA5	k
+1CA6	gh
+1CA7	q
+1CA8	sh
+1CA9	ch
+1CAA	ts
+1CAB	dz
+1CAC	ts
+1CAD	ch
+1CAE	kh
+1CAF	j
+1CB0	h
+1CB3	ui
+1CB4	q
+1CC0	
+1CC1	
+1CC2	
+1CC3	
+1CC4	
+1CC5	
+1CC6	
+1CC7	
+1CD0	
+1CD1	
+1CD2	
+1CD3	
+1CD4	
+1CD5	
+1CD6	
+1CD7	
+1CD8	
+1CD9	
+1CDA	
+1CDB	
+1CDC	
+1CDD	
+1CDE	
+1CDF	
+1CE0	
+1CE2	
+1CE3	
+1CE4	
+1CE5	
+1CE6	
+1CE7	
+1CE8	
+1CED	
+1CF4	
+1CF8	
+1CF9	
+1D00	a
+1D01	ae
+1D03	b
+1D04	c
+1D05	d
+1D06	d
+1D07	e
+1D0A	j
+1D0B	k
+1D0C	l
+1D0D	m
+1D0F	o
+1D18	p
+1D1B	t
+1D1C	u
+1D20	v
+1D21	w
+1D22	z
+1D6B	ue
+1D6C	b
+1D6D	d
+1D6E	f
+1D6F	m
+1D70	n
+1D71	p
+1D72	r
+1D73	r
+1D74	s
+1D75	t
+1D76	z
+1D7A	th
+1D7B	i
+1D7D	p
+1D7E	u
+1D80	b
+1D81	d
+1D82	f
+1D83	g
+1D84	k
+1D85	l
+1D86	m
+1D87	n
+1D88	p
+1D89	r
+1D8A	s
+1D8C	v
+1D8D	x
+1D8E	z
+1D8F	a
+1D91	d
+1D92	e
+1D93	e
+1D96	i
+1D99	u
+1DC0	
+1DC1	
+1DC2	
+1DC3	
+1DC4	
+1DC5	
+1DC6	
+1DC7	
+1DC8	
+1DC9	
+1DCA	
+1DCB	
+1DCC	
+1DCD	
+1DCE	
+1DCF	
+1DD0	
+1DD1	
+1DD2	
+1DD3	
+1DD4	
+1DD5	
+1DD6	
+1DD7	
+1DD8	
+1DD9	
+1DDA	
+1DDB	
+1DDC	
+1DDD	
+1DDE	
+1DDF	
+1DE0	
+1DE1	
+1DE2	
+1DE3	
+1DE4	
+1DE5	
+1DE6	
+1DE7	
+1DE8	
+1DE9	
+1DEA	
+1DEB	
+1DEC	
+1DED	
+1DEE	
+1DEF	
+1DF0	
+1DF1	
+1DF2	
+1DF3	
+1DF4	
+1DF5	
+1DF6	
+1DF7	
+1DF8	
+1DF9	
+1DFB	
+1DFC	
+1DFD	
+1DFE	
+1DFF	
+1E00	a
+1E01	a
+1E02	b
+1E03	b
+1E04	b
+1E05	b
+1E06	b
+1E07	b
+1E08	c
+1E09	c
+1E0A	d
+1E0B	d
+1E0C	d
+1E0D	d
+1E0E	d
+1E0F	d
+1E10	d
+1E11	d
+1E12	d
+1E13	d
+1E14	e
+1E15	e
+1E16	e
+1E17	e
+1E18	e
+1E19	e
+1E1A	e
+1E1B	e
+1E1C	e
+1E1D	e
+1E1E	f
+1E1F	f
+1E20	g
+1E21	g
+1E22	h
+1E23	h
+1E24	h
+1E25	h
+1E26	h
+1E27	h
+1E28	h
+1E29	h
+1E2A	h
+1E2B	h
+1E2C	i
+1E2D	i
+1E2E	i
+1E2F	i
+1E30	k
+1E31	k
+1E32	k
+1E33	k
+1E34	k
+1E35	k
+1E36	l
+1E37	l
+1E38	l
+1E39	l
+1E3A	l
+1E3B	l
+1E3C	l
+1E3D	l
+1E3E	m
+1E3F	m
+1E40	m
+1E41	m
+1E42	m
+1E43	m
+1E44	n
+1E45	n
+1E46	n
+1E47	n
+1E48	n
+1E49	n
+1E4A	n
+1E4B	n
+1E4C	o
+1E4D	o
+1E4E	o
+1E4F	o
+1E50	o
+1E51	o
+1E52	o
+1E53	o
+1E54	p
+1E55	p
+1E56	p
+1E57	p
+1E58	r
+1E59	r
+1E5A	r
+1E5B	r
+1E5C	r
+1E5D	r
+1E5E	r
+1E5F	r
+1E60	s
+1E61	s
+1E62	s
+1E63	s
+1E64	s
+1E65	s
+1E66	s
+1E67	s
+1E68	s
+1E69	s
+1E6A	t
+1E6B	t
+1E6C	t
+1E6D	t
+1E6E	t
+1E6F	t
+1E70	t
+1E71	t
+1E72	u
+1E73	u
+1E74	u
+1E75	u
+1E76	u
+1E77	u
+1E78	u
+1E79	u
+1E7A	u
+1E7B	u
+1E7C	v
+1E7D	v
+1E7E	v
+1E7F	v
+1E80	w
+1E81	w
+1E82	w
+1E83	w
+1E84	w
+1E85	w
+1E86	w
+1E87	w
+1E88	w
+1E89	w
+1E8A	x
+1E8B	x
+1E8C	x
+1E8D	x
+1E8E	y
+1E8F	y
+1E90	z
+1E91	z
+1E92	z
+1E93	z
+1E94	z
+1E95	z
+1E96	h
+1E97	t
+1E98	w
+1E99	y
+1E9A	a
+1E9B	s
+1E9C	s
+1E9D	s
+1E9E	ss
+1EA0	a
+1EA1	a
+1EA2	a
+1EA3	a
+1EA4	a
+1EA5	a
+1EA6	a
+1EA7	a
+1EA8	a
+1EA9	a
+1EAA	a
+1EAB	a
+1EAC	a
+1EAD	a
+1EAE	a
+1EAF	a
+1EB0	a
+1EB1	a
+1EB2	a
+1EB3	a
+1EB4	a
+1EB5	a
+1EB6	a
+1EB7	a
+1EB8	e
+1EB9	e
+1EBA	e
+1EBB	e
+1EBC	e
+1EBD	e
+1EBE	e
+1EBF	e
+1EC0	e
+1EC1	e
+1EC2	e
+1EC3	e
+1EC4	e
+1EC5	e
+1EC6	e
+1EC7	e
+1EC8	i
+1EC9	i
+1ECA	i
+1ECB	i
+1ECC	o
+1ECD	o
+1ECE	o
+1ECF	o
+1ED0	o
+1ED1	o
+1ED2	o
+1ED3	o
+1ED4	o
+1ED5	o
+1ED6	o
+1ED7	o
+1ED8	o
+1ED9	o
+1EDA	o
+1EDB	o
+1EDC	o
+1EDD	o
+1EDE	o
+1EDF	o
+1EE0	o
+1EE1	o
+1EE2	o
+1EE3	o
+1EE4	u
+1EE5	u
+1EE6	u
+1EE7	u
+1EE8	u
+1EE9	u
+1EEA	u
+1EEB	u
+1EEC	u
+1EED	u
+1EEE	u
+1EEF	u
+1EF0	u
+1EF1	u
+1EF2	y
+1EF3	y
+1EF4	y
+1EF5	y
+1EF6	y
+1EF7	y
+1EF8	y
+1EF9	y
+1EFA	ll
+1EFB	ll
+1EFC	v
+1EFD	v
+1EFE	y
+1EFF	y
+1F00	a
+1F01	ha
+1F02	a
+1F03	ha
+1F04	a
+1F05	ha
+1F06	a
+1F07	ha
+1F08	a
+1F09	ha
+1F0A	a
+1F0B	ha
+1F0C	a
+1F0D	ha
+1F0E	a
+1F0F	ha
+1F10	e
+1F11	he
+1F12	e
+1F13	he
+1F14	e
+1F15	he
+1F18	e
+1F19	he
+1F1A	e
+1F1B	he
+1F1C	e
+1F1D	he
+1F20	e
+1F21	he
+1F22	e
+1F23	he
+1F24	e
+1F25	he
+1F26	e
+1F27	he
+1F28	e
+1F29	he
+1F2A	e
+1F2B	he
+1F2C	e
+1F2D	he
+1F2E	e
+1F2F	he
+1F30	i
+1F31	hi
+1F32	i
+1F33	hi
+1F34	i
+1F35	hi
+1F36	i
+1F37	hi
+1F38	i
+1F39	hi
+1F3A	i
+1F3B	hi
+1F3C	i
+1F3D	hi
+1F3E	i
+1F3F	hi
+1F40	o
+1F41	ho
+1F42	o
+1F43	ho
+1F44	o
+1F45	ho
+1F48	o
+1F49	ho
+1F4A	o
+1F4B	ho
+1F4C	o
+1F4D	ho
+1F50	y
+1F51	hy
+1F52	y
+1F53	hy
+1F54	y
+1F55	hy
+1F56	y
+1F57	hy
+1F59	hy
+1F5B	hy
+1F5D	hy
+1F5F	hy
+1F60	o
+1F61	ho
+1F62	o
+1F63	ho
+1F64	o
+1F65	ho
+1F66	o
+1F67	ho
+1F68	o
+1F69	ho
+1F6A	o
+1F6B	ho
+1F6C	o
+1F6D	ho
+1F6E	o
+1F6F	ho
+1F70	a
+1F71	a
+1F72	e
+1F73	e
+1F74	e
+1F75	e
+1F76	i
+1F77	i
+1F78	o
+1F79	o
+1F7A	y
+1F7B	y
+1F7C	o
+1F7D	o
+1F80	ai
+1F81	hai
+1F82	ai
+1F83	hai
+1F84	ai
+1F85	hai
+1F86	ai
+1F87	hai
+1F88	ai
+1F89	hai
+1F8A	ai
+1F8B	hai
+1F8C	ai
+1F8D	hai
+1F8E	ai
+1F8F	hai
+1F90	ei
+1F91	hei
+1F92	ei
+1F93	hei
+1F94	ei
+1F95	hei
+1F96	ei
+1F97	hei
+1F98	ei
+1F99	hei
+1F9A	ei
+1F9B	hei
+1F9C	ei
+1F9D	hei
+1F9E	ei
+1F9F	hei
+1FA0	oi
+1FA1	hoi
+1FA2	oi
+1FA3	hoi
+1FA4	oi
+1FA5	hoi
+1FA6	oi
+1FA7	hoi
+1FA8	oi
+1FA9	hoi
+1FAA	oi
+1FAB	hoi
+1FAC	oi
+1FAD	hoi
+1FAE	oi
+1FAF	hoi
+1FB0	a
+1FB1	a
+1FB2	ai
+1FB3	ai
+1FB4	ai
+1FB6	a
+1FB7	ai
+1FB8	a
+1FB9	a
+1FBA	a
+1FBB	a
+1FBC	ai
+1FBE	i
+1FC1	¨
+1FC2	ei
+1FC3	ei
+1FC4	ei
+1FC6	e
+1FC7	ei
+1FC8	e
+1FC9	e
+1FCA	e
+1FCB	e
+1FCC	ei
+1FCD	᾿
+1FCE	᾿
+1FCF	᾿
+1FD0	i
+1FD1	i
+1FD2	i
+1FD3	i
+1FD6	i
+1FD7	i
+1FD8	i
+1FD9	i
+1FDA	i
+1FDB	i
+1FDD	῾
+1FDE	῾
+1FDF	῾
+1FE0	y
+1FE1	y
+1FE2	y
+1FE3	y
+1FE4	r
+1FE5	rh
+1FE6	y
+1FE7	y
+1FE8	y
+1FE9	y
+1FEA	y
+1FEB	y
+1FEC	rh
+1FED	¨
+1FEE	¨
+1FEF	`
+1FF2	oi
+1FF3	oi
+1FF4	oi
+1FF6	o
+1FF7	oi
+1FF8	o
+1FF9	o
+1FFA	o
+1FFB	o
+1FFC	oi
+1FFD	´
+2010	
+2011	
+2012	
+2013	
+2014	
+2015	
+2016	||
+2017	
+2018	
+2019	
+201A	
+201B	
+201C	
+201D	
+201E	
+201F	
+2020	
+2021	
+2022	
+2023	
+2024	
+2025	
+2026	
+2027	
+2030	
+2031	
+2032	
+2033	
+2034	
+2035	
+2036	
+2037	
+2038	
+2039	<
+203A	>
+203B	
+203C	
+203D	
+203E	
+203F	
+2040	
+2041	
+2042	
+2043	
+2044	
+2045	
+2046	
+2047	
+2048	
+2049	
+204A	
+204B	
+204C	
+204D	
+204E	
+204F	
+2050	
+2051	
+2053	
+2054	
+2055	
+2056	
+2057	
+2058	
+2059	
+205A	
+205B	
+205C	
+205D	
+205E	
+207D	
+207E	
+208D	
+208E	
+20A0	ce
+20A2	cr
+20A3	fr
+20A4	l
+20A7	pts
+20B9	rs
+20BA	tl
+20D0	
+20D1	
+20D2	
+20D3	
+20D4	
+20D5	
+20D6	
+20D7	
+20D8	
+20D9	
+20DA	
+20DB	
+20DC	
+20E1	
+20E5	
+20E6	
+20E7	
+20E8	
+20E9	
+20EA	
+20EB	
+20EC	
+20ED	
+20EE	
+20EF	
+20F0	
+2100	ac
+2101	as
+2102	c
+2105	co
+2106	cu
+210A	g
+210B	h
+210C	x
+210D	h
+210E	h
+2110	i
+2111	i
+2112	l
+2113	l
+2115	n
+2116	no
+2119	p
+211A	q
+211B	r
+211C	r
+211D	r
+211E	rx
+2121	tel
+2124	z
+2126	o
+2128	z
+212B	a
+212C	b
+212D	c
+212F	e
+2130	e
+2131	f
+2133	m
+2134	o
+2139	i
+213B	fax
+2145	d
+2146	d
+2147	e
+2148	i
+2149	j
+2153	 13
+2154	 23
+2155	 15
+2156	 25
+2157	 35
+2158	 45
+2159	 16
+215A	 56
+215B	 18
+215C	 38
+215D	 58
+215E	 78
+215F	 1
+2160	i
+2161	ii
+2162	iii
+2163	iv
+2164	v
+2165	vi
+2166	vii
+2167	viii
+2168	ix
+2169	x
+216A	xi
+216B	xii
+216C	l
+216D	c
+216E	d
+216F	m
+2170	i
+2171	ii
+2172	iii
+2173	iv
+2174	v
+2175	vi
+2176	vii
+2177	viii
+2178	ix
+2179	x
+217A	xi
+217B	xii
+217C	l
+217D	c
+217E	d
+217F	m
+219A	←
+219B	→
+21AE	↔
+21CD	⇐
+21CE	⇔
+21CF	⇒
+2204	∃
+2209	∈
+220C	∋
+2212	
+2215	
+2216	
+2223	|
+2224	∣
+2225	||
+2226	∥
+2241	∼
+2244	≃
+2247	≅
+2249	≈
+2260	=
+2262	≡
+226A	<<
+226B	>>
+226D	≍
+226E	<
+226F	>
+2270	≤
+2271	≥
+2274	≲
+2275	≳
+2278	≶
+2279	≷
+2280	≺
+2281	≻
+2284	⊂
+2285	⊃
+2288	⊆
+2289	⊇
+22AC	⊢
+22AD	⊨
+22AE	⊩
+22AF	⊫
+22E0	≼
+22E1	≽
+22E2	⊑
+22E3	⊒
+22EA	⊲
+22EB	⊳
+22EC	⊴
+22ED	⊵
+2308	
+2309	
+230A	
+230B	
+2329	<
+232A	>
+2474	1
+2475	2
+2476	3
+2477	4
+2478	5
+2479	6
+247A	7
+247B	8
+247C	9
+247D	10
+247E	11
+247F	12
+2480	13
+2481	14
+2482	15
+2483	16
+2484	17
+2485	18
+2486	19
+2487	20
+2488	1
+2489	2
+248A	3
+248B	4
+248C	5
+248D	6
+248E	7
+248F	8
+2490	9
+2491	10
+2492	11
+2493	12
+2494	13
+2495	14
+2496	15
+2497	16
+2498	17
+2499	18
+249A	19
+249B	20
+249C	a
+249D	b
+249E	c
+249F	d
+24A0	e
+24A1	f
+24A2	g
+24A3	h
+24A4	i
+24A5	j
+24A6	k
+24A7	l
+24A8	m
+24A9	n
+24AA	o
+24AB	p
+24AC	q
+24AD	r
+24AE	s
+24AF	t
+24B0	u
+24B1	v
+24B2	w
+24B3	x
+24B4	y
+24B5	z
+2768	
+2769	
+276A	
+276B	
+276C	
+276D	
+276E	
+276F	
+2770	
+2771	
+2772	
+2773	
+2774	
+2775	
+27C5	
+27C6	
+27E6	
+27E7	
+27E8	
+27E9	
+27EA	
+27EB	
+27EC	
+27ED	
+27EE	
+27EF	
+2983	
+2984	
+2985	
+2986	
+2987	
+2988	
+2989	
+298A	
+298B	
+298C	
+298D	
+298E	
+298F	
+2990	
+2991	
+2992	
+2993	
+2994	
+2995	
+2996	
+2997	
+2998	
+29D8	
+29D9	
+29DA	
+29DB	
+29FC	
+29FD	
+2A74	=
+2A75	==
+2A76	===
+2ADC	⫝
+2C62	l
+2C63	p
+2C64	r
+2C6E	m
+2C7E	s
+2C7F	z
+2CEF	
+2CF0	
+2CF1	
+2CF9	
+2CFA	
+2CFB	
+2CFC	
+2CFE	
+2CFF	
+2D70	
+2D7F	
+2DE0	
+2DE1	
+2DE2	
+2DE3	
+2DE4	
+2DE5	
+2DE6	
+2DE7	
+2DE8	
+2DE9	
+2DEA	
+2DEB	
+2DEC	
+2DED	
+2DEE	
+2DEF	
+2DF0	
+2DF1	
+2DF2	
+2DF3	
+2DF4	
+2DF5	
+2DF6	
+2DF7	
+2DF8	
+2DF9	
+2DFA	
+2DFB	
+2DFC	
+2DFD	
+2DFE	
+2DFF	
+2E00	
+2E01	
+2E02	
+2E03	
+2E04	
+2E05	
+2E06	
+2E07	
+2E08	
+2E09	
+2E0A	
+2E0B	
+2E0C	
+2E0D	
+2E0E	
+2E0F	
+2E10	
+2E11	
+2E12	
+2E13	
+2E14	
+2E15	
+2E16	
+2E17	
+2E18	
+2E19	
+2E1A	
+2E1B	
+2E1C	
+2E1D	
+2E1E	
+2E1F	
+2E20	
+2E21	
+2E22	
+2E23	
+2E24	
+2E25	
+2E26	
+2E27	
+2E28	
+2E29	
+2E2A	
+2E2B	
+2E2C	
+2E2D	
+2E2E	
+2E30	
+2E31	
+2E32	
+2E33	
+2E34	
+2E35	
+2E36	
+2E37	
+2E38	
+2E39	
+2E3A	
+2E3B	
+2E3C	
+2E3D	
+2E3E	
+2E3F	
+2E40	
+2E41	
+2E42	
+2E43	
+2E44	
+2E45	
+2E46	
+2E47	
+2E48	
+2E49	
+2E80	you
+2E81	chang
+2E82	ya
+2E83	yin
+2E84	ya
+2E85	ren
+2E86	jiong
+2E88	dao
+2E89	dao
+2E8A	bo
+2E8B	jie
+2E8C	xiao
+2E8D	xiao
+2E8E	wu
+2E8F	wang
+2E90	wang
+2E91	wu
+2E92	si
+2E93	yao
+2E94	ji
+2E95	ji
+2E96	xin
+2E97	xin
+2E98	shou
+2E99	pu
+2E9B	ri
+2E9C	ri
+2E9D	yue
+2E9E	dai
+2E9F	mu
+2EA0	min
+2EA1	shui
+2EA2	shui
+2EA3	biao
+2EA4	zhao
+2EA5	zhao
+2EA6	qiang
+2EA7	niu
+2EA8	quan
+2EAB	mu
+2EAC	shi
+2EAD	shi
+2EAE	shi
+2EAF	si
+2EB0	si
+2EB1	gang
+2EB2	wang
+2EB4	wang
+2EB6	ren
+2EB7	ren
+2EB9	lao
+2EBA	yu
+2EBB	yu
+2EBC	rou
+2EBD	ju
+2EBE	cao
+2EBF	cao
+2EC0	cao
+2EC1	hu
+2EC2	yi
+2EC3	xi
+2EC4	xi
+2EC5	jian
+2EC8	yan
+2EC9	bei
+2ECB	che
+2ECC	chuo
+2ECD	chuo
+2ECE	chuo
+2ECF	fu
+2ED0	jin
+2ED1	chang
+2ED2	chang
+2ED3	zhang
+2ED4	men
+2ED6	fu
+2ED7	yu
+2ED8	qing
+2ED9	wei
+2EDA	ye
+2EDB	feng
+2EDC	fei
+2EDD	shi
+2EDF	shi
+2EE0	shi
+2EE2	ma
+2EE3	gu
+2EE4	gui
+2EE5	yu
+2EE6	niao
+2EE7	lu
+2EE8	mai
+2EE9	huang
+2EEA	mian
+2EEB	qi
+2EEC	qi
+2EED	chi
+2EEE	chi
+2EEF	long
+2EF0	long
+2EF1	gui
+2EF2	gui
+2EF3	gui
+2F00	yi
+2F01	gun
+2F02	zhu
+2F03	pie
+2F04	yi
+2F05	jue
+2F06	er
+2F07	tou
+2F08	ren
+2F09	er
+2F0A	ru
+2F0B	ba
+2F0C	jiong
+2F0D	mi
+2F0E	bing
+2F0F	ji
+2F10	qian
+2F11	dao
+2F12	li
+2F13	bao
+2F14	bi
+2F15	fang
+2F16	xi
+2F17	shi
+2F18	bo
+2F19	jie
+2F1A	chang
+2F1B	si
+2F1C	you
+2F1D	kou
+2F1E	wei
+2F1F	tu
+2F20	shi
+2F21	zhi
+2F22	sui
+2F23	xi
+2F24	da
+2F25	nu
+2F26	zi
+2F27	mian
+2F28	cun
+2F29	xiao
+2F2A	you
+2F2B	shi
+2F2C	che
+2F2D	shan
+2F2E	chuan
+2F2F	gong
+2F30	ji
+2F31	jin
+2F32	gan
+2F33	yao
+2F34	guang
+2F35	yin
+2F36	gong
+2F37	yi
+2F38	gong
+2F39	ji
+2F3A	shan
+2F3B	chi
+2F3C	xin
+2F3D	ge
+2F3E	hu
+2F3F	shou
+2F40	zhi
+2F41	pu
+2F42	wen
+2F43	dou
+2F44	jin
+2F45	fang
+2F46	wu
+2F47	ri
+2F48	yue
+2F49	yue
+2F4A	mu
+2F4B	qian
+2F4C	zhi
+2F4D	dai
+2F4E	shu
+2F4F	wu
+2F50	bi
+2F51	mao
+2F52	shi
+2F53	qi
+2F54	shui
+2F55	huo
+2F56	zhao
+2F57	fu
+2F58	yao
+2F59	pan
+2F5A	pian
+2F5B	ya
+2F5C	niu
+2F5D	quan
+2F5E	xuan
+2F5F	yu
+2F60	gua
+2F61	wa
+2F62	gan
+2F63	sheng
+2F64	yong
+2F65	tian
+2F66	pi
+2F67	ne
+2F68	bo
+2F69	bai
+2F6A	pi
+2F6B	min
+2F6C	mu
+2F6D	mao
+2F6E	shi
+2F6F	shi
+2F70	shi
+2F71	rou
+2F72	he
+2F73	xue
+2F74	li
+2F75	zhu
+2F76	mi
+2F77	mi
+2F78	fou
+2F79	wang
+2F7A	yang
+2F7B	yu
+2F7C	lao
+2F7D	er
+2F7E	lei
+2F7F	er
+2F80	yu
+2F81	rou
+2F82	chen
+2F83	zi
+2F84	zhi
+2F85	jiu
+2F86	she
+2F87	chuan
+2F88	zhou
+2F89	gen
+2F8A	se
+2F8B	cao
+2F8C	hu
+2F8D	chong
+2F8E	xue
+2F8F	xing
+2F90	yi
+2F91	ya
+2F92	jian
+2F93	jiao
+2F94	yan
+2F95	gu
+2F96	dou
+2F97	shi
+2F98	zhi
+2F99	bei
+2F9A	chi
+2F9B	zou
+2F9C	zu
+2F9D	shen
+2F9E	che
+2F9F	xin
+2FA0	chen
+2FA1	chuo
+2FA2	yi
+2FA3	you
+2FA4	bian
+2FA5	li
+2FA6	jin
+2FA7	zhang
+2FA8	men
+2FA9	fu
+2FAA	li
+2FAB	zhui
+2FAC	yu
+2FAD	qing
+2FAE	fei
+2FAF	mian
+2FB0	ge
+2FB1	wei
+2FB2	jiu
+2FB3	yin
+2FB4	ye
+2FB5	feng
+2FB6	fei
+2FB7	shi
+2FB8	shou
+2FB9	xiang
+2FBA	ma
+2FBB	gu
+2FBC	gao
+2FBD	biao
+2FBE	dou
+2FBF	chang
+2FC0	ge
+2FC1	gui
+2FC2	yu
+2FC3	niao
+2FC4	lu
+2FC5	lu
+2FC6	mai
+2FC7	ma
+2FC8	huang
+2FC9	shu
+2FCA	hei
+2FCB	zhi
+2FCC	mian
+2FCD	ding
+2FCE	gu
+2FCF	shu
+2FD0	bi
+2FD1	qi
+2FD2	chi
+2FD3	long
+2FD4	gui
+2FD5	yue
+3001	
+3002	
+3003	
+3007	ling
+3008	<
+3009	>
+300A	<<
+300B	>>
+300C	
+300D	
+300E	
+300F	
+3010	
+3011	
+3014	
+3015	
+3016	
+3017	
+3018	
+3019	
+301A	
+301B	
+301C	
+301D	
+301E	
+301F	
+302A	
+302B	
+302C	
+302D	
+3030	
+3038	shi
+3039	nian
+303A	sa
+303D	
+3041	~a
+3042	a
+3043	~i
+3044	i
+3045	~u
+3046	u
+3047	~e
+3048	e
+3049	~o
+304A	o
+304B	ka
+304C	ga
+304D	ki
+304E	gi
+304F	ku
+3050	gu
+3051	ke
+3052	ge
+3053	ko
+3054	go
+3055	sa
+3056	za
+3057	shi
+3058	ji
+3059	su
+305A	zu
+305B	se
+305C	ze
+305D	so
+305E	zo
+305F	ta
+3060	da
+3061	chi
+3062	dji
+3063	~tsu
+3064	tsu
+3065	dzu
+3066	te
+3067	de
+3068	to
+3069	do
+306A	na
+306B	ni
+306C	nu
+306D	ne
+306E	no
+306F	ha
+3070	ba
+3071	pa
+3072	hi
+3073	bi
+3074	pi
+3075	fu
+3076	bu
+3077	pu
+3078	he
+3079	be
+307A	pe
+307B	ho
+307C	bo
+307D	po
+307E	ma
+307F	mi
+3080	mu
+3081	me
+3082	mo
+3083	~ya
+3084	ya
+3085	~yu
+3086	yu
+3087	~yo
+3088	yo
+3089	ra
+308A	ri
+308B	ru
+308C	re
+308D	ro
+308E	~wa
+308F	wa
+3090	wi
+3091	we
+3092	wo
+3093	n
+3094	vu
+3099	
+309A	
+309D	
+309E	
+30A0	
+30A1	~a
+30A2	a
+30A3	~i
+30A4	i
+30A5	~u
+30A6	u
+30A7	~e
+30A8	e
+30A9	~o
+30AA	o
+30AB	ka
+30AC	ga
+30AD	ki
+30AE	gi
+30AF	ku
+30B0	gu
+30B1	ke
+30B2	ge
+30B3	ko
+30B4	go
+30B5	sa
+30B6	za
+30B7	shi
+30B8	ji
+30B9	su
+30BA	zu
+30BB	se
+30BC	ze
+30BD	so
+30BE	zo
+30BF	ta
+30C0	da
+30C1	chi
+30C2	dji
+30C3	~tsu
+30C4	tsu
+30C5	dzu
+30C6	te
+30C7	de
+30C8	to
+30C9	do
+30CA	na
+30CB	ni
+30CC	nu
+30CD	ne
+30CE	no
+30CF	ha
+30D0	ba
+30D1	pa
+30D2	hi
+30D3	bi
+30D4	pi
+30D5	fu
+30D6	bu
+30D7	pu
+30D8	he
+30D9	be
+30DA	pe
+30DB	ho
+30DC	bo
+30DD	po
+30DE	ma
+30DF	mi
+30E0	mu
+30E1	me
+30E2	mo
+30E3	~ya
+30E4	ya
+30E5	~yu
+30E6	yu
+30E7	~yo
+30E8	yo
+30E9	ra
+30EA	ri
+30EB	ru
+30EC	re
+30ED	ro
+30EE	~wa
+30EF	wa
+30F0	wi
+30F1	we
+30F2	wo
+30F3	n
+30F4	vu
+30F5	~ka
+30F6	~ke
+30F7	va
+30F8	vi
+30F9	ve
+30FA	vo
+30FB	
+30FD	
+30FE	
+3105	b
+3106	p
+3107	m1
+3108	f
+3109	d
+310A	t
+310B	n1
+310C	l
+310D	g
+310E	k
+310F	h
+3110	j
+3111	q
+3112	x
+3113	zhi1
+3114	chi1
+3115	shi1
+3116	ri1
+3117	zi1
+3118	ci1
+3119	si1
+311A	a1
+311B	o1
+311C	e1
+311D	eh1
+311E	ai1
+311F	ei1
+3120	ao1
+3121	ou1
+3122	an1
+3123	en1
+3124	ang1
+3125	eng1
+3126	er1
+3127	yi1
+3128	wu1
+3129	yu1
+3131	g
+3132	kk
+3133	gs
+3134	n
+3135	nj
+3136	nh
+3137	d
+3138	tt
+3139	l
+313A	lg
+313B	lm
+313C	lb
+313D	ls
+313E	lt
+313F	lp
+3141	m
+3142	b
+3143	pp
+3145	s
+3146	ss
+3147	
+3148	j
+3149	jj
+314A	ch
+314B	k
+314C	t
+314D	p
+314E	h
+314F	a
+3150	ae
+3151	ya
+3152	yae
+3153	eo
+3154	e
+3155	yeo
+3156	ye
+3157	o
+3158	wa
+3159	wae
+315A	oe
+315B	yo
+315C	u
+315D	wo
+315E	we
+315F	wi
+3160	yu
+3161	eu
+3162	ui
+3163	i
+3200	g
+3201	n
+3202	d
+3203	l
+3204	m
+3205	b
+3206	s
+3207	
+3208	j
+3209	ch
+320A	k
+320B	t
+320C	p
+320D	h
+320E	ga
+320F	na
+3210	da
+3211	la
+3212	ma
+3213	ba
+3214	sa
+3215	a
+3216	ja
+3217	cha
+3218	ka
+3219	ta
+321A	pa
+321B	ha
+321C	ju
+3260	g
+3261	n
+3262	d
+3263	l
+3264	m
+3265	b
+3266	s
+3267	
+3268	j
+3269	ch
+326A	k
+326B	t
+326C	p
+326D	h
+326E	ga
+326F	na
+3270	da
+3271	la
+3272	ma
+3273	ba
+3274	sa
+3275	a
+3276	ja
+3277	cha
+3278	ka
+3279	ta
+327A	pa
+327B	ha
+3371	hpa
+3372	da
+3373	au
+3374	bar
+3375	ov
+3376	pc
+3377	dm
+337A	iu
+3380	pa
+3381	na
+3383	ma
+3384	ka
+3385	kb
+3386	mb
+3387	gb
+3388	cal
+3389	kcal
+338A	pf
+338B	nf
+338E	mg
+338F	kg
+3390	hz
+3391	khz
+3392	mhz
+3393	ghz
+3394	thz
+3399	fm
+339A	nm
+339C	mm
+339D	cm
+339E	km
+33A7	ms
+33A9	pa
+33AA	kpa
+33AB	mpa
+33AC	gpa
+33AD	rad
+33AE	rads
+33B0	ps
+33B1	ns
+33B3	ms
+33B4	pv
+33B5	nv
+33B7	mv
+33B8	kv
+33B9	mv
+33BA	pw
+33BB	nw
+33BD	mw
+33BE	kw
+33BF	mw
+33C2	am
+33C3	bq
+33C4	cc
+33C5	cd
+33C6	ckg
+33C7	co
+33C8	db
+33C9	gy
+33CA	ha
+33CB	hp
+33CC	in
+33CD	kk
+33CE	km
+33CF	kt
+33D0	lm
+33D1	ln
+33D2	log
+33D3	lx
+33D4	mb
+33D5	mil
+33D6	mol
+33D7	ph
+33D8	pm
+33D9	ppm
+33DA	pr
+33DB	sr
+33DC	sv
+33DD	wb
+33DE	vm
+33DF	am
+A4FE	
+A4FF	
+A60D	
+A60E	
+A60F	
+A66F	
+A673	
+A674	
+A675	
+A676	
+A677	
+A678	
+A679	
+A67A	
+A67B	
+A67C	
+A67D	
+A67E	
+A69E	
+A69F	
+A6F0	
+A6F1	
+A6F2	
+A6F3	
+A6F4	
+A6F5	
+A6F6	
+A6F7	
+A7AA	h
+A7AC	g
+A7AD	l
+A7AE	i
+A7B2	j
+A7C5	s
+A7C6	z
+A7CB	ɤ
+A7CC	ꟍ
+A7DA	ꟛ
+A7DC	ƛ
+A802	
+A806	
+A80B	
+A825	
+A826	
+A874	
+A875	
+A876	
+A877	
+A8C4	
+A8C5	
+A8CE	
+A8CF	
+A8E0	
+A8E1	
+A8E2	
+A8E3	
+A8E4	
+A8E5	
+A8E6	
+A8E7	
+A8E8	
+A8E9	
+A8EA	
+A8EB	
+A8EC	
+A8ED	
+A8EE	
+A8EF	
+A8F0	
+A8F1	
+A8F8	
+A8F9	
+A8FA	
+A8FC	
+A926	
+A927	
+A928	
+A929	
+A92A	
+A92B	
+A92C	
+A92D	
+A92E	
+A92F	
+A947	
+A948	
+A949	
+A94A	
+A94B	
+A94C	
+A94D	
+A94E	
+A94F	
+A950	
+A951	
+A95F	
+A980	
+A981	
+A982	
+A9B3	
+A9B6	
+A9B7	
+A9B8	
+A9B9	
+A9BC	
+A9C1	
+A9C2	
+A9C3	
+A9C4	
+A9C5	
+A9C6	
+A9C7	
+A9C8	
+A9C9	
+A9CA	
+A9CB	
+A9CC	
+A9CD	
+A9DE	
+A9DF	
+A9E5	
+AA29	
+AA2A	
+AA2B	
+AA2C	
+AA2D	
+AA2E	
+AA31	
+AA32	
+AA35	
+AA36	
+AA43	
+AA4C	
+AA5C	
+AA5D	
+AA5E	
+AA5F	
+AA7C	
+AAB0	
+AAB2	
+AAB3	
+AAB4	
+AAB7	
+AAB8	
+AABE	
+AABF	
+AAC1	
+AADE	
+AADF	
+AAEC	
+AAED	
+AAF0	
+AAF1	
+AAF6	
+ABE5	
+ABE8	
+ABEB	
+ABED	
+FA6C	𤋮
+FACF	𢡊
+FAD0	𢡄
+FAD1	𣏕
+FAD5	𥉉
+FB00	ff
+FB01	fi
+FB02	fl
+FB03	ffi
+FB04	ffl
+FB05	st
+FB06	st
+FB1D	yi
+FB1E	
+FB1F	yya
+FB20	
+FB21	
+FB22	d
+FB23	h
+FB24	k
+FB25	l
+FB26	m
+FB27	r
+FB28	t
+FB29	+
+FB2A	s
+FB2B	s
+FB2C	s
+FB2D	s
+FB2E	a
+FB2F	a
+FB30	
+FB31	b
+FB32	g
+FB33	d
+FB34	h
+FB35	w
+FB36	z
+FB38	t
+FB39	y
+FB3A	k
+FB3B	k
+FB3C	l
+FB3E	m
+FB40	n
+FB41	s
+FB43	p
+FB44	p
+FB46	z
+FB47	q
+FB48	r
+FB49	s
+FB4A	t
+FB4B	wo
+FB4C	b
+FB4D	k
+FB4E	p
+FB4F	l
+FB50	ٱ
+FB51	ٱ
+FB52	ٻ
+FB53	ٻ
+FB54	ٻ
+FB55	ٻ
+FB56	p
+FB57	p
+FB58	p
+FB59	p
+FB5A	ڀ
+FB5B	ڀ
+FB5C	ڀ
+FB5D	ڀ
+FB5E	ٺ
+FB5F	ٺ
+FB60	ٺ
+FB61	ٺ
+FB62	ٿ
+FB63	ٿ
+FB64	ٿ
+FB65	ٿ
+FB66	ٹ
+FB67	ٹ
+FB68	ٹ
+FB69	ٹ
+FB6A	v
+FB6B	v
+FB6C	v
+FB6D	v
+FB6E	ڦ
+FB6F	ڦ
+FB70	ڦ
+FB71	ڦ
+FB72	ڄ
+FB73	ڄ
+FB74	ڄ
+FB75	ڄ
+FB76	ڃ
+FB77	ڃ
+FB78	ڃ
+FB79	ڃ
+FB7A	ch
+FB7B	ch
+FB7C	ch
+FB7D	ch
+FB7E	ڇ
+FB7F	ڇ
+FB80	ڇ
+FB81	ڇ
+FB82	ڍ
+FB83	ڍ
+FB84	ڌ
+FB85	ڌ
+FB86	ڎ
+FB87	ڎ
+FB88	ڈ
+FB89	ڈ
+FB8A	zh
+FB8B	zh
+FB8C	ڑ
+FB8D	ڑ
+FB8E	k
+FB8F	k
+FB90	k
+FB91	k
+FB92	g
+FB93	g
+FB94	g
+FB95	g
+FB96	ڳ
+FB97	ڳ
+FB98	ڳ
+FB99	ڳ
+FB9A	ڱ
+FB9B	ڱ
+FB9C	ڱ
+FB9D	ڱ
+FB9E	ں
+FB9F	ں
+FBA0	ڻ
+FBA1	ڻ
+FBA2	ڻ
+FBA3	ڻ
+FBA4	ە
+FBA5	ە
+FBA6	ہ
+FBA7	ہ
+FBA8	ہ
+FBA9	ہ
+FBAA	ھ
+FBAB	ھ
+FBAC	ھ
+FBAD	ھ
+FBAE	ے
+FBAF	ے
+FBB0	ے
+FBB1	ے
+FBD3	ng
+FBD4	ng
+FBD5	ng
+FBD6	ng
+FBD7	ۇ
+FBD8	ۇ
+FBD9	ۆ
+FBDA	ۆ
+FBDB	ۈ
+FBDC	ۈ
+FBDD	ۇٴ
+FBDE	v
+FBDF	v
+FBE0	ۅ
+FBE1	ۅ
+FBE2	ۉ
+FBE3	ۉ
+FBE4	ې
+FBE5	ې
+FBE6	ې
+FBE7	ې
+FBE8	y
+FBE9	y
+FBEA	ya
+FBEB	ya
+FBEC	yە
+FBED	yە
+FBEE	yw
+FBEF	yw
+FBF0	yۇ
+FBF1	yۇ
+FBF2	yۆ
+FBF3	yۆ
+FBF4	yۈ
+FBF5	yۈ
+FBF6	yې
+FBF7	yې
+FBF8	yې
+FBF9	yy
+FBFA	yy
+FBFB	yy
+FBFC	y
+FBFD	y
+FBFE	y
+FBFF	y
+FC00	yj
+FC01	yh
+FC02	ym
+FC03	yy
+FC04	yy
+FC05	bj
+FC06	bh
+FC07	bkh
+FC08	bm
+FC09	by
+FC0A	by
+FC0B	tj
+FC0C	th
+FC0D	tkh
+FC0E	tm
+FC0F	ty
+FC10	ty
+FC11	thj
+FC12	thm
+FC13	thy
+FC14	thy
+FC15	jh
+FC16	jm
+FC17	hj
+FC18	hm
+FC19	khj
+FC1A	khh
+FC1B	khm
+FC1C	sj
+FC1D	sh
+FC1E	skh
+FC1F	sm
+FC20	sh
+FC21	sm
+FC22	dj
+FC23	dh
+FC24	dkh
+FC25	dm
+FC26	th
+FC27	tm
+FC28	zm
+FC29	ʿj
+FC2A	ʿm
+FC2B	ghj
+FC2C	ghm
+FC2D	fj
+FC2E	fh
+FC2F	fkh
+FC30	fm
+FC31	fy
+FC32	fy
+FC33	qh
+FC34	qm
+FC35	qy
+FC36	qy
+FC37	ka
+FC38	kj
+FC39	kh
+FC3A	kkh
+FC3B	kl
+FC3C	km
+FC3D	ky
+FC3E	ky
+FC3F	lj
+FC40	lh
+FC41	lkh
+FC42	lm
+FC43	ly
+FC44	ly
+FC45	mj
+FC46	mh
+FC47	mkh
+FC48	mm
+FC49	my
+FC4A	my
+FC4B	nj
+FC4C	nh
+FC4D	nkh
+FC4E	nm
+FC4F	ny
+FC50	ny
+FC51	hj
+FC52	hm
+FC53	hy
+FC54	hy
+FC55	yj
+FC56	yh
+FC57	ykh
+FC58	ym
+FC59	yy
+FC5A	yy
+FC5B	dh
+FC5C	r
+FC5D	y
+FC5E	 uⁿ
+FC5F	 iⁿ
+FC60	 a
+FC61	 u
+FC62	 i
+FC63	 
+FC64	yr
+FC65	yz
+FC66	ym
+FC67	yn
+FC68	yy
+FC69	yy
+FC6A	br
+FC6B	bz
+FC6C	bm
+FC6D	bn
+FC6E	by
+FC6F	by
+FC70	tr
+FC71	tz
+FC72	tm
+FC73	tn
+FC74	ty
+FC75	ty
+FC76	thr
+FC77	thz
+FC78	thm
+FC79	thn
+FC7A	thy
+FC7B	thy
+FC7C	fy
+FC7D	fy
+FC7E	qy
+FC7F	qy
+FC80	ka
+FC81	kl
+FC82	km
+FC83	ky
+FC84	ky
+FC85	lm
+FC86	ly
+FC87	ly
+FC88	ma
+FC89	mm
+FC8A	nr
+FC8B	nz
+FC8C	nm
+FC8D	nn
+FC8E	ny
+FC8F	ny
+FC90	y
+FC91	yr
+FC92	yz
+FC93	ym
+FC94	yn
+FC95	yy
+FC96	yy
+FC97	yj
+FC98	yh
+FC99	ykh
+FC9A	ym
+FC9B	yh
+FC9C	bj
+FC9D	bh
+FC9E	bkh
+FC9F	bm
+FCA0	bh
+FCA1	tj
+FCA2	th
+FCA3	tkh
+FCA4	tm
+FCA5	th
+FCA6	thm
+FCA7	jh
+FCA8	jm
+FCA9	hj
+FCAA	hm
+FCAB	khj
+FCAC	khm
+FCAD	sj
+FCAE	sh
+FCAF	skh
+FCB0	sm
+FCB1	sh
+FCB2	skh
+FCB3	sm
+FCB4	dj
+FCB5	dh
+FCB6	dkh
+FCB7	dm
+FCB8	th
+FCB9	zm
+FCBA	ʿj
+FCBB	ʿm
+FCBC	ghj
+FCBD	ghm
+FCBE	fj
+FCBF	fh
+FCC0	fkh
+FCC1	fm
+FCC2	qh
+FCC3	qm
+FCC4	kj
+FCC5	kh
+FCC6	kkh
+FCC7	kl
+FCC8	km
+FCC9	lj
+FCCA	lh
+FCCB	lkh
+FCCC	lm
+FCCD	lh
+FCCE	mj
+FCCF	mh
+FCD0	mkh
+FCD1	mm
+FCD2	nj
+FCD3	nh
+FCD4	nkh
+FCD5	nm
+FCD6	nh
+FCD7	hj
+FCD8	hm
+FCD9	h
+FCDA	yj
+FCDB	yh
+FCDC	ykh
+FCDD	ym
+FCDE	yh
+FCDF	ym
+FCE0	yh
+FCE1	bm
+FCE2	bh
+FCE3	tm
+FCE4	th
+FCE5	thm
+FCE6	thh
+FCE7	sm
+FCE8	sh
+FCE9	shm
+FCEA	shh
+FCEB	kl
+FCEC	km
+FCED	lm
+FCEE	nm
+FCEF	nh
+FCF0	ym
+FCF1	yh
+FCF2	a
+FCF3	u
+FCF4	i
+FCF5	ty
+FCF6	ty
+FCF7	ʿy
+FCF8	ʿy
+FCF9	ghy
+FCFA	ghy
+FCFB	sy
+FCFC	sy
+FCFD	shy
+FCFE	shy
+FCFF	hy
+FD00	hy
+FD01	jy
+FD02	jy
+FD03	khy
+FD04	khy
+FD05	sy
+FD06	sy
+FD07	dy
+FD08	dy
+FD09	shj
+FD0A	shh
+FD0B	shkh
+FD0C	shm
+FD0D	shr
+FD0E	sr
+FD0F	sr
+FD10	dr
+FD11	ty
+FD12	ty
+FD13	ʿy
+FD14	ʿy
+FD15	ghy
+FD16	ghy
+FD17	sy
+FD18	sy
+FD19	shy
+FD1A	shy
+FD1B	hy
+FD1C	hy
+FD1D	jy
+FD1E	jy
+FD1F	khy
+FD20	khy
+FD21	sy
+FD22	sy
+FD23	dy
+FD24	dy
+FD25	shj
+FD26	shh
+FD27	shkh
+FD28	shm
+FD29	shr
+FD2A	sr
+FD2B	sr
+FD2C	dr
+FD2D	shj
+FD2E	shh
+FD2F	shkh
+FD30	shm
+FD31	sh
+FD32	shh
+FD33	tm
+FD34	sj
+FD35	sh
+FD36	skh
+FD37	shj
+FD38	shh
+FD39	shkh
+FD3A	tm
+FD3B	zm
+FD3C	aaⁿ
+FD3D	aaⁿ
+FD3E	
+FD3F	
+FD50	tjm
+FD51	thj
+FD52	thj
+FD53	thm
+FD54	tkhm
+FD55	tmj
+FD56	tmh
+FD57	tmkh
+FD58	jmh
+FD59	jmh
+FD5A	hmy
+FD5B	hmy
+FD5C	shj
+FD5D	sjh
+FD5E	sjy
+FD5F	smh
+FD60	smh
+FD61	smj
+FD62	smm
+FD63	smm
+FD64	shh
+FD65	shh
+FD66	smm
+FD67	shhm
+FD68	shhm
+FD69	shjy
+FD6A	shmkh
+FD6B	shmkh
+FD6C	shmm
+FD6D	shmm
+FD6E	dhy
+FD6F	dkhm
+FD70	dkhm
+FD71	tmh
+FD72	tmh
+FD73	tmm
+FD74	tmy
+FD75	ʿjm
+FD76	ʿmm
+FD77	ʿmm
+FD78	ʿmy
+FD79	ghmm
+FD7A	ghmy
+FD7B	ghmy
+FD7C	fkhm
+FD7D	fkhm
+FD7E	qmh
+FD7F	qmm
+FD80	lhm
+FD81	lhy
+FD82	lhy
+FD83	ljj
+FD84	ljj
+FD85	lkhm
+FD86	lkhm
+FD87	lmh
+FD88	lmh
+FD89	mhj
+FD8A	mhm
+FD8B	mhy
+FD8C	mjh
+FD8D	mjm
+FD8E	mkhj
+FD8F	mkhm
+FD92	mjkh
+FD93	hmj
+FD94	hmm
+FD95	nhm
+FD96	nhy
+FD97	njm
+FD98	njm
+FD99	njy
+FD9A	nmy
+FD9B	nmy
+FD9C	ymm
+FD9D	ymm
+FD9E	bkhy
+FD9F	tjy
+FDA0	tjy
+FDA1	tkhy
+FDA2	tkhy
+FDA3	tmy
+FDA4	tmy
+FDA5	jmy
+FDA6	jhy
+FDA7	jmy
+FDA8	skhy
+FDA9	shy
+FDAA	shhy
+FDAB	dhy
+FDAC	ljy
+FDAD	lmy
+FDAE	yhy
+FDAF	yjy
+FDB0	ymy
+FDB1	mmy
+FDB2	qmy
+FDB3	nhy
+FDB4	qmh
+FDB5	lhm
+FDB6	ʿmy
+FDB7	kmy
+FDB8	njh
+FDB9	mkhy
+FDBA	ljm
+FDBB	kmm
+FDBC	ljm
+FDBD	njh
+FDBE	jhy
+FDBF	hjy
+FDC0	mjy
+FDC1	fmy
+FDC2	bhy
+FDC3	kmm
+FDC4	ʿjm
+FDC5	smm
+FDC6	skhy
+FDC7	njy
+FDF0	slے
+FDF1	qlے
+FDF2	allh
+FDF3	akbr
+FDF4	mhmd
+FDF5	slʿm
+FDF6	rswl
+FDF7	ʿlyh
+FDF8	wslm
+FDF9	sly
+FDFA	sly allh ʿlyh wslm
+FDFB	jl jlalh
+FDFC	ryal
+FE00	
+FE01	
+FE02	
+FE03	
+FE04	
+FE05	
+FE06	
+FE07	
+FE08	
+FE09	
+FE0A	
+FE0B	
+FE0C	
+FE0D	
+FE0E	
+FE0F	
+FE10	
+FE11	
+FE12	
+FE13	
+FE14	
+FE15	
+FE16	
+FE17	
+FE18	
+FE19	
+FE20	
+FE21	
+FE22	
+FE23	
+FE24	
+FE25	
+FE26	
+FE27	
+FE28	
+FE29	
+FE2A	
+FE2B	
+FE2C	
+FE2D	
+FE2E	
+FE2F	
+FE30	
+FE31	
+FE32	
+FE33	
+FE34	
+FE35	
+FE36	
+FE37	
+FE38	
+FE39	
+FE3A	
+FE3B	
+FE3C	
+FE3D	<<
+FE3E	>>
+FE3F	<
+FE40	>
+FE41	
+FE42	
+FE43	
+FE44	
+FE45	
+FE46	
+FE47	
+FE48	
+FE49	
+FE4A	
+FE4B	
+FE4C	
+FE4D	
+FE4E	
+FE4F	
+FE50	
+FE51	
+FE52	
+FE54	
+FE55	
+FE56	
+FE57	
+FE58	
+FE59	
+FE5A	
+FE5B	
+FE5C	
+FE5D	
+FE5E	
+FE5F	
+FE60	
+FE61	
+FE62	+
+FE63	
+FE64	<
+FE65	>
+FE66	=
+FE68	
+FE69	$
+FE6A	
+FE6B	
+FE70	 aⁿ
+FE71	aⁿ
+FE72	 uⁿ
+FE74	 iⁿ
+FE76	 a
+FE77	a
+FE78	 u
+FE79	u
+FE7A	 i
+FE7B	i
+FE7C	 
+FE7D	
+FE7E	 
+FE7F	
+FE80	ʾ
+FE81	a
+FE82	a
+FE83	a
+FE84	a
+FE85	w
+FE86	w
+FE87	a
+FE88	a
+FE89	y
+FE8A	y
+FE8B	y
+FE8C	y
+FE8D	a
+FE8E	a
+FE8F	b
+FE90	b
+FE91	b
+FE92	b
+FE93	t
+FE94	t
+FE95	t
+FE96	t
+FE97	t
+FE98	t
+FE99	th
+FE9A	th
+FE9B	th
+FE9C	th
+FE9D	j
+FE9E	j
+FE9F	j
+FEA0	j
+FEA1	h
+FEA2	h
+FEA3	h
+FEA4	h
+FEA5	kh
+FEA6	kh
+FEA7	kh
+FEA8	kh
+FEA9	d
+FEAA	d
+FEAB	dh
+FEAC	dh
+FEAD	r
+FEAE	r
+FEAF	z
+FEB0	z
+FEB1	s
+FEB2	s
+FEB3	s
+FEB4	s
+FEB5	sh
+FEB6	sh
+FEB7	sh
+FEB8	sh
+FEB9	s
+FEBA	s
+FEBB	s
+FEBC	s
+FEBD	d
+FEBE	d
+FEBF	d
+FEC0	d
+FEC1	t
+FEC2	t
+FEC3	t
+FEC4	t
+FEC5	z
+FEC6	z
+FEC7	z
+FEC8	z
+FEC9	ʿ
+FECA	ʿ
+FECB	ʿ
+FECC	ʿ
+FECD	gh
+FECE	gh
+FECF	gh
+FED0	gh
+FED1	f
+FED2	f
+FED3	f
+FED4	f
+FED5	q
+FED6	q
+FED7	q
+FED8	q
+FED9	k
+FEDA	k
+FEDB	k
+FEDC	k
+FEDD	l
+FEDE	l
+FEDF	l
+FEE0	l
+FEE1	m
+FEE2	m
+FEE3	m
+FEE4	m
+FEE5	n
+FEE6	n
+FEE7	n
+FEE8	n
+FEE9	h
+FEEA	h
+FEEB	h
+FEEC	h
+FEED	w
+FEEE	w
+FEEF	y
+FEF0	y
+FEF1	y
+FEF2	y
+FEF3	y
+FEF4	y
+FEF5	la
+FEF6	la
+FEF7	la
+FEF8	la
+FEF9	la
+FEFA	la
+FEFB	la
+FEFC	la
+FF01	
+FF02	
+FF03	
+FF04	$
+FF05	
+FF06	
+FF07	
+FF08	
+FF09	
+FF0A	
+FF0B	+
+FF0C	
+FF0D	
+FF0E	
+FF0F	
+FF10	0
+FF11	1
+FF12	2
+FF13	3
+FF14	4
+FF15	5
+FF16	6
+FF17	7
+FF18	8
+FF19	9
+FF1A	
+FF1B	
+FF1C	<
+FF1D	=
+FF1E	>
+FF1F	
+FF20	
+FF21	a
+FF22	b
+FF23	c
+FF24	d
+FF25	e
+FF26	f
+FF27	g
+FF28	h
+FF29	i
+FF2A	j
+FF2B	k
+FF2C	l
+FF2D	m
+FF2E	n
+FF2F	o
+FF30	p
+FF31	q
+FF32	r
+FF33	s
+FF34	t
+FF35	u
+FF36	v
+FF37	w
+FF38	x
+FF39	y
+FF3A	z
+FF3B	
+FF3C	
+FF3D	
+FF3E	^
+FF3F	
+FF40	`
+FF41	a
+FF42	b
+FF43	c
+FF44	d
+FF45	e
+FF46	f
+FF47	g
+FF48	h
+FF49	i
+FF4A	j
+FF4B	k
+FF4C	l
+FF4D	m
+FF4E	n
+FF4F	o
+FF50	p
+FF51	q
+FF52	r
+FF53	s
+FF54	t
+FF55	u
+FF56	v
+FF57	w
+FF58	x
+FF59	y
+FF5A	z
+FF5B	
+FF5C	|
+FF5D	
+FF5E	~
+FF5F	
+FF60	
+FF61	
+FF62	
+FF63	
+FF64	
+FF65	
+FF66	wo
+FF67	~a
+FF68	~i
+FF69	~u
+FF6A	~e
+FF6B	~o
+FF6C	~ya
+FF6D	~yu
+FF6E	~yo
+FF6F	~tsu
+FF70	ー
+FF71	a
+FF72	i
+FF73	u
+FF74	e
+FF75	o
+FF76	ka
+FF77	ki
+FF78	ku
+FF79	ke
+FF7A	ko
+FF7B	sa
+FF7C	shi
+FF7D	su
+FF7E	se
+FF7F	so
+FF80	ta
+FF81	chi
+FF82	tsu
+FF83	te
+FF84	to
+FF85	na
+FF86	ni
+FF87	nu
+FF88	ne
+FF89	no
+FF8A	ha
+FF8B	hi
+FF8C	fu
+FF8D	he
+FF8E	ho
+FF8F	ma
+FF90	mi
+FF91	mu
+FF92	me
+FF93	mo
+FF94	ya
+FF95	yu
+FF96	yo
+FF97	ra
+FF98	ri
+FF99	ru
+FF9A	re
+FF9B	ro
+FF9C	wa
+FF9D	n
+FF9E	
+FF9F	
+FFA0	ᅠ
+FFA1	g
+FFA2	kk
+FFA3	gs
+FFA4	n
+FFA5	nj
+FFA6	nh
+FFA7	d
+FFA8	tt
+FFA9	l
+FFAA	lg
+FFAB	lm
+FFAC	lb
+FFAD	ls
+FFAE	lt
+FFAF	lp
+FFB0	ᄚ
+FFB1	m
+FFB2	b
+FFB3	pp
+FFB4	ᄡ
+FFB5	s
+FFB6	ss
+FFB7	
+FFB8	j
+FFB9	jj
+FFBA	ch
+FFBB	k
+FFBC	t
+FFBD	p
+FFBE	h
+FFC2	a
+FFC3	ae
+FFC4	ya
+FFC5	yae
+FFC6	eo
+FFC7	e
+FFCA	yeo
+FFCB	ye
+FFCC	o
+FFCD	wa
+FFCE	wae
+FFCF	oe
+FFD2	yo
+FFD3	u
+FFD4	wo
+FFD5	we
+FFD6	wi
+FFD7	yu
+FFDA	eu
+FFDB	ui
+FFDC	i
+FFE0	¢
+FFE1	£
+FFE2	¬
+FFE3	 
+FFE4	¦
+FFE5	¥
+FFE6	₩
+FFE8	│
+FFE9	←
+FFEA	↑
+FFEB	→
+FFEC	↓
+FFED	■
+FFEE	○

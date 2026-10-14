@@ -12,12 +12,14 @@ import (
 //  1. one leading article ("the ", "a ", "an ", any case) is dropped, unless
 //     that would leave nothing;
 //  2. the characters , & - { } ' are removed and . + % become a space;
-//  3. the result is lower-cased and Latin letters are folded to ASCII
-//     (accents, ligatures, ß, ø, ł, ...);
-//  4. every run of ASCII digits shorter than ten digits is zero-padded to ten,
-//     so numbers order numerically under a plain byte comparison.
-//
-// Scripts other than Latin are left as they are.
+//  3. every run of decimal digits (BMP, any script) shorter than ten digits
+//     is zero-padded to ten, so numbers order numerically under a plain byte
+//     comparison;
+//  4. the text is lower-cased and transliterated to Latin letters (see
+//     transliterate): accents, ligatures, Greek, Cyrillic, Hebrew, Arabic,
+//     Indic scripts, Thai, kana, Hangul and Han readings. When a character
+//     outside the set the reference leaves alone is present, ASCII
+//     punctuation such as ! ( ) ? : ; is dropped as well.
 func NormalizeSortName(title string) string {
 	s := title
 	lower := strings.ToLower(s)
@@ -28,83 +30,39 @@ func NormalizeSortName(title string) string {
 		}
 	}
 
-	var b strings.Builder
-	b.Grow(len(s) + 16)
-	var run []byte
+	// Steps 2 and 3 work on code points; the transliteration needs the
+	// whole string (it depends on neighbours), so it runs afterwards.
+	work := make([]rune, 0, len(s)+16)
+	var run []rune
 	emitRun := func() {
 		if len(run) == 0 {
 			return
 		}
 		for i := len(run); i < 10; i++ {
-			b.WriteByte('0')
+			work = append(work, '0')
 		}
-		b.Write(run)
+		work = append(work, run...)
 		run = run[:0]
 	}
 	for _, r := range s {
-		if r >= '0' && r <= '9' {
-			run = append(run, byte(r))
+		if r <= 0xFFFF && unicode.IsDigit(r) {
+			run = append(run, r)
+			continue
+		}
+		switch r {
+		case ',', '&', '-', '{', '}', '\'':
+			continue // deleted: the digits around it still form one run
+		case '.', '+', '%':
+			emitRun()
+			work = append(work, ' ')
 			continue
 		}
 		emitRun()
-		switch r {
-		case ',', '&', '-', '{', '}', '\'':
-			continue
-		case '.', '+', '%':
-			b.WriteByte(' ')
-			continue
-		}
-		r = unicode.ToLower(r)
-		if rep, ok := latinFold[r]; ok {
-			b.WriteString(rep)
-			continue
-		}
-		b.WriteRune(r)
+		work = append(work, r)
 	}
 	emitRun()
-	return b.String()
+	return transliterate(work)
 }
-
-// latinFold maps lower-case Latin letters with diacritics, ligatures and
-// the handful of letters that have no decomposition to their ASCII
-// spelling. The reference transliterates every script; Tinyfin only folds
-// Latin (no dependency on a Unicode tables module).
-var latinFold = func() map[rune]string {
-	m := map[rune]string{}
-	for ascii, group := range map[string]string{
-		"a": "àáâãäåāăąǎǟǡǻȁȃȧ",
-		"c": "çćĉċč",
-		"d": "ďđð",
-		"e": "èéêëēĕėęěȅȇȩ",
-		"g": "ĝğġģǧǵ",
-		"h": "ĥħ",
-		"i": "ìíîïĩīĭįıǐȉȋ",
-		"j": "ĵ",
-		"k": "ķǩ",
-		"l": "ĺļľŀł",
-		"n": "ñńņňǹ",
-		"o": "òóôõöøōŏőǒǫȍȏ",
-		"r": "ŕŗřȑȓ",
-		"s": "śŝşšș",
-		"t": "ţťŧț",
-		"u": "ùúûüũūŭůűųǔȕȗ",
-		"w": "ŵ",
-		"y": "ýÿŷȳ",
-		"z": "źżž",
-	} {
-		for _, r := range group {
-			m[r] = ascii
-		}
-	}
-	for r, rep := range map[rune]string{
-		'æ': "ae", 'œ': "oe", 'ß': "ss", 'þ': "th", 'ĳ': "ij",
-		'ǆ': "dz", 'ǉ': "lj", 'ǌ': "nj",
-		'ﬀ': "ff", 'ﬁ': "fi", 'ﬂ': "fl", 'ﬃ': "ffi", 'ﬄ': "ffl",
-	} {
-		m[r] = rep
-	}
-	return m
-}()
 
 // SortKey is the value stored as the item's sort name (items.sort.R8). An
 // episode orders by season, then episode number, then its own title, which
