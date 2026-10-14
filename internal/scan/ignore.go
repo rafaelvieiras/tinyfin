@@ -236,6 +236,9 @@ func readScanDir(ctx context.Context, dir string) ([]os.DirEntry, error) {
 
 // upsertItem stores item and records it as cataloged by the running pass.
 func (s *Scanner) upsertItem(ctx context.Context, item storage.Item) error {
+	if item.Path != "" && IsStrm(item.Path) && item.RemoteURL == "" {
+		item.RemoteURL = readStrmURL(item.Path)
+	}
 	if err := s.store.UpsertItem(ctx, item); err != nil {
 		if p := passOf(ctx); p != nil {
 			p.mu.Lock()

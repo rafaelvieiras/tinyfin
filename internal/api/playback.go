@@ -14,11 +14,14 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/deviceprofile"
 	"github.com/rafaelvieiras/tinyfin/internal/playback"
@@ -157,6 +160,12 @@ func baseMediaSourceInfo(item storage.Item, container string) mediaSourceInfoDto
 	case storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeVideo, storage.ItemTypeTrailer:
 		src.VideoType = "VideoFile"
 	}
+	if item.RemoteURL != "" {
+		// A .strm file that holds an address: the source is the address.
+		src.Path = item.RemoteURL
+		src.IsRemote = true
+		src.Protocol = remoteProtocol(item.RemoteURL)
+	}
 	if item.VideoType != "" {
 		src.VideoType, src.IsoType = item.VideoType, item.IsoType
 		// A disc is named "<folder>/DVD" or "<folder>/Bluray" (an image: its
@@ -181,6 +190,29 @@ func baseMediaSourceInfo(item storage.Item, container string) mediaSourceInfoDto
 	return src
 }
 
+// remoteProtocol maps the scheme of an address to the MediaProtocol name.
+func remoteProtocol(u string) string {
+	scheme := strings.ToLower(u)
+	if i := strings.Index(scheme, "://"); i > 0 {
+		scheme = scheme[:i]
+	}
+	switch scheme {
+	case "http", "https":
+		return "Http"
+	case "rtmp":
+		return "Rtmp"
+	case "rtsp":
+		return "Rtsp"
+	case "udp":
+		return "Udp"
+	case "rtp":
+		return "Rtp"
+	case "ftp":
+		return "Ftp"
+	}
+	return "File"
+}
+
 // handlePlaybackInfo serves both GET and POST /Items/{itemId}/PlaybackInfo.
 // The GET form has no request body to carry a profile, so it always falls
 // through to the registry/default lookup; the POST form is how a real
@@ -195,6 +227,28 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 
 	if !item.HasMediaFile() {
 		writeNotPlayable(w)
+		return
+	}
+
+	if item.VideoType == storage.VideoTypeDvd || item.VideoType == storage.VideoTypeBluRay || IsStrmItem(item) {
+		// A disc folder or a .strm file is always offered as it is: there is
+		// nothing to negotiate (the reference does the same).
+		container := item.Container
+		if item.RemoteURL != "" && len(item.MediaStreams) == 0 {
+			// What an address holds is probed when it is played, and kept.
+			streams, ticks, c, err := s.scanner.ProbeMedia(r.Context(), item.RemoteURL)
+			if err == nil {
+				item.MediaStreams, item.RunTimeTicks, item.Container = streams, ticks, c
+				container = c
+				if err := s.store.UpsertItem(r.Context(), item); err != nil {
+					log.Printf("api: keeping the probe of %s: %v", item.ID, err)
+				}
+			}
+		}
+		source := baseMediaSourceInfo(item, container)
+		source.SupportsDirectPlay, source.SupportsDirectStream, source.SupportsTranscoding = true, true, true
+		source.TranscodingSubProtocol = "http"
+		writeJSON(w, http.StatusOK, playbackInfoResponse{PlaySessionID: randomID(), MediaSources: []mediaSourceInfoDto{source}})
 		return
 	}
 
@@ -325,7 +379,71 @@ func (s *Server) handleVideoStream(w http.ResponseWriter, r *http.Request) {
 	if v, ok := s.versionFor(r.Context(), r, item); ok {
 		item = v
 	}
+	switch {
+	case item.VideoType == storage.VideoTypeDvd || item.VideoType == storage.VideoTypeBluRay:
+		// A disc folder has no single file to send.
+		w.Header().Set("Content-Type", "video/mpeg")
+		w.Header().Set("Content-Length", "0")
+		w.WriteHeader(http.StatusOK)
+		return
+	case item.RemoteURL != "":
+		s.proxyRemote(w, r, item.RemoteURL)
+		return
+	case IsStrmItem(item):
+		// The file itself, not a video.
+		w.Header().Set("Content-Type", "application/octet-stream")
+	}
 	http.ServeFile(w, r, item.Path)
+}
+
+// IsStrmItem reports whether item is a .strm file.
+func IsStrmItem(item storage.Item) bool {
+	return item.Path != "" && strings.EqualFold(filepath.Ext(item.Path), ".strm")
+}
+
+// remoteClient fetches the address of a .strm file for playback; only the
+// wait for the response headers is bounded, the body streams for as long as
+// the viewer watches.
+var remoteClient = &http.Client{Transport: &http.Transport{
+	ResponseHeaderTimeout: 30 * time.Second,
+	Proxy:                 http.ProxyFromEnvironment,
+}}
+
+// proxyRemote sends the bytes of an address to the caller: the whole body,
+// without range support (the reference answers the same).
+func (s *Server) proxyRemote(w http.ResponseWriter, r *http.Request, target string) {
+	if remoteProtocol(target) != "Http" {
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte("Error processing request."))
+		return
+	}
+	req, err := http.NewRequestWithContext(r.Context(), r.Method, target, nil)
+	var resp *http.Response
+	if err == nil {
+		resp, err = remoteClient.Do(req)
+	}
+	if err != nil || resp.StatusCode/100 != 2 {
+		if resp != nil {
+			resp.Body.Close()
+		}
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte("Error processing request."))
+		return
+	}
+	defer resp.Body.Close()
+	if ct := resp.Header.Get("Content-Type"); ct != "" {
+		w.Header().Set("Content-Type", ct)
+	}
+	if resp.ContentLength >= 0 {
+		w.Header().Set("Content-Length", strconv.FormatInt(resp.ContentLength, 10))
+	}
+	w.Header().Set("Accept-Ranges", "none")
+	w.WriteHeader(http.StatusOK)
+	if r.Method != http.MethodHead {
+		_, _ = io.Copy(w, resp.Body)
+	}
 }
 
 // bitrateTestDefaultSize is the response size GET /Playback/BitrateTest

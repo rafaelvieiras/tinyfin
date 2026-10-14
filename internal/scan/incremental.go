@@ -51,6 +51,10 @@ func (s *Scanner) probeOrReuse(ctx context.Context, pool *jobPool, itemID storag
 		res.added = fi.ModTime().UTC()
 		res.mtimeNS = fi.ModTime().UnixNano()
 	}
+	if IsStrm(path) {
+		// What a .strm file points at is probed when it is played, not here.
+		return res
+	}
 
 	sigs, hasSigs := s.store.(signatureStore)
 	if hasSigs && statErr == nil && !s.forceProbe {

@@ -168,6 +168,8 @@ var videoExtensions = map[string]bool{
 	".vob": true, ".divx": true,
 	// disc images (VideoType Iso)
 	".iso": true, ".img": true,
+	// a text file holding the address (or path) of the media
+	".strm": true,
 }
 
 // extraSuffixes end the base name of a file that is a trailer or a sample
