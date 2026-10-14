@@ -58,6 +58,7 @@ reference source open in the same session.
 | `../../internal/conformance` | Runner, assertions, fixtures, clean-room lint |
 | `../../cmd/conformance` | CLI |
 | `../../scripts/conformance-media.sh` | Generates the synthetic media tree |
+| `specs/collections.md`, `scenarios/collections.json` | Collections (`BoxSet`): routes, listing, visibility and the automatic collections; lazy libraries `Sets`/`SetsOff` |
 | `specs/startup.md`, `scenarios/startup.json` | First-run wizard (`/Startup/*`); the scenarios are `fresh-server` ones, see *Fresh-server scenarios* |
 
 ## Scenario format
@@ -309,9 +310,10 @@ scenario that is not pending or divergent; `risky` ones run only with
 
 | Area | Scenarios | Pass | Fail | Blocked | Skipped |
 |---|---|---|---|---|---|
+| collections | 30 | 30 | 0 | 0 | 0 |
 | items | 149 | 149 | 0 | 0 | 0 |
 | playstate | 107 | 107 | 0 | 0 | 0 |
 | quickconnect | 16 | 16 | 0 | 0 | 0 |
 | users | 202 | 202 | 0 | 0 | 0 |
 | wire | 14 | 14 | 0 | 0 | 0 |
-| **Total** | 488 | 488 | 0 | 0 | 0 |
+| **Total** | 518 | 518 | 0 | 0 | 0 |

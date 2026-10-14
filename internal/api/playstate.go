@@ -41,7 +41,7 @@ const (
 // isMarkFolder reports whether a played mark on this item type is a state of
 // the folder itself (playstate.folder.R1) rather than of a playable leaf.
 func isMarkFolder(t storage.ItemType) bool {
-	return t == storage.ItemTypeSeries || t == storage.ItemTypeSeason
+	return t == storage.ItemTypeSeries || t == storage.ItemTypeSeason || t == storage.ItemTypeBoxSet
 }
 
 // applyFolderUserData completes a user data object for folder-shaped items:
@@ -123,6 +123,18 @@ func (s *Server) markPlayed(w http.ResponseWriter, r *http.Request, rawUserID st
 		return
 	}
 	now := time.Now().UTC()
+	if item.Type == storage.ItemTypeBoxSet {
+		// A collection has no state of its own: the mark is written to
+		// every leaf below it and the collection reports the derived view
+		// (collections.userdata.R2).
+		if !s.markCollectionLeaves(w, r, target.ID, item, played, date, now) {
+			return
+		}
+		dto := userItemDataFromState(s.getPlaystateOrZero(r, target.ID, item.ID), item)
+		s.applyFolderUserData(r.Context(), target.ID, item, dto)
+		writeJSON(w, http.StatusOK, dto)
+		return
+	}
 	state := s.getPlaystateOrZero(r, target.ID, item.ID)
 	folder := isMarkFolder(item.Type)
 	switch {
@@ -160,6 +172,55 @@ func (s *Server) markPlayed(w http.ResponseWriter, r *http.Request, rawUserID st
 		state.Touch = true
 	}
 	s.writeUserData(w, r, target.ID, item, state)
+}
+
+// markCollectionLeaves applies a played / unplayed mark to every leaf below a
+// collection, the way a mark on the leaf itself would. It reports false after
+// writing a failure response.
+func (s *Server) markCollectionLeaves(w http.ResponseWriter, r *http.Request, userID storage.UserID, box storage.Item, played bool, date *time.Time, now time.Time) bool {
+	const page = 500
+	for offset := 0; ; offset += page {
+		res, err := s.store.QueryItems(r.Context(), storage.ItemFilter{
+			ParentID: &box.ID, Recursive: true, ExcludeItemTypes: storage.FolderItemTypes,
+			SortBy: []storage.SortField{{By: storage.SortByName}}, Limit: page, Offset: offset,
+		})
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return false
+		}
+		for _, leaf := range res.Items {
+			state := s.getPlaystateOrZero(r, userID, leaf.ID)
+			if played {
+				state.Played = true
+				state.PlaybackPositionTicks = 0
+				if date != nil {
+					state.PlayCount++
+					state.LastPlayedDate = date
+				} else {
+					if state.PlayCount < 1 {
+						state.PlayCount = 1
+					}
+					if state.LastPlayedDate == nil {
+						n := now
+						state.LastPlayedDate = &n
+					}
+				}
+			} else {
+				state.Played = false
+				state.PlayCount = 0
+				state.PlaybackPositionTicks = 0
+				state.LastPlayedDate = nil
+				state.Touch = true
+			}
+			if err := s.store.SetPlaystate(r.Context(), userID, leaf.ID, state); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return false
+			}
+		}
+		if offset+page >= res.TotalCount {
+			return true
+		}
+	}
 }
 
 // writeUserData stores state and answers with the resulting user data.

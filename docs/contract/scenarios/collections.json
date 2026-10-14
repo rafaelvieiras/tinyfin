@@ -1,0 +1,5740 @@
+[
+ {
+  "id": "collections.create.basic",
+  "endpoint": "POST /Collections",
+  "spec": "collections.md#create",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.create.R1",
+   "collections.create.R2"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "create Conf Basic",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Basic",
+      "Ids": "{{item.alpha.id}},{{item.bravo.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "item shape",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}",
+     "query": {
+      "Fields": "ChildCount,RecursiveItemCount"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "BoxSet"
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Conf Basic"
+      },
+      {
+       "path": "$.IsFolder",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.Id",
+       "op": "eq",
+       "value": "{{capture.box}}"
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.RecursiveItemCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.MediaType",
+       "op": "eq",
+       "value": "Unknown"
+      },
+      {
+       "path": "$.LocationType",
+       "op": "eq",
+       "value": "FileSystem"
+      },
+      {
+       "path": "$.DisplayOrder",
+       "op": "eq",
+       "value": "PremiereDate"
+      },
+      {
+       "path": "$.UserData.Played",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "members",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.box}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.bravo.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "members are still in their own library",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Movie"
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "{{item.alpha.name}}"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.create.empty",
+  "endpoint": "POST /Collections",
+  "spec": "collections.md#create",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.create.R3"
+  ],
+  "steps": [
+   {
+    "name": "create Conf Empty",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Empty"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "empty",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}",
+     "query": {
+      "Fields": "ChildCount,RecursiveItemCount"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "BoxSet"
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.RecursiveItemCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "no members",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.box}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.create.same-name",
+  "endpoint": "POST /Collections",
+  "spec": "collections.md#create",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.create.R4"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "create Conf Same",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Same",
+      "Ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "first": "$.Id"
+    }
+   },
+   {
+    "name": "create Conf Same",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Same",
+      "Ids": "{{item.bravo.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "second": "$.Id"
+    }
+   },
+   {
+    "name": "same item",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.first}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "eq",
+       "value": "{{capture.second}}"
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "members were replaced",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.first}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "listed once",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true",
+      "SearchTerm": "Conf Same"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete first",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.first}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.create.duplicate-ids",
+  "endpoint": "POST /Collections",
+  "spec": "collections.md#create",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.create.R5"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "create Conf Dup",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Dup",
+      "Ids": "{{item.alpha.id}},{{item.alpha.id}},{{item.bravo.id}},{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "each member once",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.box}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.create.unknown-id",
+  "endpoint": "POST /Collections",
+  "spec": "collections.md#create",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.create.R6"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "an id that names no item",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Unknown",
+      "Ids": "00000000000000000000000000000001"
+     }
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "known and unknown ids",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Unknown",
+      "Ids": "{{item.alpha.id}},00000000000000000000000000000001"
+     }
+    },
+    "expect": {
+     "status": 400
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "find a leftover",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true",
+      "SearchTerm": "Conf Unknown"
+     }
+    },
+    "expect": {
+     "status": [
+      200
+     ]
+    },
+    "capture": {
+     "left": "$.Items[0].Id"
+    }
+   },
+   {
+    "name": "delete it",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.left}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      400,
+      404
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.create.rejected-creates-nothing",
+  "endpoint": "POST /Collections",
+  "spec": "collections.md#create",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.create.R7"
+  ],
+  "steps": [
+   {
+    "name": "unknown id",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Rejected",
+      "Ids": "00000000000000000000000000000001"
+     }
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "nothing was created",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true",
+      "SearchTerm": "Conf Rejected"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "find a leftover",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true",
+      "SearchTerm": "Conf Rejected"
+     }
+    },
+    "expect": {
+     "status": [
+      200
+     ]
+    },
+    "capture": {
+     "left": "$.Items[0].Id"
+    }
+   },
+   {
+    "name": "delete it",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.left}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      400,
+      404
+     ]
+    }
+   }
+  ],
+  "divergence": {
+   "reason": "The reference creates the (empty) collection before it rejects an unknown or malformed id; Tinyfin validates first and creates nothing."
+  }
+ },
+ {
+  "id": "collections.create.invalid-input",
+  "endpoint": "POST /Collections",
+  "spec": "collections.md#create",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.create.R8"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "no name",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "blank name",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "   ",
+      "Ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "an id that is not a GUID",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Invalid",
+      "Ids": "not-a-guid"
+     }
+    },
+    "expect": {
+     "status": 400
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "find a leftover",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true",
+      "SearchTerm": "Conf Invalid"
+     }
+    },
+    "expect": {
+     "status": [
+      200
+     ]
+    },
+    "capture": {
+     "left": "$.Items[0].Id"
+    }
+   },
+   {
+    "name": "delete it",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.left}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      400,
+      404
+     ]
+    }
+   }
+  ],
+  "divergence": {
+   "reason": "The reference answers these with 500 (an unhandled error) and, for the malformed id, leaves the collection behind; Tinyfin answers 400 and creates nothing."
+  }
+ },
+ {
+  "id": "collections.create.parent-and-locked",
+  "endpoint": "POST /Collections",
+  "spec": "collections.md#create",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.create.R9"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "library ids for ParentId",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "type",
+       "value": "array"
+      }
+     ]
+    },
+    "capture": {
+     "movies_lib": "$.Items[?Name={{library.movies.name}}].Id"
+    }
+   },
+   {
+    "name": "create Conf Params",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Params",
+      "Ids": "{{item.alpha.id}}",
+      "ParentId": "{{capture.movies_lib}}",
+      "IsLocked": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "collection stays in the collections library",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "BoxSet"
+      },
+      {
+       "path": "$.ParentId",
+       "op": "ne",
+       "value": "{{capture.movies_lib}}"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.auth.anonymous",
+  "endpoint": "POST /Collections",
+  "spec": "collections.md#auth",
+  "scope": "modern",
+  "tags": [
+   "collections",
+   "auth"
+  ],
+  "covers": [
+   "collections.auth.R1"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "create Conf Anon",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Anon",
+      "Ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "create",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Anon",
+      "Ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "add",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Collections/{{capture.box}}/Items",
+     "query": {
+      "Ids": "{{item.bravo.id}}"
+     }
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "remove",
+    "as": "anonymous",
+    "request": {
+     "method": "DELETE",
+     "path": "/Collections/{{capture.box}}/Items",
+     "query": {
+      "Ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "delete",
+    "as": "anonymous",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.auth.no-permission",
+  "endpoint": "POST /Collections",
+  "spec": "collections.md#auth",
+  "scope": "modern",
+  "tags": [
+   "collections",
+   "auth"
+  ],
+  "covers": [
+   "collections.auth.R2"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "create Conf Perm",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Perm",
+      "Ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "create",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Perm Alice",
+      "Ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "add",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/Collections/{{capture.box}}/Items",
+     "query": {
+      "Ids": "{{item.bravo.id}}"
+     }
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "remove",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/Collections/{{capture.box}}/Items",
+     "query": {
+      "Ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "delete",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "nothing changed",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}",
+     "query": {
+      "Fields": "ChildCount"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "the item says the caller cannot delete it",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.CanDelete",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.auth.manager",
+  "endpoint": "POST /Collections",
+  "spec": "collections.md#auth",
+  "scope": "modern",
+  "tags": [
+   "collections",
+   "auth"
+  ],
+  "covers": [
+   "collections.auth.R3"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:collmgr"
+  ],
+  "steps": [
+   {
+    "name": "create Conf Mgr",
+    "as": "collmgr",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Mgr",
+      "Ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "add",
+    "as": "collmgr",
+    "request": {
+     "method": "POST",
+     "path": "/Collections/{{capture.box}}/Items",
+     "query": {
+      "Ids": "{{item.bravo.id}}"
+     }
+    },
+    "expect": {
+     "status": 204,
+     "empty": true
+    }
+   },
+   {
+    "name": "two members",
+    "as": "collmgr",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}",
+     "query": {
+      "Fields": "ChildCount"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.CanDelete",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "remove",
+    "as": "collmgr",
+    "request": {
+     "method": "DELETE",
+     "path": "/Collections/{{capture.box}}/Items",
+     "query": {
+      "Ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 204,
+     "empty": true
+    }
+   },
+   {
+    "name": "one member",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}",
+     "query": {
+      "Fields": "ChildCount"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "delete",
+    "as": "collmgr",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204,
+     "empty": true
+    }
+   },
+   {
+    "name": "gone",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.add.appends",
+  "endpoint": "POST /Collections/{collectionId}/Items",
+  "spec": "collections.md#add",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.add.R1",
+   "collections.add.R2",
+   "collections.list.R3"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "create Conf Add",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Add",
+      "Ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "add two",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections/{{capture.box}}/Items",
+     "query": {
+      "Ids": "{{item.bravo.id}},{{item.charlie.id}}"
+     }
+    },
+    "expect": {
+     "status": 204,
+     "empty": true
+    }
+   },
+   {
+    "name": "default order is by year (alpha 2015, charlie 2018, bravo 2020)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.box}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Items[1].Id",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      },
+      {
+       "path": "$.Items[2].Id",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "adding a member again changes nothing",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections/{{capture.box}}/Items",
+     "query": {
+      "Ids": "{{item.bravo.id}}"
+     }
+    },
+    "expect": {
+     "status": 204,
+     "empty": true
+    }
+   },
+   {
+    "name": "still three",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}",
+     "query": {
+      "Fields": "ChildCount"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 3
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.add.errors",
+  "endpoint": "POST /Collections/{collectionId}/Items",
+  "spec": "collections.md#add",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.add.R3",
+   "collections.add.R4",
+   "collections.add.R5"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "create Conf AddErr",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf AddErr",
+      "Ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "unknown item",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections/{{capture.box}}/Items",
+     "query": {
+      "Ids": "00000000000000000000000000000001"
+     }
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "unknown collection",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections/00000000000000000000000000000001/Items",
+     "query": {
+      "Ids": "{{item.bravo.id}}"
+     }
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "a movie is not a collection",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections/{{item.alpha.id}}/Items",
+     "query": {
+      "Ids": "{{item.bravo.id}}"
+     }
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "collection id that is not a GUID",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections/not-a-guid/Items",
+     "query": {
+      "Ids": "{{item.bravo.id}}"
+     }
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   },
+   {
+    "name": "no ids",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections/{{capture.box}}/Items"
+    },
+    "expect": {
+     "status": 204,
+     "empty": true
+    }
+   },
+   {
+    "name": "ids that are not GUIDs",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections/{{capture.box}}/Items",
+     "query": {
+      "Ids": "nope"
+     }
+    },
+    "expect": {
+     "status": 204,
+     "empty": true
+    }
+   },
+   {
+    "name": "unchanged",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}",
+     "query": {
+      "Fields": "ChildCount"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.remove.basic",
+  "endpoint": "DELETE /Collections/{collectionId}/Items",
+  "spec": "collections.md#remove",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.remove.R1",
+   "collections.remove.R2",
+   "collections.remove.R3"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "create Conf Remove",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Remove",
+      "Ids": "{{item.alpha.id}},{{item.bravo.id}},{{item.charlie.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "remove one",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Collections/{{capture.box}}/Items",
+     "query": {
+      "Ids": "{{item.bravo.id}}"
+     }
+    },
+    "expect": {
+     "status": 204,
+     "empty": true
+    }
+   },
+   {
+    "name": "two left",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.box}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.charlie.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the removed item still exists",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.bravo.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Movie"
+      }
+     ]
+    }
+   },
+   {
+    "name": "non-member and unknown ids are ignored",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Collections/{{capture.box}}/Items",
+     "query": {
+      "Ids": "{{item.bravo.id}},00000000000000000000000000000001"
+     }
+    },
+    "expect": {
+     "status": 204,
+     "empty": true
+    }
+   },
+   {
+    "name": "no ids",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Collections/{{capture.box}}/Items"
+    },
+    "expect": {
+     "status": 204,
+     "empty": true
+    }
+   },
+   {
+    "name": "unchanged",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}",
+     "query": {
+      "Fields": "ChildCount"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 2
+      }
+     ]
+    }
+   },
+   {
+    "name": "unknown collection",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Collections/00000000000000000000000000000001/Items",
+     "query": {
+      "Ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "remove all",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Collections/{{capture.box}}/Items",
+     "query": {
+      "Ids": "{{item.alpha.id}},{{item.charlie.id}}"
+     }
+    },
+    "expect": {
+     "status": 204,
+     "empty": true
+    }
+   },
+   {
+    "name": "the collection stays, empty",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}",
+     "query": {
+      "Fields": "ChildCount"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.delete.basic",
+  "endpoint": "DELETE /Items/{itemId}",
+  "spec": "collections.md#delete",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.delete.R1",
+   "collections.delete.R2"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "create Conf Delete",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Delete",
+      "Ids": "{{item.alpha.id}},{{item.bravo.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "mark a member played",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/UserPlayedItems/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "delete the collection",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204,
+     "empty": true
+    }
+   },
+   {
+    "name": "it is gone",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "members are untouched",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Movie"
+      }
+     ]
+    }
+   },
+   {
+    "name": "their user data too",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.UserData.Played",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "listing no longer has it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true",
+      "SearchTerm": "Conf Delete"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "deleting it again",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "an id that is not a GUID",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/not-a-guid"
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "unmark",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": [
+      200,
+      404
+     ]
+    }
+   },
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.item.derived-metadata",
+  "endpoint": "POST /Collections",
+  "spec": "collections.md#item",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.item.R1",
+   "collections.item.R2",
+   "collections.item.R3"
+  ],
+  "requires": [
+   "library:sets",
+   "item:sa1",
+   "item:sa2",
+   "item:sa3",
+   "item:sb1",
+   "item:sb2",
+   "item:sl1",
+   "item:sp1",
+   "item:spad1",
+   "item:spad2",
+   "item:scu",
+   "item:scl"
+  ],
+  "steps": [
+   {
+    "name": "create The Conf Derived",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "The Conf Derived",
+      "Ids": "{{item.sa2.id}},{{item.sa1.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "derived from the members",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}",
+     "query": {
+      "Fields": "ChildCount,Genres,SortName,ProductionYear,OfficialRating"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ProductionYear",
+       "op": "eq",
+       "value": 2001
+      },
+      {
+       "path": "$.OfficialRating",
+       "op": "eq",
+       "value": "PG"
+      },
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Genres[0]",
+       "op": "eq",
+       "value": "Action"
+      },
+      {
+       "path": "$.Genres[1]",
+       "op": "eq",
+       "value": "Drama"
+      },
+      {
+       "path": "$.SortName",
+       "op": "eq",
+       "value": "conf derived"
+      }
+     ]
+    }
+   },
+   {
+    "name": "create Conf Unrated",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Unrated",
+      "Ids": "{{item.sa3.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "plain": "$.Id"
+    }
+   },
+   {
+    "name": "members without metadata",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.plain}}",
+     "query": {
+      "Fields": "Genres"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.OfficialRating",
+       "op": "absent"
+      },
+      {
+       "path": "$.ProductionYear",
+       "op": "eq",
+       "value": 2003
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "delete plain",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.plain}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "find automatic collections",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": [
+      200
+     ]
+    },
+    "capture": {
+     "auto_a": "$.Items[?Name=Alpha Saga].Id",
+     "auto_b": "$.Items[?Name=The Beta Saga].Id",
+     "auto_c": "$.Items[?Name=Padded Saga].Id"
+    }
+   },
+   {
+    "name": "delete auto_a",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.auto_a}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      404,
+      400
+     ]
+    }
+   },
+   {
+    "name": "delete auto_b",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.auto_b}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      404,
+      400
+     ]
+    }
+   },
+   {
+    "name": "delete auto_c",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.auto_c}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      404,
+      400
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.item.metadata-on-change",
+  "endpoint": "POST /Collections/{collectionId}/Items",
+  "spec": "collections.md#item",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.item.R4",
+   "collections.item.R5"
+  ],
+  "requires": [
+   "library:sets",
+   "item:sa1",
+   "item:sa2",
+   "item:sa3",
+   "item:sb1",
+   "item:sb2",
+   "item:sl1",
+   "item:sp1",
+   "item:spad1",
+   "item:spad2",
+   "item:scu",
+   "item:scl"
+  ],
+  "steps": [
+   {
+    "name": "create Conf Change",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Change",
+      "Ids": "{{item.sa2.id}},{{item.sa3.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "created from [R, Action, 2002] and an item without metadata",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}",
+     "query": {
+      "Fields": "Genres,ProductionYear,OfficialRating"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ProductionYear",
+       "op": "eq",
+       "value": 2002
+      },
+      {
+       "path": "$.OfficialRating",
+       "op": "eq",
+       "value": "R"
+      },
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Genres[0]",
+       "op": "eq",
+       "value": "Action"
+      }
+     ]
+    }
+   },
+   {
+    "name": "add a PG Drama from 2001",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections/{{capture.box}}/Items",
+     "query": {
+      "Ids": "{{item.sa1.id}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "the rating drops to the lowest; genres and year stay",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}",
+     "query": {
+      "Fields": "Genres,ProductionYear,OfficialRating"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.OfficialRating",
+       "op": "eq",
+       "value": "PG"
+      },
+      {
+       "path": "$.ProductionYear",
+       "op": "eq",
+       "value": 2002
+      },
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Genres[0]",
+       "op": "eq",
+       "value": "Action"
+      }
+     ]
+    }
+   },
+   {
+    "name": "remove it again",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Collections/{{capture.box}}/Items",
+     "query": {
+      "Ids": "{{item.sa1.id}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "removing changes no metadata",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}",
+     "query": {
+      "Fields": "Genres,ProductionYear,OfficialRating"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.OfficialRating",
+       "op": "eq",
+       "value": "PG"
+      },
+      {
+       "path": "$.ProductionYear",
+       "op": "eq",
+       "value": 2002
+      }
+     ]
+    }
+   },
+   {
+    "name": "refresh",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{capture.box}}/Refresh",
+     "query": {
+      "MetadataRefreshMode": "FullRefresh",
+      "ReplaceAllMetadata": "true"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "wait",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "sleepMs": 2500
+   },
+   {
+    "name": "a refresh derives everything from the current members",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}",
+     "query": {
+      "Fields": "Genres,ProductionYear,OfficialRating"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.OfficialRating",
+       "op": "eq",
+       "value": "R"
+      },
+      {
+       "path": "$.ProductionYear",
+       "op": "eq",
+       "value": 2002
+      },
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "create Conf Genres",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Genres",
+      "Ids": "{{item.sa3.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "gen": "$.Id"
+    }
+   },
+   {
+    "name": "add an item with genres to a collection that has none",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections/{{capture.gen}}/Items",
+     "query": {
+      "Ids": "{{item.sa2.id}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "genres were taken",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.gen}}",
+     "query": {
+      "Fields": "Genres"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Genres[0]",
+       "op": "eq",
+       "value": "Action"
+      }
+     ]
+    }
+   },
+   {
+    "name": "add another genre",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections/{{capture.gen}}/Items",
+     "query": {
+      "Ids": "{{item.sa1.id}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "genres do not grow",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.gen}}",
+     "query": {
+      "Fields": "Genres"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "delete gen",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.gen}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "find automatic collections",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": [
+      200
+     ]
+    },
+    "capture": {
+     "auto_a": "$.Items[?Name=Alpha Saga].Id",
+     "auto_b": "$.Items[?Name=The Beta Saga].Id",
+     "auto_c": "$.Items[?Name=Padded Saga].Id"
+    }
+   },
+   {
+    "name": "delete auto_a",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.auto_a}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      404,
+      400
+     ]
+    }
+   },
+   {
+    "name": "delete auto_b",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.auto_b}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      404,
+      400
+     ]
+    }
+   },
+   {
+    "name": "delete auto_c",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.auto_c}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      404,
+      400
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.item.series-member",
+  "endpoint": "POST /Collections",
+  "spec": "collections.md#item",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.item.R6"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "item:show",
+   "library:shows",
+   "item:s01e01",
+   "item:s01e02",
+   "item:s02e01"
+  ],
+  "steps": [
+   {
+    "name": "create Conf Series",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Series",
+      "Ids": "{{item.show.id}},{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "counts",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}",
+     "query": {
+      "Fields": "ChildCount,RecursiveItemCount"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.RecursiveItemCount",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.UserData.UnplayedItemCount",
+       "op": "eq",
+       "value": 4
+      }
+     ]
+    }
+   },
+   {
+    "name": "direct members",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.box}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.show.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.alpha.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "everything below, recursively",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.box}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "Episode"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      }
+     ]
+    }
+   },
+   {
+    "name": "a series in a collection collapses into it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "Series",
+      "Recursive": "true",
+      "CollapseBoxSetItems": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{capture.box}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.show.id}}"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.userdata.leaves",
+  "endpoint": "POST /UserPlayedItems/{itemId}",
+  "spec": "collections.md#userdata",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.userdata.R1",
+   "collections.userdata.R2",
+   "collections.userdata.R3"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "create Conf UserData",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf UserData",
+      "Ids": "{{item.alpha.id}},{{item.bravo.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "nothing played",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.UserData.Played",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.UserData.UnplayedItemCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.UserData.PlayedPercentage",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "play one member",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/UserPlayedItems/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "half played",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.UserData.Played",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.UserData.UnplayedItemCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.UserData.PlayedPercentage",
+       "op": "eq",
+       "value": 50
+      }
+     ]
+    }
+   },
+   {
+    "name": "mark the collection played",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/UserPlayedItems/{{capture.box}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Played",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.UnplayedItemCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.PlayedPercentage",
+       "op": "eq",
+       "value": 100
+      }
+     ]
+    }
+   },
+   {
+    "name": "the members themselves are played",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.bravo.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.UserData.Played",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.UserData.PlayCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "the collection reports played",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.UserData.Played",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.UserData.UnplayedItemCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "mark the collection unplayed",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{capture.box}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Played",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.UnplayedItemCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.PlayedPercentage",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "members are reset",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.UserData.Played",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.UserData.PlayCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "played filter",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true",
+      "IsPlayed": "true",
+      "SearchTerm": "Conf UserData"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "reset alpha",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": [
+      200,
+      404
+     ]
+    }
+   },
+   {
+    "name": "reset bravo",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.bravo.id}}"
+    },
+    "expect": {
+     "status": [
+      200,
+      404
+     ]
+    }
+   },
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.list.library",
+  "endpoint": "GET /Items",
+  "spec": "collections.md#list",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.list.R1",
+   "collections.list.R7"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "create Conf Lib",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Lib",
+      "Ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "the collections library is a view",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[?Name=Collections].CollectionType",
+       "op": "eq",
+       "value": "boxsets"
+      },
+      {
+       "path": "$.Items[?Name=Collections].Type",
+       "op": "eq",
+       "value": "CollectionFolder"
+      }
+     ]
+    },
+    "capture": {
+     "coll_lib": "$.Items[?Name=Collections].Id"
+    }
+   },
+   {
+    "name": "it lists the collections",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.coll_lib}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{capture.box}}"
+      },
+      {
+       "path": "$.Items[*].Type",
+       "op": "notcontains",
+       "value": "Movie"
+      }
+     ]
+    }
+   },
+   {
+    "name": "by type, recursive",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{capture.box}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the administrator's library list has it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Library/VirtualFolders"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?Name=Collections].CollectionType",
+       "op": "eq",
+       "value": "boxsets"
+      },
+      {
+       "path": "$[?Name=Collections].ItemId",
+       "op": "eq",
+       "value": "{{capture.coll_lib}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "its parent is the collections folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ParentId",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "coll_folder": "$.ParentId"
+    }
+   },
+   {
+    "name": "which is a plain folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.coll_folder}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Folder"
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "collections"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the library is an ancestor of the collection",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}/Ancestors"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Id",
+       "op": "contains",
+       "value": "{{capture.coll_lib}}"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.list.library-view-appears",
+  "endpoint": "GET /UserViews",
+  "spec": "collections.md#list",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.list.R8"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "no collection yet: no view",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Collections"
+      }
+     ]
+    }
+   },
+   {
+    "name": "create Conf View",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf View",
+      "Ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "a collection exists: the view appears",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Collections"
+      }
+     ]
+    }
+   },
+   {
+    "name": "also in the root listing",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Collections"
+      }
+     ]
+    }
+   },
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "deleted: it goes away again",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Collections"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.list.by-content-library",
+  "endpoint": "GET /Items",
+  "spec": "collections.md#list",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.list.R2"
+  ],
+  "requires": [
+   "library:sets",
+   "item:sa1",
+   "item:sa2",
+   "item:sa3",
+   "item:sb1",
+   "item:sb2",
+   "item:sl1",
+   "item:sp1",
+   "item:spad1",
+   "item:spad2",
+   "item:scu",
+   "item:scl",
+   "library:setsoff"
+  ],
+  "steps": [
+   {
+    "name": "library ids",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "type",
+       "value": "array"
+      }
+     ]
+    },
+    "capture": {
+     "sets_lib": "$.Items[?Name={{library.sets.name}}].Id"
+    }
+   },
+   {
+    "name": "create Conf ByLib",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf ByLib",
+      "Ids": "{{item.sa1.id}},{{item.sa2.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "the boxes with a member in the library",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.sets_lib}}",
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{capture.box}}"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Alpha Saga"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "The Beta Saga"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Padded Saga"
+      }
+     ]
+    }
+   },
+   {
+    "name": "none have a member of the other library",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Library/VirtualFolders"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "{{library.sets.name}}Off"
+      }
+     ]
+    },
+    "capture": {
+     "off_lib": "$[?Name={{library.sets.name}}Off].ItemId"
+    }
+   },
+   {
+    "name": "a library none of them draws from",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.off_lib}}",
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "plain listing of the library holds no collections",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.sets_lib}}",
+      "IncludeItemTypes": "Movie",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Type",
+       "op": "notcontains",
+       "value": "BoxSet"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "find automatic collections",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": [
+      200
+     ]
+    },
+    "capture": {
+     "auto_a": "$.Items[?Name=Alpha Saga].Id",
+     "auto_b": "$.Items[?Name=The Beta Saga].Id",
+     "auto_c": "$.Items[?Name=Padded Saga].Id"
+    }
+   },
+   {
+    "name": "delete auto_a",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.auto_a}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      404,
+      400
+     ]
+    }
+   },
+   {
+    "name": "delete auto_b",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.auto_b}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      404,
+      400
+     ]
+    }
+   },
+   {
+    "name": "delete auto_c",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.auto_c}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      404,
+      400
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.list.members-sort-paging",
+  "endpoint": "GET /Items",
+  "spec": "collections.md#list",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.list.R4",
+   "collections.list.R5"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "create Conf Sort",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Sort",
+      "Ids": "{{item.bravo.id}},{{item.charlie.id}},{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "by name, descending",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.box}}",
+      "SortBy": "SortName",
+      "SortOrder": "Descending"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      },
+      {
+       "path": "$.Items[1].Id",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      },
+      {
+       "path": "$.Items[2].Id",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "paging",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.box}}",
+      "SortBy": "SortName",
+      "Limit": "1",
+      "StartIndex": "1"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      },
+      {
+       "path": "$.StartIndex",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "recursive listing sorts by name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.box}}",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Items[1].Id",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      },
+      {
+       "path": "$.Items[2].Id",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "exclusion",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.box}}",
+      "ExcludeItemIds": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.alpha.id}}"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.list.collapse",
+  "endpoint": "GET /Items",
+  "spec": "collections.md#list",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.list.R6"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "create Conf Collapse",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Collapse",
+      "Ids": "{{item.alpha.id}},{{item.bravo.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "library ids",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "type",
+       "value": "array"
+      }
+     ]
+    },
+    "capture": {
+     "movies_lib": "$.Items[?Name={{library.movies.name}}].Id"
+    }
+   },
+   {
+    "name": "members give way to the collection",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.movies_lib}}",
+      "IncludeItemTypes": "Movie",
+      "Recursive": "true",
+      "CollapseBoxSetItems": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{capture.box}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.charlie.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.bravo.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "not collapsing",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.movies_lib}}",
+      "IncludeItemTypes": "Movie",
+      "Recursive": "true",
+      "CollapseBoxSetItems": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{capture.box}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.bravo.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.charlie.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "without a parent",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "Movie",
+      "Recursive": "true",
+      "CollapseBoxSetItems": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{capture.box}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.alpha.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "inside the collection nothing is collapsed",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.box}}",
+      "CollapseBoxSetItems": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.bravo.id}}"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.list.latest-and-counts",
+  "endpoint": "GET /Items/Latest",
+  "spec": "collections.md#list",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.list.R9"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "counts before",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Counts"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.BoxSetCount",
+       "op": "type",
+       "value": "number"
+      }
+     ]
+    },
+    "capture": {
+     "before": "$.BoxSetCount"
+    }
+   },
+   {
+    "name": "create Conf Latest",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Latest",
+      "Ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "latest does not list collections",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "Limit": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Id",
+       "op": "notcontains",
+       "value": "{{capture.box}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "unless asked for",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "Limit": "50",
+      "IncludeItemTypes": "BoxSet"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Id",
+       "op": "contains",
+       "value": "{{capture.box}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "counted",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Counts"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.BoxSetCount",
+       "op": "gte",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.visibility.restricted-user",
+  "endpoint": "GET /Items",
+  "spec": "collections.md#visibility",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.visibility.R1",
+   "collections.visibility.R2",
+   "collections.visibility.R3"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "create Conf Vis Filled",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Vis Filled",
+      "Ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "filled": "$.Id"
+    }
+   },
+   {
+    "name": "create Conf Vis Empty",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Vis Empty"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "empty": "$.Id"
+    }
+   },
+   {
+    "name": "library ids",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Library/VirtualFolders"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Collections"
+      }
+     ]
+    },
+    "capture": {
+     "coll_lib": "$[?Name=Collections].ItemId",
+     "movies_lib": "$[?Name={{library.movies.name}}].ItemId"
+    }
+   },
+   {
+    "name": "create tmp-coll-vis",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-coll-vis",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tu": "$.Id",
+     "ap": "$.Policy.AuthenticationProviderId",
+     "rp": "$.Policy.PasswordResetProviderId"
+    }
+   },
+   {
+    "name": "log in",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-coll-vis",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-coll-vis{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tok": "$.AccessToken"
+    }
+   },
+   {
+    "name": "only the collections library",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.tu}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.ap}}",
+      "PasswordResetProviderId": "{{capture.rp}}",
+      "EnableAllFolders": false,
+      "EnabledFolders": [
+       "{{capture.coll_lib}}"
+      ]
+     }
+    },
+    "expect": {
+     "status": 204,
+     "empty": true
+    }
+   },
+   {
+    "name": "an empty collection is visible",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{capture.empty}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{capture.filled}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "one with no visible member is not",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.filled}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "nor can it be opened as a parent",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.filled}}"
+     }
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "the collections view is there",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Collections"
+      }
+     ]
+    }
+   },
+   {
+    "name": "only the movies library",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.tu}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.ap}}",
+      "PasswordResetProviderId": "{{capture.rp}}",
+      "EnableAllFolders": false,
+      "EnabledFolders": [
+       "{{capture.movies_lib}}"
+      ]
+     }
+    },
+    "expect": {
+     "status": 204,
+     "empty": true
+    }
+   },
+   {
+    "name": "without the collections library nothing is visible",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "no collections view",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Collections"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an empty collection can still be read by id",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.empty}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "BoxSet"
+      }
+     ]
+    }
+   },
+   {
+    "name": "so can one with a visible member",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.filled}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "BoxSet"
+      }
+     ]
+    }
+   },
+   {
+    "name": "movies and collections",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.tu}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.ap}}",
+      "PasswordResetProviderId": "{{capture.rp}}",
+      "EnableAllFolders": false,
+      "EnabledFolders": [
+       "{{capture.movies_lib}}",
+       "{{capture.coll_lib}}"
+      ]
+     }
+    },
+    "expect": {
+     "status": 204,
+     "empty": true
+    }
+   },
+   {
+    "name": "both are visible",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{capture.empty}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{capture.filled}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "members are listed",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.filled}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete filled",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.filled}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "delete empty",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.empty}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "delete the user",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.tu}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      404,
+      400
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.visibility.partial-members",
+  "endpoint": "GET /Items",
+  "spec": "collections.md#visibility",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.visibility.R4"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "library:sets",
+   "item:sa1",
+   "item:sa2",
+   "item:sa3",
+   "item:sb1",
+   "item:sb2",
+   "item:sl1",
+   "item:sp1",
+   "item:spad1",
+   "item:spad2",
+   "item:scu",
+   "item:scl"
+  ],
+  "steps": [
+   {
+    "name": "create Conf Vis Mixed",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Vis Mixed",
+      "Ids": "{{item.alpha.id}},{{item.sa1.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "library ids",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Library/VirtualFolders"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Collections"
+      }
+     ]
+    },
+    "capture": {
+     "coll_lib": "$[?Name=Collections].ItemId",
+     "movies_lib": "$[?Name={{library.movies.name}}].ItemId"
+    }
+   },
+   {
+    "name": "create tmp-coll-mixed",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-coll-mixed",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tu": "$.Id",
+     "ap": "$.Policy.AuthenticationProviderId",
+     "rp": "$.Policy.PasswordResetProviderId"
+    }
+   },
+   {
+    "name": "log in",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-coll-mixed",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-coll-mix{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tok": "$.AccessToken"
+    }
+   },
+   {
+    "name": "movies and collections, not sets",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.tu}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.ap}}",
+      "PasswordResetProviderId": "{{capture.rp}}",
+      "EnableAllFolders": false,
+      "EnabledFolders": [
+       "{{capture.movies_lib}}",
+       "{{capture.coll_lib}}"
+      ]
+     }
+    },
+    "expect": {
+     "status": 204,
+     "empty": true
+    }
+   },
+   {
+    "name": "the collection is visible through its visible member",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{capture.box}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "only the visible member is listed",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.box}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "counts are not narrowed to the viewer",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.box}}",
+     "query": {
+      "Fields": "ChildCount,RecursiveItemCount"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.RecursiveItemCount",
+       "op": "eq",
+       "value": 2
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete box",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "delete the user",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.tu}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      404,
+      400
+     ]
+    }
+   },
+   {
+    "name": "find automatic collections",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": [
+      200
+     ]
+    },
+    "capture": {
+     "auto_a": "$.Items[?Name=Alpha Saga].Id",
+     "auto_b": "$.Items[?Name=The Beta Saga].Id",
+     "auto_c": "$.Items[?Name=Padded Saga].Id"
+    }
+   },
+   {
+    "name": "delete auto_a",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.auto_a}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      404,
+      400
+     ]
+    }
+   },
+   {
+    "name": "delete auto_b",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.auto_b}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      404,
+      400
+     ]
+    }
+   },
+   {
+    "name": "delete auto_c",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.auto_c}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      404,
+      400
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.auto.build",
+  "endpoint": "POST /Library/VirtualFolders",
+  "spec": "collections.md#auto",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.auto.R1",
+   "collections.auto.R3",
+   "collections.auto.R4",
+   "collections.auto.R5"
+  ],
+  "requires": [
+   "library:sets",
+   "item:sa1",
+   "item:sa2",
+   "item:sa3",
+   "item:sb1",
+   "item:sb2",
+   "item:sl1",
+   "item:sp1",
+   "item:spad1",
+   "item:spad2",
+   "item:scu",
+   "item:scl",
+   "library:setsoff",
+   "item:sg1",
+   "item:sg2"
+  ],
+  "steps": [
+   {
+    "name": "collections",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true",
+      "Fields": "ChildCount,ProductionYear,OfficialRating,Genres"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Alpha Saga"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "The Beta Saga"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Padded Saga"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Lonely Saga"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Gamma Saga"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Case Saga"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "case saga"
+      },
+      {
+       "path": "$.Items[?Name=Alpha Saga].ChildCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[?Name=The Beta Saga].ChildCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[?Name=Padded Saga].ChildCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[?Name=Alpha Saga].ProductionYear",
+       "op": "eq",
+       "value": 2001
+      },
+      {
+       "path": "$.Items[?Name=Alpha Saga].OfficialRating",
+       "op": "eq",
+       "value": "PG"
+      },
+      {
+       "path": "$.Items[?Name=Alpha Saga].Genres",
+       "op": "len",
+       "value": 2
+      }
+     ]
+    },
+    "capture": {
+     "alpha": "$.Items[?Name=Alpha Saga].Id",
+     "beta": "$.Items[?Name=The Beta Saga].Id",
+     "padded": "$.Items[?Name=Padded Saga].Id"
+    }
+   },
+   {
+    "name": "the members of Alpha Saga, in year order",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.alpha}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.sa1.id}}"
+      },
+      {
+       "path": "$.Items[1].Id",
+       "op": "eq",
+       "value": "{{item.sa2.id}}"
+      },
+      {
+       "path": "$.Items[2].Id",
+       "op": "eq",
+       "value": "{{item.sa3.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the members of The Beta Saga",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.beta}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.sb1.id}}"
+      },
+      {
+       "path": "$.Items[1].Id",
+       "op": "eq",
+       "value": "{{item.sb2.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the members of Padded Saga",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.padded}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      }
+     ]
+    }
+   },
+   {
+    "name": "a movie that names a collection is a movie like the others",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sa1.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Movie"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "find automatic collections",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": [
+      200
+     ]
+    },
+    "capture": {
+     "auto_a": "$.Items[?Name=Alpha Saga].Id",
+     "auto_b": "$.Items[?Name=The Beta Saga].Id",
+     "auto_c": "$.Items[?Name=Padded Saga].Id"
+    }
+   },
+   {
+    "name": "delete auto_a",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.auto_a}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      404,
+      400
+     ]
+    }
+   },
+   {
+    "name": "delete auto_b",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.auto_b}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      404,
+      400
+     ]
+    }
+   },
+   {
+    "name": "delete auto_c",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.auto_c}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      404,
+      400
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.auto.option-off",
+  "endpoint": "POST /Library/VirtualFolders",
+  "spec": "collections.md#auto",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.auto.R2"
+  ],
+  "requires": [
+   "library:setsoff",
+   "item:sg1",
+   "item:sg2"
+  ],
+  "steps": [
+   {
+    "name": "no collection from a library that did not ask for it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Gamma Saga"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "collections.auto.rescan",
+  "endpoint": "POST /Items/{itemId}/Refresh",
+  "spec": "collections.md#auto",
+  "scope": "modern",
+  "tags": [
+   "collections"
+  ],
+  "covers": [
+   "collections.auto.R6",
+   "collections.auto.R7"
+  ],
+  "requires": [
+   "library:sets",
+   "item:sa1",
+   "item:sa2",
+   "item:sa3",
+   "item:sb1",
+   "item:sb2",
+   "item:sl1",
+   "item:sp1",
+   "item:spad1",
+   "item:spad2",
+   "item:scu",
+   "item:scl"
+  ],
+  "steps": [
+   {
+    "name": "collections and library",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Alpha Saga"
+      }
+     ]
+    },
+    "capture": {
+     "alpha": "$.Items[?Name=Alpha Saga].Id",
+     "beta": "$.Items[?Name=The Beta Saga].Id"
+    }
+   },
+   {
+    "name": "library ids",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "type",
+       "value": "array"
+      }
+     ]
+    },
+    "capture": {
+     "sets_lib": "$.Items[?Name={{library.sets.name}}].Id"
+    }
+   },
+   {
+    "name": "remove a member by hand",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Collections/{{capture.alpha}}/Items",
+     "query": {
+      "Ids": "{{item.sa1.id}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "add an item that names no collection",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections/{{capture.alpha}}/Items",
+     "query": {
+      "Ids": "{{item.sp1.id}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "delete another collection",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.beta}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "refresh one library: collections are left alone",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{capture.sets_lib}}/Refresh",
+     "query": {
+      "Recursive": "true",
+      "MetadataRefreshMode": "Default",
+      "ImageRefreshMode": "Default"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "wait",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "sleepMs": 4000
+   },
+   {
+    "name": "nothing was rebuilt",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.alpha}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.sa1.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "refresh all libraries",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Library/Refresh"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "wait",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "sleepMs": 6000
+   },
+   {
+    "name": "the member that names the collection is back, the manual one stays",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.alpha}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.sa1.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.sp1.id}}"
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 4
+      }
+     ]
+    }
+   },
+   {
+    "name": "the deleted collection is built again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "The Beta Saga"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "find automatic collections",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "BoxSet",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": [
+      200
+     ]
+    },
+    "capture": {
+     "auto_a": "$.Items[?Name=Alpha Saga].Id",
+     "auto_b": "$.Items[?Name=The Beta Saga].Id",
+     "auto_c": "$.Items[?Name=Padded Saga].Id"
+    }
+   },
+   {
+    "name": "delete auto_a",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.auto_a}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      404,
+      400
+     ]
+    }
+   },
+   {
+    "name": "delete auto_b",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.auto_b}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      404,
+      400
+     ]
+    }
+   },
+   {
+    "name": "delete auto_c",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.auto_c}}"
+    },
+    "expect": {
+     "status": [
+      204,
+      404,
+      400
+     ]
+    }
+   }
+  ]
+ }
+]

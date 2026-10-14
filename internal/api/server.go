@@ -200,6 +200,7 @@ func NewServer(store storage.Store, cfg Config) *Server {
 			Concurrency:      cfg.ScanConcurrency,
 			ProbeConcurrency: cfg.ScanProbeConcurrency,
 			ForceProbe:       cfg.ScanForceProbe,
+			DataDir:          cfg.DataDir,
 		}),
 		scanLibSem: make(chan struct{}, scanLibParallelism(cfg.ScanLibraryParallelism)),
 		scanState:  &scanTracker{},
@@ -275,7 +276,11 @@ func scanLibParallelism(n int) int {
 // (a background operation it can poll/observe progress on, once this
 // project has a task-progress endpoint — not yet, a known gap).
 func (s *Server) runScan(lib storage.Library) {
-	ctx := context.Background()
+	s.runScanCtx(context.Background(), lib)
+}
+
+// runScanCtx is runScan with a caller-prepared context (scan.WithoutCollections).
+func (s *Server) runScanCtx(ctx context.Context, lib storage.Library) {
 	s.scanState.begin()
 	s.notifyScheduledTasks(ctx, true)
 	// Bound how many libraries scan at once; the scan counts as running
@@ -648,6 +653,13 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /Library/VirtualFolders/LibraryOptions", requireAdmin(s.handleSaveLibraryOptions))
 	s.mux.HandleFunc("POST /Library/VirtualFolders/Name", requireAdmin(s.handleRenameVirtualFolder))
 	s.mux.HandleFunc("POST /Library/Refresh", requireAdmin(s.handleLibraryRefresh))
+
+	// Collections (collections.go): management needs the user's
+	// EnableCollectionManagement (or an administrator).
+	s.mux.HandleFunc("POST /Collections", requireCollectionManagement(s.handleCreateCollection))
+	s.mux.HandleFunc("POST /Collections/{collectionId}/Items", requireCollectionManagement(s.handleAddToCollection))
+	s.mux.HandleFunc("DELETE /Collections/{collectionId}/Items", requireCollectionManagement(s.handleRemoveFromCollection))
+	s.mux.HandleFunc("DELETE /Items/{itemId}", requireAuth(s.handleDeleteItem))
 	// jellyfin-web's per-library "Rastrear biblioteca" menu action, distinct
 	// from POST /Library/Refresh above (which scans every library) — see
 	// item_refresh.go.

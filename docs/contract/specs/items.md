@@ -407,14 +407,14 @@ Name-list parameters are used here with a single value only.
 ## Not exercisable with the fixtures
 
 These parameters are accepted but nothing observable can be asserted with the available data
-(no such metadata, plugins, Live TV, music or box sets exist):
+(no such metadata, plugins, Live TV or music exist):
 
 `HasThemeSong`, `HasThemeVideo`, `HasSpecialFeature`, `HasTrailer`, `HasTvdbId`, `IsUnaired`,
 `MinDateLastSaved`, `MinDateLastSavedForUser`, `MaxPremiereDate`, `IsMovie`, `IsSeries`, `IsNews`, `IsKids`, `IsSports`,
 `PersonIds`, `PersonTypes`, `Studios`, `StudioIds`, `GenreIds`, `Artists`, `ArtistIds`, `ExcludeArtistIds`,
 `AlbumArtistIds`, `ContributingArtistIds`, `Albums`, `AlbumIds`, `IsPlaceHolder`, `SeriesStatus`,
 `AudioLanguages`, `SubtitleLanguages`, `Filters=Likes|Dislikes|IsFavoriteOrLikes` (only the conflict check is covered),
-`SortBy=DatePlayed|PlayCount|...` user-ordering keys, BoxSet/Playlist/Collection behaviors, channel and Live TV parents,
+`SortBy=DatePlayed|PlayCount|...` user-ordering keys, Playlist behaviors (collections are in [`collections.md`](collections.md)), channel and Live TV parents,
 special library views (`UserView` types such as latest, next-up, genres), remote-access and parental-schedule denial,
 API-key (no user) access. Naming a studio or an artist in a query also creates the by-name entity as a side effect in the
 reference; that is deliberately left unexercised.
@@ -430,7 +430,7 @@ Observed on the reference and deliberately not reproduced (they are not asserted
 * **Release token list.** The tokens of items.names.R10 are the ones probed one by one; a token outside that list that the reference also cuts at would keep its text in Tinyfin.
 * **Sort name transliteration.** The residue listed under items.sort.R14 stays: characters outside the observed table (Thai runs after other scripts, rare Indic signs, supplementary planes) have no closed rule; the table was observed one code point at a time and is not extended by guessing.
 * **Network `EnableRemoteAccess=false`.** Implemented (wire.network.R1) and covered by a unit test only: with the setting off the reference answers every remote request 503 (administrator included), so a scenario could not restore the setting from the runner; the runner would lock itself out.
-* **Collections (`BoxSet`).** Not implemented; see scope-excluded.md.
+* **Collections (`BoxSet`).** Specified in [`collections.md`](collections.md); the differences that remain are listed there.
 
 ## Resolved questions
 

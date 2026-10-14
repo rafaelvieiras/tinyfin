@@ -40,6 +40,20 @@ type FixtureLibrary struct {
 	// and removed around it, so the extra media never shows up in the
 	// listings other scenarios count.
 	Lazy bool `json:"lazy,omitempty"`
+	// Options are library options (LibraryOptions members, e.g.
+	// AutomaticallyAddToCollection) sent when the library is created.
+	Options map[string]any `json:"options,omitempty"`
+}
+
+// libraryBody is the creation body of l under path: its options plus the
+// single media path.
+func (l FixtureLibrary) libraryBody(path string) map[string]any {
+	opts := map[string]any{}
+	for k, v := range l.Options {
+		opts[k] = v
+	}
+	opts["PathInfos"] = []any{map[string]any{"Path": path}}
+	return map[string]any{"LibraryOptions": opts}
 }
 
 // FixtureItem resolves a library item by type and path (or name) after the
@@ -188,7 +202,7 @@ func (c *Client) Setup(ctx context.Context, adminUser, adminPass, mediaRoot stri
 		}
 		path := strings.TrimRight(mediaRoot, "/") + "/" + l.Path
 		if _, ok := have[strings.ToLower(l.Name)]; !ok {
-			body := map[string]any{"LibraryOptions": map[string]any{"PathInfos": []any{map[string]any{"Path": path}}}}
+			body := l.libraryBody(path)
 			r, err := c.Do(ctx, "admin", "POST", "/Library/VirtualFolders",
 				map[string]string{"name": l.Name, "collectionType": l.Type, "refreshLibrary": "true"}, body, nil)
 			if err != nil || (r.Status != 204 && r.Status != 200) {
@@ -381,7 +395,7 @@ func (c *Client) lazyFor(need string) *lazyLibrary {
 func (c *Client) materialize(ctx context.Context, ll *lazyLibrary) (undo func(), err error) {
 	l := ll.lib
 	path := strings.TrimRight(c.mediaRoot, "/") + "/" + l.Path
-	body := map[string]any{"LibraryOptions": map[string]any{"PathInfos": []any{map[string]any{"Path": path}}}}
+	body := l.libraryBody(path)
 	r, err := c.Do(ctx, "admin", "POST", "/Library/VirtualFolders",
 		map[string]string{"name": l.Name, "collectionType": l.Type, "refreshLibrary": "true"}, body, nil)
 	if err != nil || (r.Status != 204 && r.Status != 200) {

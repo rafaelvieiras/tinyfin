@@ -70,8 +70,9 @@ func (s *Server) handleUserViews(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	items := make([]baseItemDto, 0, len(scope.libs))
-	for _, lib := range scope.libs {
+	libs := s.viewLibraries(r.Context(), scope)
+	items := make([]baseItemDto, 0, len(libs))
+	for _, lib := range libs {
 		items = append(items, s.libraryBaseItemDto(r.Context(), lib))
 	}
 
@@ -210,7 +211,18 @@ func (s *Server) handleItemsLatest(w http.ResponseWriter, r *http.Request) {
 		Limit:     defaultLatestLimit,
 		SortBy:    []storage.SortField{{By: storage.SortByDateCreated, Descending: true}},
 		// A library's own root folder item is not "recently added media".
-		ExcludeItemTypes: []storage.ItemType{storage.ItemTypeFolder},
+		ExcludeItemTypes: []storage.ItemType{storage.ItemTypeFolder, storage.ItemTypeBoxSet},
+	}
+	// IncludeItemTypes names the kinds asked for (collections are left out
+	// of the default "recently added" list).
+	var wanted []storage.ItemType
+	for _, tok := range itemsListParam(q, "includeitemtypes") {
+		if k, ok := itemsKnownKinds[strings.ToLower(tok)]; ok {
+			wanted = append(wanted, k)
+		}
+	}
+	if len(wanted) > 0 {
+		filter.ItemTypes, filter.ExcludeItemTypes = wanted, nil
 	}
 	s.applyParentID(r, &filter)
 	scope, err := s.callerScope(ctx)

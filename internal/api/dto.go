@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"time"
 
+	"github.com/rafaelvieiras/tinyfin/internal/collection"
 	"github.com/rafaelvieiras/tinyfin/internal/guid"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
@@ -213,8 +214,11 @@ type baseItemDto struct {
 	// PlayAccess/CanDelete/CanDownload/Etag/DisplayPreferencesId are all
 	// per-request-caller fields (docs/12's same section) — populated only
 	// alongside UserData below, when ctx carries an authenticated caller.
-	PlayAccess           string `json:"PlayAccess,omitempty"`
-	CanDelete            bool   `json:"CanDelete"`
+	PlayAccess string `json:"PlayAccess,omitempty"`
+	CanDelete  bool   `json:"CanDelete"`
+	// DisplayOrder is the order a collection (BoxSet) lists its members in;
+	// only collections carry it.
+	DisplayOrder         string `json:"DisplayOrder,omitempty"`
 	CanDownload          bool   `json:"CanDownload"`
 	Etag                 string `json:"Etag,omitempty"`
 	DisplayPreferencesID string `json:"DisplayPreferencesId,omitempty"`
@@ -979,6 +983,10 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 			dto.RecursiveItemCount = &n
 		}
 	}
+	if item.Type == storage.ItemTypeBoxSet {
+		dto.ParentID = string(collection.FolderID())
+		dto.DisplayOrder = "PremiereDate"
+	}
 	if item.ParentID != nil {
 		dto.ParentID = string(*item.ParentID)
 		if item.Type == storage.ItemTypePhoto {
@@ -1045,6 +1053,9 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		dto.UserData = s.userDataFor(ctx, ac.User.ID, item)
 		dto.PlayAccess = "Full"
 		dto.CanDelete = ac.User.IsAdministrator
+		if item.Type == storage.ItemTypeBoxSet {
+			dto.CanDelete = canManageCollections(ac)
+		}
 		dto.CanDownload = ac.User.IsAdministrator && !isFolderType(item.Type)
 		dto.Etag = etagFor(item)
 		dto.DisplayPreferencesID = displayPreferencesIDFor(item.Type)

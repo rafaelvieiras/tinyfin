@@ -20,6 +20,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Collections (`BoxSet`): `POST /Collections` (name, ids), `POST` and
+  `DELETE /Collections/{id}/Items`, and `DELETE /Items/{id}` for collections,
+  gated on the `EnableCollectionManagement` policy (administrators always). A
+  collection links its members without moving them, lists them in
+  premiere-date order, derives its year, genres and lowest rating from them,
+  reports played state derived from the leaves below (and writes a played mark
+  to them), and is found by `IncludeItemTypes=BoxSet` under the collections
+  library or a content library, in `CollapseBoxSetItems` and in
+  `/Items/Counts`. The `Collections` library is created with the first
+  collection and shown as a view only while a collection is visible.
+- Library scans build collections from movie `<set>` names when the library
+  option `AutomaticallyAddToCollection` is on and at least two movies share a
+  name: new members join existing collections, nothing is removed, a refresh of
+  one library leaves collections alone. `POST /Library/VirtualFolders` keeps
+  the `LibraryOptions` it is sent. New migration `0020_collections`
+  (`items.set_name`, unique collection links); contract: `specs/collections.md`.
 - Library scans follow the reference's naming without metadata: a movie folder
   keeps its text as the name (`Foo (2015)`) and the year is read from it; loose
   movie files, folders of several movies, stacked parts and versions are

@@ -34,6 +34,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rafaelvieiras/tinyfin/internal/collection"
 	"github.com/rafaelvieiras/tinyfin/internal/metadata"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
@@ -75,6 +76,11 @@ type Config struct {
 
 	// ForceProbe disables the incremental skip: every file is probed again.
 	ForceProbe bool
+
+	// DataDir is the server's data directory; the collections (BoxSet) the
+	// scan builds from movie sets live under <DataDir>/collections. Empty
+	// disables the automatic collections.
+	DataDir string
 }
 
 // Scanner walks configured library paths and populates storage.Store.
@@ -86,6 +92,7 @@ type Scanner struct {
 	concurrency int
 	probeSem    chan struct{}
 	forceProbe  bool
+	dataDir     string
 	httpClient  interface {
 		fetchImage(ctx context.Context, url string) ([]byte, error)
 	}
@@ -123,6 +130,7 @@ func New(store storage.Store, provider metadata.Provider, cfg Config) *Scanner {
 		concurrency: concurrency,
 		probeSem:    make(chan struct{}, probeConc),
 		forceProbe:  cfg.ForceProbe,
+		dataDir:     cfg.DataDir,
 		httpClient:  defaultImageFetcher{},
 	}
 }
@@ -233,8 +241,12 @@ func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, 
 		case storage.CollectionTypeHomeVideos:
 			s.recordRootFolder(ctx, lib, root)
 			s.walkHomeVideos(ctx, pool, lib, root, nil)
+		case storage.CollectionTypeBoxSets:
+			// The collections library holds items made through the API and
+			// by the automatic collections below; there is no directory to
+			// walk.
 		default:
-			// Music/BoxSets/Mixed aren't in this scanner's scope yet — a
+			// Music/Mixed aren't in this scanner's scope yet — a
 			// documented gap (docs/08 describes the video-first v1 scope
 			// this project targets), not a silent no-op: logged once per
 			// path so an operator adding an unsupported library type sees
@@ -244,6 +256,13 @@ func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, 
 	}
 
 	stats := pool.wait()
+	if lib.CollectionType == storage.CollectionTypeMovies && s.dataDir != "" && !skipCollections(ctx) {
+		// Every movie of the pass is cataloged: group the ones that name a
+		// set (only libraries with AutomaticallyAddToCollection on count).
+		if _, err := collection.BuildAutomatic(ctx, s.store, s.dataDir); err != nil {
+			stats.Errors = append(stats.Errors, fmt.Sprintf("building collections: %v", err))
+		}
+	}
 	stats.Duration = time.Since(started)
 	log.Printf("scan: library %q: %d items in %s (probed %d, skipped %d unchanged, %d enriched, %d warnings)",
 		lib.Name, stats.ItemsScanned, stats.Duration.Round(time.Millisecond), stats.ItemsProbed, stats.ItemsSkipped, stats.ItemsEnriched, len(stats.Errors))
@@ -254,6 +273,20 @@ func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, 
 		return stats, fmt.Errorf("scan: persisting LastScannedAt for library %q: %w", lib.Name, err)
 	}
 	return stats, nil
+}
+
+type skipCollectionsKey struct{}
+
+// WithoutCollections marks a scan that must not build automatic collections:
+// the refresh of a single library (as opposed to a full library refresh or
+// the first scan of a new library) leaves the collections alone.
+func WithoutCollections(ctx context.Context) context.Context {
+	return context.WithValue(ctx, skipCollectionsKey{}, true)
+}
+
+func skipCollections(ctx context.Context) bool {
+	v, _ := ctx.Value(skipCollectionsKey{}).(bool)
+	return v
 }
 
 // recordRootFolder catalogs a library path as a plain Folder item named

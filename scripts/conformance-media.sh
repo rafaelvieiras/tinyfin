@@ -374,4 +374,26 @@ nfo "$ROOT/SortWords/so-many/so-many.nfo" '<movie><title>One An Two A Three The 
 vid "$ROOT/SortWords/so-thea/so-thea.mp4"
 nfo "$ROOT/SortWords/so-thea/so-thea.nfo" '<movie><title>Thea The</title></movie>'
 
+# Collections (own libraries "Sets" with AutomaticallyAddToCollection on and
+# "SetsOff" with the default, both lazy): movies whose .nfo carries a <set>,
+# some with genres and ratings so a collection has metadata to derive.
+setmovie() { # <library dir> <title> <year> <extra nfo xml>
+  local d="$ROOT/$1/$2 ($3)"
+  vid "$d/$2 ($3).mp4"
+  nfo "$d/$2 ($3).nfo" "<movie><title>$2</title><year>$3</year>${4:-}</movie>"
+}
+setmovie Sets "Saga Alpha One" 2001 "<genre>Drama</genre><mpaa>PG</mpaa><set><name>Alpha Saga</name></set>"
+setmovie Sets "Saga Alpha Two" 2002 "<genre>Action</genre><mpaa>R</mpaa><set><name>Alpha Saga</name></set>"
+setmovie Sets "Saga Alpha Three" 2003 "<set>Alpha Saga</set>"
+setmovie Sets "Saga Beta One" 2004 "<set><name>The Beta Saga</name></set>"
+setmovie Sets "Saga Beta Two" 2005 "<set><name>The Beta Saga</name></set>"
+setmovie Sets "Saga Lonely One" 2006 "<set><name>Lonely Saga</name></set>"
+setmovie Sets "Saga Plain" 2007 ""
+setmovie Sets "Saga Pad One" 2008 "<set><name>  Padded Saga  </name></set>"
+setmovie Sets "Saga Pad Two" 2009 "<set><name>  Padded Saga  </name></set>"
+setmovie Sets "Saga Case Upper" 2010 "<set><name>Case Saga</name></set>"
+setmovie Sets "Saga Case Lower" 2011 "<set><name>case saga</name></set>"
+setmovie SetsOff "Saga Gamma One" 2008 "<set><name>Gamma Saga</name></set>"
+setmovie SetsOff "Saga Gamma Two" 2009 "<set><name>Gamma Saga</name></set>"
+
 echo "media tree ready under $ROOT"
