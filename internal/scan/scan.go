@@ -149,8 +149,8 @@ type Stats struct {
 	ItemsSkipped int
 	// Removed counts the items forgotten because their file or folder is gone.
 	Removed  int
-	Duration     time.Duration
-	Errors       []string
+	Duration time.Duration
+	Errors   []string
 }
 
 // jobPool runs enqueued jobs with bounded concurrency, accumulating Stats
