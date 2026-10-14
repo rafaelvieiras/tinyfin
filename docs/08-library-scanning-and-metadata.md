@@ -169,14 +169,17 @@ against a scan that can exhaust the memory budget this whole project exists to p
 The observable behavior is specified in `docs/contract/specs/items.md` (rules `items.names`,
 `items.runtime`, `items.episodes`, `items.homevideos`); this section only records where it lives.
 
-- **`movies`**: one folder per movie holding the video file; **`tvshows`**: series folder, season
-  folders (`Season N`, `Specials`) and episode files. An episode file needs no `SxxExx`: its name,
-  numbers and season come from the file name, its `.nfo` and the folder it sits in, and files in
-  the series folder itself join the season of their number or a season created for them
-  (`seasonSet` in `scan.go`).
-- **`homevideos`**: every folder under the library path becomes a `Folder` item and every video
-  file a `Video` item (`walkHomeVideos`), with no name parsing and no provider lookup; pictures are
-  not cataloged yet.
+- **`movies`**: a folder that holds one movie (a file, its stacked parts or versions) is that
+  movie, named after the folder as written; other folders become `Folder` items and their files
+  movies named after the file with the year and release tokens cut (`walkMovieDir`, `CleanTitle`).
+  **`tvshows`**: series folder; a folder named like a season is that season, any other folder a season
+  named after it, extras folders are skipped (`walkSeasons`, `SkippedFolder`). An episode file needs no
+  `SxxExx`: numbers, date and name come from `ParseEpisodeFile`, the `.nfo` (several documents merge,
+  `mergeEpisodeDocs`) and the folder it sits in; files in the series folder join the season of their
+  number or the first unnumbered season or a season created for them (`seasonSet`).
+- **`homevideos`**: every folder under the library path becomes a `Folder` item (a `PhotoAlbum` when it
+  directly holds pictures) and every video file a `Video` item (`walkHomeVideos`), with no name
+  parsing and no provider lookup; picture files are `Photo` items.
 - Text from `.nfo` files is trimmed of surrounding white space when stored (`applyCommonNFOFields`);
   a series takes its runtime from `<runtime>` of `tvshow.nfo` only.
 

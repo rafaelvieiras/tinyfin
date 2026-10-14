@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Library scans follow the reference's naming without metadata: a movie folder
+  keeps its text as the name (`Foo (2015)`) and the year is read from it; loose
+  movie files, folders of several movies, stacked parts and versions are
+  cataloged, nested folders become `Folder` items; episode numbering covers
+  `Show - 05`, bare and four digit numbers, `Season 2 Episode 13`, `[S02E15]`,
+  dates, `S01E02E03` and `1x05-06` (with `IndexNumberEnd`), and episode names
+  are cut at the year and release tokens.
+- Folders of a series that are not `Season N` become seasons named after them,
+  extras folders are skipped, folders inside a season are `Folder` items, an
+  episode naming a season without a folder gets an empty season, and a season
+  lists the episodes that carry its number.
+- Home-videos libraries catalog pictures as `Photo` items and folders holding
+  pictures as `PhotoAlbum`.
+- An `.nfo` with several `<episodedetails>` is one multi-episode item (titles
+  joined with ` / `).
+- `RecursiveItemCount` on folders, seasons and series; `MediaType` is `Unknown`
+  for everything that is not playable; listings carry `ChildCount` and
+  `RecursiveItemCount` only when asked for in `Fields`.
+- Network `EnableRemoteAccess=false` answers `503` to requests from outside the
+  local network.
+- Sort names drop the articles `the`, `a` and `an` anywhere as whole words.
+
 - Home-videos libraries are scanned: nested folders become `Folder` items and
   video files `Video` items named after the file, with probed media, an
   optional `<name>.nfo` and the same playback path as movies; hidden entries,

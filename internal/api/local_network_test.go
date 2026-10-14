@@ -109,3 +109,46 @@ func parseIP(t *testing.T, s string) net.IP {
 	}
 	return ip
 }
+
+// TestNetworkRemoteAccessGate covers wire.network.R1: with the network
+// EnableRemoteAccess off, a caller outside the local network gets 503 on
+// every route but the web client's static files; local callers are served.
+func TestNetworkRemoteAccessGate(t *testing.T) {
+	st, err := sqlite.New(filepath.Join(t.TempDir(), "tinyfin.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	srv := NewServer(st, Config{ServerName: "T"})
+	ts := httptest.NewServer(srv.Handler())
+	t.Cleanup(ts.Close)
+	createTestAdminUser(t, st, "root", "pw")
+	tok := loginToken(t, ts.URL, "root", "pw")
+	auth := `MediaBrowser Token="` + tok + `"`
+
+	if c, b := rawDo(t, ts.URL, http.MethodPost, "/System/Configuration/network", `{"EnableRemoteAccess":false,"LocalNetworkSubnets":["192.0.2.0/24"]}`, auth); c != http.StatusNoContent {
+		t.Fatalf("POST network: %d %s", c, b)
+	}
+	if c, _ := fromAddr(srv, "8.8.8.8", http.MethodGet, "/System/Info/Public", ""); c != http.StatusServiceUnavailable {
+		t.Errorf("remote /System/Info/Public: %d, want 503", c)
+	}
+	if c, _ := fromAddr(srv, "172.17.0.1", http.MethodGet, "/Users/Public", ""); c != http.StatusServiceUnavailable {
+		t.Errorf("remote (private, outside subnets) /Users/Public: %d, want 503", c)
+	}
+	if c, _ := fromAddr(srv, "192.0.2.7", http.MethodGet, "/System/Info/Public", ""); c != http.StatusOK {
+		t.Errorf("local /System/Info/Public: %d, want 200", c)
+	}
+	if c, _ := fromAddr(srv, "127.0.0.1", http.MethodGet, "/System/Info/Public", ""); c != http.StatusOK {
+		t.Errorf("loopback /System/Info/Public: %d, want 200", c)
+	}
+	if c, _ := fromAddr(srv, "8.8.8.8", http.MethodGet, "/web/index.html", ""); c == http.StatusServiceUnavailable {
+		t.Errorf("remote /web/index.html is gated: %d", c)
+	}
+	// Turning it back on (from a local caller) reopens the server.
+	if c, b := rawDo(t, ts.URL, http.MethodPost, "/System/Configuration/network", `{"EnableRemoteAccess":true}`, auth); c != http.StatusNoContent {
+		t.Fatalf("POST network: %d %s", c, b)
+	}
+	if c, _ := fromAddr(srv, "8.8.8.8", http.MethodGet, "/System/Info/Public", ""); c != http.StatusOK {
+		t.Errorf("remote after re-enable: %d, want 200", c)
+	}
+}

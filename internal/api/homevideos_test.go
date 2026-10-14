@@ -65,7 +65,7 @@ func TestHomeVideosLibraryBrowsing(t *testing.T) {
 	}
 
 	// First level: the folder and the video, not the root folder item.
-	total, first := list("/Items?ParentId=0123456789abcdef0123456789abcdef")
+	total, first := list("/Items?ParentId=0123456789abcdef0123456789abcdef&Fields=ChildCount")
 	if got := names(first); total != 2 || got["TV"] != "Folder" || got["Root Video"] != "Video" {
 		t.Fatalf("library first level = %v (total %d)", got, total)
 	}

@@ -34,3 +34,7 @@ Specified as thin aliases of the modern route (user id taken from the path). Iso
 | `POST /Users/{userId}/PlayedItems/{itemId}` | `POST /UserPlayedItems/{itemId}?userId=` | static:2, live-capture |
 
 Evidence legend: `static:N` = N call sites in the web client source (via its embedded API client); `live-capture` = observed on the wire from the official 12.2 web client in a real session.
+
+## Out of scope for now — collections (`BoxSet`)
+
+Tinyfin has no collections: no `BoxSet` items, no `POST /Collections`, no collection membership. Observed on the 12.2 reference (online providers off): a movie library creates a `BoxSet` only when its library option `AutomaticallyAddToCollection` is `true` and at least two of its movies carry the same `<set><name>X</name></set>` (or `<set>X</set>`) in their `.nfo`; the box is named `X`, lists those movies as children and is stored under the server's `collections` folder (not under a library path). With the option off (the default) a `<set>` creates nothing, and a single movie with a set creates nothing. Implementing it needs a membership model (`item_relations` exists but is not wired to listings), collection management routes and library-option persistence, which is more than a scanner change; it stays out of the contract until those routes are specified.

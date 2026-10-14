@@ -1,8 +1,13 @@
 {
   "counts": {
-    "pass": 477
+    "pass": 488
   },
   "scenarios": {
+    "items.episode-nfo-multi-document": "pass",
+    "items.episode-numbering-1": "pass",
+    "items.episode-numbering-2": "pass",
+    "items.episode-numbering-3": "pass",
+    "items.episode-numbering-season-folder": "pass",
     "items.episodes.loose-files-names-and-numbers": "pass",
     "items.episodes.loose-files-seasons": "pass",
     "items.episodes.specials-folder-and-series-without-seasons": "pass",
@@ -43,6 +48,7 @@
     "items.get.series-and-episode": "pass",
     "items.get.user-data-per-user": "pass",
     "items.get.user-id": "pass",
+    "items.homevideos-photos": "pass",
     "items.homevideos.folder-children": "pass",
     "items.homevideos.library-first-level": "pass",
     "items.homevideos.library-view": "pass",
@@ -73,6 +79,9 @@
     "items.list.series-children": "pass",
     "items.list.shape-recursive-movies": "pass",
     "items.list.unknown-param-ignored": "pass",
+    "items.names-folders-and-stacks": "pass",
+    "items.names-loose-movie-file": "pass",
+    "items.names-movie-in-folder": "pass",
     "items.names.episodes": "pass",
     "items.names.file-derived-name-kept": "pass",
     "items.names.nfo-trims-surrounding-whitespace": "pass",
@@ -110,6 +119,8 @@
     "items.search.ignores-sort": "pass",
     "items.search.scoped": "pass",
     "items.search.term": "pass",
+    "items.season-folders": "pass",
+    "items.sort-articles-anywhere": "pass",
     "items.sort.default-order": "pass",
     "items.sort.multi-key": "pass",
     "items.sort.order-without-key": "pass",

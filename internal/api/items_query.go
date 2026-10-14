@@ -899,6 +899,12 @@ func shapeListItem(d baseItemDto, iq itemsQuery) baseItemDto {
 	if !has("sortname") {
 		d.SortName = ""
 	}
+	if !has("childcount") {
+		d.ChildCount = nil
+	}
+	if !has("recursiveitemcount") {
+		d.RecursiveItemCount = nil
+	}
 	if !has("overview") {
 		d.Overview = ""
 	}

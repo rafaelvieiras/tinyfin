@@ -29,6 +29,10 @@ A failure that the route does not describe with an explicit message of its own i
 - **wire.problem.R2** A `400` caused by a value that cannot be bound (a path or query id that is not a GUID, a body that is not valid JSON) is a problem document with `status: 400`, `title: "One or more validation errors occurred."` and an `errors` object that names the offending parameter or body location.
 - **wire.problem.R3** A `400` that the route raises without a message, such as `GET /Users/Me` with an API key, is a problem document with `status: 400` and `title: "Bad Request"`.
 
+## Remote access
+
+- **wire.network.R1** [untestable: the runner could not restore the setting from a remote address (every route answers 503); covered by a Go test] With the network configuration's `EnableRemoteAccess` set to `false` (`POST /System/Configuration/network`, `POST /Startup/RemoteAccess`), a request from outside the local network (users.auth.R21) is answered `503` with an empty body on every route, administrators and valid tokens included; only the web client's static files (`/`, `/web/...`, `/robots.txt`) are served. Requests from the local network are unaffected, and the setting can be turned back on only from there. Observed on the reference by making the runner's address remote with `LocalNetworkSubnets`; no scenario asserts it because the runner could not restore the setting afterwards (it would be locked out). Unit-tested in Tinyfin.
+
 ## Rule -> scenarios
 
 | Rule | Scenarios |

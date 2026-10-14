@@ -252,4 +252,126 @@ vid "$H/.hidden/Secret.mp4"
 vid "$H/#recycle/Gone.mp4"
 vid "$H/Root Video-trailer.mp4"
 
+
+# Reference naming without metadata files: movie names and years, episode
+# numbering, season folders, several documents in one .nfo, photos and sort
+# names (own libraries "Names", "EpNum", "SeasonDirs", "NfoMulti", "Photos",
+# "SortWords", lazy). Files are copies of one tiny clip.
+img() { # <out>: a tiny picture, format by extension
+  mkdir -p "$(dirname "$1")"
+  [ -f "$1" ] && return 0
+  "$FFMPEG" -v error -y -f lavfi -i "color=c=red:s=40x30" -frames:v 1 "$1"
+}
+vid "$ROOT/Names/Foo One (2015)/Foo One (2015).mp4"
+vid "$ROOT/Names/Foo Two (2016)/Other Name.mp4"
+vid "$ROOT/Names/Foo Three.2017.1080p.BluRay/Foo Three.2017.1080p.BluRay.mp4"
+vid "$ROOT/Names/Foo Twelve (1899)/Foo Twelve (1899).mp4"
+vid "$ROOT/Names/Far (2100)/Far (2100).mp4"
+vid "$ROOT/Names/Two Years 1999 2005/Two Years 1999 2005.mp4"
+vid "$ROOT/Names/(2013) Paren Start/(2013) Paren Start.mp4"
+vid "$ROOT/Names/Foo Seven (2021).mp4"
+vid "$ROOT/Names/Foo.Eight.2022.mp4"
+vid "$ROOT/Names/Loose H 1080p.mp4"
+vid "$ROOT/Names/Loose Q 2009 1080p 2010.mp4"
+vid "$ROOT/Names/Loose F (2005) [1080p].mp4"
+vid "$ROOT/Names/Loose A (2001).mp4"
+vid "$ROOT/Names/2012 (2009).mp4"
+vid "$ROOT/Names/Loose Z - 2014 -.mp4"
+vid "$ROOT/Names/Loose N2001.mp4"
+vid "$ROOT/Names/Name [Group].mp4"
+vid "$ROOT/Names/Brk [Group] Name.mp4"
+vid "$ROOT/Names/Multi (2010)/part1.mp4"
+vid "$ROOT/Names/Multi (2010)/part2.mp4"
+vid "$ROOT/Names/Stacked (2011)/Stacked (2011) - part1.mp4"
+vid "$ROOT/Names/Stacked (2011)/Stacked (2011) - part2.mp4"
+vid "$ROOT/Names/Versions (2014)/Versions (2014).mp4"
+vid "$ROOT/Names/Versions (2014)/Versions (2014) - 4K.mp4"
+vid "$ROOT/Names/Collection/Inner One (2012)/Inner One (2012).mp4"
+vid "$ROOT/Names/Collection/Inner Two (2013)/Inner Two (2013).mp4"
+vid "$ROOT/EpNum/Series 00/Bat - 05.mp4"
+vid "$ROOT/EpNum/Series 01/Bat 209.mp4"
+vid "$ROOT/EpNum/Series 02/Bat 2020-01-31.mp4"
+vid "$ROOT/EpNum/Series 03/Bat 31-01-2020.mp4"
+vid "$ROOT/EpNum/Series 04/Bat 01-31-2020.mp4"
+vid "$ROOT/EpNum/Series 05/Bat Season 2 Episode 13.mp4"
+vid "$ROOT/EpNum/Series 06/Bat [S02E15].mp4"
+vid "$ROOT/EpNum/Series 07/Bat 2020.mp4"
+vid "$ROOT/EpNum/Series 08/Bat 3x09.mp4"
+vid "$ROOT/EpNum/Series 09/Bat S01E05-E06.mp4"
+vid "$ROOT/EpNum/Series 10/Bat S01E02E03E04.mp4"
+vid "$ROOT/EpNum/Series 11/Bat S01E02.E03.mp4"
+vid "$ROOT/EpNum/Series 12/Bat [01].mp4"
+vid "$ROOT/EpNum/Series 13/Bat 12 Title.mp4"
+vid "$ROOT/EpNum/Series 14/Bat 1080p.mp4"
+vid "$ROOT/EpNum/Series 15/Bat Ep. 5.mp4"
+vid "$ROOT/EpNum/Series 16/Bat 05 - 06.mp4"
+vid "$ROOT/EpNum/Series 17/Bat S01E02 2020.mp4"
+vid "$ROOT/EpNum/Series 18/Bat - 1080p.mp4"
+vid "$ROOT/EpNum/Series 19/Bat E05.mp4"
+vid "$ROOT/EpNum/Series 20/Bat Part 2.mp4"
+vid "$ROOT/EpNum/Series 21/Bat Special.mp4"
+vid "$ROOT/EpNum/Series 22/Yr Show (2019) S01E01.mp4"
+vid "$ROOT/EpNum/Series 23/Yr.Show.S01E04.720p.WEB-DL.x264.mp4"
+vid "$ROOT/EpNum/Season Series/Season 01/Bat 05.mp4"
+vid "$ROOT/EpNum/Season Series/Season 01/Bat Special.mp4"
+vid "$ROOT/EpNum/Season Series/Season 01/Bat 2020-01-31.mp4"
+vid "$ROOT/EpNum/Season Series/Season 01/Bat S02E15.mp4"
+vid "$ROOT/EpNum/Season Series/Season 01/Bat 209.mp4"
+vid "$ROOT/SeasonDirs/Dirs Show (2003)/Season 01/Dirs Show S01E01.mp4"
+vid "$ROOT/SeasonDirs/Dirs Show (2003)/Season 01/Disc A/Dirs Show S01E02.mp4"
+vid "$ROOT/SeasonDirs/Dirs Show (2003)/Season 1 Bonus/Bonus S01E05.mp4"
+vid "$ROOT/SeasonDirs/Dirs Show (2003)/Part 2/Dirs Show S02E01.mp4"
+vid "$ROOT/SeasonDirs/Dirs Show (2003)/Season 03/Dirs Show S05E01.mp4"
+vid "$ROOT/SeasonDirs/Dirs Show (2003)/Season 7 Redux/Dirs Show S07E02.mp4"
+vid "$ROOT/SeasonDirs/Dirs Show (2003)/Extras/Extra One.mp4"
+vid "$ROOT/SeasonDirs/Dirs Show (2003)/Behind The Scenes/BTS One.mp4"
+vid "$ROOT/SeasonDirs/Dirs Show (2003)/Season 01/Subs/Skipped.mp4"
+vid "$ROOT/SeasonDirs/Dirs Show (2003)/Loose Root.mp4"
+vid "$ROOT/NfoMulti/Multi Show (2004)/Season 01/Multi S01E01E02.mp4"
+nfo "$ROOT/NfoMulti/Multi Show (2004)/Season 01/Multi S01E01E02.nfo" '<episodedetails><title>Alpha</title><plot>PlotA</plot><season>1</season><episode>1</episode></episodedetails>
+<episodedetails><title>Beta</title><plot>PlotB</plot><season>1</season><episode>3</episode></episodedetails>'
+vid "$ROOT/NfoMulti/Multi Show (2004)/Season 01/Multi S01E04.mp4"
+nfo "$ROOT/NfoMulti/Multi Show (2004)/Season 01/Multi S01E04.nfo" '<episodedetails><title>Rev One</title><season>1</season><episode>5</episode></episodedetails>
+<episodedetails><title>Rev Two</title><season>1</season><episode>4</episode></episodedetails>'
+vid "$ROOT/NfoMulti/Multi Show (2004)/Season 01/Multi S01E06.mp4"
+nfo "$ROOT/NfoMulti/Multi Show (2004)/Season 01/Multi S01E06.nfo" '<episodedetails><title>A</title><season>1</season><episode>6</episode></episodedetails>
+<episodedetails><title>B</title><season>1</season><episode>7</episode></episodedetails>
+<episodedetails><title>C</title><season>1</season><episode>8</episode></episodedetails>'
+vid "$ROOT/NfoMulti/Multi Show (2004)/Season 01/Multi S01E09.mp4"
+nfo "$ROOT/NfoMulti/Multi Show (2004)/Season 01/Multi S01E09.nfo" '<episodedetails><title>Only Title</title><season>1</season><episode>9</episode></episodedetails>
+<episodedetails><season>1</season><episode>10</episode></episodedetails>'
+img "$ROOT/Photos/Album One/pic1.jpg"
+vid "$ROOT/Photos/Album One/Clip.mp4"
+img "$ROOT/Photos/Album One/Clip.jpg"
+img "$ROOT/Photos/Album One/poster.png"
+img "$ROOT/Photos/Album One/banner.jpg"
+img "$ROOT/Photos/Pics Only/a.jpg"
+img "$ROOT/Photos/Pics Only/b.png"
+vid "$ROOT/Photos/Videos Only/Vid.mp4"
+img "$ROOT/Photos/root.jpg"
+vid "$ROOT/SortWords/so-return/so-return.mp4"
+nfo "$ROOT/SortWords/so-return/so-return.nfo" '<movie><title>Return of the King</title></movie>'
+vid "$ROOT/SortWords/so-rings/so-rings.mp4"
+nfo "$ROOT/SortWords/so-rings/so-rings.nfo" '<movie><title>Lord of the Rings</title></movie>'
+vid "$ROOT/SortWords/so-tale/so-tale.mp4"
+nfo "$ROOT/SortWords/so-tale/so-tale.nfo" '<movie><title>A Tale of an Apple</title></movie>'
+vid "$ROOT/SortWords/so-odyssey/so-odyssey.mp4"
+nfo "$ROOT/SortWords/so-odyssey/so-odyssey.nfo" '<movie><title>2001 A Space Odyssey</title></movie>'
+vid "$ROOT/SortWords/so-the3/so-the3.mp4"
+nfo "$ROOT/SortWords/so-the3/so-the3.nfo" '<movie><title>The The The</title></movie>'
+vid "$ROOT/SortWords/so-trail/so-trail.mp4"
+nfo "$ROOT/SortWords/so-trail/so-trail.nfo" '<movie><title>Out of The</title></movie>'
+vid "$ROOT/SortWords/so-dash/so-dash.mp4"
+nfo "$ROOT/SortWords/so-dash/so-dash.nfo" '<movie><title>Hello - A World</title></movie>'
+vid "$ROOT/SortWords/so-dots/so-dots.mp4"
+nfo "$ROOT/SortWords/so-dots/so-dots.nfo" '<movie><title>Hello.The.World</title></movie>'
+vid "$ROOT/SortWords/so-quote/so-quote.mp4"
+nfo "$ROOT/SortWords/so-quote/so-quote.nfo" '<movie><title>Hello '\''The'\'' World</title></movie>'
+vid "$ROOT/SortWords/so-amp/so-amp.mp4"
+nfo "$ROOT/SortWords/so-amp/so-amp.nfo" '<movie><title>Rock &amp; The Roll</title></movie>'
+vid "$ROOT/SortWords/so-many/so-many.mp4"
+nfo "$ROOT/SortWords/so-many/so-many.nfo" '<movie><title>One An Two A Three The Four</title></movie>'
+vid "$ROOT/SortWords/so-thea/so-thea.mp4"
+nfo "$ROOT/SortWords/so-thea/so-thea.nfo" '<movie><title>Thea The</title></movie>'
+
 echo "media tree ready under $ROOT"
