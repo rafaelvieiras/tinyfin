@@ -766,8 +766,11 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 	if err := s.store.UpsertItem(ctx, item); err != nil {
 		return fmt.Errorf("upserting enriched movie %q: %w", itemPath, err)
 	}
+	// A movie whose folder is a Folder item (it holds sub folders) keeps its
+	// extras only while no trailer or feature file sits next to it.
+	attach := alone && !(group.sole && hasRootExtraFiles(ctx, dir))
 	s.scanExtras(ctx, pool, lib, itemID, dir, []string{strings.TrimSuffix(videoFile, filepath.Ext(videoFile)), filepath.Base(dir)},
-		item.ProductionYear, alone, false, movieOthers(dir, source, group))
+		item.ProductionYear, attach, false, movieOthers(dir, source, group))
 
 	if probeErr != nil {
 		pool.addWarning(fmt.Sprintf("probing %q: %v (cataloged with no media stream info)", itemPath, probeErr))

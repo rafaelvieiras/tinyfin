@@ -104,6 +104,17 @@ func IsExtraFile(name string) bool {
 	return lower == "sample" || strings.HasSuffix(lower, ".sample") || strings.HasSuffix(lower, "_sample")
 }
 
+// hasRootExtraFiles reports whether dir holds a video file that is an extra by
+// its name ("Movie-trailer.mp4").
+func hasRootExtraFiles(ctx context.Context, dir string) bool {
+	for n := range dirNames(ctx, dir) {
+		if IsVideoFile(n) && IsExtraFile(n) {
+			return true
+		}
+	}
+	return false
+}
+
 // audioExtensions are the file extensions of a theme song.
 var audioExtensions = map[string]bool{
 	".mp3": true, ".flac": true, ".m4a": true, ".ogg": true, ".wav": true, ".wma": true, ".aac": true, ".opus": true,

@@ -374,4 +374,160 @@ nfo "$ROOT/SortWords/so-many/so-many.nfo" '<movie><title>One An Two A Three The 
 vid "$ROOT/SortWords/so-thea/so-thea.mp4"
 nfo "$ROOT/SortWords/so-thea/so-thea.nfo" '<movie><title>Thea The</title></movie>'
 
+# Artwork, extras and the residual shape rules (own libraries "Art",
+# "ArtShows", "Extras", "ExtraShows", "Resid", lazy): picture names and
+# extensions, trailers, special features, theme media, stacked parts,
+# versions, merged season folders. Pictures are copies of one tiny image
+# (the file name decides what they are), audio files copies of one tone.
+pic_src="$ROOT/.src/pic.jpg"
+if [ ! -f "$pic_src" ]; then
+  mkdir -p "$ROOT/.src"
+  "$FFMPEG" -v error -y -f lavfi -i "color=c=blue:s=200x300" -frames:v 1 "$pic_src"
+fi
+aud_src="$ROOT/.src/tone.mp3"
+if [ ! -f "$aud_src" ]; then
+  "$FFMPEG" -v error -y -f lavfi -i "sine=frequency=300:duration=1" -c:a libmp3lame "$aud_src"
+fi
+pic() { mkdir -p "$(dirname "$1")"; [ -f "$1" ] || cp "$pic_src" "$1"; }
+aud() { mkdir -p "$(dirname "$1")"; [ -f "$1" ] || cp "$aud_src" "$1"; }
+
+A="$ROOT/Art"
+# Primary names: "<video>-poster" beats "poster", which beats "folder"; the
+# extension order is png, jpg, jpeg, webp, tbn, gif.
+M="$A/Art Primary (2201)"
+vid "$M/Art Primary (2201).mp4"
+pic "$M/poster.jpg"; pic "$M/poster.png"; pic "$M/folder.jpg"; pic "$M/cover.jpg"
+pic "$M/Art Primary (2201)-poster.webp"
+# Every other single picture kind, and names that no kind owns.
+M="$A/Art Kinds (2202)"
+vid "$M/Art Kinds (2202).mp4"
+pic "$M/clearlogo.png"; pic "$M/clearart.jpg"; pic "$M/banner.jpg"; pic "$M/landscape.jpg"; pic "$M/thumb.jpg"
+pic "$M/discart.jpg"; pic "$M/cdart.jpg"
+pic "$M/box.jpg"; pic "$M/screenshot.jpg"; pic "$M/menu.jpg"; pic "$M/back.jpg"
+# Backdrops: fanart, numbered forms, background, art, extrafanart/ and
+# backdrop<N>; not fanart1, backdrop-1 or backdrop0.
+M="$A/Art Backdrops (2203)"
+vid "$M/Art Backdrops (2203).mp4"
+pic "$M/fanart.jpg"; pic "$M/fanart-1.jpg"; pic "$M/fanart-2.jpg"; pic "$M/backdrop1.jpg"
+pic "$M/art.jpg"; pic "$M/background.jpg"; pic "$M/extrafanart/a.jpg"; pic "$M/extrafanart/b.jpg"
+pic "$M/fanart1.jpg"; pic "$M/backdrop-1.jpg"; pic "$M/backdrop0.jpg"
+# A single "<video>-fanart" is listed at two backdrop indexes.
+M="$A/Art Fanart Dup (2204)"
+vid "$M/Art Fanart Dup (2204).mp4"
+pic "$M/Art Fanart Dup (2204)-fanart.jpg"
+# Recognized extensions and spellings (any case), and ones that are not.
+M="$A/Art Ext Ok (2205)"
+vid "$M/Art Ext Ok (2205).mp4"
+pic "$M/POSTER.TBN"; pic "$M/Fanart.webp"; pic "$M/logo.jpeg"; pic "$M/Banner.GIF"
+M="$A/Art Ext No (2206)"
+vid "$M/Art Ext No (2206).mp4"
+pic "$M/poster.avif"; pic "$M/fanart.bmp"; pic "$M/logo.heic"; pic "$M/banner.jpe"
+# Several movies in one folder: only their own "<video>-<kind>" pictures are
+# theirs; the folder's own artwork goes to the folder item.
+M="$A/Art Multi"
+vid "$M/Multi One (2207).mp4"; vid "$M/Multi Two (2207).mp4"
+pic "$M/poster.jpg"; pic "$M/Multi One (2207)-poster.jpg"; pic "$M/Multi One (2207)-landscape.jpg"
+pic "$M/Multi Two (2207)-fanart.jpg"; pic "$M/fanart.jpg"
+# A movie that is not alone in its folder because it also has a sub folder.
+M="$A/Art Sub (2208)"
+vid "$M/Art Sub (2208).mp4"
+pic "$M/poster.jpg"; pic "$M/logo.png"
+mkdir -p "$M/Unrelated"; pic "$M/Unrelated/x.jpg"
+
+AS="$ROOT/ArtShows"
+S="$AS/Art Show (2210)"
+vid "$S/Season 01/Art Show S01E01.mp4"
+vid "$S/Season 01/Art Show S01E02.mp4"
+vid "$S/Season 01/Art Show S01E03.mp4"
+vid "$S/Season 02/Art Show S02E01.mp4"
+vid "$S/Specials/Art Show S00E01.mp4"
+pic "$S/poster.jpg"; pic "$S/folder.png"; pic "$S/banner.jpg"; pic "$S/clearart.jpg"; pic "$S/landscape.jpg"
+pic "$S/fanart.jpg"; pic "$S/fanart-1.jpg"; pic "$S/extrafanart/a.jpg"
+pic "$S/season01-poster.jpg"; pic "$S/season1-poster.png"; pic "$S/season01-banner.jpg"; pic "$S/season01-fanart.jpg"
+pic "$S/season01-thumb.jpg"; pic "$S/season01.jpg"
+pic "$S/season-specials-poster.jpg"
+pic "$S/Season 01/folder.jpg"; pic "$S/Season 01/landscape.jpg"
+pic "$S/Season 02/folder.jpg"; pic "$S/Season 02/logo.png"
+pic "$S/Season 01/Art Show S01E01-thumb.jpg"
+pic "$S/Season 01/Art Show S01E02.jpg"
+pic "$S/Season 01/metadata/Art Show S01E03.jpg"
+pic "$S/Season 02/Art Show S02E01-poster.jpg"
+
+E="$ROOT/Extras"
+M="$E/Ex All (2220)"
+vid "$M/Ex All (2220).mp4"
+vid "$M/Ex All (2220)-trailer.mp4"
+vid "$M/trailers/Folder Trailer.mp4"
+vid "$M/extras/Making Of.mp4"
+vid "$M/featurettes/Deep Dive.mp4"
+vid "$M/behind the scenes/On Set.mp4"
+vid "$M/deleted scenes/Cut One.mp4"
+vid "$M/interviews/Chat.mp4"
+vid "$M/scenes/Opening.mp4"
+vid "$M/samples/Taste.mp4"
+vid "$M/shorts/Mini.mp4"
+vid "$M/clips/Snip.mp4"
+vid "$M/Ex All (2220)-featurette.mp4"
+vid "$M/other/Misc.mp4"
+vid "$M/extras/sub/Deep.mp4"
+aud "$M/theme.mp3"; aud "$M/theme-music/Second Theme.mp3"; vid "$M/theme-music/not-audio.mp4"
+vid "$M/backdrops/Loop.mp4"
+aud "$M/soundtrack.mp3"; aud "$M/Ex All (2220) OST.mp3"
+M="$E/Ex Names (2221)"
+vid "$M/Ex Names (2221).mp4"
+vid "$M/Ex Names (2221)-trailer.mp4"; vid "$M/trailer.mp4"; vid "$M/x-trailer.mp4"
+vid "$M/Ex Names (2221)-behindthescenes.mp4"; vid "$M/Ex Names (2221)-deleted.mp4"
+vid "$M/Ex Names (2221)-other.mp4"; vid "$M/Ex Names (2221)-sample.mp4"
+M="$E/Ex Unowned"
+vid "$M/Ex Unowned A (2222).mp4"; vid "$M/Ex Unowned B (2222).mp4"
+vid "$M/Ex Unowned A (2222)-trailer.mp4"; vid "$M/trailers/Shared.mp4"; vid "$M/extras/Shared Extra.mp4"; aud "$M/theme.mp3"
+M="$E/Ex Hidden (2223)"
+vid "$M/Ex Hidden (2223).mp4"
+vid "$M/Ex Hidden (2223).featurette.mp4"; vid "$M/Ex Hidden (2223)-featurettes.mp4"; vid "$M/Ex Hidden (2223).sample.mp4"
+vid "$M/sample/Singular Folder.mp4"
+M="$E/Ex Parts (2224)"
+vid "$M/Ex Parts (2224) - part1.mp4"; vid "$M/Ex Parts (2224) - part2.mp4"; vid "$M/Ex Parts (2224) - part3.mp4"
+M="$E/Ex Versions (2225)"
+vid "$M/Ex Versions (2225).mp4"; vid "$M/Ex Versions (2225) - 4K.mp4"
+M="$E/Ex Sub Folder (2226)"
+vid "$M/Ex Sub Folder (2226).mp4"; vid "$M/featurette/Singular.mp4"; vid "$M/trailers/Real Trailer.mp4"
+# A movie whose folder also holds a (non extras) sub folder is a Folder item.
+M="$E/Ex Shape Plain (2227)"
+vid "$M/Ex Shape Plain (2227).mp4"; aud "$M/soundtrack/01 Intro.mp3"; vid "$M/trailers/Plain Trailer.mp4"
+aud "$M/theme.mp3"
+M="$E/Ex Shape Root (2228)"
+vid "$M/Ex Shape Root (2228).mp4"; aud "$M/soundtrack/01 Intro.mp3"; vid "$M/Ex Shape Root (2228)-trailer.mp4"
+aud "$M/theme.mp3"
+
+ES="$ROOT/ExtraShows"
+S="$ES/Extra Show (2230)"
+vid "$S/Season 01/Extra Show S01E01.mp4"
+vid "$S/Season 01/Extra Show S01E02.mp4"
+vid "$S/trailers/Show Trailer.mp4"; vid "$S/extras/Show Extra.mp4"; vid "$S/Extra Show (2230)-featurette.mp4"
+aud "$S/theme.mp3"; vid "$S/backdrops/Show Loop.mp4"
+vid "$S/Season 01/trailers/Season Trailer.mp4"; vid "$S/Season 01/extras/Season Extra.mp4"
+vid "$S/Season 01/Extra Show S01E01-featurette.mp4"
+aud "$S/Season 01/theme.mp3"
+
+R="$ROOT/Resid"
+# Season folders sharing a number, an episode-like folder, several files of
+# one episode, numbering without a season/episode pattern.
+S="$R/Dup Show (2240)"
+vid "$S/Season 01/Dup Show S01E01.mp4"; vid "$S/Season 1 Bonus/Dup Show S01E02.mp4"
+vid "$S/Specials/Dup Show S00E01.mp4"; vid "$S/Season 00/Dup Show S00E02.mp4"
+S="$R/Folder Show (2241)"
+vid "$S/Season 01/Folder Show S01E01.mp4"; vid "$S/S26E01/Folder Show S26E01.mp4"
+S="$R/Version Show (2242)"
+vid "$S/Season 01/Version Show S01E01.mp4"; vid "$S/Season 01/Version Show S01E01 1080p.mp4"
+vid "$S/Season 01/Version Show S01E01 - 4K.mp4"; vid "$S/Season 01/Version Show S01E02.mp4"
+S="$R/Number Show (2243)"
+vid "$S/Season 01/Number Show E5E6.mp4"; vid "$S/Season 01/Number Show Title3.mp4"
+vid "$S/Season 01/Number Show E05E06E07.mp4"
+vid "$S/Season 01/Number Show Part3.mp4"; vid "$S/Season 01/Number Show x264.mp4"
+
+# Photo extensions of a home-videos library (own library "PhotoTypes", lazy).
+P="$ROOT/PhotoTypes/Album"
+for e in jpg jpeg png gif bmp webp tif tiff avif ico cr2 dng nef arw; do pic "$P/photo.$e"; done
+for e in heic heif jpe jfif svg psd jxl tga raw; do pic "$P/other.$e"; done
+
 echo "media tree ready under $ROOT"
