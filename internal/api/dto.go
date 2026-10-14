@@ -396,7 +396,18 @@ func (s *Server) childCountOf(ctx context.Context, item storage.Item) (int, erro
 	if err != nil {
 		return 0, err
 	}
-	return page.TotalCount, nil
+	n := page.TotalCount
+	if item.Type == storage.ItemTypeSeries {
+		// The reference counts every season folder, also the ones that
+		// share a number with another (one season item stands for them).
+		owner := item.ID
+		if merged, err := s.store.QueryItems(ctx, storage.ItemFilter{
+			OwnerID: &owner, ExtraTypes: []string{storage.ExtraTypeMergedSeason}, Limit: 1,
+		}); err == nil {
+			n += merged.TotalCount
+		}
+	}
+	return n, nil
 }
 
 // recursiveItemCountOf counts the items below item that are not folders
@@ -995,7 +1006,7 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		MediaSources:            mediaSourcesFor(item),
 		LocationType:            locationTypeFor(item),
 	}
-	if item.ExtraType != "" && item.ExtraType != storage.ExtraTypePart {
+	if item.ExtraType != "" && !internalExtraType(item.ExtraType) {
 		dto.ExtraType = item.ExtraType
 	}
 	if childCountItemTypes[item.Type] || item.Type == storage.ItemTypeFolder {

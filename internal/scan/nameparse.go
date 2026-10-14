@@ -236,7 +236,10 @@ func SkippedFolder(name string) bool {
 // catalogs as photos.
 var photoExtensions = map[string]bool{
 	".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".bmp": true, ".webp": true,
-	".tif": true, ".tiff": true, ".avif": true,
+	".tif": true, ".tiff": true, ".avif": true, ".ico": true, ".wbmp": true,
+	// camera raw formats the reference reads as pictures
+	".cr2": true, ".crw": true, ".dng": true, ".arw": true, ".erf": true, ".nef": true,
+	".nrw": true, ".orf": true, ".pef": true, ".raf": true, ".rw2": true,
 }
 
 // IsPhotoFile reports whether name has a picture extension (any case).

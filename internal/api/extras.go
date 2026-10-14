@@ -41,6 +41,12 @@ func (s *Server) extrasOf(ctx context.Context, owner storage.ItemID, types ...st
 	return items
 }
 
+// internalExtraType reports whether an ExtraType is one the wire does not
+// show: an additional part, a version or a merged season folder.
+func internalExtraType(t string) bool {
+	return t == storage.ExtraTypePart || t == storage.ExtraTypeVersion || t == storage.ExtraTypeMergedSeason
+}
+
 // specialFeatureTypes are the ExtraType values counted as special features.
 var specialFeatureTypes = []string{
 	storage.ExtraTypeFeaturette, storage.ExtraTypeBehindTheScenes, storage.ExtraTypeDeletedScene,
@@ -48,12 +54,45 @@ var specialFeatureTypes = []string{
 	storage.ExtraTypeClip, storage.ExtraTypeUnknown,
 }
 
+// versionSources are the media sources of the other files (versions) of a
+// movie or episode, after its own: each one is a direct play source named
+// after what sets the file apart ("4K"), carrying the id of its version item.
+func (s *Server) versionSources(ctx context.Context, item storage.Item) []mediaSourceInfoDto {
+	var out []mediaSourceInfoDto
+	for _, v := range s.extrasOf(ctx, item.ID, storage.ExtraTypeVersion) {
+		src := baseMediaSourceInfo(v, v.Container)
+		src.Name = v.Name
+		src.SupportsDirectPlay = true
+		src.TranscodingSubProtocol = "http"
+		out = append(out, src)
+	}
+	return out
+}
+
+// versionFor returns the version item a request names with MediaSourceId
+// when it is one of item's versions.
+func (s *Server) versionFor(ctx context.Context, r *http.Request, item storage.Item) (storage.Item, bool) {
+	raw := caseInsensitiveQuery(r).Get("mediasourceid")
+	if raw == "" {
+		return item, false
+	}
+	norm, ok := normalizeGUID(raw)
+	if !ok || norm == string(item.ID) {
+		return item, false
+	}
+	v, err := s.store.GetItem(ctx, storage.ItemID(norm))
+	if err != nil || v.OwnerID == nil || *v.OwnerID != item.ID || v.ExtraType != storage.ExtraTypeVersion {
+		return item, false
+	}
+	return v, true
+}
+
 // applyExtraInfo fills the fields of dto that depend on the extras of item:
 // LocalTrailerCount and SpecialFeatureCount, and PartCount for a stacked
 // movie. Done on demand (a single read, or a listing that names the fields)
 // because each call is a query.
 func (s *Server) applyExtraInfo(ctx context.Context, dto *baseItemDto, item storage.Item) {
-	if item.ExtraType != "" && item.ExtraType != storage.ExtraTypePart {
+	if item.ExtraType != "" && !internalExtraType(item.ExtraType) {
 		zero := 0
 		dto.LocalTrailerCount, dto.SpecialFeatureCount = &zero, &zero
 		return
@@ -65,12 +104,15 @@ func (s *Server) applyExtraInfo(ctx context.Context, dto *baseItemDto, item stor
 			trailers++
 		case storage.ExtraTypePart:
 			parts++
-		case storage.ExtraTypeThemeSong, storage.ExtraTypeThemeVideo:
+		case storage.ExtraTypeThemeSong, storage.ExtraTypeThemeVideo, storage.ExtraTypeVersion, storage.ExtraTypeMergedSeason:
 		default:
 			features++
 		}
 	}
 	dto.LocalTrailerCount, dto.SpecialFeatureCount = &trailers, &features
+	if len(dto.MediaSources) > 0 {
+		dto.MediaSources = append(dto.MediaSources, s.versionSources(ctx, item)...)
+	}
 	if parts > 0 {
 		n := parts + 1
 		dto.PartCount = &n

@@ -38,8 +38,13 @@ var (
 	reDateDMY = regexp.MustCompile(`(?:^|[ ._\-\[(])(\d{2})[-. ](\d{2})[-. ]((?:19|20)\d{2})(?:$|\D)`)
 	// "Ep05", "EP5", "Episode05": the number follows without a separator.
 	reEpisodeWord = regexp.MustCompile(`(?i)(?:^|[ ._\-\[(])ep(?:isode)?(\d{1,4})`)
-	// "E05", "e05.Title" (a separator or the end must follow).
-	reEpisodeLetter = regexp.MustCompile(`(?i)(?:^|[ ._-])e(\d{1,4})(?:[._-]|$)`)
+	// "E05", "e05.Title" (a separator or the end must follow), also chained
+	// ("E5E6", "E5-E6", "E5_E6": the last number is the episode).
+	reEpisodeLetter = regexp.MustCompile(`(?i)(?:^|[ ._-])e(\d{1,4})((?:[-_]?e\d{1,4})*)(?:[._-]|$)`)
+	// A word with the number glued to it at the end of the name ("Show
+	// Title3", "Title12"): letters (at least two) and digits.
+	reGluedNumber = regexp.MustCompile(`^(.*?[ ._-])?([\p{L}]{2,})(\d{1,4})$`)
+	reGluedWord   = regexp.MustCompile(`[\p{L}]{2,}\d{1,4}(?:[ ._\-\[\])(]|$)`)
 	// "Part 2", "Pt.2", "part_3".
 	rePart = regexp.MustCompile(`(?i)(?:^|[ ._-])p(?:ar)?t[._ -](\d{1,4})`)
 	// "[01]".
@@ -106,6 +111,25 @@ func bareNumber(s string) *int {
 	return nil
 }
 
+// gluedNumber reads the episode number of a name that ends with a word that
+// carries it ("Show Title3"): the only such word of the name, not a part or
+// disc marker, and, when it is the whole name, with at least two digits
+// ("Title12", not "Show3").
+func gluedNumber(s string) *int {
+	m := reGluedNumber.FindStringSubmatch(s)
+	if m == nil || len(reGluedWord.FindAllString(s, -1)) != 1 {
+		return nil
+	}
+	switch strings.ToLower(m[2]) {
+	case "part", "pt", "cd", "dvd", "disc", "disk", "ep", "episode", "season", "vol", "volume", "chapter":
+		return nil
+	}
+	if m[1] == "" && len(m[3]) < 2 {
+		return nil
+	}
+	return atoi(m[3])
+}
+
 // parseNameDate reads a date in a name: year-month-day ("2020-01-31", kept in
 // the title) or day-month-year ("31-01-2020"; the year ends the title). A
 // numeric date group whose month is out of range ("01-31-2020") still
@@ -170,8 +194,14 @@ func ParseEpisodeFile(filename string) EpisodeFile {
 		for _, re := range []*regexp.Regexp{reEpisodeWord, reEpisodeLetter, rePart, reBracketNumber, reDashNumber} {
 			if m := re.FindStringSubmatch(base); m != nil {
 				ef.Episode = atoi(m[1])
+				if re == reEpisodeLetter && m[2] != "" {
+					ef.Episode = lastChained(strings.ToLower(m[2]))
+				}
 				break
 			}
+		}
+		if ef.Episode == nil {
+			ef.Episode = gluedNumber(base)
 		}
 		if ef.Episode == nil {
 			ef.Episode = bareNumber(base)

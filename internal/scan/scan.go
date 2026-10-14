@@ -450,8 +450,9 @@ func (s *Scanner) seedVideoImages(ctx context.Context, itemID storage.ItemID, vi
 type movieGroup struct {
 	primary string
 	size    int64
-	// parts are the other files of a stacked movie, in part order.
-	parts []movieFile
+	// parts are the other files of a stacked movie, in part order; versions
+	// are the other versions ("Movie - 4K") of the movie.
+	parts, versions []movieFile
 	// sole is set for the only movie of a folder that is itself a Folder
 	// item (it also holds sub folders): the folder's artwork and extras are
 	// the movie's, but its name comes from its file.
@@ -465,6 +466,24 @@ type movieFile struct {
 }
 
 var stackPart = regexp.MustCompile(`(?i)^(.*?)[ ._-]*(?:cd|dvd|part|pt|disc|disk)[ ._-]?(\d{1,2})$`)
+
+// movieOthers lists the files of a movie group beyond its primary file as
+// the owned items they are stored as.
+func movieOthers(dir, source string, g movieGroup) []otherFile {
+	var out []otherFile
+	for _, p := range g.parts {
+		name, _ := CleanTitle(strings.TrimSuffix(p.name, filepath.Ext(p.name)), true)
+		out = append(out, otherFile{path: filepath.Join(dir, p.name), name: name, extraType: storage.ExtraTypePart})
+	}
+	base := strings.TrimSuffix(g.primary, filepath.Ext(g.primary))
+	for _, v := range g.versions {
+		out = append(out, otherFile{
+			path: filepath.Join(dir, v.name), extraType: storage.ExtraTypeVersion,
+			name: versionName(strings.TrimSuffix(v.name, filepath.Ext(v.name)), base),
+		})
+	}
+	return out
+}
 
 // isVersionOf reports whether a file base name is another version of the
 // folder's movie: the movie's name followed by " - ", "-", "." or "_" and
@@ -553,19 +572,27 @@ func movieDirContent(dir string, versionsOfFolder bool) (groups []movieGroup, su
 	// The versions of the folder's movie.
 	if versionsOfFolder {
 		best := -1
+		var members []int
 		for i, f := range files {
 			if used[i] {
 				continue
 			}
 			if f.base == dirName || isVersionOf(f.base, dirName) {
 				used[i] = true
+				members = append(members, i)
 				if best < 0 || (f.base == dirName && files[best].base != dirName) {
 					best = i
 				}
 			}
 		}
 		if best >= 0 {
-			groups = append(groups, movieGroup{primary: files[best].name, size: files[best].size})
+			g := movieGroup{primary: files[best].name, size: files[best].size}
+			for _, i := range members {
+				if i != best {
+					g.versions = append(g.versions, movieFile{name: files[i].name, size: files[i].size})
+				}
+			}
+			groups = append(groups, g)
 		}
 	}
 	for i, f := range files {
@@ -740,7 +767,7 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 		return fmt.Errorf("upserting enriched movie %q: %w", itemPath, err)
 	}
 	s.scanExtras(ctx, pool, lib, itemID, dir, []string{strings.TrimSuffix(videoFile, filepath.Ext(videoFile)), filepath.Base(dir)},
-		item.ProductionYear, alone, false, group.parts)
+		item.ProductionYear, alone, false, movieOthers(dir, source, group))
 
 	if probeErr != nil {
 		pool.addWarning(fmt.Sprintf("probing %q: %v (cataloged with no media stream info)", itemPath, probeErr))
@@ -801,6 +828,7 @@ func (s *Scanner) walkSeries(ctx context.Context, pool *jobPool, lib storage.Lib
 
 		seasons := s.walkSeasons(ctx, pool, lib, seriesPath, seriesID, seriesTitle)
 		s.walkSeriesRootEpisodes(ctx, pool, lib, seriesPath, seriesID, seriesTitle, seasons)
+		s.flushEpisodes(ctx, pool, lib, seasons)
 	}
 }
 
@@ -816,6 +844,9 @@ type seasonSet struct {
 	unnumbered *storage.ItemID        // the first season folder whose name carries no number
 	mu         sync.Mutex
 	virtual    map[string]storage.ItemID
+	// jobs are the episode files of the series, held until the whole series
+	// is walked so that files of one episode can be merged into one item.
+	jobs []episodeJob
 }
 
 // resolve returns the season item for number (nil: the season is unknown).
@@ -900,6 +931,7 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 		id     storage.ItemID
 	}
 	var dirs []seasonDir
+	var episodeFolders []seasonDir
 	for _, e := range entries {
 		if !e.IsDir() || SkippedFolder(e.Name()) {
 			continue
@@ -908,6 +940,12 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 		if n, ok := ParseSeasonFolder(e.Name()); ok {
 			v := n
 			d.number = &v
+		} else if ef := ParseEpisodeFile(e.Name()); ef.Season != nil && ef.Episode != nil {
+			// A folder named like an episode ("S26E01", "Show S02E03") is a
+			// plain folder: the files in it are episodes of the season their
+			// numbers name.
+			episodeFolders = append(episodeFolders, d)
+			continue
 		}
 		dirs = append(dirs, d)
 	}
@@ -928,6 +966,17 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 	for i := range dirs {
 		d := &dirs[i]
 		if d.number != nil && winner[*d.number] != i {
+			// Another folder stands for this number; keep this one only so
+			// that the series still counts it among its children.
+			owner := seriesID
+			merged := storage.Item{
+				ID:   storage.ItemID(deterministicID("item-merged-season-" + string(lib.ID) + "-" + d.path)),
+				Type: storage.ItemTypeSeason, LibraryID: lib.ID, Name: d.name, SortName: d.name, Path: d.path,
+				ExtraType: storage.ExtraTypeMergedSeason, OwnerID: &owner, DateCreated: fileDateAdded(d.path),
+			}
+			if err := s.store.UpsertItem(ctx, merged); err != nil {
+				log.Printf("scan: upserting merged season folder %q: %v", d.path, err)
+			}
 			continue
 		}
 		d.id = storage.ItemID(deterministicID("item-season-" + string(lib.ID) + "-" + d.path))
@@ -970,6 +1019,22 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 			return nil
 		})
 	}
+	for _, d := range episodeFolders {
+		id := storage.ItemID(deterministicID("item-folder-" + string(lib.ID) + "-" + d.path))
+		folder := storage.Item{
+			ID: id, Type: storage.ItemTypeFolder, LibraryID: lib.ID, ParentID: &seriesID,
+			Name: d.name, SortName: d.name, Path: d.path, DateCreated: fileDateAdded(d.path),
+		}
+		if err := s.store.UpsertItem(ctx, folder); err != nil {
+			log.Printf("scan: upserting folder %q: %v", d.path, err)
+			continue
+		}
+		ef := ParseEpisodeFile(d.name)
+		s.walkEpisodeFiles(ctx, pool, lib, d.path, episodeJob{
+			seriesID: seriesID, seriesTitle: seriesTitle, seasons: seasons,
+			folderNumbers: &ef,
+		})
+	}
 	// The folders that lost map onto the season of their number.
 	for i := range dirs {
 		if d := &dirs[i]; d.number != nil && d.id == "" {
@@ -1007,6 +1072,11 @@ type episodeJob struct {
 	seasonID     *storage.ItemID // the season folder's item; nil for a file in the series folder
 	parentID     storage.ItemID  // the folder the file sits in (the season or a folder inside it)
 	seasons      *seasonSet
+	// versions are the other files of the same episode.
+	versions []string
+	// folderNumbers is the numbering of the episode-like folder the file sits
+	// in; its season and episode stand in for those a file name lacks.
+	folderNumbers *EpisodeFile
 }
 
 // walkSeasonDir catalogs the video files of a season folder and, below it,
@@ -1038,6 +1108,74 @@ func (s *Scanner) walkSeasonDir(ctx context.Context, pool *jobPool, lib storage.
 	}
 }
 
+// episodeKey identifies the episode a job's file stands for by its numbering
+// (season and episode taken from the file name, the season of its folder when
+// the name has none) and its name once the quality and release tokens are cut
+// off ("Show S01E01", "Show S01E01 - 4K"); "" when the name does not give both
+// numbers.
+func episodeKey(job episodeJob) string {
+	ef := ParseEpisodeFile(filepath.Base(job.path))
+	if fn := job.folderNumbers; fn != nil && ef.Season == nil && ef.Episode == nil {
+		ef.Season, ef.Episode, ef.EpisodeEnd = fn.Season, fn.Episode, fn.EpisodeEnd
+	}
+	season := ef.Season
+	if season == nil && job.folderSeason != nil {
+		season = job.folderSeason
+	}
+	if season == nil || ef.Episode == nil || ef.Date != nil {
+		return ""
+	}
+	end := 0
+	if ef.EpisodeEnd != nil {
+		end = *ef.EpisodeEnd
+	}
+	return fmt.Sprintf("%d:%d:%d:%s", *season, *ef.Episode, end, strings.ToLower(strings.TrimRight(ef.Name, " -._")))
+}
+
+// flushEpisodes enqueues the episode files collected for a series. Files that
+// carry the same numbers and name are versions of one episode: the
+// one with the shortest name (then the first by path) is the episode, the
+// others are cataloged as its versions.
+func (s *Scanner) flushEpisodes(ctx context.Context, pool *jobPool, lib storage.Library, ss *seasonSet) {
+	jobs := ss.jobs
+	ss.jobs = nil
+	byKey := map[string][]int{}
+	for i, j := range jobs {
+		if k := episodeKey(j); k != "" {
+			byKey[k] = append(byKey[k], i)
+		}
+	}
+	skip := map[int]bool{}
+	for _, idx := range byKey {
+		if len(idx) < 2 {
+			continue
+		}
+		primary := idx[0]
+		for _, i := range idx[1:] {
+			a, b := filepath.Base(jobs[i].path), filepath.Base(jobs[primary].path)
+			if len(a) < len(b) || (len(a) == len(b) && jobs[i].path < jobs[primary].path) {
+				primary = i
+			}
+		}
+		var others []string
+		for _, i := range idx {
+			if i != primary {
+				skip[i] = true
+				others = append(others, jobs[i].path)
+			}
+		}
+		sort.Strings(others)
+		jobs[primary].versions = others
+	}
+	for i, j := range jobs {
+		if skip[i] {
+			continue
+		}
+		job := j
+		pool.enqueue(func() error { return s.processEpisode(ctx, pool, lib, job) })
+	}
+}
+
 // walkSeriesRootEpisodes catalogs the episode files that sit directly in the
 // series folder.
 func (s *Scanner) walkSeriesRootEpisodes(ctx context.Context, pool *jobPool, lib storage.Library, seriesPath string, seriesID storage.ItemID, seriesTitle string, seasons *seasonSet) {
@@ -1066,7 +1204,7 @@ func (s *Scanner) walkEpisodeFiles(ctx context.Context, pool *jobPool, lib stora
 		job.path = filepath.Join(dir, e.Name())
 		job.name = strings.TrimSuffix(e.Name(), filepath.Ext(e.Name()))
 		job.size = info.Size()
-		pool.enqueue(func() error { return s.processEpisode(ctx, pool, lib, job) })
+		base.seasons.jobs = append(base.seasons.jobs, job)
 	}
 }
 
@@ -1079,6 +1217,9 @@ func (s *Scanner) processEpisode(ctx context.Context, pool *jobPool, lib storage
 	// of the folder it sits in.
 	ef := ParseEpisodeFile(filepath.Base(episodePath))
 	season, episode, episodeEnd := ef.Season, ef.Episode, ef.EpisodeEnd
+	if fn := job.folderNumbers; fn != nil && season == nil && episode == nil {
+		season, episode, episodeEnd = fn.Season, fn.Episode, fn.EpisodeEnd
+	}
 	if season == nil && (episode != nil || ef.Date != nil) && job.folderSeason != nil {
 		n := *job.folderSeason
 		season = &n
@@ -1159,6 +1300,13 @@ func (s *Scanner) processEpisode(ctx context.Context, pool *jobPool, lib storage
 	if err := s.store.UpsertItem(ctx, item); err != nil {
 		return fmt.Errorf("upserting enriched episode %q: %w", episodePath, err)
 	}
+	var versions []otherFile
+	base := strings.TrimSuffix(filepath.Base(episodePath), filepath.Ext(episodePath))
+	for _, p := range job.versions {
+		stem := strings.TrimSuffix(filepath.Base(p), filepath.Ext(p))
+		versions = append(versions, otherFile{path: p, extraType: storage.ExtraTypeVersion, name: versionName(stem, base)})
+	}
+	s.scanExtras(ctx, pool, lib, itemID, filepath.Dir(episodePath), nil, nil, false, false, versions)
 	if probeErr != nil {
 		pool.addWarning(fmt.Sprintf("probing %q: %v (cataloged with no media stream info)", episodePath, probeErr))
 	}

@@ -266,12 +266,33 @@ func extraItemType(extraType string) storage.ItemType {
 	return storage.ItemTypeVideo
 }
 
+// otherFile is a file that belongs to its owner without being an extra of one
+// of the named kinds: an additional part, a version, a merged season folder.
+type otherFile struct {
+	path      string
+	name      string
+	extraType string
+}
+
+// versionName is the name a version of a movie or episode takes from its file
+// name: the text that follows the name the shortest file stem of the group
+// shares ("Movie (2014) - 4K" gives "4K"); the file that is that stem keeps
+// its whole name.
+func versionName(stem, base string) string {
+	if len(stem) > len(base) && strings.EqualFold(stem[:len(base)], base) {
+		if rest := strings.Trim(stem[len(base):], " -._"); rest != "" {
+			return rest
+		}
+	}
+	return stem
+}
+
 // scanExtras catalogs the extras that sit beside an owner (a movie that owns
 // its folder, a series, a season) and forgets those of its extras whose files
 // are gone. async is true when the caller is not itself a pool job. attach is false for a movie that shares its folder with others
 // (its folder's trailers and features belong to nobody); parts are the
 // additional files of a stacked movie.
-func (s *Scanner) scanExtras(ctx context.Context, pool *jobPool, lib storage.Library, ownerID storage.ItemID, dir string, ownerNames []string, year *int, attach, async bool, parts []movieFile) {
+func (s *Scanner) scanExtras(ctx context.Context, pool *jobPool, lib storage.Library, ownerID storage.ItemID, dir string, ownerNames []string, year *int, attach, async bool, others []otherFile) {
 	// From inside a pool job the extras are processed in line: enqueueing
 	// from a job could wait for a worker slot that only the job itself holds.
 	run := func(fn func() error) {
@@ -294,13 +315,15 @@ func (s *Scanner) scanExtras(ctx context.Context, pool *jobPool, lib storage.Lib
 			return s.processExtra(ctx, pool, lib, ownerID, id, src.path, src.extraType, src.name, year)
 		})
 	}
-	for _, part := range parts {
-		path := filepath.Join(dir, part.name)
-		id := storage.ItemID(deterministicID("item-part-" + string(lib.ID) + "-" + path))
+	for _, o := range others {
+		o := o
+		id := storage.ItemID(deterministicID("item-" + strings.ToLower(o.extraType) + "-" + string(lib.ID) + "-" + o.path))
 		seen[id] = true
-		name, _ := CleanTitle(strings.TrimSuffix(part.name, filepath.Ext(part.name)), true)
+		if o.extraType == storage.ExtraTypeMergedSeason {
+			continue // stored by the season walker
+		}
 		run(func() error {
-			return s.processExtra(ctx, pool, lib, ownerID, id, path, storage.ExtraTypePart, name, year)
+			return s.processExtra(ctx, pool, lib, ownerID, id, o.path, o.extraType, o.name, year)
 		})
 	}
 	s.forgetExtras(ctx, ownerID, seen)

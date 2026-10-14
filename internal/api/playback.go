@@ -180,7 +180,7 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 	case playback.ModeDirectPlay:
 		source.SupportsDirectPlay = true
 		source.TranscodingSubProtocol = "http"
-		resp.MediaSources = []mediaSourceInfoDto{source}
+		resp.MediaSources = append([]mediaSourceInfoDto{source}, s.versionSources(r.Context(), item)...)
 
 	case playback.ModeRemux, playback.ModeDirectStream, playback.ModeTranscode:
 		// All three hand off to the transcode worker over HLS (docs/07's
@@ -293,6 +293,9 @@ func (s *Server) handleVideoStream(w http.ResponseWriter, r *http.Request) {
 	if !item.HasMediaFile() {
 		writeNotPlayable(w)
 		return
+	}
+	if v, ok := s.versionFor(r.Context(), r, item); ok {
+		item = v
 	}
 	http.ServeFile(w, r, item.Path)
 }

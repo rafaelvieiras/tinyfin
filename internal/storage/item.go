@@ -297,8 +297,9 @@ type Item struct {
 }
 
 // ExtraType values of Item.ExtraType (the reference server's ExtraType names;
-// ExtraTypePart is internal: an additional part of a stacked movie, which the
-// wire shows as a plain Video with no ExtraType).
+// ExtraTypePart, ExtraTypeVersion and ExtraTypeMergedSeason are internal: the
+// wire shows an additional part of a stacked movie as a plain Video with no
+// ExtraType).
 const (
 	ExtraTypeTrailer         = "Trailer"
 	ExtraTypeFeaturette      = "Featurette"
@@ -313,6 +314,13 @@ const (
 	ExtraTypeThemeSong       = "ThemeSong"
 	ExtraTypeThemeVideo      = "ThemeVideo"
 	ExtraTypePart            = "Part"
+	// ExtraTypeVersion is another file of the same movie or episode (a
+	// quality or cut), listed among its media sources.
+	ExtraTypeVersion = "Version"
+	// ExtraTypeMergedSeason is a season folder that shares its number with
+	// another folder: one season item stands for both, this item only
+	// keeps the folder counted among the series' children.
+	ExtraTypeMergedSeason = "Merged"
 )
 
 // HasMediaFile reports whether Path names a playable file of the item's own.
