@@ -341,9 +341,10 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 }
 
 func (s *Store) DeleteItem(ctx context.Context, id storage.ItemID) error {
-	// Descendants, item_ancestors rows, playstates, image/subtitle/lyric
-	// refs, and item_relations all reference items.id with ON DELETE
-	// CASCADE, so a single delete here cleans up the whole subtree.
+	// Descendants, item_ancestors rows, image/subtitle/lyric refs, and
+	// item_relations all reference items.id with ON DELETE CASCADE, so a
+	// single delete here cleans up the whole subtree. Playstates are not
+	// among them: a user's play state outlives the item (migration 0022).
 	if _, err := s.exec(ctx, `DELETE FROM items WHERE id = ?`, string(id)); err != nil {
 		return fmt.Errorf("sqlite: deleting item %q: %w", id, err)
 	}

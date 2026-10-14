@@ -322,6 +322,14 @@ func (s *Server) runScanCtx(ctx context.Context, lib storage.Library) {
 // mechanism yet — a documented gap (docs/11), not something this function
 // should paper over by borrowing the library-scan tracker.
 func (s *Server) runItemRefresh(itemID storage.ItemID, replaceImages bool) {
+	// A folder (series, season, folder of a library) is re-walked first: what
+	// is new on disk is cataloged and what is gone is forgotten, like a
+	// library scan does for the part of the library it stands for.
+	if present, err := s.scanner.RescanFolder(context.Background(), itemID); err != nil {
+		log.Printf("api: rescanning folder %s: %v", itemID, err)
+	} else if !present {
+		return
+	}
 	if err := s.scanner.RefreshItem(context.Background(), itemID, replaceImages); err != nil {
 		log.Printf("api: refreshing item %s: %v", itemID, err)
 	}

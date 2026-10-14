@@ -369,7 +369,7 @@ func (s *Scanner) processExtra(ctx context.Context, pool *jobPool, lib storage.L
 		MediaStreams: pr.streams, RunTimeTicks: pr.ticks, DateCreated: pr.added,
 		ExtraType: extraType, OwnerID: &owner, ProductionYear: year,
 	}
-	if err := s.store.UpsertItem(ctx, item); err != nil {
+	if err := s.upsertItem(ctx, item); err != nil {
 		return fmt.Errorf("upserting extra %q: %w", path, err)
 	}
 	s.recordSignature(ctx, id, pr)

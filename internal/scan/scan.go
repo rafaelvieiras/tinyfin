@@ -147,6 +147,8 @@ type Stats struct {
 	// whose stored media info was reused because size+mtime were unchanged.
 	ItemsProbed  int
 	ItemsSkipped int
+	// Removed counts the items forgotten because their file or folder is gone.
+	Removed  int
 	Duration     time.Duration
 	Errors       []string
 }
@@ -162,6 +164,8 @@ type jobPool struct {
 	wg    sync.WaitGroup
 	mu    sync.Mutex
 	stats Stats
+	// failed counts the jobs that returned an error (as opposed to a warning).
+	failed int
 }
 
 func newJobPool(concurrency int) *jobPool {
@@ -177,6 +181,7 @@ func (p *jobPool) enqueue(fn func() error) {
 		if err := fn(); err != nil {
 			p.mu.Lock()
 			p.stats.Errors = append(p.stats.Errors, err.Error())
+			p.failed++
 			p.mu.Unlock()
 			return
 		}
@@ -228,10 +233,23 @@ func (p *jobPool) wait() Stats {
 // err.
 func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, error) {
 	started := time.Now()
-	ctx = withDirCache(ctx)
+	ctx = withPassState(withDirCache(ctx))
 	pool := newJobPool(s.concurrency)
 
+	// A root that cannot be read, or that has no entry at all (a mount that is
+	// not there, an emptied share), is skipped: what the library holds under
+	// it is kept, not forgotten.
+	var live, skipped []string
 	for _, root := range lib.Paths {
+		switch lib.CollectionType {
+		case storage.CollectionTypeMovies, storage.CollectionTypeTVShows, storage.CollectionTypeHomeVideos:
+			if entries, err := os.ReadDir(root); err != nil || len(entries) == 0 {
+				log.Printf("scan: library %q: folder %s is inaccessible or empty, skipping", lib.Name, root)
+				skipped = append(skipped, root)
+				continue
+			}
+			live = append(live, root)
+		}
 		switch lib.CollectionType {
 		case storage.CollectionTypeMovies:
 			s.recordRootFolder(ctx, lib, root)
@@ -257,6 +275,9 @@ func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, 
 	}
 
 	stats := pool.wait()
+	if len(live) > 0 && pool.failed == 0 && ctx.Err() == nil {
+		stats.Removed = s.forgetVanished(ctx, lib, forgetScope{roots: live, skipped: skipped})
+	}
 	if lib.CollectionType == storage.CollectionTypeMovies && s.dataDir != "" && !skipCollections(ctx) {
 		// Every movie of the pass is cataloged: group the ones that name a
 		// set (only libraries with AutomaticallyAddToCollection on count).
@@ -305,7 +326,7 @@ func (s *Scanner) recordRootFolder(ctx context.Context, lib storage.Library, roo
 		Path:        root,
 		DateCreated: fileDateAdded(root),
 	}
-	if err := s.store.UpsertItem(ctx, item); err != nil {
+	if err := s.upsertItem(ctx, item); err != nil {
 		log.Printf("scan: recording root folder %s: %v", root, err)
 		return
 	}
@@ -317,7 +338,7 @@ func (s *Scanner) recordRootFolder(ctx context.Context, lib storage.Library, roo
 // nesting and naming. A folder is cataloged before its content so the
 // ancestor index sees the whole chain. parent is nil for the first level.
 func (s *Scanner) walkHomeVideos(ctx context.Context, pool *jobPool, lib storage.Library, dir string, parent *storage.ItemID) {
-	entries, err := os.ReadDir(dir)
+	entries, err := readScanDir(ctx, dir)
 	if err != nil {
 		log.Printf("scan: reading home videos folder %s: %v", dir, err)
 		return
@@ -336,7 +357,7 @@ func (s *Scanner) walkHomeVideos(ctx context.Context, pool *jobPool, lib storage
 			}
 			id := storage.ItemID(deterministicID("item-folder-" + string(lib.ID) + "-" + path))
 			typ := storage.ItemTypeFolder
-			firstPhoto := firstPhotoOf(path)
+			firstPhoto := firstPhotoOf(ctx, path)
 			if firstPhoto != "" {
 				typ = storage.ItemTypePhotoAlbum
 			}
@@ -344,7 +365,7 @@ func (s *Scanner) walkHomeVideos(ctx context.Context, pool *jobPool, lib storage
 				ID: id, Type: typ, LibraryID: lib.ID, ParentID: parent,
 				Name: e.Name(), SortName: e.Name(), Path: path, DateCreated: fileDateAdded(path),
 			}
-			if err := s.store.UpsertItem(ctx, folder); err != nil {
+			if err := s.upsertItem(ctx, folder); err != nil {
 				log.Printf("scan: upserting folder %q: %v", path, err)
 				continue
 			}
@@ -377,8 +398,8 @@ func (s *Scanner) walkHomeVideos(ctx context.Context, pool *jobPool, lib storage
 
 // firstPhotoOf returns the name of the first picture (by name) that sits
 // directly in dir, or "" when there is none.
-func firstPhotoOf(dir string) string {
-	entries, err := os.ReadDir(dir)
+func firstPhotoOf(ctx context.Context, dir string) string {
+	entries, err := readScanDir(ctx, dir)
 	if err != nil {
 		return ""
 	}
@@ -413,7 +434,7 @@ func (s *Scanner) processPhoto(ctx context.Context, lib storage.Library, path, a
 	if parent != nil {
 		item.Album = album
 	}
-	if err := s.store.UpsertItem(ctx, item); err != nil {
+	if err := s.upsertItem(ctx, item); err != nil {
 		log.Printf("scan: upserting photo %q: %v", path, err)
 		return
 	}
@@ -453,13 +474,13 @@ func (s *Scanner) processHomeVideo(ctx context.Context, pool *jobPool, lib stora
 		RunTimeTicks: pr.ticks,
 		DateCreated:  pr.added,
 	}
-	if err := s.store.UpsertItem(ctx, item); err != nil {
+	if err := s.upsertItem(ctx, item); err != nil {
 		return fmt.Errorf("upserting video %q: %w", path, err)
 	}
 	s.recordSignature(ctx, itemID, pr)
 	s.seedVideoImages(ctx, itemID, path)
 	s.applyVideoNFO(pool, &item, path)
-	if err := s.store.UpsertItem(ctx, item); err != nil {
+	if err := s.upsertItem(ctx, item); err != nil {
 		return fmt.Errorf("upserting enriched video %q: %w", path, err)
 	}
 	if probeErr != nil {
@@ -538,8 +559,8 @@ func isVersionOf(base, movie string) bool {
 // movieDirContent lists what a movie library folder holds: its movies and
 // the sub folders worth walking. dirIsFolderMovie names the folder whose own
 // name stands for versions of its movie (not the library root).
-func movieDirContent(dir string, versionsOfFolder bool) (groups []movieGroup, subdirs []string) {
-	entries, err := os.ReadDir(dir)
+func movieDirContent(ctx context.Context, dir string, versionsOfFolder bool) (groups []movieGroup, subdirs []string) {
+	entries, err := readScanDir(ctx, dir)
 	if err != nil {
 		return nil, nil
 	}
@@ -641,7 +662,7 @@ func movieDirContent(dir string, versionsOfFolder bool) (groups []movieGroup, su
 // folder; every other folder is a Folder item holding what is in it, and its
 // video files are movies named after the file (items.names.R9).
 func (s *Scanner) walkMovies(ctx context.Context, pool *jobPool, lib storage.Library, root string) {
-	if _, err := os.ReadDir(root); err != nil {
+	if _, err := readScanDir(ctx, root); err != nil {
 		log.Printf("scan: reading movies root %s: %v", root, err)
 		return
 	}
@@ -649,7 +670,7 @@ func (s *Scanner) walkMovies(ctx context.Context, pool *jobPool, lib storage.Lib
 }
 
 func (s *Scanner) walkMovieDir(ctx context.Context, pool *jobPool, lib storage.Library, dir string, parent *storage.ItemID, isRoot bool) {
-	groups, subdirs := movieDirContent(dir, !isRoot)
+	groups, subdirs := movieDirContent(ctx, dir, !isRoot)
 	if !isRoot && len(groups) == 1 && len(subdirs) == 0 {
 		g := groups[0]
 		pool.enqueue(func() error {
@@ -667,7 +688,7 @@ func (s *Scanner) walkMovieDir(ctx context.Context, pool *jobPool, lib storage.L
 		}
 	}
 	for _, sub := range subdirs {
-		subGroups, subSubdirs := movieDirContent(sub, true)
+		subGroups, subSubdirs := movieDirContent(ctx, sub, true)
 		if len(subGroups) == 1 && len(subSubdirs) == 0 {
 			s.walkMovieDir(ctx, pool, lib, sub, parent, false)
 			continue
@@ -677,7 +698,7 @@ func (s *Scanner) walkMovieDir(ctx context.Context, pool *jobPool, lib storage.L
 			ID: id, Type: storage.ItemTypeFolder, LibraryID: lib.ID, ParentID: parent,
 			Name: filepath.Base(sub), SortName: filepath.Base(sub), Path: sub, DateCreated: fileDateAdded(sub),
 		}
-		if err := s.store.UpsertItem(ctx, folder); err != nil {
+		if err := s.upsertItem(ctx, folder); err != nil {
 			log.Printf("scan: upserting folder %q: %v", sub, err)
 			continue
 		}
@@ -784,7 +805,7 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 	// ImageRef against it (ImageRef.ItemID is a foreign key) — upsert the
 	// filename/probe-derived item first, enrich in place, then upsert
 	// again to persist the enrichment.
-	if err := s.store.UpsertItem(ctx, item); err != nil {
+	if err := s.upsertItem(ctx, item); err != nil {
 		return fmt.Errorf("upserting movie %q: %w", itemPath, err)
 	}
 	s.recordSignature(ctx, itemID, pr)
@@ -796,7 +817,7 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 	} else {
 		s.applyVideoNFO(pool, &item, itemPath)
 	}
-	if err := s.store.UpsertItem(ctx, item); err != nil {
+	if err := s.upsertItem(ctx, item); err != nil {
 		return fmt.Errorf("upserting enriched movie %q: %w", itemPath, err)
 	}
 	// A movie whose folder is a Folder item (it holds sub folders) keeps its
@@ -816,7 +837,7 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 // is a season named after it, and the episode files of the series folder
 // fall into the season of their number (nameparse.go, episodeparse.go).
 func (s *Scanner) walkSeries(ctx context.Context, pool *jobPool, lib storage.Library, root string) {
-	entries, err := os.ReadDir(root)
+	entries, err := readScanDir(ctx, root)
 	if err != nil {
 		log.Printf("scan: reading tvshows root %s: %v", root, err)
 		return
@@ -825,47 +846,52 @@ func (s *Scanner) walkSeries(ctx context.Context, pool *jobPool, lib storage.Lib
 		if !e.IsDir() {
 			continue
 		}
-		seriesFolder := e.Name()
-		if SkippedFolder(seriesFolder) {
+		if SkippedFolder(e.Name()) {
 			continue
 		}
-		seriesPath := filepath.Join(root, seriesFolder)
-		seriesTitle, seriesYear := ParseSeriesTitleYear(seriesFolder)
-		seriesID := storage.ItemID(deterministicID("item-series-" + string(lib.ID) + "-" + seriesPath))
-
-		seriesItem := storage.Item{
-			ID: seriesID, Type: storage.ItemTypeSeries, LibraryID: lib.ID,
-			Name: seriesTitle, SortName: seriesTitle, DateCreated: fileDateAdded(seriesPath),
-			Path: seriesPath, // the series directory, as the reference server reports it
-		}
-		if seriesYear > 0 {
-			seriesItem.ProductionYear = &seriesYear
-		}
-		if err := s.store.UpsertItem(ctx, seriesItem); err != nil {
-			log.Printf("scan: upserting series %q: %v", seriesFolder, err)
-			continue
-		}
-		s.seedSeriesImages(ctx, seriesID, seriesPath)
-		var seriesYearPtr *int
-		if seriesYear > 0 {
-			seriesYearPtr = &seriesYear
-		}
-		s.scanExtras(ctx, pool, lib, seriesID, seriesPath, []string{seriesFolder, seriesTitle}, seriesYearPtr, true, true, nil)
-
-		pool.enqueue(func() error {
-			enriched := seriesItem
-			s.enrich(ctx, pool, &enriched, metadata.Query{Kind: metadata.KindSeries, Title: seriesTitle, Year: seriesYear}, false)
-			s.applySeriesNFO(pool, &enriched, seriesPath)
-			if err := s.store.UpsertItem(ctx, enriched); err != nil {
-				return fmt.Errorf("upserting enriched series %q: %w", seriesFolder, err)
-			}
-			return nil
-		})
-
-		seasons := s.walkSeasons(ctx, pool, lib, seriesPath, seriesID, seriesTitle)
-		s.walkSeriesRootEpisodes(ctx, pool, lib, seriesPath, seriesID, seriesTitle, seasons)
-		s.flushEpisodes(ctx, pool, lib, seasons)
+		s.walkSeriesFolder(ctx, pool, lib, root, e.Name())
 	}
+}
+
+// walkSeriesFolder catalogs one series folder of a tvshows root: the series,
+// its seasons, its episodes and its extras.
+func (s *Scanner) walkSeriesFolder(ctx context.Context, pool *jobPool, lib storage.Library, root, seriesFolder string) {
+	seriesPath := filepath.Join(root, seriesFolder)
+	seriesTitle, seriesYear := ParseSeriesTitleYear(seriesFolder)
+	seriesID := storage.ItemID(deterministicID("item-series-" + string(lib.ID) + "-" + seriesPath))
+
+	seriesItem := storage.Item{
+		ID: seriesID, Type: storage.ItemTypeSeries, LibraryID: lib.ID,
+		Name: seriesTitle, SortName: seriesTitle, DateCreated: fileDateAdded(seriesPath),
+		Path: seriesPath, // the series directory, as the reference server reports it
+	}
+	if seriesYear > 0 {
+		seriesItem.ProductionYear = &seriesYear
+	}
+	if err := s.upsertItem(ctx, seriesItem); err != nil {
+		log.Printf("scan: upserting series %q: %v", seriesFolder, err)
+		return
+	}
+	s.seedSeriesImages(ctx, seriesID, seriesPath)
+	var seriesYearPtr *int
+	if seriesYear > 0 {
+		seriesYearPtr = &seriesYear
+	}
+	s.scanExtras(ctx, pool, lib, seriesID, seriesPath, []string{seriesFolder, seriesTitle}, seriesYearPtr, true, true, nil)
+
+	pool.enqueue(func() error {
+		enriched := seriesItem
+		s.enrich(ctx, pool, &enriched, metadata.Query{Kind: metadata.KindSeries, Title: seriesTitle, Year: seriesYear}, false)
+		s.applySeriesNFO(pool, &enriched, seriesPath)
+		if err := s.upsertItem(ctx, enriched); err != nil {
+			return fmt.Errorf("upserting enriched series %q: %w", seriesFolder, err)
+		}
+		return nil
+	})
+
+	seasons := s.walkSeasons(ctx, pool, lib, seriesPath, seriesID, seriesTitle)
+	s.walkSeriesRootEpisodes(ctx, pool, lib, seriesPath, seriesID, seriesTitle, seasons)
+	s.flushEpisodes(ctx, pool, lib, seasons)
 }
 
 // seasonSet resolves the season an episode that is not inside a season folder
@@ -920,7 +946,7 @@ func (ss *seasonSet) virtualSeason(ctx context.Context, number *int) (storage.It
 		item.IndexNumber = &n
 	}
 	item.SortName = item.Name
-	if err := ss.s.store.UpsertItem(ctx, item); err != nil {
+	if err := ss.s.upsertItem(ctx, item); err != nil {
 		return "", fmt.Errorf("upserting season %q: %w", item.Name, err)
 	}
 	ss.s.seedSeasonImages(ctx, id, ss.dir, "", item.IndexNumber)
@@ -955,7 +981,7 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 		s: s, lib: lib, seriesID: seriesID, dir: seriesPath,
 		real: map[int]storage.ItemID{}, virtual: map[string]storage.ItemID{},
 	}
-	entries, err := os.ReadDir(seriesPath)
+	entries, err := readScanDir(ctx, seriesPath)
 	if err != nil {
 		log.Printf("scan: reading series folder %s: %v", seriesPath, err)
 		return seasons
@@ -1014,7 +1040,7 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 				Type: storage.ItemTypeSeason, LibraryID: lib.ID, Name: d.name, SortName: d.name, Path: d.path,
 				ExtraType: storage.ExtraTypeMergedSeason, OwnerID: &owner, DateCreated: fileDateAdded(d.path),
 			}
-			if err := s.store.UpsertItem(ctx, merged); err != nil {
+			if err := s.upsertItem(ctx, merged); err != nil {
 				log.Printf("scan: upserting merged season folder %q: %v", d.path, err)
 			}
 			continue
@@ -1039,7 +1065,7 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 				seasons.unnumbered = &id
 			}
 		}
-		if err := s.store.UpsertItem(ctx, seasonItem); err != nil {
+		if err := s.upsertItem(ctx, seasonItem); err != nil {
 			log.Printf("scan: upserting season %q: %v", d.name, err)
 			continue
 		}
@@ -1053,7 +1079,7 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 				s.enrich(ctx, pool, &enriched, metadata.Query{Kind: metadata.KindSeason, SeriesTitle: seriesTitle, SeasonNumber: num}, false)
 				s.applySeasonNFO(pool, &enriched, enriched.Path, seriesPath, num)
 			}
-			if err := s.store.UpsertItem(ctx, enriched); err != nil {
+			if err := s.upsertItem(ctx, enriched); err != nil {
 				return fmt.Errorf("upserting enriched season %q: %w", enriched.Name, err)
 			}
 			return nil
@@ -1065,7 +1091,7 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 			ID: id, Type: storage.ItemTypeFolder, LibraryID: lib.ID, ParentID: &seriesID,
 			Name: d.name, SortName: d.name, Path: d.path, DateCreated: fileDateAdded(d.path),
 		}
-		if err := s.store.UpsertItem(ctx, folder); err != nil {
+		if err := s.upsertItem(ctx, folder); err != nil {
 			log.Printf("scan: upserting folder %q: %v", d.path, err)
 			continue
 		}
@@ -1077,7 +1103,7 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 			ID: id, Type: storage.ItemTypeFolder, LibraryID: lib.ID, ParentID: &seriesID,
 			Name: d.name, SortName: d.name, Path: d.path, DateCreated: fileDateAdded(d.path),
 		}
-		if err := s.store.UpsertItem(ctx, folder); err != nil {
+		if err := s.upsertItem(ctx, folder); err != nil {
 			log.Printf("scan: upserting folder %q: %v", d.path, err)
 			continue
 		}
@@ -1113,7 +1139,7 @@ func containsVideo(ctx context.Context, dir string, depth int) bool {
 		return false
 	}
 	for _, n := range idx.names {
-		if IsVideoFile(n) && !strings.HasPrefix(n, ".") && !IsExtraFile(n) {
+		if IsVideoFile(n) && !strings.HasPrefix(n, ".") && !IsExtraFile(n) && !ignoredEntry(ctx, dir, n, false) {
 			return true
 		}
 	}
@@ -1122,7 +1148,7 @@ func containsVideo(ctx context.Context, dir string, depth int) bool {
 	}
 	for _, names := range idx.dirAll {
 		for _, name := range names {
-			if SkippedFolder(name) {
+			if SkippedFolder(name) || ignoredEntry(ctx, dir, name, true) {
 				continue
 			}
 			if containsVideo(ctx, filepath.Join(dir, name), depth-1) {
@@ -1163,7 +1189,7 @@ type episodeJob struct {
 // the folders it holds (each a Folder item holding what is in it).
 func (s *Scanner) walkSeasonDir(ctx context.Context, pool *jobPool, lib storage.Library, dir string, base episodeJob) {
 	s.walkEpisodeFiles(ctx, pool, lib, dir, base)
-	entries, err := os.ReadDir(dir)
+	entries, err := readScanDir(ctx, dir)
 	if err != nil {
 		return
 	}
@@ -1178,7 +1204,7 @@ func (s *Scanner) walkSeasonDir(ctx context.Context, pool *jobPool, lib storage.
 			ID: id, Type: storage.ItemTypeFolder, LibraryID: lib.ID, ParentID: &parent,
 			Name: e.Name(), SortName: e.Name(), Path: path, DateCreated: fileDateAdded(path),
 		}
-		if err := s.store.UpsertItem(ctx, folder); err != nil {
+		if err := s.upsertItem(ctx, folder); err != nil {
 			log.Printf("scan: upserting folder %q: %v", path, err)
 			continue
 		}
@@ -1267,7 +1293,7 @@ func (s *Scanner) walkSeriesRootEpisodes(ctx context.Context, pool *jobPool, lib
 // file name and its .nfo when they carry any, and its name is the file name
 // without the extension unless the .nfo gives a title.
 func (s *Scanner) walkEpisodeFiles(ctx context.Context, pool *jobPool, lib storage.Library, dir string, base episodeJob) {
-	entries, err := os.ReadDir(dir)
+	entries, err := readScanDir(ctx, dir)
 	if err != nil {
 		log.Printf("scan: reading season folder %s: %v", dir, err)
 		return
@@ -1361,7 +1387,7 @@ func (s *Scanner) processEpisode(ctx context.Context, pool *jobPool, lib storage
 
 	// Same ordering requirement as processMovie: upsert first so
 	// enrich's image storage has a row to point its foreign key at.
-	if err := s.store.UpsertItem(ctx, item); err != nil {
+	if err := s.upsertItem(ctx, item); err != nil {
 		return fmt.Errorf("upserting episode %q: %w", episodePath, err)
 	}
 	s.recordSignature(ctx, itemID, pr)
@@ -1377,7 +1403,7 @@ func (s *Scanner) processEpisode(ctx context.Context, pool *jobPool, lib storage
 	if nfoFound {
 		applyParsedEpisodeNFO(&item, nfo)
 	}
-	if err := s.store.UpsertItem(ctx, item); err != nil {
+	if err := s.upsertItem(ctx, item); err != nil {
 		return fmt.Errorf("upserting enriched episode %q: %w", episodePath, err)
 	}
 	var versions []otherFile
@@ -1519,7 +1545,7 @@ func (s *Scanner) RefreshItem(ctx context.Context, itemID storage.ItemID, replac
 		if len(pool.stats.Errors) > 0 {
 			return fmt.Errorf("refreshing item %q: %s", item.Name, strings.Join(pool.stats.Errors, "; "))
 		}
-		return s.store.UpsertItem(ctx, item)
+		return s.upsertItem(ctx, item)
 	}
 
 	q, ok := s.refreshQuery(ctx, item)
@@ -1537,7 +1563,7 @@ func (s *Scanner) RefreshItem(ctx context.Context, itemID storage.ItemID, replac
 	if len(pool.stats.Errors) > 0 {
 		return fmt.Errorf("refreshing item %q: %s", item.Name, strings.Join(pool.stats.Errors, "; "))
 	}
-	return s.store.UpsertItem(ctx, item)
+	return s.upsertItem(ctx, item)
 }
 
 // refreshLocalImages re-seeds item's folder-convention local artwork
