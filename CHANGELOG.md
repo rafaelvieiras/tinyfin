@@ -46,9 +46,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Season folders that share a number are counted in the series' `ChildCount`;
   a folder named like an episode (`S26E01`) is a plain folder; `E5E6`,
   `E05E06E07` and `Show Title3` numbering; a movie folder that also holds a
-  sub folder is a `Folder` item; `ico`, `wbmp` and camera raw pictures are
+  sub folder is a `Folder` item; a folder of a series with no video in it is a
+  plain `Folder` (not a season); `ico`, `wbmp` and camera raw pictures are
   photos.
-- Conformance: specs `images.md` and `extras.md`, 28 new scenarios, lazy
+- Conformance: specs `images.md` and `extras.md`, 35 new scenarios, lazy
   fixture libraries `Art`, `ArtShows`, `Extras`, `ExtraShows`, `Resid` and
   `PhotoTypes`, and `{{library.<key>.id}}` templates.
 - Library scans follow the reference's naming without metadata: a movie folder
