@@ -42,7 +42,11 @@ import (
 // HTTP calls when Config.Concurrency is left zero — docs/08's "Scan-time
 // resource discipline" calls this out explicitly as a documented failure
 // mode of the reference implementation this project deliberately avoids.
-const defaultConcurrency = 4
+const defaultConcurrency = 8
+
+// probeTimeout bounds one ffprobe run so a stalled remote read cannot hang a
+// worker forever.
+const probeTimeout = 3 * time.Minute
 
 // Config configures a Scanner. Every field has a usable zero value.
 type Config struct {
@@ -63,6 +67,14 @@ type Config struct {
 	// Concurrency bounds simultaneous ffprobe subprocesses and provider
 	// calls. <= 0 defaults to defaultConcurrency.
 	Concurrency int
+
+	// ProbeConcurrency bounds simultaneous ffprobe processes across every
+	// scan running in this Scanner (library scans may run in parallel).
+	// <= 0 defaults to the resolved Concurrency.
+	ProbeConcurrency int
+
+	// ForceProbe disables the incremental skip: every file is probed again.
+	ForceProbe bool
 }
 
 // Scanner walks configured library paths and populates storage.Store.
@@ -72,6 +84,8 @@ type Scanner struct {
 	ffprobePath string
 	imageDir    string
 	concurrency int
+	probeSem    chan struct{}
+	forceProbe  bool
 	httpClient  interface {
 		fetchImage(ctx context.Context, url string) ([]byte, error)
 	}
@@ -94,6 +108,10 @@ func New(store storage.Store, provider metadata.Provider, cfg Config) *Scanner {
 	if concurrency <= 0 {
 		concurrency = defaultConcurrency
 	}
+	probeConc := cfg.ProbeConcurrency
+	if probeConc <= 0 {
+		probeConc = concurrency
+	}
 	if cfg.ImageDir != "" {
 		_ = os.MkdirAll(cfg.ImageDir, 0o755)
 	}
@@ -103,6 +121,8 @@ func New(store storage.Store, provider metadata.Provider, cfg Config) *Scanner {
 		ffprobePath: ffprobePath,
 		imageDir:    cfg.ImageDir,
 		concurrency: concurrency,
+		probeSem:    make(chan struct{}, probeConc),
+		forceProbe:  cfg.ForceProbe,
 		httpClient:  defaultImageFetcher{},
 	}
 }
@@ -114,7 +134,12 @@ func New(store storage.Store, provider metadata.Provider, cfg Config) *Scanner {
 type Stats struct {
 	ItemsScanned  int
 	ItemsEnriched int
-	Errors        []string
+	// ItemsProbed counts files ffprobe was run on; ItemsSkipped counts files
+	// whose stored media info was reused because size+mtime were unchanged.
+	ItemsProbed  int
+	ItemsSkipped int
+	Duration     time.Duration
+	Errors       []string
 }
 
 // jobPool runs enqueued jobs with bounded concurrency, accumulating Stats
@@ -152,6 +177,18 @@ func (p *jobPool) enqueue(fn func() error) {
 	}()
 }
 
+func (p *jobPool) countProbed() {
+	p.mu.Lock()
+	p.stats.ItemsProbed++
+	p.mu.Unlock()
+}
+
+func (p *jobPool) countSkipped() {
+	p.mu.Lock()
+	p.stats.ItemsSkipped++
+	p.mu.Unlock()
+}
+
 func (p *jobPool) markEnriched() {
 	p.mu.Lock()
 	p.stats.ItemsEnriched++
@@ -181,6 +218,8 @@ func (p *jobPool) wait() Stats {
 // library path's root, or the final LastScannedAt persist, is returned as
 // err.
 func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, error) {
+	started := time.Now()
+	ctx = withDirCache(ctx)
 	pool := newJobPool(s.concurrency)
 
 	for _, root := range lib.Paths {
@@ -205,6 +244,9 @@ func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, 
 	}
 
 	stats := pool.wait()
+	stats.Duration = time.Since(started)
+	log.Printf("scan: library %q: %d items in %s (probed %d, skipped %d unchanged, %d enriched, %d warnings)",
+		lib.Name, stats.ItemsScanned, stats.Duration.Round(time.Millisecond), stats.ItemsProbed, stats.ItemsSkipped, stats.ItemsEnriched, len(stats.Errors))
 
 	now := time.Now().UTC()
 	lib.LastScannedAt = &now
@@ -365,18 +407,20 @@ func (s *Scanner) seedPhotoImage(ctx context.Context, itemID storage.ItemID, pat
 func (s *Scanner) processHomeVideo(ctx context.Context, pool *jobPool, lib storage.Library, path string, parent *storage.ItemID, size int64) error {
 	itemID := s.reconcileItemID(ctx, lib.ID, path, storage.ItemID(deterministicID("item-video-"+string(lib.ID)+"-"+path)))
 	name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
-	info, probeErr := s.probe(ctx, path)
+	pr := s.probeOrReuse(ctx, pool, itemID, path, size)
+	probeErr := pr.err
 	item := storage.Item{
 		ID: itemID, Type: storage.ItemTypeVideo, LibraryID: lib.ID, ParentID: parent,
 		Name: name, SortName: name,
 		Path: path, Container: videoExt(path), Size: size,
-		MediaStreams: mediaStreamsFromProbe(info),
-		RunTimeTicks: runtimeTicksFromProbe(info),
-		DateCreated:  fileDateAdded(path),
+		MediaStreams: pr.streams,
+		RunTimeTicks: pr.ticks,
+		DateCreated:  pr.added,
 	}
 	if err := s.store.UpsertItem(ctx, item); err != nil {
 		return fmt.Errorf("upserting video %q: %w", path, err)
 	}
+	s.recordSignature(ctx, itemID, pr)
 	s.seedVideoImages(ctx, itemID, path)
 	s.applyVideoNFO(pool, &item, path)
 	if err := s.store.UpsertItem(ctx, item); err != nil {
@@ -602,7 +646,8 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 		name = source
 	}
 
-	info, probeErr := s.probe(ctx, itemPath)
+	pr := s.probeOrReuse(ctx, pool, itemID, itemPath, size)
+	probeErr := pr.err
 	item := storage.Item{
 		ID:           itemID,
 		Type:         storage.ItemTypeMovie,
@@ -613,8 +658,8 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 		Path:         itemPath,
 		Container:    videoExt(videoFile),
 		Size:         size,
-		MediaStreams: mediaStreamsFromProbe(info),
-		RunTimeTicks: runtimeTicksFromProbe(info),
+		MediaStreams: pr.streams,
+		RunTimeTicks: pr.ticks,
 		// .UTC(), not bare time.Now(): the sqlite driver stores a time.Time
 		// as its own t.String() text (modernc.org/sqlite's formatTime), so
 		// a non-UTC-zoned value serializes with its local offset instead of
@@ -627,7 +672,7 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 		// convention (item.go); every DateCreated this scanner sets
 		// explicitly needs to match it. fileDateAdded already applies
 		// .UTC() itself.
-		DateCreated: fileDateAdded(itemPath),
+		DateCreated: pr.added,
 	}
 	if year > 0 {
 		item.ProductionYear = &year
@@ -640,6 +685,7 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 	if err := s.store.UpsertItem(ctx, item); err != nil {
 		return fmt.Errorf("upserting movie %q: %w", itemPath, err)
 	}
+	s.recordSignature(ctx, itemID, pr)
 
 	if folderMovie {
 		s.seedFolderImages(ctx, itemID, dir, videoFile)
@@ -1029,7 +1075,8 @@ func (s *Scanner) processEpisode(ctx context.Context, pool *jobPool, lib storage
 	}
 	seriesID := job.seriesID
 
-	info, probeErr := s.probe(ctx, episodePath)
+	pr := s.probeOrReuse(ctx, pool, itemID, episodePath, job.size)
+	probeErr := pr.err
 	item := storage.Item{
 		ID: itemID, Type: storage.ItemTypeEpisode, LibraryID: lib.ID,
 		ParentID: &parentID, SeriesID: &seriesID, SeasonID: &seasonID,
@@ -1037,9 +1084,9 @@ func (s *Scanner) processEpisode(ctx context.Context, pool *jobPool, lib storage
 		IndexNumber: episode, ParentIndexNumber: season, IndexNumberEnd: episodeEnd,
 		PremiereDate: ef.Date,
 		Path:         episodePath, Container: videoExt(episodePath), Size: job.size,
-		MediaStreams: mediaStreamsFromProbe(info),
-		RunTimeTicks: runtimeTicksFromProbe(info),
-		DateCreated:  fileDateAdded(episodePath),
+		MediaStreams: pr.streams,
+		RunTimeTicks: pr.ticks,
+		DateCreated:  pr.added,
 	}
 	if ef.Year > 0 {
 		y := ef.Year
@@ -1051,6 +1098,7 @@ func (s *Scanner) processEpisode(ctx context.Context, pool *jobPool, lib storage
 	if err := s.store.UpsertItem(ctx, item); err != nil {
 		return fmt.Errorf("upserting episode %q: %w", episodePath, err)
 	}
+	s.recordSignature(ctx, itemID, pr)
 	q := metadata.Query{Kind: metadata.KindEpisode, SeriesTitle: job.seriesTitle}
 	if season != nil {
 		q.SeasonNumber = *season
@@ -1514,7 +1562,11 @@ func (s *Scanner) seedFolderImages(ctx context.Context, itemID storage.ItemID, f
 // seedFolderImage stores the first of candidates (filenames relative to
 // folder) that actually exists as itemID's image of the given kind.
 func (s *Scanner) seedFolderImage(ctx context.Context, itemID storage.ItemID, folder, kind string, candidates []string) {
+	names := dirNames(ctx, folder)
 	for _, filename := range candidates {
+		if _, ok := names[filename]; !ok {
+			continue
+		}
 		path := filepath.Join(folder, filename)
 		fi, err := os.Stat(path)
 		if err != nil {

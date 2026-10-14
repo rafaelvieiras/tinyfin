@@ -67,6 +67,10 @@ Flags (all optional, see `-h` for the authoritative list):
 | `-web-dir` | `TINYFIN_WEB_DIR` | `/web` | A built `jellyfin-web` `dist/` to serve at `/web/`; skipped if the directory doesn't exist |
 | `-ffmpeg-path` | `TINYFIN_FFMPEG_PATH` | `/usr/lib/jellyfin-ffmpeg/ffmpeg` | `jellyfin-ffmpeg` binary, for Remux/Direct Stream/Transcode (`docs/07`) |
 | `-ffprobe-path` | `TINYFIN_FFPROBE_PATH` | `/usr/lib/jellyfin-ffmpeg/ffprobe` | `ffprobe` binary, for the library scanner's media-info extraction (`docs/08`) |
+| `-scan-concurrency` | `TINYFIN_SCAN_CONCURRENCY` | `8` | Scan workers per library (I/O bound; raise for remote filesystems) |
+| `-scan-probe-concurrency` | `TINYFIN_SCAN_PROBE_CONCURRENCY` | scan concurrency | Max simultaneous `ffprobe` processes across all scans |
+| `-scan-library-parallelism` | `TINYFIN_SCAN_LIBRARY_PARALLELISM` | `3` | Libraries scanned at once during a refresh |
+| `-scan-force-probe` | `TINYFIN_SCAN_FORCE_PROBE` | off | Re-probe every file even when size and mtime are unchanged |
 | `-tmdb-api-key` | `TINYFIN_TMDB_API_KEY` | *(empty)* | Enables TMDB metadata enrichment when set; catalog-only scanning otherwise (`internal/metadata`) |
 
 A library still has to be added and scanned before there's anything to browse — either through a

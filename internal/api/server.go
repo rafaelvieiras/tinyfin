@@ -103,6 +103,17 @@ type Config struct {
 	// library folder's own poster.jpg/fanart.jpg already provides.
 	ScanImageDir string
 
+	// ScanConcurrency bounds per-library scan workers (0 = scanner default).
+	ScanConcurrency int
+	// ScanProbeConcurrency bounds simultaneous ffprobe processes across all
+	// scans (0 = ScanConcurrency).
+	ScanProbeConcurrency int
+	// ScanLibraryParallelism bounds how many libraries scan at once during
+	// a refresh (0 = 3).
+	ScanLibraryParallelism int
+	// ScanForceProbe disables the incremental skip (re-probes every file).
+	ScanForceProbe bool
+
 	// DataDir is the real directory holding the SQLite database file and
 	// its sidecar files (server-id, scan image cache) — cmd/tinyfin/main.go
 	// passes filepath.Dir of its -data flag. Tinyfin has no separate
@@ -135,9 +146,11 @@ type Server struct {
 	transcode *transcode.Manager
 	scanner   *scan.Scanner
 	scanState *scanTracker
-	sessions  *sessionRegistry
-	hub       *wsHub
-	quick     *quickConnectState
+	// scanLibSem bounds libraries scanning concurrently (runScan).
+	scanLibSem chan struct{}
+	sessions   *sessionRegistry
+	hub        *wsHub
+	quick      *quickConnectState
 	// qcOverride is the runtime QuickConnect setting: 0 unset (the
 	// command-line default applies), 1 enabled, 2 disabled.
 	qcOverride atomic.Int32
@@ -182,14 +195,18 @@ func NewServer(store storage.Store, cfg Config) *Server {
 		mux:       http.NewServeMux(),
 		transcode: transcode.New(transcode.Config{FFmpegPath: cfg.TranscodeFFmpegPath}),
 		scanner: scan.New(store, provider, scan.Config{
-			FFprobePath: cfg.ScanFFprobePath,
-			ImageDir:    cfg.ScanImageDir,
+			FFprobePath:      cfg.ScanFFprobePath,
+			ImageDir:         cfg.ScanImageDir,
+			Concurrency:      cfg.ScanConcurrency,
+			ProbeConcurrency: cfg.ScanProbeConcurrency,
+			ForceProbe:       cfg.ScanForceProbe,
 		}),
-		scanState: &scanTracker{},
-		sessions:  newSessionRegistry(),
-		hub:       newWSHub(),
-		quick:     newQuickConnectState(),
-		pinLimit:  newPinThrottle(),
+		scanLibSem: make(chan struct{}, scanLibParallelism(cfg.ScanLibraryParallelism)),
+		scanState:  &scanTracker{},
+		sessions:   newSessionRegistry(),
+		hub:        newWSHub(),
+		quick:      newQuickConnectState(),
+		pinLimit:   newPinThrottle(),
 	}
 	s.loadRuntimeSettings()
 	s.loadLocalNetwork()
@@ -242,6 +259,13 @@ func (t *scanTracker) snapshot() (running bool, lastStart, lastEnd time.Time, la
 	return t.running > 0, t.lastStart, t.lastEnd, t.lastErr
 }
 
+func scanLibParallelism(n int) int {
+	if n <= 0 {
+		return 3
+	}
+	return n
+}
+
 // runScan runs a full Scanner pass over lib in the background, logging its
 // outcome — the same "outlives the triggering request" pattern
 // hls.go/ensureTranscodeJob's doc comment documents for transcode jobs:
@@ -254,6 +278,10 @@ func (s *Server) runScan(lib storage.Library) {
 	ctx := context.Background()
 	s.scanState.begin()
 	s.notifyScheduledTasks(ctx, true)
+	// Bound how many libraries scan at once; the scan counts as running
+	// while it waits for a slot.
+	s.scanLibSem <- struct{}{}
+	defer func() { <-s.scanLibSem }()
 	stats, err := s.scanner.ScanLibrary(ctx, lib)
 	s.scanState.end(err)
 	s.notifyScheduledTasks(ctx, true)
@@ -261,8 +289,8 @@ func (s *Server) runScan(lib storage.Library) {
 		log.Printf("api: scanning library %q: %v", lib.Name, err)
 		return
 	}
-	log.Printf("api: scanned library %q: %d items cataloged, %d enriched, %d warnings",
-		lib.Name, stats.ItemsScanned, stats.ItemsEnriched, len(stats.Errors))
+	log.Printf("api: scanned library %q: %d items cataloged (%d probed, %d unchanged) in %s, %d enriched, %d warnings",
+		lib.Name, stats.ItemsScanned, stats.ItemsProbed, stats.ItemsSkipped, stats.Duration.Round(time.Millisecond), stats.ItemsEnriched, len(stats.Errors))
 }
 
 // runItemRefresh re-enriches one catalog item against the configured

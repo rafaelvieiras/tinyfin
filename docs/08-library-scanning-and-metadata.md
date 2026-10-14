@@ -164,6 +164,26 @@ Tinyfin's scanner bounds `ffprobe` (and any other scan-time subprocess) concurre
 rather than spawning one per discovered file — a scan taking longer is an acceptable trade-off
 against a scan that can exhaust the memory budget this whole project exists to protect (`09`).
 
+### Scan cost on slow (remote) filesystems
+
+Operational behavior, not part of the API contract (nothing observable changes in a response):
+
+- **Incremental probe.** After a successful `ffprobe`, the item's file size and mtime are stored
+  (`scan_signatures`). A later scan whose file still has the same size and mtime reuses the item's
+  stored `MediaStreams` and `RunTimeTicks` and does not run `ffprobe`. A changed file, an item with
+  no stored streams/duration (e.g. a failed earlier probe) or a missing signature is probed again.
+  `-scan-force-probe` / `TINYFIN_SCAN_FORCE_PROBE` disables the skip.
+- **Cheaper probe.** `ffprobe` runs with `-probesize 5000000 -analyzeduration 5000000` (FFmpeg's own
+  defaults, pinned) and a 3 minute timeout; the output fields used are unchanged.
+- **Concurrency.** Scan workers per library default to 8 (`-scan-concurrency` /
+  `TINYFIN_SCAN_CONCURRENCY`). Simultaneous `ffprobe` processes across all scans are bounded
+  separately (`-scan-probe-concurrency` / `TINYFIN_SCAN_PROBE_CONCURRENCY`, default = scan
+  concurrency). A refresh scans up to 3 libraries at once (`-scan-library-parallelism` /
+  `TINYFIN_SCAN_LIBRARY_PARALLELISM`).
+- **Sidecar images** are detected from one directory listing per folder per pass instead of one
+  `stat` per candidate file name.
+- Each library scan logs items, probed vs skipped counts and duration.
+
 ## Library kinds and file layouts the scanner reads
 
 The observable behavior is specified in `docs/contract/specs/items.md` (rules `items.names`,
