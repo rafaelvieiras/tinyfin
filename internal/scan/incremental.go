@@ -91,12 +91,12 @@ type dirIndex struct {
 	// dirAll lists every real name of the folders that share a lower-cased
 	// name (two folders differing only in case), sorted.
 	dirAll map[string][]string
-	// names is the set of real file names.
-	names map[string]struct{}
+	// names are the real file names, in directory order.
+	names []string
 }
 
 func newDirIndex(entries []os.DirEntry) *dirIndex {
-	d := &dirIndex{files: map[string]string{}, dirs: map[string]string{}, dirAll: map[string][]string{}, names: map[string]struct{}{}}
+	d := &dirIndex{files: map[string]string{}, dirs: map[string]string{}, dirAll: map[string][]string{}}
 	put := func(m map[string]string, name string) {
 		l := strings.ToLower(name)
 		if old, ok := m[l]; ok && old == l {
@@ -112,7 +112,7 @@ func newDirIndex(entries []os.DirEntry) *dirIndex {
 			continue
 		}
 		put(d.files, e.Name())
-		d.names[e.Name()] = struct{}{}
+		d.names = append(d.names, e.Name())
 	}
 	return d
 }
@@ -171,8 +171,11 @@ func dirIndexOf(ctx context.Context, dir string) *dirIndex {
 // dirNames returns the set of non-directory entry names in dir (empty when it
 // cannot be read).
 func dirNames(ctx context.Context, dir string) map[string]struct{} {
+	out := map[string]struct{}{}
 	if idx := dirIndexOf(ctx, dir); idx != nil {
-		return idx.names
+		for _, n := range idx.names {
+			out[n] = struct{}{}
+		}
 	}
-	return map[string]struct{}{}
+	return out
 }

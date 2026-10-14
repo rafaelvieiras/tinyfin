@@ -934,7 +934,7 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 		id     storage.ItemID
 	}
 	var dirs []seasonDir
-	var episodeFolders []seasonDir
+	var episodeFolders, plainFolders []seasonDir
 	for _, e := range entries {
 		if !e.IsDir() || SkippedFolder(e.Name()) {
 			continue
@@ -943,6 +943,10 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 		if n, ok := ParseSeasonFolder(e.Name()); ok {
 			v := n
 			d.number = &v
+		} else if !containsVideo(ctx, d.path, 4) {
+			// A folder with no video in it, at any depth, is not a season.
+			plainFolders = append(plainFolders, d)
+			continue
 		} else if ef := ParseEpisodeFile(e.Name()); ef.Season != nil && ef.Episode != nil {
 			// A folder named like an episode ("S26E01", "Show S02E03") is a
 			// plain folder: the files in it are episodes of the season their
@@ -1022,6 +1026,18 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 			return nil
 		})
 	}
+	for _, d := range plainFolders {
+		id := storage.ItemID(deterministicID("item-folder-" + string(lib.ID) + "-" + d.path))
+		folder := storage.Item{
+			ID: id, Type: storage.ItemTypeFolder, LibraryID: lib.ID, ParentID: &seriesID,
+			Name: d.name, SortName: d.name, Path: d.path, DateCreated: fileDateAdded(d.path),
+		}
+		if err := s.store.UpsertItem(ctx, folder); err != nil {
+			log.Printf("scan: upserting folder %q: %v", d.path, err)
+			continue
+		}
+		s.seedFolderArtwork(ctx, id, d.path)
+	}
 	for _, d := range episodeFolders {
 		id := storage.ItemID(deterministicID("item-folder-" + string(lib.ID) + "-" + d.path))
 		folder := storage.Item{
@@ -1054,6 +1070,34 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 		})
 	}
 	return seasons
+}
+
+// containsVideo reports whether dir holds a video file directly or in a folder
+// below it (up to depth levels, skipped folders left out).
+func containsVideo(ctx context.Context, dir string, depth int) bool {
+	idx := dirIndexOf(ctx, dir)
+	if idx == nil {
+		return false
+	}
+	for _, n := range idx.names {
+		if IsVideoFile(n) && !strings.HasPrefix(n, ".") && !IsExtraFile(n) {
+			return true
+		}
+	}
+	if depth <= 1 {
+		return false
+	}
+	for _, names := range idx.dirAll {
+		for _, name := range names {
+			if SkippedFolder(name) {
+				continue
+			}
+			if containsVideo(ctx, filepath.Join(dir, name), depth-1) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // pureSeasonName reports whether a folder name is the season and nothing

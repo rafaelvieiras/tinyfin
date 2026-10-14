@@ -289,6 +289,11 @@
     {"key": "folder-show-folder", "type": "Folder", "library": "resid", "path": "Resid/Folder Show (2241)/S26E01"},
     {"key": "version-show", "type": "Series", "library": "resid", "path": "Resid/Version Show (2242)"},
     {"key": "number-show", "type": "Series", "library": "resid", "path": "Resid/Number Show (2243)"},
-    {"key": "phototypes-album", "type": "PhotoAlbum", "library": "phototypes", "path": "PhotoTypes/Album"}
+    {"key": "phototypes-album", "type": "PhotoAlbum", "library": "phototypes", "path": "PhotoTypes/Album"},
+    {"key": "plain-show", "type": "Series", "library": "resid", "path": "Resid/Plain Show (2244)"},
+    {"key": "plain-show-empty", "type": "Folder", "library": "resid", "path": "Resid/Plain Show (2244)/Empty"},
+    {"key": "plain-show-pics", "type": "Folder", "library": "resid", "path": "Resid/Plain Show (2244)/Pics"},
+    {"key": "plain-show-ost", "type": "Folder", "library": "resid", "path": "Resid/Plain Show (2244)/OST"},
+    {"key": "plain-show-part", "type": "Season", "library": "resid", "path": "Resid/Plain Show (2244)/Part 2"}
   ]
 }

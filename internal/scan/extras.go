@@ -105,7 +105,11 @@ func IsExtraFile(name string) bool {
 // hasRootExtraFiles reports whether dir holds a video file that is an extra by
 // its name ("Movie-trailer.mp4").
 func hasRootExtraFiles(ctx context.Context, dir string) bool {
-	for n := range dirNames(ctx, dir) {
+	idx := dirIndexOf(ctx, dir)
+	if idx == nil {
+		return false
+	}
+	for _, n := range idx.names {
 		if IsVideoFile(n) && IsExtraFile(n) {
 			return true
 		}
@@ -165,11 +169,8 @@ func findExtras(ctx context.Context, dir string, ownerNames []string, withThemes
 		return nil
 	}
 	var out []extraSource
-	sortedNames := func(m map[string]struct{}) []string {
-		names := make([]string, 0, len(m))
-		for n := range m {
-			names = append(names, n)
-		}
+	sortedNames := func(in []string) []string {
+		names := append([]string(nil), in...)
 		sort.Slice(names, func(i, j int) bool { return strings.ToLower(names[i]) < strings.ToLower(names[j]) })
 		return names
 	}

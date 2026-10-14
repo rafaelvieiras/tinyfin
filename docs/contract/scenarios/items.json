@@ -18538,33 +18538,25 @@
     "as": "admin",
     "request": {
      "method": "GET",
-     "path": "/Items",
-     "query": {
-      "ParentId": "{{item.folder-show.id}}"
-     }
+     "path": "/Items/{{item.folder-show-folder.id}}"
     },
     "expect": {
      "status": 200,
      "json": [
       {
-       "path": "$.TotalRecordCount",
-       "op": "eq",
-       "value": 3
-      },
-      {
-       "path": "$.Items[?Name=S26E01].Type",
+       "path": "$.Type",
        "op": "eq",
        "value": "Folder"
       },
       {
-       "path": "$.Items[?Name=Season 1].Type",
+       "path": "$.Name",
        "op": "eq",
-       "value": "Season"
+       "value": "S26E01"
       },
       {
-       "path": "$.Items[?Name=Season 26].Type",
+       "path": "$.ParentId",
        "op": "eq",
-       "value": "Season"
+       "value": "{{item.folder-show.id}}"
       }
      ]
     }
@@ -18621,6 +18613,139 @@
        "path": "$.Items[*].Name",
        "op": "contains",
        "value": "Season 26"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "items.seasons.folder-without-videos",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "items.md#get",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.seasons.R2"
+  ],
+  "requires": [
+   "item:plain-show",
+   "item:plain-show-empty",
+   "item:plain-show-pics",
+   "item:plain-show-ost",
+   "item:plain-show-part",
+   "library:resid"
+  ],
+  "steps": [
+   {
+    "name": "an empty folder is a plain folder of the series",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.plain-show-empty.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Folder"
+      },
+      {
+       "path": "$.ParentId",
+       "op": "eq",
+       "value": "{{item.plain-show.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "so is a folder of pictures",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.plain-show-pics.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Folder"
+      },
+      {
+       "path": "$.ParentId",
+       "op": "eq",
+       "value": "{{item.plain-show.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "and a folder of songs",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.plain-show-ost.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Folder"
+      },
+      {
+       "path": "$.ParentId",
+       "op": "eq",
+       "value": "{{item.plain-show.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a folder with a video is a season named after it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.plain-show-part.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Season"
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Part 2"
+      }
+     ]
+    }
+   },
+   {
+    "name": "only the real seasons are listed as seasons",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Shows/{{item.plain-show.id}}/Seasons"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
       }
      ]
     }

@@ -150,8 +150,8 @@ func (s *Scanner) resolveCand(ctx context.Context, c imageCand) []string {
 
 // storeLocalImages records the pictures found for one kind of item as its
 // image refs (index = position) and forgets refs of local pictures that are no
-// longer there. A kind with no local picture is left alone: it may hold an
-// image a provider downloaded.
+// longer there. An image a provider downloaded (or an administrator uploaded)
+// into the scanner's own image directory is never touched.
 func (s *Scanner) storeLocalImages(ctx context.Context, itemID storage.ItemID, kind string, paths []string) {
 	existing, err := s.store.GetImageRefs(ctx, itemID, storage.ImageKind(kind))
 	if err != nil {
@@ -185,9 +185,6 @@ func (s *Scanner) storeLocalImages(ctx context.Context, itemID storage.ItemID, k
 		if err := s.store.UpsertImageRef(ctx, ref); err != nil {
 			log.Printf("scan: storing %s image %s for %s: %v", kind, filepath.Base(path), itemID, err)
 		}
-	}
-	if len(paths) == 0 {
-		return
 	}
 	for _, r := range existing {
 		if keep[r.ID] || s.isProviderImage(r.Path) {

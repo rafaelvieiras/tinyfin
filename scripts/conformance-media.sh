@@ -529,6 +529,10 @@ vid "$S/Season 01/Number Show E5E6.mp4"; vid "$S/Season 01/Number Show Title3.mp
 vid "$S/Season 01/Number Show E05E06E07.mp4"
 vid "$S/Season 01/Number Show Part3.mp4"; vid "$S/Season 01/Number Show x264.mp4"
 
+S="$R/Plain Show (2244)"
+vid "$S/Season 01/Plain Show S01E01.mp4"
+mkdir -p "$S/Empty"; pic "$S/Pics/a.jpg"; aud "$S/OST/01.mp3"; vid "$S/Part 2/Plain Show Part 2.mp4"
+
 # Photo extensions of a home-videos library (own library "PhotoTypes", lazy).
 P="$ROOT/PhotoTypes/Album"
 for e in jpg jpeg png gif bmp webp tif tiff avif ico cr2 dng nef arw; do pic "$P/photo.$e"; done
