@@ -16,18 +16,17 @@ import (
 // "ProgramCount":0,"TrailerCount":0,"SongCount":0,"AlbumCount":0,
 // "MusicVideoCount":0,"BoxSetCount":0,"BookCount":0,"ItemCount":0}.
 //
-// Only MovieCount/SeriesCount/EpisodeCount are ever real numbers here.
-// internal/scan/scan.go — the only thing that ever creates an Item today —
-// only ever produces storage.ItemTypeMovie/ItemTypeSeries/ItemTypeSeason/
-// ItemTypeEpisode (its CollectionType switch only walks Movies/TVShows,
-// same gap library.go's package doc comment and localization.go's
-// libraryTypeOptionsByType already document for music/book/program/boxset).
+// Only MovieCount/SeriesCount/EpisodeCount/BoxSetCount are real numbers
+// here: the scanner only produces movies, series, seasons and episodes (its
+// CollectionType switch only walks Movies/TVShows, same gap library.go's
+// package doc comment and localization.go's libraryTypeOptionsByType already
+// document for music/book/program), and collections come from the
+// collections routes and the automatic collections (internal/collection).
 // So ArtistCount/ProgramCount/TrailerCount/SongCount/AlbumCount/
-// MusicVideoCount/BoxSetCount/BookCount/ItemCount are structural zeros, not
-// placeholders awaiting a query: there is no music/book/program/boxset
-// scanning pipeline behind any of them to count, the same "minimal over
-// guessed" boundary this package already draws in library.go and
-// localization.go. ItemCount specifically mirrors the reference server's
+// MusicVideoCount/BookCount/ItemCount are structural zeros, not
+// placeholders awaiting a query: there is no music/book/program scanning
+// pipeline behind any of them to count, the same "minimal over guessed"
+// boundary this package already draws in library.go and localization.go. ItemCount specifically mirrors the reference server's
 // own field (confirmed live: it stays 0 even against a populated library,
 // evidently reserved for a BaseItemKind this project has no equivalent
 // scan path for either) rather than being repurposed as a grand total.
@@ -100,10 +99,17 @@ func (s *Server) handleItemsCounts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	boxsets, err := countItemsByType(ctx, s.store, scope, storage.ItemTypeBoxSet)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	writeJSON(w, http.StatusOK, itemCounts{
 		MovieCount:   movies,
 		SeriesCount:  series,
 		EpisodeCount: episodes,
+		BoxSetCount:  boxsets,
 		// Every other field is a structural zero — see itemCounts' doc
 		// comment.
 	})

@@ -23,6 +23,7 @@ const itemColumns = `items.id, items.type, items.library_id, items.parent_id, it
 	items.collection_type,
 	items.media_streams,
 	items.people,
+	items.set_name,
 	items.date_created, items.extra_type, items.owner_id`
 
 // rowScanner is satisfied by both *sql.Row and *sql.Rows, so scanItem works
@@ -54,6 +55,7 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 		collectionType                          string
 		mediaStreamsJSON                        string
 		peopleJSON                              string
+		setName                                 string
 		dateCreated                             time.Time
 		extraType                               string
 		ownerID                                 sql.NullString
@@ -71,6 +73,7 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 		&collectionType,
 		&mediaStreamsJSON,
 		&peopleJSON,
+		&setName,
 		&dateCreated,
 		&extraType, &ownerID,
 	); err != nil {
@@ -92,6 +95,7 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 		Container:      container,
 		Size:           size,
 		CollectionType: storage.CollectionType(collectionType),
+		SetName:        setName,
 		DateCreated:    dateCreated,
 		ExtraType:      extraType,
 	}
@@ -279,10 +283,11 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 		collection_type,
 		media_streams,
 		people,
+		set_name,
 		search_text,
 		date_created,
 		extra_type, owner_id
-	) VALUES (?,?,?,?,?,?,?,?, ?,?,?,?, ?,?,?,?,?,?,?, ?,?,?, ?,?, ?,?,?, ?, ?,?,?, ?, ?, ?, ?, ?, ?, ?)
+	) VALUES (?,?,?,?,?,?,?,?, ?,?,?,?, ?,?,?,?,?,?,?, ?,?,?, ?,?, ?,?,?, ?, ?,?,?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(id) DO UPDATE SET
 		type=excluded.type, library_id=excluded.library_id, parent_id=excluded.parent_id, name=excluded.name,
 		original_title=excluded.original_title, sort_name=excluded.sort_name, overview=excluded.overview,
@@ -297,6 +302,7 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 		collection_type=excluded.collection_type,
 		media_streams=excluded.media_streams,
 		people=excluded.people,
+		set_name=excluded.set_name,
 		search_text=excluded.search_text,
 		extra_type=excluded.extra_type, owner_id=excluded.owner_id`
 
@@ -318,6 +324,7 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 			string(item.CollectionType),
 			mediaStreamsJSON,
 			peopleJSON,
+			item.SetName,
 			searchText,
 			item.DateCreated,
 			item.ExtraType, idPtrToAny(item.OwnerID),
@@ -389,6 +396,18 @@ func recomputeAncestors(ctx context.Context, ex dbtx, id storage.ItemID) error {
 	}
 	for _, a := range chain {
 		if _, err := ex.ExecContext(ctx, `INSERT INTO item_ancestors (item_id, ancestor_id) VALUES (?, ?)`, string(id), string(a)); err != nil {
+			return err
+		}
+	}
+	// Collections the item (or any of its ancestors) is a member of are
+	// ancestors too: a recursive listing of a collection reaches the members
+	// and everything below them.
+	boxes, err := collectionsHolding(ctx, ex, append([]storage.ItemID{id}, chain...))
+	if err != nil {
+		return err
+	}
+	for _, b := range boxes {
+		if _, err := ex.ExecContext(ctx, `INSERT OR IGNORE INTO item_ancestors (item_id, ancestor_id) VALUES (?, ?)`, string(id), string(b)); err != nil {
 			return err
 		}
 	}
@@ -543,14 +562,27 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 	}
 
 	if filter.LibraryID != nil {
-		addWhere("items.library_id = ?", string(*filter.LibraryID))
-	}
-	if filter.RestrictToLibraries {
-		args := make([]any, len(filter.LibraryIDs))
-		for i, id := range filter.LibraryIDs {
-			args[i] = string(id)
+		if filter.LibraryBoxSets {
+			lib := string(*filter.LibraryID)
+			addWhere("(items.library_id = ? OR (items.type = 'BoxSet' AND EXISTS (SELECT 1 FROM item_relations lr JOIN items lc ON lc.id = lr.child_id "+
+				"WHERE lr.parent_id = items.id AND lr.kind = 'collection' AND lc.library_id = ?)))", lib, lib)
+		} else {
+			addWhere("items.library_id = ?", string(*filter.LibraryID))
 		}
-		addWhere("items.library_id IN ("+sqlPlaceholders(len(args))+")", args...)
+	}
+	var libArgs []any
+	if filter.RestrictToLibraries {
+		libArgs = make([]any, len(filter.LibraryIDs))
+		for i, id := range filter.LibraryIDs {
+			libArgs[i] = string(id)
+		}
+		addWhere("items.library_id IN ("+sqlPlaceholders(len(libArgs))+")", libArgs...)
+		// A collection that has members is visible only when the user can
+		// see at least one of them; an empty one is visible to everybody
+		// who can see the collections library.
+		addWhere("(items.type <> 'BoxSet' OR NOT EXISTS (SELECT 1 FROM item_relations vr WHERE vr.parent_id = items.id AND vr.kind = 'collection') "+
+			"OR EXISTS (SELECT 1 FROM item_relations vr JOIN items vc ON vc.id = vr.child_id WHERE vr.parent_id = items.id AND vr.kind = 'collection' "+
+			"AND vc.library_id IN ("+sqlPlaceholders(len(libArgs))+")))", libArgs...)
 	}
 	if filter.TopLevelOnly {
 		if len(filter.RootFolderPaths) > 0 {
@@ -578,7 +610,9 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 			joins = append(joins, "JOIN item_ancestors ia ON ia.item_id = items.id")
 			addWhere("ia.ancestor_id = ?", string(*filter.ParentID))
 		} else {
-			addWhere("items.parent_id = ?", string(*filter.ParentID))
+			// A collection's members are linked, not parented.
+			addWhere("(items.parent_id = ? OR items.id IN (SELECT lm.child_id FROM item_relations lm WHERE lm.parent_id = ? AND lm.kind = 'collection'))",
+				string(*filter.ParentID), string(*filter.ParentID))
 		}
 	}
 
@@ -847,6 +881,40 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 		}
 	} else if filter.Resumable {
 		return storage.ItemPage{Offset: filter.Offset}, nil
+	}
+
+	if filter.CollapseBoxSets {
+		// Members of a visible collection give way to the collection: the
+		// base query (every filter above) is kept as a subquery, the members
+		// it returns are dropped and the collections holding one of them
+		// are added, whatever the type filter says.
+		base := "SELECT items.id FROM items " + strings.Join(joins, " ")
+		if len(wheres) > 0 {
+			base += " WHERE " + strings.Join(wheres, " AND ")
+		}
+		baseArgs := make([]any, 0, len(joinArgs)+len(whereArgs))
+		baseArgs = append(baseArgs, joinArgs...)
+		baseArgs = append(baseArgs, whereArgs...)
+		visible := "SELECT vb.id FROM items vb WHERE vb.type = 'BoxSet'"
+		var visArgs []any
+		if filter.RestrictToLibraries {
+			visible += " AND vb.library_id IN (" + sqlPlaceholders(len(libArgs)) + ")"
+			visArgs = libArgs
+		}
+		var collapsed []any
+		collapsed = append(collapsed, baseArgs...)
+		collapsed = append(collapsed, visArgs...)
+		collapsed = append(collapsed, baseArgs...)
+		collapsed = append(collapsed, visArgs...)
+		joins, joinArgs = nil, nil
+		if needsSeriesSortJoin(filter.SortBy) {
+			joins = append(joins, "LEFT JOIN items series_sort ON series_sort.id = items.series_id")
+		}
+		wheres = []string{"(items.id IN (SELECT cb.id FROM (" + base + ") cb WHERE cb.id NOT IN " +
+			"(SELECT cr.child_id FROM item_relations cr WHERE cr.kind = 'collection' AND cr.parent_id IN (" + visible + "))) " +
+			"OR items.id IN (SELECT cr2.parent_id FROM item_relations cr2 WHERE cr2.kind = 'collection' " +
+			"AND cr2.child_id IN (" + base + ") AND cr2.parent_id IN (" + visible + ")))"}
+		whereArgs = collapsed
 	}
 
 	joinSQL := strings.Join(joins, " ")

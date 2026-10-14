@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rafaelvieiras/tinyfin/internal/collection"
 	"github.com/rafaelvieiras/tinyfin/internal/guid"
 	"github.com/rafaelvieiras/tinyfin/internal/rating"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
@@ -320,6 +321,9 @@ func (s *Server) itemReadable(ctx context.Context, sc itemsScope, item storage.I
 	if !sc.itemVisible(item) {
 		return false
 	}
+	if item.Type == storage.ItemTypeBoxSet && !s.collectionVisible(ctx, sc, item) {
+		return false
+	}
 	own, ownOK := rating.Parse(item.OfficialRating)
 	eff, effOK := own, ownOK
 	var ser rating.Score
@@ -357,7 +361,9 @@ func (s *Server) itemReadable(ctx context.Context, sc itemsScope, item storage.I
 // itemVisible reports whether item is inside an accessible library and
 // passes the user's tag restrictions.
 func (sc itemsScope) itemVisible(item storage.Item) bool {
-	if !sc.libIDs[item.LibraryID] {
+	// A collection is readable whatever libraries the user may see: what
+	// decides is whether any of its members is visible (collectionVisible).
+	if !sc.libIDs[item.LibraryID] && item.Type != storage.ItemTypeBoxSet {
 		return false
 	}
 	has := func(set []string) bool {
@@ -578,6 +584,13 @@ func parseItemsQuery(q url.Values, legacy bool) (itemsQuery, error) {
 		f.MinPremiereDate = &t
 	}
 	f.ImageTypes = itemsListParam(q, "imagetypes")
+	// CollapseBoxSetItems: members of a collection give way to the
+	// collection (resolved against the parent in handleItemsList).
+	if b, err := itemsBool(q, "collapseboxsetitems"); err != nil {
+		return iq, err
+	} else if b != nil && *b {
+		f.CollapseBoxSets = true
+	}
 	// Locked/3D/video-type metadata is not tracked: asking for it matches
 	// nothing; asking for its absence changes nothing.
 	for _, key := range []string{"islocked", "is3d"} {
@@ -745,6 +758,7 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 	withPlaylists := false // ... plus the Playlists folder
 	empty := false         // answer with nothing
 	recursiveQuery := false
+	boxParent := false // the parent is a collection
 
 	if raw := strings.TrimSpace(q.Get("parentid")); raw != "" {
 		norm, valid := normalizeGUID(raw)
@@ -765,6 +779,13 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 				}
 				id := lib.ID
 				filter.LibraryID = &id
+				// A query that names the BoxSet type also finds the
+				// collections that hold items of this library.
+				for _, t := range filter.ItemTypes {
+					if t == storage.ItemTypeBoxSet {
+						filter.LibraryBoxSets = true
+					}
+				}
 				recursiveQuery = len(filter.ItemTypes) > 0
 				if iq.recursive != nil {
 					recursiveQuery = *iq.recursive
@@ -785,6 +806,14 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
+			if parent.Type == storage.ItemTypeBoxSet {
+				if !s.collectionVisible(ctx, scope, parent) {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				boxParent = true
+				filter.CollapseBoxSets = false
+			}
 			if !isFolderType(parent.Type) {
 				// A leaf parent is ignored: handled as if no ParentId was
 				// sent, without the Playlists extra.
@@ -802,6 +831,11 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 			}
 			iq.hasParent = true
 			recursiveQuery = iq.recursive != nil && *iq.recursive
+			if boxParent && !recursiveQuery && len(filter.SortBy) == 0 {
+				// The members of a collection list in premiere-date order
+				// unless the caller sorts (collections.list.R3).
+				filter.SortBy = []storage.SortField{{By: storage.SortByPremiereDate}}
+			}
 			if !recursiveQuery {
 				// The non-recursive child listing of a folder is not
 				// narrowed by IncludeItemTypes (items.list.R8).
@@ -820,8 +854,9 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 	shape := func(it baseItemDto) baseItemDto { return shapeListItem(it, iq) }
 
 	if views {
-		out := make([]baseItemDto, 0, len(scope.libs)+1)
-		for _, lib := range scope.libs {
+		libs := s.viewLibraries(ctx, scope)
+		out := make([]baseItemDto, 0, len(libs)+1)
+		for _, lib := range libs {
 			out = append(out, shape(s.libraryBaseItemDto(ctx, lib)))
 		}
 		if withPlaylists {
@@ -867,6 +902,37 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 		TotalRecordCount: resolveTotalRecordCount(iq.totalRecord, len(items), page.TotalCount),
 		StartIndex:       startIndex,
 	})
+}
+
+// viewLibraries is the libraries a user is shown as views: the ones the
+// scope allows, except that the collections library appears only while the
+// user can see at least one collection.
+func (s *Server) viewLibraries(ctx context.Context, sc itemsScope) []storage.Library {
+	out := make([]storage.Library, 0, len(sc.libs))
+	for _, lib := range sc.libs {
+		if lib.CollectionType == storage.CollectionTypeBoxSets && lib.ID == collection.LibraryID() {
+			f := storage.ItemFilter{LibraryID: &lib.ID, ItemTypes: []storage.ItemType{storage.ItemTypeBoxSet}, Limit: 1}
+			sc.apply(&f)
+			if page, err := s.store.QueryItems(ctx, f); err != nil || page.TotalCount == 0 {
+				continue
+			}
+		}
+		out = append(out, lib)
+	}
+	return out
+}
+
+// collectionVisible reports whether the scope may open a collection: it is
+// empty, or holds at least one member the scope can see.
+func (s *Server) collectionVisible(ctx context.Context, sc itemsScope, box storage.Item) bool {
+	members, err := s.store.CollectionMembers(ctx, box.ID)
+	if err != nil || len(members) == 0 {
+		return err == nil
+	}
+	f := storage.ItemFilter{ParentID: &box.ID, Limit: 1}
+	sc.apply(&f)
+	page, err := s.store.QueryItems(ctx, f)
+	return err == nil && page.TotalCount > 0
 }
 
 // playlistsFolderDto is the user's Playlists folder, listed after the

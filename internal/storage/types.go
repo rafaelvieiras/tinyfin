@@ -189,6 +189,19 @@ type ItemFilter struct {
 	// AdjacentTo narrows the (otherwise ordered) result to the named item
 	// and its immediate previous/next neighbours.
 	AdjacentTo *ItemID
+
+	// LibraryBoxSets widens LibraryID: besides the library's own items, the
+	// result also holds the collections (BoxSet) that have at least one
+	// direct member in that library. Collections live in their own virtual
+	// library, so a recursive listing of a content library would otherwise
+	// never show them.
+	LibraryBoxSets bool
+
+	// CollapseBoxSets replaces every item that is a member of a collection
+	// the user may see by that collection: the members drop out of the
+	// result and each collection holding at least one matching item takes
+	// their place (CollapseBoxSetItems).
+	CollapseBoxSets bool
 }
 
 // SeasonMembers identifies the episodes that belong to a season by number.
@@ -212,4 +225,14 @@ type ItemPage struct {
 	Items      []Item
 	TotalCount int
 	Offset     int
+}
+
+// RelationCollection is the ItemRelation kind of collection membership.
+const RelationCollection = "collection"
+
+// SetGroup is the movies that declare one set name, in library order (by
+// production year, then sort name).
+type SetGroup struct {
+	Name    string
+	Members []ItemID
 }

@@ -62,6 +62,8 @@ var routePaths = []string{
 	"/Users/Public",
 	"/Users/{userId}",
 	"/UserViews",
+	"/Collections",
+	"/Collections/{collectionId}/Items",
 	"/Items",
 	// No length collision with the several other 4-segment patterns below
 	// (/Items/{itemId}/Ancestors, /Shows/{seriesId}/Seasons, /Videos/{itemId}/

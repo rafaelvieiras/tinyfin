@@ -14,8 +14,11 @@
 package api
 
 import (
+	"context"
 	"net/http"
 
+	"github.com/rafaelvieiras/tinyfin/internal/collection"
+	"github.com/rafaelvieiras/tinyfin/internal/scan"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
 
@@ -49,13 +52,24 @@ func (s *Server) handleItemRefresh(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, lib := range libs {
 		if string(lib.ID) == id {
-			go s.runScan(lib)
+			// Refreshing one library does not run the automatic
+			// collections (a full refresh does).
+			go s.runScanCtx(scan.WithoutCollections(context.Background()), lib)
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 	}
 
-	if _, err := s.store.GetItem(ctx, storage.ItemID(id)); err == nil {
+	if item, err := s.store.GetItem(ctx, storage.ItemID(id)); err == nil {
+		if item.Type == storage.ItemTypeBoxSet {
+			// A collection's metadata is derived from its members.
+			if _, err := collection.Refresh(ctx, s.store, item.ID); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 		// ReplaceAllImages=true, validated against the reference server
 		// (docs/08's "Local-vs-remote precedence" section), is the only way
 		// a Provider-returned image is allowed to overwrite one the item

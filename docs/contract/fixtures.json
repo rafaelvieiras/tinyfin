@@ -7,7 +7,8 @@
     {"key": "rating10", "name": "rating10", "password": "Rating-Pass-10", "policy": {"MaxParentalRating": 10}},
     {"key": "rating17", "name": "rating17", "password": "Rating-Pass-17", "policy": {"MaxParentalRating": 17}},
     {"key": "rating17s1", "name": "rating17s1", "password": "Rating-Pass-17s", "policy": {"MaxParentalRating": 17, "MaxParentalSubRating": 1}},
-    {"key": "blockunrated", "name": "blockunrated", "password": "Block-Pass-1", "policy": {"BlockUnratedItems": ["Movie"]}}
+    {"key": "blockunrated", "name": "blockunrated", "password": "Block-Pass-1", "policy": {"BlockUnratedItems": ["Movie"]}},
+    {"key": "collmgr", "name": "collmgr", "password": "CollMgr-Pass-1", "policy": {"EnableCollectionManagement": true}}
   ],
   "libraries": [
     {"key": "movies", "name": "Movies", "type": "movies", "path": "Movies"},
@@ -35,7 +36,9 @@
     {"key": "extras", "name": "Extras", "type": "movies", "path": "Extras", "lazy": true},
     {"key": "extrashows", "name": "ExtraShows", "type": "tvshows", "path": "ExtraShows", "lazy": true},
     {"key": "resid", "name": "Resid", "type": "tvshows", "path": "Resid", "lazy": true},
-    {"key": "phototypes", "name": "PhotoTypes", "type": "homevideos", "path": "PhotoTypes", "lazy": true}
+    {"key": "phototypes", "name": "PhotoTypes", "type": "homevideos", "path": "PhotoTypes", "lazy": true},
+    {"key": "sets", "name": "Sets", "type": "movies", "path": "Sets", "lazy": true, "options": {"AutomaticallyAddToCollection": true}},
+    {"key": "setsoff", "name": "SetsOff", "type": "movies", "path": "SetsOff", "lazy": true}
   ],
   "items": [
     {"key": "alpha", "type": "Movie", "path": "Movies/Alpha Movie (2015)/Alpha Movie (2015).mp4"},
@@ -294,6 +297,19 @@
     {"key": "plain-show-empty", "type": "Folder", "library": "resid", "path": "Resid/Plain Show (2244)/Empty"},
     {"key": "plain-show-pics", "type": "Folder", "library": "resid", "path": "Resid/Plain Show (2244)/Pics"},
     {"key": "plain-show-ost", "type": "Folder", "library": "resid", "path": "Resid/Plain Show (2244)/OST"},
-    {"key": "plain-show-part", "type": "Season", "library": "resid", "path": "Resid/Plain Show (2244)/Part 2"}
+    {"key": "plain-show-part", "type": "Season", "library": "resid", "path": "Resid/Plain Show (2244)/Part 2"},
+    {"key": "sa1", "type": "Movie", "library": "sets", "path": "Sets/Saga Alpha One (2001)/Saga Alpha One (2001).mp4"},
+    {"key": "sa2", "type": "Movie", "library": "sets", "path": "Sets/Saga Alpha Two (2002)/Saga Alpha Two (2002).mp4"},
+    {"key": "sa3", "type": "Movie", "library": "sets", "path": "Sets/Saga Alpha Three (2003)/Saga Alpha Three (2003).mp4"},
+    {"key": "sb1", "type": "Movie", "library": "sets", "path": "Sets/Saga Beta One (2004)/Saga Beta One (2004).mp4"},
+    {"key": "sb2", "type": "Movie", "library": "sets", "path": "Sets/Saga Beta Two (2005)/Saga Beta Two (2005).mp4"},
+    {"key": "sl1", "type": "Movie", "library": "sets", "path": "Sets/Saga Lonely One (2006)/Saga Lonely One (2006).mp4"},
+    {"key": "sp1", "type": "Movie", "library": "sets", "path": "Sets/Saga Plain (2007)/Saga Plain (2007).mp4"},
+    {"key": "spad1", "type": "Movie", "library": "sets", "path": "Sets/Saga Pad One (2008)/Saga Pad One (2008).mp4"},
+    {"key": "spad2", "type": "Movie", "library": "sets", "path": "Sets/Saga Pad Two (2009)/Saga Pad Two (2009).mp4"},
+    {"key": "scu", "type": "Movie", "library": "sets", "path": "Sets/Saga Case Upper (2010)/Saga Case Upper (2010).mp4"},
+    {"key": "scl", "type": "Movie", "library": "sets", "path": "Sets/Saga Case Lower (2011)/Saga Case Lower (2011).mp4"},
+    {"key": "sg1", "type": "Movie", "library": "setsoff", "path": "SetsOff/Saga Gamma One (2008)/Saga Gamma One (2008).mp4"},
+    {"key": "sg2", "type": "Movie", "library": "setsoff", "path": "SetsOff/Saga Gamma Two (2009)/Saga Gamma Two (2009).mp4"}
   ]
 }

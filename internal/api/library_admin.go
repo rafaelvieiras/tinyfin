@@ -17,8 +17,10 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 
@@ -75,6 +77,7 @@ func (s *Server) handleAddVirtualFolder(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	opts := libraryOptionsFromBody(r)
 	paths := q["paths"]
 	if len(paths) == 1 && strings.Contains(paths[0], ",") {
 		paths = strings.Split(paths[0], ",")
@@ -88,6 +91,7 @@ func (s *Server) handleAddVirtualFolder(w http.ResponseWriter, r *http.Request) 
 		Name:           name,
 		CollectionType: storage.CollectionType(q.Get("collectionType")),
 		Paths:          paths,
+		LibraryOptions: opts,
 	}
 	if err := s.store.UpsertLibrary(r.Context(), lib); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -98,6 +102,27 @@ func (s *Server) handleAddVirtualFolder(w http.ResponseWriter, r *http.Request) 
 		go s.runScan(lib)
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// libraryOptionsFromBody returns the LibraryOptions object of a create
+// request, as sent (nil when the body has none), so options such as
+// AutomaticallyAddToCollection take effect from the first scan.
+func libraryOptionsFromBody(r *http.Request) []byte {
+	if r.Body == nil {
+		return nil
+	}
+	raw, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		return nil
+	}
+	r.Body = io.NopCloser(bytes.NewReader(raw))
+	var body struct {
+		LibraryOptions json.RawMessage `json:"LibraryOptions"`
+	}
+	if json.Unmarshal(raw, &body) != nil || len(body.LibraryOptions) == 0 || string(body.LibraryOptions) == "null" {
+		return nil
+	}
+	return body.LibraryOptions
 }
 
 // pathInfosFromBody extracts LibraryOptions.PathInfos[].Path from r's JSON

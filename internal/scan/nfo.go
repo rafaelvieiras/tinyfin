@@ -74,10 +74,35 @@ type uniqueIDEl struct {
 	Value string `xml:",chardata"`
 }
 
+// setEl is a movie's <set>: either <set><name>X</name>...</set> or the
+// older <set>X</set>.
+type setEl struct {
+	Name *string `xml:"name"`
+	Text string  `xml:",chardata"`
+}
+
+// value is the collection name as written: the <name> child when there is
+// one, else the element's own text. It is not trimmed (movies are grouped by
+// the raw value); an all-white-space value names no collection.
+func (e *setEl) value() string {
+	if e == nil {
+		return ""
+	}
+	v := e.Text
+	if e.Name != nil {
+		v = *e.Name
+	}
+	if strings.TrimSpace(v) == "" {
+		return ""
+	}
+	return v
+}
+
 // movieNFO is a Kodi <movie> .nfo document.
 type movieNFO struct {
 	XMLName xml.Name `xml:"movie"`
 	commonNFOFields
+	Set *setEl `xml:"set"`
 }
 
 // tvshowNFO is a Kodi <tvshow> .nfo document (series root, tvshow.nfo).
@@ -270,6 +295,7 @@ func (s *Scanner) applyMovieNFO(pool *jobPool, item *storage.Item, folder, video
 		return
 	}
 	applyCommonNFOFields(item, n.commonNFOFields)
+	item.SetName = n.Set.value()
 }
 
 // applySeriesNFO looks for "tvshow.nfo" in seriesPath (the series root
@@ -483,4 +509,5 @@ func (s *Scanner) applyVideoNFO(pool *jobPool, item *storage.Item, videoPath str
 		return
 	}
 	applyCommonNFOFields(item, n.commonNFOFields)
+	item.SetName = n.Set.value()
 }

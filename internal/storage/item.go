@@ -270,6 +270,12 @@ type Item struct {
 	Container string
 	Size      int64
 
+	// SetName is the collection ("set") a movie declares in its metadata
+	// file (<set><name>X</name></set> or <set>X</set>), kept as written. It
+	// is what the scanner groups by when a library has
+	// AutomaticallyAddToCollection on; empty when the movie names none.
+	SetName string
+
 	// CollectionType is set on library-root items (Type ==
 	// ItemTypeCollectionFolder) — mirrors VirtualFolderInfo.CollectionType
 	// — and empty otherwise.

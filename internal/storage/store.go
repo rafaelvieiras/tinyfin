@@ -92,6 +92,27 @@ type ItemStore interface {
 	QueryRelations(ctx context.Context, itemID ItemID, kind string, asParent bool) ([]ItemRelation, error)
 	UpsertRelation(ctx context.Context, rel ItemRelation) error
 	DeleteRelation(ctx context.Context, id ItemRelationID) error
+
+	// Collection (BoxSet) membership: relations of kind RelationCollection
+	// from the collection (parent) to each member (child). A collection is
+	// a set — adding a member twice keeps one link — and a member keeps its
+	// own library and parent. The ancestor index is kept in step, so a
+	// recursive listing, folder counts and played marks under the
+	// collection see the members and everything below them.
+	//
+	// AddToCollection appends the members that are not in yet and returns
+	// the ones it added, in order. RemoveFromCollection drops the named
+	// members (absent ones are ignored). SetCollectionMembers replaces the
+	// whole membership. CollectionMembers lists the direct members in the
+	// order they were added.
+	AddToCollection(ctx context.Context, collectionID ItemID, memberIDs []ItemID) ([]ItemID, error)
+	RemoveFromCollection(ctx context.Context, collectionID ItemID, memberIDs []ItemID) error
+	SetCollectionMembers(ctx context.Context, collectionID ItemID, memberIDs []ItemID) error
+	CollectionMembers(ctx context.Context, collectionID ItemID) ([]ItemID, error)
+	// MoviesWithSet lists the movies of the given libraries that declare a
+	// set name, grouped by the name as written: the backing query of the
+	// automatic collections. Names are returned in first-seen order.
+	MoviesWithSet(ctx context.Context, libraryIDs []LibraryID) ([]SetGroup, error)
 }
 
 // UserStore covers accounts and auth tokens (the "Users, sessions,
