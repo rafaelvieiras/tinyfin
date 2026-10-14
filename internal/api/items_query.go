@@ -947,7 +947,7 @@ func shapeListItem(d baseItemDto, iq itemsQuery) baseItemDto {
 		d.UserData = nil
 	}
 	if !iq.images || (iq.imageLimit != nil && *iq.imageLimit == 0) {
-		d.ImageTags, d.BackdropImageTags, d.PrimaryImageAspectRatio, d.ImageBlurHashes = nil, nil, nil, nil
+		d.ImageTags, d.BackdropImageTags, d.PrimaryImageAspectRatio, d.ImageBlurHashes = map[string]string{}, nil, nil, map[string]map[string]string{}
 	} else if iq.imageTypes != nil {
 		for k := range d.ImageTags {
 			if !iq.imageTypes[strings.ToLower(k)] {

@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- A media source is named after its file, like the reference.
+- `ImageTags`, `BackdropImageTags` and `ImageBlurHashes` are always present on an
+  item (empty when it has no picture).
 - Library scans are much faster on slow filesystems: files whose size and
   mtime are unchanged since their last successful probe reuse the stored media
   info instead of running `ffprobe`; scan workers default to 8, `ffprobe`
@@ -20,6 +23,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Local artwork follows the reference: `png`, `jpg`, `jpeg`, `webp`, `tbn` and
+  `gif` pictures in any case; `<video>`/`<video>-poster`/`poster`/`folder`/
+  `cover`/`default`/`movie` for `Primary`; `Logo`, `Banner`, `Art`, `Thumb` and
+  `Disc` names; every `fanart`/`background`/`art`/`backdrop<N>`/`extrafanart/`
+  match as an indexed `Backdrop`; season pictures from the series folder
+  (`seasonNN-poster`, `season-specials-poster`) and the season folder; episode
+  `<episode>-thumb`/`<episode>` pictures; folder items and the library root's
+  own pictures; `ImageBlurHashes`, tags that change with the file, `Art` in
+  `ImageTags`, `Backdrop/{index}` answering 404/400 like the reference and
+  immutable caching for tagged requests.
+- Trailers, special features, theme songs and theme videos are cataloged as
+  items owned by their movie, series or season and served by
+  `/Items/{id}/LocalTrailers`, `/SpecialFeatures`, `/ThemeSongs`,
+  `/ThemeVideos`, `/ThemeMedia` and the user-scoped legacy forms; items carry
+  `ExtraType`, `LocalTrailerCount`, `SpecialFeatureCount` and (stacked movies)
+  `PartCount`; `/Videos/{id}/AdditionalParts` lists the other files of a
+  stacked movie. Extras never show up in listings, counts or searches. New
+  migration `0020_extras`.
+- Other versions of a movie and files of one episode with the same numbering
+  and name are media sources of one item (selectable by `MediaSourceId`).
+- Season folders that share a number are counted in the series' `ChildCount`;
+  a folder named like an episode (`S26E01`) is a plain folder; `E5E6`,
+  `E05E06E07` and `Show Title3` numbering; a movie folder that also holds a
+  sub folder is a `Folder` item; `ico`, `wbmp` and camera raw pictures are
+  photos.
+- Conformance: specs `images.md` and `extras.md`, 28 new scenarios, lazy
+  fixture libraries `Art`, `ArtShows`, `Extras`, `ExtraShows`, `Resid` and
+  `PhotoTypes`, and `{{library.<key>.id}}` templates.
 - Library scans follow the reference's naming without metadata: a movie folder
   keeps its text as the name (`Foo (2015)`) and the year is read from it; loose
   movie files, folders of several movies, stacked parts and versions are

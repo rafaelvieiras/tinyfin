@@ -49,23 +49,23 @@ type extraSuffix struct {
 	word      string
 	extraType string
 	name      string
-	// anySep: "." and "_" may stand before the word as well as "-".
-	anySep bool
+	// seps are the characters that may stand before the word.
+	seps string
 }
 
 var extraSuffixList = []extraSuffix{
-	{"trailer", storage.ExtraTypeTrailer, "Trailer", true},
-	{"featurette", storage.ExtraTypeFeaturette, "Featurette", false},
-	{"behindthescenes", storage.ExtraTypeBehindTheScenes, "Behind The Scenes", false},
-	{"deletedscene", storage.ExtraTypeDeletedScene, "Deleted Scene", false},
-	{"deleted", storage.ExtraTypeDeletedScene, "Deleted Scene", false},
-	{"interview", storage.ExtraTypeInterview, "Interview", false},
-	{"scene", storage.ExtraTypeScene, "Scene", false},
-	{"short", storage.ExtraTypeShort, "Short", false},
-	{"sample", storage.ExtraTypeSample, "Sample", false},
-	{"clip", storage.ExtraTypeClip, "Clip", false},
-	{"extra", storage.ExtraTypeUnknown, "Extra", false},
-	{"other", storage.ExtraTypeUnknown, "Extra", false},
+	{"trailer", storage.ExtraTypeTrailer, "Trailer", "-._"},
+	{"featurette", storage.ExtraTypeFeaturette, "Featurette", "-"},
+	{"behindthescenes", storage.ExtraTypeBehindTheScenes, "Behind The Scenes", "-"},
+	{"deletedscene", storage.ExtraTypeDeletedScene, "Deleted Scene", "-"},
+	{"deleted", storage.ExtraTypeDeletedScene, "Deleted Scene", "-"},
+	{"interview", storage.ExtraTypeInterview, "Interview", "-"},
+	{"scene", storage.ExtraTypeScene, "Scene", "-"},
+	{"short", storage.ExtraTypeShort, "Short", "-"},
+	{"sample", storage.ExtraTypeSample, "Sample", "-_"},
+	{"clip", storage.ExtraTypeClip, "Clip", "-"},
+	{"extra", storage.ExtraTypeUnknown, "Extra", "-"},
+	{"other", storage.ExtraTypeUnknown, "Extra", "-"},
 }
 
 // extraOfFile classifies a video file name (with extension) that sits beside
@@ -79,12 +79,10 @@ func extraOfFile(name string) (prefix string, suffix extraSuffix, ok bool) {
 		return "", extraSuffixList[0], true
 	}
 	for _, sfx := range extraSuffixList {
-		for _, sep := range []string{"-", ".", "_"} {
-			if sep != "-" && !sfx.anySep {
-				continue
-			}
-			if strings.HasSuffix(lower, sep+sfx.word) && len(lower) > len(sep+sfx.word) {
-				return stem[:len(stem)-len(sep+sfx.word)], sfx, true
+		for _, sep := range sfx.seps {
+			tail := string(sep) + sfx.word
+			if strings.HasSuffix(lower, tail) && len(lower) > len(tail) {
+				return stem[:len(stem)-len(tail)], sfx, true
 			}
 		}
 	}
@@ -99,9 +97,9 @@ func IsExtraFile(name string) bool {
 		return true
 	}
 	// A sample is left out of the catalog by the bare word and by a "." or
-	// "_" ending (only "-sample" is also a Sample extra).
+	// " " ending (the "-" and "_" endings are Sample extras).
 	lower := strings.ToLower(strings.TrimSuffix(name, filepath.Ext(name)))
-	return lower == "sample" || strings.HasSuffix(lower, ".sample") || strings.HasSuffix(lower, "_sample")
+	return lower == "sample" || strings.HasSuffix(lower, ".sample") || strings.HasSuffix(lower, " sample")
 }
 
 // hasRootExtraFiles reports whether dir holds a video file that is an extra by
@@ -151,7 +149,7 @@ func extraTitle(stem string) string {
 			}
 		}
 	}
-	if prefix, _, ok := extraOfFile(stem + ".x"); ok {
+	if prefix, _, ok := extraOfFile(stem + ".x"); ok && prefix != "" {
 		stem = prefix
 	}
 	title, _ := CleanTitle(stem, true)

@@ -198,6 +198,9 @@ func (c *Client) Setup(ctx context.Context, adminUser, adminPass, mediaRoot stri
 		}
 		c.Available["library:"+l.Key] = true
 		c.Vars["library."+l.Key+".name"] = l.Name
+		if id := c.libraryID(ctx, l.Name); id != "" {
+			c.Vars["library."+l.Key+".id"] = id
+		}
 	}
 	_, _ = c.Do(ctx, "admin", "POST", "/Library/Refresh", nil, nil, nil)
 
@@ -225,6 +228,23 @@ func (c *Client) Setup(ctx context.Context, adminUser, adminPass, mediaRoot stri
 		warn("item %s (%s %q%s) not found after scan", it.Key, it.Type, it.Name, it.Path)
 	}
 	return warnings, nil
+}
+
+// libraryID returns the id of the library called name ("" when it is not
+// listed), as {{library.<key>.id}}.
+func (c *Client) libraryID(ctx context.Context, name string) string {
+	r, err := c.Do(ctx, "admin", "GET", "/Library/VirtualFolders", nil, nil, nil)
+	if err != nil || r.Status != 200 {
+		return ""
+	}
+	arr, _ := r.JSON.([]any)
+	for _, v := range arr {
+		if m, ok := v.(map[string]any); ok && strings.EqualFold(fmt.Sprint(m["Name"]), name) {
+			id, _ := m["ItemId"].(string)
+			return id
+		}
+	}
+	return ""
 }
 
 func statusErr(r *Response, err error) string {
@@ -396,6 +416,9 @@ func (c *Client) materialize(ctx context.Context, ll *lazyLibrary) (undo func(),
 	}
 	c.Available["library:"+l.Key] = true
 	c.Vars["library."+l.Key+".name"] = l.Name
+	if id := c.libraryID(ctx, l.Name); id != "" {
+		c.Vars["library."+l.Key+".id"] = id
+	}
 	_, _ = c.Do(ctx, "admin", "POST", "/Library/Refresh", nil, nil, nil)
 	deadline := time.Now().Add(60 * time.Second)
 	for _, it := range ll.items {

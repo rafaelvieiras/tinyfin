@@ -94,7 +94,7 @@ reference source open in the same session.
   scenario). The runner adds the identity's `Authorization` header unless
   `request.noAuth` is true.
 * Templates: `{{user.<key>.id|name|password}}`, `{{item.<key>.id|name}}`,
-  `{{library.<key>.name}}`, `{{capture.<name>}}`, `{{server.mediaroot}}`.
+  `{{library.<key>.id|name}}`, `{{capture.<name>}}`, `{{server.mediaroot}}`.
 * `{{x|dashed}}` renders a 32-hex id in its 8-4-4-4-12 form, `{{x|upper}}` in upper case (filters combine);
   `{{device.<identity>}}` is the DeviceId the runner uses for an identity and
   `{{run.suffix}}` the per-run DeviceId suffix (see *Running*).

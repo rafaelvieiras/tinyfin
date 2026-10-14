@@ -1,0 +1,1740 @@
+[
+ {
+  "id": "extras.local.trailers",
+  "endpoint": "GET /Items/{itemId}/LocalTrailers",
+  "spec": "extras.md#find",
+  "scope": "modern",
+  "tags": [
+   "extras"
+  ],
+  "covers": [
+   "extras.find.R1",
+   "extras.find.R4",
+   "extras.item.R2",
+   "extras.routes.R1"
+  ],
+  "requires": [
+   "item:ex-all",
+   "library:extras"
+  ],
+  "steps": [
+   {
+    "name": "a trailers folder and a '-trailer' file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-all.id}}/LocalTrailers"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$[0].Name",
+       "op": "eq",
+       "value": "Folder"
+      },
+      {
+       "path": "$[1].Name",
+       "op": "eq",
+       "value": "Trailer"
+      },
+      {
+       "path": "$[0].Type",
+       "op": "eq",
+       "value": "Trailer"
+      },
+      {
+       "path": "$[0].ExtraType",
+       "op": "eq",
+       "value": "Trailer"
+      },
+      {
+       "path": "$[0].IsFolder",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$[0].MediaType",
+       "op": "eq",
+       "value": "Video"
+      },
+      {
+       "path": "$[0].Id",
+       "op": "hex32"
+      },
+      {
+       "path": "$[0].MediaSources",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[0].RunTimeTicks",
+       "op": "exists"
+      }
+     ]
+    },
+    "capture": {
+     "trailer": "$[0].Id"
+    }
+   },
+   {
+    "name": "the extra is an item of its own",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.trailer}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Trailer"
+      },
+      {
+       "path": "$.ExtraType",
+       "op": "eq",
+       "value": "Trailer"
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Folder"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "extras.local.special-features",
+  "endpoint": "GET /Items/{itemId}/SpecialFeatures",
+  "spec": "extras.md#find",
+  "scope": "modern",
+  "tags": [
+   "extras"
+  ],
+  "covers": [
+   "extras.find.R2",
+   "extras.find.R3",
+   "extras.find.R5"
+  ],
+  "requires": [
+   "item:ex-all",
+   "library:extras"
+  ],
+  "steps": [
+   {
+    "name": "every features folder and the '-featurette' file, by name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-all.id}}/SpecialFeatures"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 11
+      },
+      {
+       "path": "$[0].Name",
+       "op": "eq",
+       "value": "Chat"
+      },
+      {
+       "path": "$[1].Name",
+       "op": "eq",
+       "value": "Cut One"
+      },
+      {
+       "path": "$[2].Name",
+       "op": "eq",
+       "value": "Deep Dive"
+      },
+      {
+       "path": "$[3].Name",
+       "op": "eq",
+       "value": "Featurette"
+      },
+      {
+       "path": "$[4].Name",
+       "op": "eq",
+       "value": "Making Of"
+      },
+      {
+       "path": "$[5].Name",
+       "op": "eq",
+       "value": "Mini"
+      },
+      {
+       "path": "$[6].Name",
+       "op": "eq",
+       "value": "Misc"
+      },
+      {
+       "path": "$[7].Name",
+       "op": "eq",
+       "value": "On Set"
+      },
+      {
+       "path": "$[8].Name",
+       "op": "eq",
+       "value": "Opening"
+      },
+      {
+       "path": "$[9].Name",
+       "op": "eq",
+       "value": "Snip"
+      },
+      {
+       "path": "$[10].Name",
+       "op": "eq",
+       "value": "Taste"
+      },
+      {
+       "path": "$[0].Type",
+       "op": "eq",
+       "value": "Video"
+      },
+      {
+       "path": "$[0].ExtraType",
+       "op": "eq",
+       "value": "Interview"
+      },
+      {
+       "path": "$[1].ExtraType",
+       "op": "eq",
+       "value": "DeletedScene"
+      },
+      {
+       "path": "$[2].ExtraType",
+       "op": "eq",
+       "value": "Featurette"
+      },
+      {
+       "path": "$[3].ExtraType",
+       "op": "eq",
+       "value": "Featurette"
+      },
+      {
+       "path": "$[4].ExtraType",
+       "op": "eq",
+       "value": "Unknown"
+      },
+      {
+       "path": "$[5].ExtraType",
+       "op": "eq",
+       "value": "Short"
+      },
+      {
+       "path": "$[6].ExtraType",
+       "op": "eq",
+       "value": "Unknown"
+      },
+      {
+       "path": "$[7].ExtraType",
+       "op": "eq",
+       "value": "BehindTheScenes"
+      },
+      {
+       "path": "$[8].ExtraType",
+       "op": "eq",
+       "value": "Scene"
+      },
+      {
+       "path": "$[9].ExtraType",
+       "op": "eq",
+       "value": "Clip"
+      },
+      {
+       "path": "$[10].ExtraType",
+       "op": "eq",
+       "value": "Sample"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "extras.local.counts",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "extras.md#counts",
+  "scope": "modern",
+  "tags": [
+   "extras"
+  ],
+  "covers": [
+   "extras.counts.R1"
+  ],
+  "requires": [
+   "item:ex-all",
+   "item:alpha",
+   "library:extras"
+  ],
+  "steps": [
+   {
+    "name": "a single read carries the counts",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-all.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.LocalTrailerCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.SpecialFeatureCount",
+       "op": "eq",
+       "value": 11
+      }
+     ]
+    }
+   },
+   {
+    "name": "a listing carries them when Fields asks",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.ex-all.id}}",
+      "Fields": "LocalTrailerCount,SpecialFeatureCount"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].LocalTrailerCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].SpecialFeatureCount",
+       "op": "eq",
+       "value": 11
+      }
+     ]
+    }
+   },
+   {
+    "name": "and leaves them out otherwise",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.ex-all.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].LocalTrailerCount",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a movie without extras says zero",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.LocalTrailerCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.SpecialFeatureCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "extras.local.names-and-numbering",
+  "endpoint": "GET /Items/{itemId}/LocalTrailers",
+  "spec": "extras.md#find",
+  "scope": "modern",
+  "tags": [
+   "extras"
+  ],
+  "covers": [
+   "extras.find.R3",
+   "extras.find.R4"
+  ],
+  "requires": [
+   "item:ex-names",
+   "library:extras"
+  ],
+  "steps": [
+   {
+    "name": "default names, numbered when repeated; a prefix that is not the movie's names it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-names.id}}/LocalTrailers"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$[0].Name",
+       "op": "eq",
+       "value": "Trailer"
+      },
+      {
+       "path": "$[1].Name",
+       "op": "eq",
+       "value": "Trailer 2"
+      },
+      {
+       "path": "$[2].Name",
+       "op": "eq",
+       "value": "x"
+      }
+     ]
+    }
+   },
+   {
+    "name": "other suffix forms get their default names",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-names.id}}/SpecialFeatures"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 5
+      },
+      {
+       "path": "$[0].Name",
+       "op": "eq",
+       "value": "Behind The Scenes"
+      },
+      {
+       "path": "$[1].Name",
+       "op": "eq",
+       "value": "Deleted Scene"
+      },
+      {
+       "path": "$[2].Name",
+       "op": "eq",
+       "value": "Extra"
+      },
+      {
+       "path": "$[3].Name",
+       "op": "eq",
+       "value": "Sample"
+      },
+      {
+       "path": "$[4].Name",
+       "op": "eq",
+       "value": "Sample 2"
+      },
+      {
+       "path": "$[0].ExtraType",
+       "op": "eq",
+       "value": "BehindTheScenes"
+      },
+      {
+       "path": "$[1].ExtraType",
+       "op": "eq",
+       "value": "DeletedScene"
+      },
+      {
+       "path": "$[2].ExtraType",
+       "op": "eq",
+       "value": "Unknown"
+      },
+      {
+       "path": "$[3].ExtraType",
+       "op": "eq",
+       "value": "Sample"
+      },
+      {
+       "path": "$[4].ExtraType",
+       "op": "eq",
+       "value": "Sample"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "extras.local.not-extras",
+  "endpoint": "GET /Items",
+  "spec": "extras.md#find",
+  "scope": "modern",
+  "tags": [
+   "extras"
+  ],
+  "covers": [
+   "extras.find.R6"
+  ],
+  "requires": [
+   "item:ex-hidden",
+   "library:extras"
+  ],
+  "steps": [
+   {
+    "name": "'.featurette', '-featurettes' and '.sample' files are no extras and no movies",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-hidden.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.LocalTrailerCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.SpecialFeatureCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "the movie of that folder is the only one named like it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "ParentId": "{{library.extras.id}}",
+      "SearchTerm": "Ex Hidden"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "extras.local.unowned",
+  "endpoint": "GET /Items/{itemId}/LocalTrailers",
+  "spec": "extras.md#owner",
+  "scope": "modern",
+  "tags": [
+   "extras"
+  ],
+  "covers": [
+   "extras.find.R7"
+  ],
+  "requires": [
+   "item:ex-unowned-a",
+   "item:ex-unowned-b",
+   "library:extras"
+  ],
+  "steps": [
+   {
+    "name": "movies that share a folder own no trailers",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-unowned-a.id}}/LocalTrailers"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "nor features",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-unowned-b.id}}/SpecialFeatures"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "nor themes",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-unowned-a.id}}/ThemeSongs"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "extras.local.folder-shape",
+  "endpoint": "GET /Items/{itemId}/LocalTrailers",
+  "spec": "extras.md#shape",
+  "scope": "modern",
+  "tags": [
+   "extras"
+  ],
+  "covers": [
+   "extras.find.R8"
+  ],
+  "requires": [
+   "item:ex-shape-plain",
+   "item:ex-shape-root",
+   "library:extras"
+  ],
+  "steps": [
+   {
+    "name": "a movie in a folder item keeps what its extras folders hold",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-shape-plain.id}}/LocalTrailers"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[0].Name",
+       "op": "eq",
+       "value": "Plain"
+      }
+     ]
+    }
+   },
+   {
+    "name": "and its theme",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-shape-plain.id}}/ThemeSongs"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "but loses everything when a '-trailer' file sits beside it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-shape-root.id}}/LocalTrailers"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "theme included",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-shape-root.id}}/ThemeSongs"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "extras.theme.songs-and-videos",
+  "endpoint": "GET /Items/{itemId}/ThemeSongs",
+  "spec": "extras.md#themes",
+  "scope": "modern",
+  "tags": [
+   "extras"
+  ],
+  "covers": [
+   "extras.theme.R1",
+   "extras.theme.R2",
+   "extras.theme.R4"
+  ],
+  "requires": [
+   "item:ex-all",
+   "library:extras"
+  ],
+  "steps": [
+   {
+    "name": "theme.mp3 and theme-music/*.mp3, not the video in theme-music",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-all.id}}/ThemeSongs"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.OwnerId",
+       "op": "eq",
+       "value": "{{item.ex-all.id}}"
+      },
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.StartIndex",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Second Theme"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Theme Song"
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "Audio"
+      },
+      {
+       "path": "$.Items[0].ExtraType",
+       "op": "eq",
+       "value": "ThemeSong"
+      },
+      {
+       "path": "$.Items[0].MediaType",
+       "op": "eq",
+       "value": "Audio"
+      }
+     ]
+    }
+   },
+   {
+    "name": "videos of backdrops/",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-all.id}}/ThemeVideos"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Loop"
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "Video"
+      },
+      {
+       "path": "$.Items[0].ExtraType",
+       "op": "eq",
+       "value": "ThemeVideo"
+      }
+     ]
+    }
+   },
+   {
+    "name": "both at once",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-all.id}}/ThemeMedia"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ThemeSongsResult.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.ThemeVideosResult.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SoundtrackSongsResult.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.ThemeSongsResult.OwnerId",
+       "op": "eq",
+       "value": "{{item.ex-all.id}}"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "extras.theme.inherit",
+  "endpoint": "GET /Items/{itemId}/ThemeSongs",
+  "spec": "extras.md#themes",
+  "scope": "modern",
+  "tags": [
+   "extras"
+  ],
+  "covers": [
+   "extras.theme.R3",
+   "extras.series.R1"
+  ],
+  "requires": [
+   "item:extra-show",
+   "item:extra-season1",
+   "item:extra-ep1",
+   "library:extrashows"
+  ],
+  "steps": [
+   {
+    "name": "a series has its own theme",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.extra-show.id}}/ThemeSongs"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.OwnerId",
+       "op": "eq",
+       "value": "{{item.extra-show.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an episode has none",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.extra-ep1.id}}/ThemeSongs"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.OwnerId",
+       "op": "eq",
+       "value": "{{item.extra-ep1.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "with InheritFromParent the closest owner that has some answers",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.extra-ep1.id}}/ThemeSongs",
+     "query": {
+      "InheritFromParent": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.OwnerId",
+       "op": "eq",
+       "value": "{{item.extra-season1.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "videos come from the series when the season has none",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.extra-ep1.id}}/ThemeVideos",
+     "query": {
+      "InheritFromParent": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.OwnerId",
+       "op": "eq",
+       "value": "{{item.extra-show.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "ThemeMedia inherits the same way",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.extra-ep1.id}}/ThemeMedia",
+     "query": {
+      "InheritFromParent": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ThemeSongsResult.OwnerId",
+       "op": "eq",
+       "value": "{{item.extra-season1.id}}"
+      },
+      {
+       "path": "$.ThemeVideosResult.OwnerId",
+       "op": "eq",
+       "value": "{{item.extra-show.id}}"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "extras.series.series-and-season",
+  "endpoint": "GET /Items/{itemId}/LocalTrailers",
+  "spec": "extras.md#series",
+  "scope": "modern",
+  "tags": [
+   "extras"
+  ],
+  "covers": [
+   "extras.series.R1",
+   "extras.counts.R1"
+  ],
+  "requires": [
+   "item:extra-show",
+   "item:extra-season1",
+   "item:extra-ep1",
+   "library:extrashows"
+  ],
+  "steps": [
+   {
+    "name": "a series' trailers",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.extra-show.id}}/LocalTrailers"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[0].Name",
+       "op": "eq",
+       "value": "Show"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a series' features: the folder file and the '-featurette' named like the series",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.extra-show.id}}/SpecialFeatures"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$[0].Name",
+       "op": "eq",
+       "value": "Featurette"
+      },
+      {
+       "path": "$[1].Name",
+       "op": "eq",
+       "value": "Show Extra"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a season's own",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.extra-season1.id}}/LocalTrailers"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[0].Name",
+       "op": "eq",
+       "value": "Season"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a season's features: its folder and the episode-named '-featurette'",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.extra-season1.id}}/SpecialFeatures"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$[0].Name",
+       "op": "eq",
+       "value": "Extra Show S01E01"
+      },
+      {
+       "path": "$[1].Name",
+       "op": "eq",
+       "value": "Season Extra"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an episode has none",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.extra-ep1.id}}/LocalTrailers"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "counts on the series",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.extra-show.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.LocalTrailerCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SpecialFeatureCount",
+       "op": "eq",
+       "value": 2
+      }
+     ]
+    }
+   },
+   {
+    "name": "counts on the season",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.extra-season1.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.LocalTrailerCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SpecialFeatureCount",
+       "op": "eq",
+       "value": 2
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "extras.item.hidden-from-listings",
+  "endpoint": "GET /Items",
+  "spec": "extras.md#item",
+  "scope": "modern",
+  "tags": [
+   "extras"
+  ],
+  "covers": [
+   "extras.item.R1",
+   "extras.audio.R1"
+  ],
+  "requires": [
+   "item:ex-all",
+   "library:extras",
+   "item:ex-all"
+  ],
+  "steps": [
+   {
+    "name": "an extra",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-all.id}}/LocalTrailers"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[0].Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "extra": "$[0].Id"
+    }
+   },
+   {
+    "name": "no trailer, video or audio item appears in a recursive listing of the library",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "ParentId": "{{library.extras.id}}",
+      "IncludeItemTypes": "Trailer,Audio,Video"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "trailers are not counted",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Counts"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TrailerCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "an extra is found by its id",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{capture.extra}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "extras.routes.errors",
+  "endpoint": "GET /Items/{itemId}/LocalTrailers",
+  "spec": "extras.md#routes",
+  "scope": "modern",
+  "tags": [
+   "extras"
+  ],
+  "covers": [
+   "extras.routes.R1"
+  ],
+  "requires": [
+   "item:ex-all",
+   "item:ex-unowned-folder",
+   "library:extras"
+  ],
+  "steps": [
+   {
+    "name": "not a GUID",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/not-a-guid/LocalTrailers"
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "not a GUID (themes)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/not-a-guid/ThemeSongs"
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "not a GUID (parts)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/not-a-guid/AdditionalParts"
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "unknown item",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/00000000000000000000000000000001/LocalTrailers"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "unknown item (features)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/00000000000000000000000000000001/SpecialFeatures"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "unknown item (themes)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/00000000000000000000000000000001/ThemeVideos"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "unknown item (parts)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/00000000000000000000000000000001/AdditionalParts"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "a folder has none",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-unowned-folder.id}}/LocalTrailers"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "anonymous",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-all.id}}/LocalTrailers",
+     "noAuth": true
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "extras.routes.legacy-user-forms",
+  "endpoint": "GET /Users/{userId}/Items/{itemId}/LocalTrailers",
+  "spec": "extras.md#routes",
+  "scope": "legacy-web-required",
+  "tags": [
+   "extras",
+   "legacy",
+   "web-client"
+  ],
+  "covers": [
+   "extras.routes.R2"
+  ],
+  "requires": [
+   "item:ex-all",
+   "library:extras"
+  ],
+  "steps": [
+   {
+    "name": "trailers",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Users/{{user.admin.id}}/Items/{{item.ex-all.id}}/LocalTrailers"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 2
+      }
+     ]
+    }
+   },
+   {
+    "name": "features",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Users/{{user.admin.id}}/Items/{{item.ex-all.id}}/SpecialFeatures"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 11
+      }
+     ]
+    }
+   },
+   {
+    "name": "an unknown user",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Users/00000000000000000000000000000001/Items/{{item.ex-all.id}}/LocalTrailers"
+    },
+    "expect": {
+     "status": 404
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "extras.parts.stacked",
+  "endpoint": "GET /Videos/{itemId}/AdditionalParts",
+  "spec": "extras.md#parts",
+  "scope": "modern",
+  "tags": [
+   "extras"
+  ],
+  "covers": [
+   "extras.parts.R1"
+  ],
+  "requires": [
+   "item:ex-parts",
+   "library:extras"
+  ],
+  "steps": [
+   {
+    "name": "three parts are one movie",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-parts.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.PartCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Ex Parts (2224)"
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "the other two are listed apart",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.ex-parts.id}}/AdditionalParts"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.StartIndex",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "Video"
+      },
+      {
+       "path": "$.Items[0].ExtraType",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Ex Parts (2224) - part2"
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "hex32"
+      }
+     ]
+    }
+   },
+   {
+    "name": "and are not movies of the library",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "ParentId": "{{library.extras.id}}",
+      "SearchTerm": "Ex Parts"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "a movie that is not stacked has no part count",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-all.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.PartCount",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "extras.versions.movie",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "extras.md#versions",
+  "scope": "modern",
+  "tags": [
+   "extras"
+  ],
+  "covers": [
+   "extras.versions.R1"
+  ],
+  "requires": [
+   "item:ex-versions",
+   "library:extras"
+  ],
+  "steps": [
+   {
+    "name": "a second file named after the movie is a version: one more media source",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-versions.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.MediaSources[0].Name",
+       "op": "eq",
+       "value": "Ex Versions (2225)"
+      },
+      {
+       "path": "$.MediaSources[1].Name",
+       "op": "eq",
+       "value": "4K"
+      },
+      {
+       "path": "$.MediaSources[1].Id",
+       "op": "hex32"
+      }
+     ]
+    }
+   },
+   {
+    "name": "PlaybackInfo lists both",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-versions.id}}/PlaybackInfo"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 2
+      }
+     ]
+    }
+   },
+   {
+    "name": "and the movie is the only one",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "ParentId": "{{library.extras.id}}",
+      "SearchTerm": "Ex Versions"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ }
+]

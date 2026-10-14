@@ -92,7 +92,7 @@ type baseItemDto struct {
 	// back to a generic placeholder icon. Each page is still bounded
 	// (defaultItemsLimit/ItemFilter.Limit, AGENTS.md principle 1) so this
 	// is N+1 bounded queries, not an unbounded scan.
-	ImageTags map[string]string `json:"ImageTags,omitempty"`
+	ImageTags map[string]string `json:"ImageTags,omitzero"`
 
 	// BackdropImageTags: unlike every other image kind, an item can have
 	// more than one Backdrop (fanart.jpg plus any provider-returned
@@ -108,11 +108,11 @@ type baseItemDto struct {
 	// means no image" behavior ImageTags's own doc comment above
 	// describes) — see docs/12's "Movie detail page — image tags for
 	// Backdrop and Logo".
-	BackdropImageTags []string `json:"BackdropImageTags,omitempty"`
+	BackdropImageTags []string `json:"BackdropImageTags,omitzero"`
 
 	// ImageBlurHashes: for each image kind present, a map from the image's
 	// tag to its BlurHash placeholder.
-	ImageBlurHashes map[string]map[string]string `json:"ImageBlurHashes,omitempty"`
+	ImageBlurHashes map[string]map[string]string `json:"ImageBlurHashes,omitzero"`
 
 	// PrimaryImageAspectRatio is the Primary image's width/height ratio.
 	// Found missing, not just unpolished, by reading jellyfin-web's
@@ -750,6 +750,29 @@ func (s *Server) imageTagsFor(ctx context.Context, id storage.ItemID) (tags map[
 	return tags, aspectRatio, backdropTags, blurHashes
 }
 
+// The image members of an item are always present, empty when it has no
+// picture (omitzero drops them only when a listing turns images off).
+func orEmptyMap(m map[string]string) map[string]string {
+	if m == nil {
+		return map[string]string{}
+	}
+	return m
+}
+
+func orEmptySlice(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
+}
+
+func orEmptyNested(m map[string]map[string]string) map[string]map[string]string {
+	if m == nil {
+		return map[string]map[string]string{}
+	}
+	return m
+}
+
 // parentImageInheritanceItemTypes are the ItemTypes SeriesPrimaryImageTag
 // and the Parent{Logo,Backdrop,Thumb}* fields are ever populated for —
 // docs/12's "Season/Episode DTO — inherited Parent* image fields and
@@ -995,9 +1018,9 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		CollectionType:          string(item.CollectionType),
 		MediaType:               mediaTypeFor(item.Type),
 		MediaStreams:            mediaStreamDtos(item.MediaStreams),
-		ImageTags:               imageTags,
-		BackdropImageTags:       backdropImageTags,
-		ImageBlurHashes:         imageBlurHashes,
+		ImageTags:               orEmptyMap(imageTags),
+		BackdropImageTags:       orEmptySlice(backdropImageTags),
+		ImageBlurHashes:         orEmptyNested(imageBlurHashes),
 		PrimaryImageAspectRatio: primaryImageAspectRatio,
 		People:                  peopleDtos(item.People),
 		GenreItems:              genreItemsFor(item.Genres),

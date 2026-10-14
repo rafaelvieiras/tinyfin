@@ -18424,5 +18424,531 @@
     }
    }
   ]
+ },
+ {
+  "id": "items.seasons.merged-folders",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "items.md#get",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.seasons.R8"
+  ],
+  "requires": [
+   "item:dup-show",
+   "library:resid"
+  ],
+  "steps": [
+   {
+    "name": "a series counts every season folder, one season stands for the folders of a number",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.dup-show.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.RecursiveItemCount",
+       "op": "eq",
+       "value": 4
+      }
+     ]
+    }
+   },
+   {
+    "name": "listing the series returns one season per number",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{item.dup-show.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Season 1"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Specials"
+      }
+     ]
+    }
+   },
+   {
+    "name": "and so do the seasons of the series",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Shows/{{item.dup-show.id}}/Seasons"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "items.seasons.episode-folder",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.seasons.R9"
+  ],
+  "requires": [
+   "item:folder-show",
+   "item:folder-show-folder",
+   "library:resid"
+  ],
+  "steps": [
+   {
+    "name": "a folder named like an episode is a plain folder of the series",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{item.folder-show.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[?Name=S26E01].Type",
+       "op": "eq",
+       "value": "Folder"
+      },
+      {
+       "path": "$.Items[?Name=Season 1].Type",
+       "op": "eq",
+       "value": "Season"
+      },
+      {
+       "path": "$.Items[?Name=Season 26].Type",
+       "op": "eq",
+       "value": "Season"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the episode in it belongs to the season its numbers name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Shows/{{item.folder-show.id}}/Episodes"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[?Name=Folder Show S26E01].ParentIndexNumber",
+       "op": "eq",
+       "value": 26
+      },
+      {
+       "path": "$.Items[?Name=Folder Show S26E01].IndexNumber",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[?Name=Folder Show S26E01].SeasonName",
+       "op": "eq",
+       "value": "Season 26"
+      }
+     ]
+    }
+   },
+   {
+    "name": "which exists next to the season folder's",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Shows/{{item.folder-show.id}}/Seasons"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Season 26"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "items.episodes.versions",
+  "endpoint": "GET /Shows/{seriesId}/Episodes",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.episodes.R11"
+  ],
+  "requires": [
+   "item:version-show",
+   "library:resid"
+  ],
+  "steps": [
+   {
+    "name": "files with the same numbers and name are one episode",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Shows/{{item.version-show.id}}/Episodes"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].IndexNumber",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[1].IndexNumber",
+       "op": "eq",
+       "value": 2
+      }
+     ]
+    },
+    "capture": {
+     "ep1": "$.Items[0].Id"
+    }
+   },
+   {
+    "name": "it has a media source per file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.ep1}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.MediaSources[*].Name",
+       "op": "contains",
+       "value": "1080p"
+      },
+      {
+       "path": "$.MediaSources[*].Name",
+       "op": "contains",
+       "value": "4K"
+      },
+      {
+       "path": "$.MediaSources[*].Name",
+       "op": "contains",
+       "value": "Version Show S01E01"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the season counts two episodes",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.version-show.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.RecursiveItemCount",
+       "op": "eq",
+       "value": 2
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "items.episodes.numbering-forms",
+  "endpoint": "GET /Shows/{seriesId}/Episodes",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.episodes.R12"
+  ],
+  "requires": [
+   "item:number-show",
+   "library:resid"
+  ],
+  "steps": [
+   {
+    "name": "a chain of E-numbers ends at the last, a word with the number glued to it gives it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Shows/{{item.number-show.id}}/Episodes"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 5
+      },
+      {
+       "path": "$.Items[?Name=Number Show E5E6].IndexNumber",
+       "op": "eq",
+       "value": 6
+      },
+      {
+       "path": "$.Items[?Name=Number Show E5E6].ParentIndexNumber",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[?Name=Number Show E05E06E07].IndexNumber",
+       "op": "eq",
+       "value": 7
+      },
+      {
+       "path": "$.Items[?Name=Number Show Title3].IndexNumber",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[?Name=Number Show Part3].Id",
+       "op": "exists"
+      },
+      {
+       "path": "$.Items[?Name=Number Show Part3].IndexNumber",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[?Name=Number Show].Id",
+       "op": "exists"
+      },
+      {
+       "path": "$.Items[?Name=Number Show].IndexNumber",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "items.names.movie-folder-with-subfolder",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "items.md#get",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.names.R12"
+  ],
+  "requires": [
+   "item:ex-shape-plain",
+   "item:ex-shape-plain-folder",
+   "library:extras"
+  ],
+  "steps": [
+   {
+    "name": "a movie folder that also holds a sub folder is a Folder item",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-shape-plain-folder.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Folder"
+      },
+      {
+       "path": "$.IsFolder",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 2
+      }
+     ]
+    }
+   },
+   {
+    "name": "the movie is inside it and keeps its name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ex-shape-plain.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Movie"
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Ex Shape Plain (2227)"
+      },
+      {
+       "path": "$.ParentId",
+       "op": "eq",
+       "value": "{{item.ex-shape-plain-folder.id}}"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "items.homevideos.photo-types",
+  "endpoint": "GET /Items",
+  "spec": "items.md#homevideos",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.homevideos.R10"
+  ],
+  "requires": [
+   "item:phototypes-album",
+   "library:phototypes"
+  ],
+  "steps": [
+   {
+    "name": "jpg, jpeg, png, gif, bmp, webp, tif, tiff, avif, ico and the cr2, dng, nef, arw raw formats are photos",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{item.phototypes-album.id}}",
+      "IncludeItemTypes": "Photo"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 14
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "allmatch",
+       "value": "^photo$"
+      },
+      {
+       "path": "$.Items[*].Type",
+       "op": "allmatch",
+       "value": "^Photo$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "heic, heif, jpe, jfif, svg, psd, jxl, tga and raw are not",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{item.phototypes-album.id}}",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 14
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
  }
 ]

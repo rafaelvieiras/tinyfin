@@ -1,0 +1,1004 @@
+[
+ {
+  "id": "images.local.primary-priority",
+  "endpoint": "GET /Items/{itemId}/Images",
+  "spec": "images.md#names",
+  "scope": "modern",
+  "tags": [
+   "images"
+  ],
+  "covers": [
+   "images.names.R2"
+  ],
+  "requires": [
+   "item:art-primary",
+   "library:art"
+  ],
+  "steps": [
+   {
+    "name": "a movie's own '<video>-poster' beats poster, folder and cover",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-primary.id}}/Images"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?ImageType=Primary].Path",
+       "op": "matches",
+       "value": "Art Primary \\(2201\\)-poster\\.webp$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the item advertises it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-primary.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ImageTags.Primary",
+       "op": "hex32"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "images.local.extension-order",
+  "endpoint": "GET /Items/{itemId}/Images",
+  "spec": "images.md#names",
+  "scope": "modern",
+  "tags": [
+   "images"
+  ],
+  "covers": [
+   "images.names.R1"
+  ],
+  "requires": [
+   "item:art-extorder",
+   "library:art"
+  ],
+  "steps": [
+   {
+    "name": "png beats jpg and webp for one name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-extorder.id}}/Images"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?ImageType=Primary].Path",
+       "op": "matches",
+       "value": "poster\\.png$"
+      },
+      {
+       "path": "$[?ImageType=Backdrop].Path",
+       "op": "matches",
+       "value": "fanart\\.png$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "one name is one backdrop",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-extorder.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.BackdropImageTags",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "images.local.extensions-recognized",
+  "endpoint": "GET /Items/{itemId}/Images",
+  "spec": "images.md#names",
+  "scope": "modern",
+  "tags": [
+   "images"
+  ],
+  "covers": [
+   "images.names.R1"
+  ],
+  "requires": [
+   "item:art-extok",
+   "library:art"
+  ],
+  "steps": [
+   {
+    "name": "tbn, webp, jpeg and gif pictures, in any case, are artwork",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-extok.id}}/Images"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?ImageType=Primary].Path",
+       "op": "matches",
+       "value": "POSTER\\.TBN$"
+      },
+      {
+       "path": "$[?ImageType=Logo].Path",
+       "op": "matches",
+       "value": "logo\\.jpeg$"
+      },
+      {
+       "path": "$[?ImageType=Banner].Path",
+       "op": "matches",
+       "value": "Banner\\.GIF$"
+      },
+      {
+       "path": "$[?ImageType=Backdrop].Path",
+       "op": "matches",
+       "value": "Fanart\\.webp$"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "images.local.extensions-ignored",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "images.md#names",
+  "scope": "modern",
+  "tags": [
+   "images"
+  ],
+  "covers": [
+   "images.names.R1"
+  ],
+  "requires": [
+   "item:art-extno",
+   "library:art"
+  ],
+  "steps": [
+   {
+    "name": "avif, bmp, heic and jpe pictures are not artwork",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-extno.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ImageTags.Logo",
+       "op": "absent"
+      },
+      {
+       "path": "$.ImageTags.Banner",
+       "op": "absent"
+      },
+      {
+       "path": "$.BackdropImageTags",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "images.local.kinds",
+  "endpoint": "GET /Items/{itemId}/Images",
+  "spec": "images.md#names",
+  "scope": "modern",
+  "tags": [
+   "images"
+  ],
+  "covers": [
+   "images.names.R3",
+   "images.names.R4",
+   "images.api.R1"
+  ],
+  "requires": [
+   "item:art-kinds",
+   "library:art"
+  ],
+  "steps": [
+   {
+    "name": "each kind takes the first of its names",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-kinds.id}}/Images"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?ImageType=Logo].Path",
+       "op": "matches",
+       "value": "clearlogo\\.png$"
+      },
+      {
+       "path": "$[?ImageType=Art].Path",
+       "op": "matches",
+       "value": "clearart\\.jpg$"
+      },
+      {
+       "path": "$[?ImageType=Banner].Path",
+       "op": "matches",
+       "value": "banner\\.jpg$"
+      },
+      {
+       "path": "$[?ImageType=Thumb].Path",
+       "op": "matches",
+       "value": "landscape\\.jpg$"
+      },
+      {
+       "path": "$[?ImageType=Disc].Path",
+       "op": "matches",
+       "value": "cdart\\.jpg$"
+      },
+      {
+       "path": "$[?ImageType=Box].Path",
+       "op": "absent"
+      },
+      {
+       "path": "$[?ImageType=Screenshot].Path",
+       "op": "absent"
+      },
+      {
+       "path": "$[?ImageType=Menu].Path",
+       "op": "absent"
+      },
+      {
+       "path": "$[?ImageType=BoxRear].Path",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the item carries a tag per kind",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-kinds.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ImageTags.Logo",
+       "op": "hex32"
+      },
+      {
+       "path": "$.ImageTags.Art",
+       "op": "hex32"
+      },
+      {
+       "path": "$.ImageTags.Banner",
+       "op": "hex32"
+      },
+      {
+       "path": "$.ImageTags.Thumb",
+       "op": "hex32"
+      },
+      {
+       "path": "$.ImageTags.Disc",
+       "op": "hex32"
+      },
+      {
+       "path": "$.ImageTags.Box",
+       "op": "absent"
+      },
+      {
+       "path": "$.ImageTags.Screenshot",
+       "op": "absent"
+      },
+      {
+       "path": "$.ImageTags.Menu",
+       "op": "absent"
+      },
+      {
+       "path": "$.ImageBlurHashes.Logo",
+       "op": "exists"
+      },
+      {
+       "path": "$.ImageBlurHashes.Banner",
+       "op": "exists"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "images.local.backdrops",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "images.md#backdrops",
+  "scope": "modern",
+  "tags": [
+   "images"
+  ],
+  "covers": [
+   "images.backdrop.R1"
+  ],
+  "requires": [
+   "item:art-backdrops",
+   "library:art"
+  ],
+  "steps": [
+   {
+    "name": "every recognized backdrop is listed: fanart, fanart-1, fanart-2, background, art, extrafanart/a, extrafanart/b, backdrop1",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-backdrops.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.BackdropImageTags",
+       "op": "len",
+       "value": 8
+      },
+      {
+       "path": "$.BackdropImageTags[0]",
+       "op": "hex32"
+      },
+      {
+       "path": "$.BackdropImageTags[7]",
+       "op": "hex32"
+      },
+      {
+       "path": "$.ImageBlurHashes.Backdrop",
+       "op": "exists"
+      }
+     ]
+    }
+   },
+   {
+    "name": "all eight are served",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-backdrops.id}}/Images/Backdrop/7"
+    },
+    "expect": {
+     "status": 200
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "images.local.backdrop-duplicate",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "images.md#backdrops",
+  "scope": "modern",
+  "tags": [
+   "images"
+  ],
+  "covers": [
+   "images.backdrop.R2"
+  ],
+  "requires": [
+   "item:art-fanartdup",
+   "library:art"
+  ],
+  "steps": [
+   {
+    "name": "a '<video>-fanart' picture is two backdrops",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-fanartdup.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.BackdropImageTags",
+       "op": "len",
+       "value": 2
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "images.local.shared-folder",
+  "endpoint": "GET /Items/{itemId}/Images",
+  "spec": "images.md#shared",
+  "scope": "modern",
+  "tags": [
+   "images"
+  ],
+  "covers": [
+   "images.shared.R1",
+   "images.shared.R2"
+  ],
+  "requires": [
+   "item:art-multi-one",
+   "item:art-multi-two",
+   "item:art-multi-folder",
+   "library:art"
+  ],
+  "steps": [
+   {
+    "name": "a movie takes only its own pictures",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-multi-one.id}}/Images"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?ImageType=Primary].Path",
+       "op": "matches",
+       "value": "Multi One \\(2207\\)-poster\\.jpg$"
+      },
+      {
+       "path": "$[?ImageType=Thumb].Path",
+       "op": "matches",
+       "value": "Multi One \\(2207\\)-landscape\\.jpg$"
+      },
+      {
+       "path": "$[?ImageType=Backdrop].Path",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the other movie has its own backdrop only",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-multi-two.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.BackdropImageTags",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "the folder item has the folder's pictures",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-multi-folder.id}}/Images"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?ImageType=Primary].Path",
+       "op": "matches",
+       "value": "Art Multi/poster\\.jpg$"
+      },
+      {
+       "path": "$[?ImageType=Backdrop].Path",
+       "op": "matches",
+       "value": "Art Multi/fanart\\.jpg$"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "images.local.folder-shaped",
+  "endpoint": "GET /Items/{itemId}/Images",
+  "spec": "images.md#shape",
+  "scope": "modern",
+  "tags": [
+   "images"
+  ],
+  "covers": [
+   "images.shape.R1"
+  ],
+  "requires": [
+   "item:art-sub",
+   "item:art-sub-folder",
+   "library:art"
+  ],
+  "steps": [
+   {
+    "name": "the folder item has the pictures",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-sub-folder.id}}/Images"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?ImageType=Primary].Path",
+       "op": "matches",
+       "value": "poster\\.jpg$"
+      },
+      {
+       "path": "$[?ImageType=Logo].Path",
+       "op": "matches",
+       "value": "logo\\.png$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "and so has the movie that is alone in it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-sub.id}}/Images"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?ImageType=Primary].Path",
+       "op": "matches",
+       "value": "Art Sub \\(2208\\)/poster\\.jpg$"
+      },
+      {
+       "path": "$[?ImageType=Logo].Path",
+       "op": "matches",
+       "value": "Art Sub \\(2208\\)/logo\\.png$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the folder holds the movie and its sub folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-sub-folder.id}}",
+     "query": {
+      "Fields": "ChildCount"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Folder"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "images.series.names",
+  "endpoint": "GET /Items/{itemId}/Images",
+  "spec": "images.md#series",
+  "scope": "modern",
+  "tags": [
+   "images"
+  ],
+  "covers": [
+   "images.series.R1"
+  ],
+  "requires": [
+   "item:art-show",
+   "library:artshows"
+  ],
+  "steps": [
+   {
+    "name": "a series reads poster before folder, then the other kinds",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-show.id}}/Images"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?ImageType=Primary].Path",
+       "op": "matches",
+       "value": "Art Show \\(2210\\)/poster\\.jpg$"
+      },
+      {
+       "path": "$[?ImageType=Art].Path",
+       "op": "matches",
+       "value": "clearart\\.jpg$"
+      },
+      {
+       "path": "$[?ImageType=Banner].Path",
+       "op": "matches",
+       "value": "banner\\.jpg$"
+      },
+      {
+       "path": "$[?ImageType=Thumb].Path",
+       "op": "matches",
+       "value": "landscape\\.jpg$"
+      },
+      {
+       "path": "$[?ImageIndex=0].Path",
+       "op": "matches",
+       "value": "fanart\\.jpg$"
+      },
+      {
+       "path": "$[?ImageIndex=1].Path",
+       "op": "matches",
+       "value": "fanart-1\\.jpg$"
+      },
+      {
+       "path": "$[?ImageIndex=2].Path",
+       "op": "matches",
+       "value": "extrafanart/a\\.jpg$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "three backdrops",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-show.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.BackdropImageTags",
+       "op": "len",
+       "value": 3
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "images.season.names",
+  "endpoint": "GET /Items/{itemId}/Images",
+  "spec": "images.md#seasons",
+  "scope": "modern",
+  "tags": [
+   "images"
+  ],
+  "covers": [
+   "images.season.R1"
+  ],
+  "requires": [
+   "item:art-season1",
+   "item:art-season2",
+   "item:art-specials",
+   "library:artshows"
+  ],
+  "steps": [
+   {
+    "name": "season 1: seasonN-poster from the series folder, the season folder's landscape",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-season1.id}}/Images"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?ImageType=Primary].Path",
+       "op": "matches",
+       "value": "season1-poster\\.png$"
+      },
+      {
+       "path": "$[?ImageType=Banner].Path",
+       "op": "matches",
+       "value": "season01-banner\\.jpg$"
+      },
+      {
+       "path": "$[?ImageType=Thumb].Path",
+       "op": "matches",
+       "value": "Season 01/landscape\\.jpg$"
+      },
+      {
+       "path": "$[?ImageType=Backdrop].Path",
+       "op": "matches",
+       "value": "season01-fanart\\.jpg$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "season 2: pictures inside its own folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-season2.id}}/Images"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?ImageType=Primary].Path",
+       "op": "matches",
+       "value": "Season 02/folder\\.jpg$"
+      },
+      {
+       "path": "$[?ImageType=Logo].Path",
+       "op": "matches",
+       "value": "Season 02/logo\\.png$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "specials: season-specials-poster",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-specials.id}}/Images"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?ImageType=Primary].Path",
+       "op": "matches",
+       "value": "season-specials-poster\\.jpg$"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "images.episode.names",
+  "endpoint": "GET /Items/{itemId}/Images",
+  "spec": "images.md#episodes",
+  "scope": "modern",
+  "tags": [
+   "images"
+  ],
+  "covers": [
+   "images.episode.R1"
+  ],
+  "requires": [
+   "item:art-ep1",
+   "item:art-ep2",
+   "item:art-ep3",
+   "item:art-ep4",
+   "library:artshows"
+  ],
+  "steps": [
+   {
+    "name": "'<episode>-thumb' is the picture",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-ep1.id}}/Images"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?ImageType=Primary].Path",
+       "op": "matches",
+       "value": "Art Show S01E01-thumb\\.jpg$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "'<episode>.jpg' is the picture",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-ep2.id}}/Images"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?ImageType=Primary].Path",
+       "op": "matches",
+       "value": "Art Show S01E02\\.jpg$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "so is one in the metadata folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-ep3.id}}/Images"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?ImageType=Primary].Path",
+       "op": "matches",
+       "value": "metadata/Art Show S01E03\\.jpg$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "'<episode>-poster' is not one",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-ep4.id}}/Images"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?ImageType=Primary].Path",
+       "op": "notcontains",
+       "value": "-poster"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "images.api.index-lookup",
+  "endpoint": "GET /Items/{itemId}/Images/{imageType}/{imageIndex}",
+  "spec": "images.md#api",
+  "scope": "modern",
+  "tags": [
+   "images"
+  ],
+  "covers": [
+   "images.api.R2",
+   "images.api.R3"
+  ],
+  "requires": [
+   "item:art-backdrops",
+   "library:art"
+  ],
+  "steps": [
+   {
+    "name": "read the tag",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-backdrops.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.BackdropImageTags[0]",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "tag": "$.BackdropImageTags[0]"
+    }
+   },
+   {
+    "name": "the last backdrop",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-backdrops.id}}/Images/Backdrop/7"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^image\\//"
+     }
+    }
+   },
+   {
+    "name": "no such index",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-backdrops.id}}/Images/Backdrop/8"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "not a number",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-backdrops.id}}/Images/Backdrop/abc"
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "a single image has no index 1",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-kinds.id}}/Images/Primary/1"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "a kind the item has not",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-primary.id}}/Images/Disc"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "a request that names the tag is cacheable for good",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-backdrops.id}}/Images/Backdrop/0",
+     "query": {
+      "tag": "{{capture.tag}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Cache-Control": "/immutable/"
+     }
+    }
+   }
+  ],
+  "cleanup": []
+ }
+]
