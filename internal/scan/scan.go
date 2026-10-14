@@ -511,6 +511,10 @@ type movieGroup struct {
 	// item (it also holds sub folders): the folder's artwork and extras are
 	// the movie's, but its name comes from its file.
 	sole bool
+	// disc is set when the group is a DVD or Blu-ray structure rather than a
+	// file; primary is then a made-up name ("<folder>.disc") used only for
+	// naming and sidecar lookups.
+	disc *discRef
 }
 
 // movieFile is a video file of a movie folder.
@@ -565,6 +569,18 @@ func movieDirContent(ctx context.Context, dir string, versionsOfFolder bool) (gr
 		return nil, nil
 	}
 	dirName := filepath.Base(dir)
+	// A disc structure: a VIDEO_TS or BDMV folder, or VIDEO_TS.IFO itself.
+	var disc *discRef
+	for _, e := range entries {
+		switch {
+		case e.IsDir() && discDirKind(e.Name()) != "":
+			if disc == nil {
+				disc = &discRef{kind: discDirKind(e.Name()), path: filepath.Join(dir, e.Name())}
+			}
+		case !e.IsDir() && strings.EqualFold(e.Name(), "VIDEO_TS.IFO"):
+			disc = &discRef{kind: storage.VideoTypeDvd, path: dir, self: true}
+		}
+	}
 	type file struct {
 		base string
 		name string
@@ -575,13 +591,22 @@ func movieDirContent(ctx context.Context, dir string, versionsOfFolder bool) (gr
 	var files []file
 	for _, e := range entries {
 		if e.IsDir() {
-			if !SkippedFolder(e.Name()) {
+			// An extras-named folder belongs to the movie of the folder it sits
+			// in; directly under the library root there is no such movie and
+			// it is an ordinary folder.
+			if discDirKind(e.Name()) != "" {
+				continue // a disc structure, not a folder to walk
+			}
+			if !SkippedFolder(e.Name()) || (!versionsOfFolder && !strings.HasPrefix(e.Name(), ".")) {
 				subdirs = append(subdirs, filepath.Join(dir, e.Name()))
 			}
 			continue
 		}
 		if !IsVideoFile(e.Name()) || strings.HasPrefix(e.Name(), ".") || IsExtraFile(e.Name()) {
 			continue
+		}
+		if disc != nil && disc.self && strings.EqualFold(filepath.Ext(e.Name()), ".vob") {
+			continue // a part of the disc in this very folder
 		}
 		info, err := e.Info()
 		if err != nil {
@@ -654,6 +679,13 @@ func movieDirContent(ctx context.Context, dir string, versionsOfFolder bool) (gr
 			groups = append(groups, movieGroup{primary: f.name, size: f.size})
 		}
 	}
+	if disc != nil {
+		name := filepath.Base(disc.path)
+		if disc.self {
+			name = dirName
+		}
+		groups = append(groups, movieGroup{primary: name + ".disc", disc: disc})
+	}
 	return groups, subdirs
 }
 
@@ -670,15 +702,34 @@ func (s *Scanner) walkMovies(ctx context.Context, pool *jobPool, lib storage.Lib
 }
 
 func (s *Scanner) walkMovieDir(ctx context.Context, pool *jobPool, lib storage.Library, dir string, parent *storage.ItemID, isRoot bool) {
+	s.walkMovieDirAs(ctx, pool, lib, dir, parent, isRoot, false)
+}
+
+// walkMovieDirAs walks dir; plain makes its videos movies named after their
+// files even when it holds just one (an extras-named folder under the root).
+func (s *Scanner) walkMovieDirAs(ctx context.Context, pool *jobPool, lib storage.Library, dir string, parent *storage.ItemID, isRoot, plain bool) {
 	groups, subdirs := movieDirContent(ctx, dir, !isRoot)
-	if !isRoot && len(groups) == 1 && len(subdirs) == 0 {
+	if !isRoot && !plain && len(groups) == 1 && len(subdirs) == 0 {
 		g := groups[0]
 		pool.enqueue(func() error {
 			return s.processMovie(ctx, pool, lib, dir, g, parent, true)
 		})
 	} else {
-		if !isRoot && len(groups) == 1 {
-			groups[0].sole = true
+		if !isRoot && !plain {
+			// The only movie that is a file (a disc beside it does not count).
+			files := 0
+			for _, g := range groups {
+				if g.disc == nil {
+					files++
+				}
+			}
+			if files == 1 {
+				for i := range groups {
+					if groups[i].disc == nil {
+						groups[i].sole = true
+					}
+				}
+			}
 		}
 		for _, g := range groups {
 			g := g
@@ -688,8 +739,9 @@ func (s *Scanner) walkMovieDir(ctx context.Context, pool *jobPool, lib storage.L
 		}
 	}
 	for _, sub := range subdirs {
+		rootExtras := isRoot && SkippedFolder(filepath.Base(sub)) && !strings.EqualFold(filepath.Base(sub), "theme-music")
 		subGroups, subSubdirs := movieDirContent(ctx, sub, true)
-		if len(subGroups) == 1 && len(subSubdirs) == 0 {
+		if !rootExtras && len(subGroups) == 1 && len(subSubdirs) == 0 {
 			s.walkMovieDir(ctx, pool, lib, sub, parent, false)
 			continue
 		}
@@ -703,7 +755,10 @@ func (s *Scanner) walkMovieDir(ctx context.Context, pool *jobPool, lib storage.L
 			continue
 		}
 		s.seedFolderArtwork(ctx, id, sub)
-		s.walkMovieDir(ctx, pool, lib, sub, &id, false)
+		if rootExtras && strings.EqualFold(filepath.Base(sub), "sample") {
+			continue // listed, its videos are samples and not cataloged
+		}
+		s.walkMovieDirAs(ctx, pool, lib, sub, &id, false, rootExtras)
 	}
 }
 
@@ -756,6 +811,16 @@ func (s *Scanner) reconcileItemID(ctx context.Context, libraryID storage.Library
 func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.Library, dir string, group movieGroup, parent *storage.ItemID, folderMovie bool) error {
 	videoFile, size := group.primary, group.size
 	itemPath := filepath.Join(dir, videoFile)
+	videoType := ""
+	if group.disc != nil {
+		videoType = group.disc.kind
+		itemPath = group.disc.path
+		if folderMovie {
+			itemPath = dir // the folder holds nothing but the disc: it is the movie
+		}
+	} else if IsDiscImage(videoFile) {
+		videoType = storage.VideoTypeIso
+	}
 	itemID := s.reconcileItemID(ctx, lib.ID, itemPath, storage.ItemID(deterministicID("item-movie-"+string(lib.ID)+"-"+itemPath)))
 
 	source := strings.TrimSuffix(videoFile, filepath.Ext(videoFile))
@@ -764,12 +829,19 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 	}
 	queryTitle, year := CleanTitle(source, true)
 	name := queryTitle
-	if folderMovie || (group.sole && source == filepath.Base(dir)) {
+	if folderMovie || (group.sole && source == filepath.Base(dir)) || group.disc != nil {
 		name = source
 	}
 	alone := folderMovie || group.sole
 
-	pr := s.probeOrReuse(ctx, pool, itemID, itemPath, size)
+	var pr probeResult
+	var disc discProbe
+	if videoType != "" {
+		disc = s.probeDisc(ctx, pool, itemID, videoType, itemPath, group.disc != nil && group.disc.self)
+		pr, size = disc.probeResult, disc.size
+	} else {
+		pr = s.probeOrReuse(ctx, pool, itemID, itemPath, size)
+	}
 	probeErr := pr.err
 	item := storage.Item{
 		ID:           itemID,
@@ -796,6 +868,9 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 		// explicitly needs to match it. fileDateAdded already applies
 		// .UTC() itself.
 		DateCreated: pr.added,
+	}
+	if videoType != "" {
+		item.VideoType, item.IsoType, item.Container = videoType, disc.isoType, disc.container
 	}
 	if year > 0 {
 		item.ProductionYear = &year

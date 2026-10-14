@@ -88,6 +88,8 @@ const (
 	StreamTypeVideo    StreamType = "Video"
 	StreamTypeAudio    StreamType = "Audio"
 	StreamTypeSubtitle StreamType = "Subtitle"
+	// StreamTypeData is a data track (timecodes, DVD navigation packets).
+	StreamTypeData StreamType = "Data"
 )
 
 // MediaStreamRef is one scan-derived embedded track on an item's media
@@ -300,7 +302,27 @@ type Item struct {
 	// ExtraType* values. Empty for every ordinary item.
 	ExtraType string
 	OwnerID   *ItemID
+
+	// VideoType is the kind of video the item's Path is, when it is not a plain
+	// file: VideoTypeDvd or VideoTypeBluRay (Path is the disc's folder),
+	// VideoTypeIso (Path is a disc image file). Empty for a plain file.
+	// IsoType, for an image, is the kind of disc inside (VideoTypeDvd or
+	// VideoTypeBluRay), empty when it is not known.
+	VideoType string
+	IsoType   string
+
+	// RemoteURL is the address a .strm file points at, when its content is a
+	// URL. The item's Path is still the .strm file.
+	RemoteURL string
 }
+
+// VideoType values of Item.VideoType and Item.IsoType (the reference
+// server's VideoType names).
+const (
+	VideoTypeDvd    = "Dvd"
+	VideoTypeBluRay = "BluRay"
+	VideoTypeIso    = "Iso"
+)
 
 // ExtraType values of Item.ExtraType (the reference server's ExtraType names;
 // ExtraTypePart, ExtraTypeVersion and ExtraTypeMergedSeason are internal: the

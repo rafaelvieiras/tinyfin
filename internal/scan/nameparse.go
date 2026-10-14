@@ -166,6 +166,8 @@ var videoExtensions = map[string]bool{
 	".mkv": true, ".mp4": true, ".avi": true, ".webm": true, ".m4v": true, ".ts": true, ".mov": true,
 	".wmv": true, ".flv": true, ".mpg": true, ".mpeg": true, ".ogv": true, ".3gp": true, ".m2ts": true,
 	".vob": true, ".divx": true,
+	// disc images (VideoType Iso)
+	".iso": true, ".img": true,
 }
 
 // extraSuffixes end the base name of a file that is a trailer or a sample

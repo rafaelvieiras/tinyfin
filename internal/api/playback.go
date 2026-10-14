@@ -64,6 +64,8 @@ type mediaSourceInfoDto struct {
 	RequiresClosing       bool   `json:"RequiresClosing"`
 	RequiresLooping       bool   `json:"RequiresLooping"`
 	SupportsProbing       bool   `json:"SupportsProbing"`
+	VideoType             string `json:"VideoType,omitempty"`
+	IsoType               string `json:"IsoType,omitempty"`
 	// TranscodingUrl/TranscodingContainer are set only for Remux/Direct
 	// Stream/Transcode (docs/07) — empty (omitted) for Direct Play, which
 	// needs no transcode-worker involvement at all.
@@ -139,7 +141,7 @@ func baseMediaSourceInfo(item storage.Item, container string) mediaSourceInfoDto
 		base := filepath.Base(item.Path)
 		name = strings.TrimSuffix(base, filepath.Ext(base))
 	}
-	return mediaSourceInfoDto{
+	src := mediaSourceInfoDto{
 		ID:              string(item.ID),
 		Protocol:        "File",
 		Path:            item.Path,
@@ -151,6 +153,32 @@ func baseMediaSourceInfo(item storage.Item, container string) mediaSourceInfoDto
 		SupportsProbing: true,
 		MediaStreams:    mediaStreamDtos(item.MediaStreams),
 	}
+	switch item.Type {
+	case storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeVideo, storage.ItemTypeTrailer:
+		src.VideoType = "VideoFile"
+	}
+	if item.VideoType != "" {
+		src.VideoType, src.IsoType = item.VideoType, item.IsoType
+		// A disc is named "<folder>/DVD" or "<folder>/Bluray" (an image: its
+		// file name without the extension, then the kind of disc inside).
+		kind := item.VideoType
+		if kind == storage.VideoTypeIso {
+			kind = item.IsoType
+		} else if item.Path != "" {
+			src.Name = filepath.Base(item.Path)
+		}
+		switch kind {
+		case storage.VideoTypeDvd:
+			src.Name += "/DVD"
+		case storage.VideoTypeBluRay:
+			src.Name += "/Bluray"
+		default:
+			if item.VideoType == storage.VideoTypeIso {
+				src.Name += "/ISO"
+			}
+		}
+	}
+	return src
 }
 
 // handlePlaybackInfo serves both GET and POST /Items/{itemId}/PlaybackInfo.

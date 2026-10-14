@@ -28,6 +28,9 @@ type probeResult struct {
 	record  bool
 	size    int64
 	mtimeNS int64
+	// sigSize, when not zero, is the size the signature is recorded with
+	// (a disc is probed from several files); size otherwise.
+	sigSize int64
 	// added is the file's mtime in UTC (DateCreated), from the same stat
 	// that produced mtimeNS.
 	added time.Time
@@ -77,7 +80,11 @@ func (s *Scanner) recordSignature(ctx context.Context, itemID storage.ItemID, re
 		return
 	}
 	if sigs, ok := s.store.(signatureStore); ok {
-		_ = sigs.SetScanSignature(ctx, itemID, res.size, res.mtimeNS)
+		size := res.size
+		if res.sigSize != 0 {
+			size = res.sigSize
+		}
+		_ = sigs.SetScanSignature(ctx, itemID, size, res.mtimeNS)
 	}
 }
 

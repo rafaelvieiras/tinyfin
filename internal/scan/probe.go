@@ -65,7 +65,8 @@ type ffprobeStream struct {
 type ffprobeOutput struct {
 	Streams []ffprobeStream `json:"streams"`
 	Format  struct {
-		Duration string `json:"duration"`
+		Duration   string `json:"duration"`
+		FormatName string `json:"format_name"`
 	} `json:"format"`
 }
 
@@ -177,6 +178,13 @@ func mediaStreamsFromProbe(info ffprobeOutput) []storage.MediaStreamRef {
 				ref.SampleRate = &sr
 			}
 			streams = append(streams, ref)
+			idx++
+		case "data":
+			streams = append(streams, storage.MediaStreamRef{
+				Index: idx, Type: storage.StreamTypeData, Codec: st.CodecName,
+				IsDefault: st.Disposition.Default == 1, IsForced: st.Disposition.Forced == 1,
+				Title: st.Tags.Title, Language: st.Tags.Language,
+			})
 			idx++
 		case "subtitle":
 			ref := storage.MediaStreamRef{
