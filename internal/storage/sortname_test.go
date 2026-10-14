@@ -119,7 +119,7 @@ func TestNormalizeSortName(t *testing.T) {
 }
 
 func TestItemSortKey(t *testing.T) {
-	one, two := 1, 2
+	zero, one, two := 0, 1, 2
 	ten := 10
 	cases := []struct {
 		name string
@@ -132,7 +132,12 @@ func TestItemSortKey(t *testing.T) {
 		{"season index", Item{Type: ItemTypeSeason, Name: "Season 2", SortName: "0002", IndexNumber: &two}, "0002"},
 		{"episode keeps its title", Item{Type: ItemTypeEpisode, Name: "The Opening", SortName: "The Opening", ParentIndexNumber: &one, IndexNumber: &one}, "001 - 0001 - The Opening"},
 		{"episode numbers pad", Item{Type: ItemTypeEpisode, Name: "Pilot", ParentIndexNumber: &two, IndexNumber: &ten}, "002 - 0010 - Pilot"},
-		{"episode without numbers", Item{Type: ItemTypeEpisode, Name: "The Special", SortName: "The Special"}, "special"},
+		{"episode without numbers keeps its title", Item{Type: ItemTypeEpisode, Name: "The Special", SortName: "The Special"}, "The Special"},
+		{"episode with a season only", Item{Type: ItemTypeEpisode, Name: "Short One", ParentIndexNumber: &zero}, "000 - Short One"},
+		{"episode with an episode only", Item{Type: ItemTypeEpisode, Name: "Loose", IndexNumber: &ten}, "0010 - Loose"},
+		{"episode with a sort title", Item{Type: ItemTypeEpisode, Name: "Two", SortName: "The Zed", ForcedSortName: " The Zed ", ParentIndexNumber: &one, IndexNumber: &two}, "zed"},
+		{"season without a number", Item{Type: ItemTypeSeason, Name: "Season Unknown"}, "Season Unknown"},
+		{"surrounding space is dropped", Item{Type: ItemTypeMovie, Name: "\u00a0 The Lead\t"}, "lead"},
 	}
 	for _, c := range cases {
 		if got := c.it.SortKey(); got != c.want {

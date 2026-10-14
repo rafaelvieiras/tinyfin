@@ -22,9 +22,11 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -280,7 +282,7 @@ func (s *Server) handleItemsLatest(w http.ResponseWriter, r *http.Request) {
 var mediaTypeItemTypes = map[string][]storage.ItemType{
 	"Video": {
 		storage.ItemTypeMovie, storage.ItemTypeSeries, storage.ItemTypeSeason,
-		storage.ItemTypeEpisode, storage.ItemTypeTrailer,
+		storage.ItemTypeEpisode, storage.ItemTypeTrailer, storage.ItemTypeVideo,
 	},
 	"Audio": {storage.ItemTypeMusicArtist, storage.ItemTypeMusicAlbum, storage.ItemTypeAudio},
 }
@@ -356,6 +358,18 @@ func (s *Server) handleShowSeasons(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	// A season without a number (the one that holds files with no season
+	// number) comes after the numbered ones.
+	sort.SliceStable(page.Items, func(i, j int) bool {
+		a, b := page.Items[i].IndexNumber, page.Items[j].IndexNumber
+		switch {
+		case a == nil:
+			return false
+		case b == nil:
+			return true
+		}
+		return *a < *b
+	})
 	items := make([]baseItemDto, 0, len(page.Items))
 	for _, it := range page.Items {
 		items = append(items, s.baseItemDto(r.Context(), it))
@@ -364,6 +378,48 @@ func (s *Server) handleShowSeasons(w http.ResponseWriter, r *http.Request) {
 		Items:            items,
 		TotalRecordCount: page.TotalCount,
 		StartIndex:       page.Offset,
+	})
+}
+
+// orderEpisodes orders a series' episodes the way the series page lists
+// them: by season number (an episode with no season number of its own takes
+// its season's; a season without a number comes last), then by sort name,
+// which already carries the episode number.
+func (s *Server) orderEpisodes(ctx context.Context, eps []storage.Item) {
+	seasonIdx := map[storage.ItemID]*int{}
+	idxOf := func(it storage.Item) *int {
+		if it.ParentIndexNumber != nil {
+			return it.ParentIndexNumber
+		}
+		if it.SeasonID == nil {
+			return nil
+		}
+		if v, ok := seasonIdx[*it.SeasonID]; ok {
+			return v
+		}
+		var v *int
+		if season, err := s.store.GetItem(ctx, *it.SeasonID); err == nil {
+			v = season.IndexNumber
+		}
+		seasonIdx[*it.SeasonID] = v
+		return v
+	}
+	keys := make(map[storage.ItemID]*int, len(eps))
+	for _, it := range eps {
+		keys[it.ID] = idxOf(it)
+	}
+	sort.SliceStable(eps, func(i, j int) bool {
+		a, b := keys[eps[i].ID], keys[eps[j].ID]
+		switch {
+		case a == nil && b == nil:
+		case a == nil:
+			return false
+		case b == nil:
+			return true
+		case *a != *b:
+			return *a < *b
+		}
+		return eps[i].SortName < eps[j].SortName
 	})
 }
 
@@ -414,14 +470,17 @@ func (s *Server) handleShowEpisodes(w http.ResponseWriter, r *http.Request) {
 	// that does send these (e.g. a future paged episode view) is honored
 	// exactly like every other listing endpoint; only the no-params case
 	// differs from handleItemsList, per this function's doc comment above.
+	// The order is decided here (orderEpisodes), so the store returns the
+	// whole set and the page is cut afterwards.
+	limit, offset := 0, 0
 	if v := q.Get("limit"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			filter.Limit = n
+			limit = n
 		}
 	}
 	if v := q.Get("startindex"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
-			filter.Offset = n
+			offset = n
 		}
 	}
 
@@ -430,14 +489,23 @@ func (s *Server) handleShowEpisodes(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	items := make([]baseItemDto, 0, len(page.Items))
-	for _, it := range page.Items {
+	all := page.Items
+	s.orderEpisodes(r.Context(), all)
+	if offset > len(all) {
+		offset = len(all)
+	}
+	all = all[offset:]
+	if limit > 0 && limit < len(all) {
+		all = all[:limit]
+	}
+	items := make([]baseItemDto, 0, len(all))
+	for _, it := range all {
 		items = append(items, s.baseItemDto(r.Context(), it))
 	}
 	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{
 		Items:            items,
 		TotalRecordCount: page.TotalCount,
-		StartIndex:       page.Offset,
+		StartIndex:       offset,
 	})
 }
 

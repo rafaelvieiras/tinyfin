@@ -47,7 +47,7 @@ var itemsKnownKinds = func() map[string]storage.ItemType {
 // mediaTypeKinds maps a MediaTypes value to the item kinds that carry it.
 // Types with no kind behind them match nothing.
 var mediaTypeKinds = map[string][]storage.ItemType{
-	"video":   {storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeTrailer},
+	"video":   {storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeTrailer, storage.ItemTypeVideo},
 	"audio":   {storage.ItemTypeAudio},
 	"photo":   nil,
 	"book":    nil,
@@ -61,7 +61,7 @@ var itemsListFilterParams = map[string]bool{
 	"includeitemtypes": true, "excludeitemtypes": true, "mediatypes": true,
 	"searchterm": true, "namestartswith": true, "namestartswithorgreater": true, "namelessthan": true,
 	"ids": true, "excludeitemids": true, "adjacentto": true,
-	"filters": true, "isplayed": true, "isfavorite": true, "isfolder": true,
+	"filters": true, "isplayed": true, "isfavorite": true,
 	"years": true, "parentindexnumber": true, "indexnumber": true,
 	"minwidth": true, "minheight": true, "maxwidth": true, "maxheight": true, "ishd": true, "is4k": true,
 	"genres": true, "tags": true, "officialratings": true, "person": true, "hassubtitles": true,
@@ -610,10 +610,9 @@ func parseItemsQuery(q url.Values, legacy bool) (itemsQuery, error) {
 	if err != nil {
 		return iq, err
 	}
-	isFolder, err := itemsBool(q, "isfolder")
-	if err != nil {
-		return iq, err
-	}
+	// The IsFolder query parameter is ignored (items.filter.R12); only the
+	// Filters tokens select folders.
+	var isFolder *bool
 	flags := map[string]bool{}
 	for _, tok := range itemsListParam(q, "filters") {
 		flags[strings.ToLower(tok)] = true
@@ -772,6 +771,7 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 				}
 				if !recursiveQuery {
 					filter.TopLevelOnly = true
+					filter.RootFolderPaths = lib.Paths
 				}
 				iq.hasParent = true
 				break

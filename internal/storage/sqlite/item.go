@@ -537,7 +537,15 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 		addWhere("items.library_id IN ("+sqlPlaceholders(len(args))+")", args...)
 	}
 	if filter.TopLevelOnly {
-		addWhere("items.parent_id IS NULL AND items.type <> 'Folder'")
+		if len(filter.RootFolderPaths) > 0 {
+			args := make([]any, len(filter.RootFolderPaths))
+			for i, p := range filter.RootFolderPaths {
+				args[i] = p
+			}
+			addWhere("items.parent_id IS NULL AND NOT (items.type = 'Folder' AND items.path IN ("+sqlPlaceholders(len(args))+"))", args...)
+		} else {
+			addWhere("items.parent_id IS NULL AND items.type <> 'Folder'")
+		}
 	}
 
 	if filter.ParentID != nil {

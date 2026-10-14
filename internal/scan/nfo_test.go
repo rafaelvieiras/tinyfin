@@ -187,8 +187,8 @@ func TestEpisodeNFOParsing(t *testing.T) {
 	if n.Plot != "Bulma meets Goku." {
 		t.Errorf("Plot = %q", n.Plot)
 	}
-	if n.Season != 1 || n.Episode != 1 {
-		t.Errorf("Season/Episode = %d/%d, want 1/1", n.Season, n.Episode)
+	if s, e := nfoNumber(n.Season), nfoNumber(n.Episode); s == nil || e == nil || *s != 1 || *e != 1 {
+		t.Errorf("Season/Episode = %q/%q, want 1/1", n.Season, n.Episode)
 	}
 	aired, ok := parseNFODate(n.Aired)
 	if !ok || !aired.Equal(time.Date(1986, 2, 26, 0, 0, 0, 0, time.UTC)) {

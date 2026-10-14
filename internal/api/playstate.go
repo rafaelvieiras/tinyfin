@@ -487,7 +487,7 @@ func (s *Server) logPlaybackActivity(r *http.Request, ac *AuthContext, item stor
 		if kind == reportStopped {
 			typ, verb = storage.ActivityTypeAudioPlaybackStopped, "has finished playing"
 		}
-	case storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeTrailer:
+	case storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeTrailer, storage.ItemTypeVideo:
 		typ, verb = storage.ActivityTypeVideoPlayback, "is playing"
 		if kind == reportStopped {
 			typ, verb = storage.ActivityTypeVideoPlaybackStopped, "has finished playing"

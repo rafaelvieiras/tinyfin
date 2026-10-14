@@ -356,10 +356,25 @@ var childCountItemTypes = map[storage.ItemType]bool{
 // helper's own ItemTypes narrowing (a Series' direct children are Seasons,
 // but a BoxSet's direct children can be any collected type).
 func (s *Server) childCountFor(ctx context.Context, id storage.ItemID) (int, error) {
-	page, err := s.store.QueryItems(ctx, storage.ItemFilter{
-		ParentID: &id,
-		Limit:    1,
-	})
+	return s.childCountOf(ctx, storage.Item{ID: id})
+}
+
+// childCountOf is childCountFor for a loaded item: a library's own root
+// folder has no children by parent; its children are the top-level items.
+func (s *Server) childCountOf(ctx context.Context, item storage.Item) (int, error) {
+	filter := storage.ItemFilter{ParentID: &item.ID, Limit: 1}
+	if item.Type == storage.ItemTypeFolder && item.ParentID == nil && item.LibraryID != "" {
+		if lib, err := s.store.GetLibrary(ctx, item.LibraryID); err == nil {
+			for _, p := range lib.Paths {
+				if p == item.Path {
+					id := lib.ID
+					filter = storage.ItemFilter{LibraryID: &id, TopLevelOnly: true, RootFolderPaths: lib.Paths, Limit: 1}
+					break
+				}
+			}
+		}
+	}
+	page, err := s.store.QueryItems(ctx, filter)
 	if err != nil {
 		return 0, err
 	}
@@ -593,7 +608,7 @@ func isFolderType(t storage.ItemType) bool {
 func mediaTypeFor(t storage.ItemType) string {
 	switch t {
 	case storage.ItemTypeMovie, storage.ItemTypeSeries, storage.ItemTypeSeason,
-		storage.ItemTypeEpisode, storage.ItemTypeTrailer:
+		storage.ItemTypeEpisode, storage.ItemTypeTrailer, storage.ItemTypeVideo:
 		return "Video"
 	case storage.ItemTypeMusicArtist, storage.ItemTypeMusicAlbum, storage.ItemTypeAudio:
 		return "Audio"
@@ -758,6 +773,7 @@ var videoFileItemTypes = map[storage.ItemType]bool{
 	storage.ItemTypeMovie:   true,
 	storage.ItemTypeEpisode: true,
 	storage.ItemTypeTrailer: true,
+	storage.ItemTypeVideo:   true,
 }
 
 // primaryVideoStreamFor returns item's own primary video track — the first
@@ -919,8 +935,8 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		MediaSources:            mediaSourcesFor(item),
 		LocationType:            locationTypeFor(item),
 	}
-	if childCountItemTypes[item.Type] {
-		if n, err := s.childCountFor(ctx, item.ID); err == nil {
+	if childCountItemTypes[item.Type] || item.Type == storage.ItemTypeFolder {
+		if n, err := s.childCountOf(ctx, item); err == nil {
 			dto.ChildCount = &n
 		}
 	}

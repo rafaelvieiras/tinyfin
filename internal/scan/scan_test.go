@@ -302,8 +302,8 @@ func TestScanLibraryTVShows(t *testing.T) {
 		t.Fatalf("episode query: err=%v, len=%d, want 2", err, len(epPage.Items))
 	}
 	ep1 := epPage.Items[0]
-	if ep1.Name != "The Secret of the Example Orbs" {
-		t.Errorf("ep1.Name = %q, want %q", ep1.Name, "The Secret of the Example Orbs")
+	if ep1.Name != "Example Show - S01E01 - The Secret of the Example Orbs" {
+		t.Errorf("ep1.Name = %q, want the file name without its extension", ep1.Name)
 	}
 	if ep1.IndexNumber == nil || *ep1.IndexNumber != 1 {
 		t.Errorf("ep1.IndexNumber = %v, want 1", ep1.IndexNumber)

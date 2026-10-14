@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Home-videos libraries are scanned: nested folders become `Folder` items and
+  video files `Video` items named after the file, with probed media, an
+  optional `<name>.nfo` and the same playback path as movies; hidden entries,
+  sidecar folders and trailer or sample files are left out.
+- Episodes without a `SxxExx` pattern (specials, loose files in season folders
+  and files directly in a series folder) are cataloged: named by the `.nfo`
+  title or the file name, numbered only by what the name or the `.nfo` says,
+  under their season folder or a season created for them (`Season N`,
+  `Season Unknown`); season 0 is named `Specials`.
+- A series takes `RunTimeTicks` from its `tvshow.nfo` `<runtime>` (a `0` is
+  returned as `0`).
 - User configuration validation per the users contract: `null` for a boolean,
   `SubtitleMode` or a list member and non-GUID list entries answer `400`,
   `SubtitleMode` is a lenient enumeration (numbers, any letter case, comma
@@ -44,6 +55,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Titles, sort titles, original titles and plots from `.nfo` files are stored
+  without surrounding white space, and sort keys ignore it.
+- Episodes are named after their file (without the extension) when no `.nfo`
+  title exists, and an episode `.nfo` `<season>`/`<episode>` replaces the
+  numbers of the file name.
+- The `IsFolder` query parameter of `GET /Items` is ignored, as on the
+  reference; `Filters=IsFolder` is unchanged.
+- Playback info and stream requests for an item with no media file (a series,
+  season or folder) answer `400`.
 - Identifiers are written as 32 lowercase hex digits without dashes in every
   response (`wire.id.R1`); ids in dashed or upper-case form are still accepted
   in paths, query parameters and bodies (`wire.id.R2`). Existing databases are

@@ -23,8 +23,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
@@ -81,6 +83,8 @@ type movieNFO struct {
 type tvshowNFO struct {
 	XMLName xml.Name `xml:"tvshow"`
 	commonNFOFields
+	// Runtime is the raw <runtime> text (minutes); see nfoRuntimeTicks.
+	Runtime string `xml:"runtime"`
 }
 
 // episodeNFO is a Kodi <episodedetails> .nfo document. It embeds
@@ -96,17 +100,45 @@ type tvshowNFO struct {
 // only if that left PremiereDate unset, so either convention works without
 // duplicating the date-parsing logic.
 //
-// Season/Episode are parsed but deliberately not applied to the item:
-// nameparse.go already derives season/episode numbers from the filename
-// before any .nfo is consulted, and that's reliable enough on its own —
-// see the package doc comment's "don't duplicate logic" note in the task
-// this file implements.
+// Season/Episode, when present, replace the numbers the file name gave
+// (applyParsedEpisodeNFO).
 type episodeNFO struct {
 	XMLName xml.Name `xml:"episodedetails"`
 	commonNFOFields
-	Aired   string `xml:"aired"`
-	Season  int    `xml:"season"`
-	Episode int    `xml:"episode"`
+	Aired string `xml:"aired"`
+	// Season and Episode stay text so that a value that is not a number
+	// leaves the file's other tags usable; nfoNumber converts them.
+	Season  string `xml:"season"`
+	Episode string `xml:"episode"`
+}
+
+// nfoNumber converts a <season>/<episode> value; nil when the tag is absent
+// or not an integer.
+func nfoNumber(s string) *int {
+	n, err := strconv.Atoi(strings.TrimSpace(s))
+	if err != nil {
+		return nil
+	}
+	return &n
+}
+
+// trimSpace drops every leading and trailing Unicode space character.
+func trimSpace(s string) string {
+	return strings.TrimFunc(s, unicode.IsSpace)
+}
+
+// nfoRuntimeTicks converts a <runtime> value (minutes) to ticks. Only the
+// text before the first space is read, as a base-10 integer that may carry a
+// sign (so "20 min" is 20, " 20 " and "12.5" are not numbers); a value
+// outside 32 bits is not a number either. ok is false then.
+func nfoRuntimeTicks(s string) (ticks int64, ok bool) {
+	tok, _, _ := strings.Cut(s, " ")
+	tok = strings.Trim(tok, "\t\n\v\f\r")
+	n, err := strconv.ParseInt(tok, 10, 32)
+	if err != nil {
+		return 0, false
+	}
+	return n * 60 * 10_000_000, true
 }
 
 // readFirstExisting returns the contents of the first path in candidates
@@ -171,18 +203,20 @@ func nfoProviderID(ids []uniqueIDEl, idType string) (string, bool) {
 // applyCommonNFOFields overlays n's non-empty fields onto item, using the
 // same "if the source actually set this, overwrite" pattern as enrich().
 func applyCommonNFOFields(item *storage.Item, n commonNFOFields) {
-	if n.Title != "" {
-		item.Name = n.Title
-		item.SortName = n.Title
+	if t := trimSpace(n.Title); t != "" {
+		item.Name = t
+		item.SortName = t
+		item.ForcedSortName = ""
 	}
-	if n.SortTitle != "" {
-		item.SortName = n.SortTitle
+	if t := trimSpace(n.SortTitle); t != "" {
+		item.SortName = t
+		item.ForcedSortName = t
 	}
-	if n.OriginalTitle != "" {
-		item.OriginalTitle = n.OriginalTitle
+	if t := trimSpace(n.OriginalTitle); t != "" {
+		item.OriginalTitle = t
 	}
-	if n.Plot != "" {
-		item.Overview = n.Plot
+	if t := trimSpace(n.Plot); t != "" {
+		item.Overview = t
 	}
 	if n.Year > 0 {
 		y := n.Year
@@ -246,6 +280,9 @@ func (s *Scanner) applySeriesNFO(pool *jobPool, item *storage.Item, seriesPath s
 		return
 	}
 	applyCommonNFOFields(item, n.commonNFOFields)
+	if t, ok := nfoRuntimeTicks(n.Runtime); ok {
+		item.RunTimeTicks = &t
+	}
 }
 
 // namedSeasonEl is Kodi's <namedseason number="1">Custom Name</namedseason>
@@ -294,10 +331,46 @@ func (s *Scanner) applySeasonNFO(pool *jobPool, item *storage.Item, seasonPath, 
 		if ns.Number != seasonNum {
 			continue
 		}
-		if name := strings.TrimSpace(ns.Name); name != "" {
-			item.Name = name
+		// The name is used as written (surrounding white space included);
+		// a value that is only white space is not a name.
+		if trimSpace(ns.Name) != "" {
+			item.Name = ns.Name
 		}
 		return
+	}
+}
+
+// episodeNFOFor reads and parses "<episode-video-basename>.nfo" next to
+// episodePath. found is false when there is no readable file; a file that does
+// not parse is reported as a warning and treated as missing.
+func (s *Scanner) episodeNFOFor(pool *jobPool, episodePath string) (n episodeNFO, found bool) {
+	base := strings.TrimSuffix(episodePath, filepath.Ext(episodePath))
+	data, ok := readFirstExisting(base + ".nfo")
+	if !ok {
+		return n, false
+	}
+	if err := xml.Unmarshal(data, &n); err != nil {
+		pool.addWarning(fmt.Sprintf("parsing episode .nfo for %q: %v (ignored)", episodePath, err))
+		return n, false
+	}
+	return n, true
+}
+
+// applyParsedEpisodeNFO overlays n onto item: the common fields, the air date
+// as the fallback premiere date, and the season and episode numbers when the
+// file carries them (they win over what the file name gave).
+func applyParsedEpisodeNFO(item *storage.Item, n episodeNFO) {
+	applyCommonNFOFields(item, n.commonNFOFields)
+	if item.PremiereDate == nil && n.Aired != "" {
+		if t, ok := parseNFODate(n.Aired); ok {
+			item.PremiereDate = &t
+		}
+	}
+	if v := nfoNumber(n.Season); v != nil {
+		item.ParentIndexNumber = v
+	}
+	if v := nfoNumber(n.Episode); v != nil {
+		item.IndexNumber = v
 	}
 }
 
@@ -307,20 +380,24 @@ func (s *Scanner) applySeasonNFO(pool *jobPool, item *storage.Item, seasonPath, 
 // back to <aired> for PremiereDate if <premiered> wasn't present — see the
 // episodeNFO doc comment.
 func (s *Scanner) applyEpisodeNFO(pool *jobPool, item *storage.Item, episodePath string) {
-	base := strings.TrimSuffix(episodePath, filepath.Ext(episodePath))
+	if n, ok := s.episodeNFOFor(pool, episodePath); ok {
+		applyParsedEpisodeNFO(item, n)
+	}
+}
+
+// applyVideoNFO overlays "<video-basename>.nfo" onto a home video. The file
+// is a <movie> document; a "movie.nfo" in the folder is not read, because the
+// folder holds many unrelated videos.
+func (s *Scanner) applyVideoNFO(pool *jobPool, item *storage.Item, videoPath string) {
+	base := strings.TrimSuffix(videoPath, filepath.Ext(videoPath))
 	data, found := readFirstExisting(base + ".nfo")
 	if !found {
 		return
 	}
-	var n episodeNFO
+	var n movieNFO
 	if err := xml.Unmarshal(data, &n); err != nil {
-		pool.addWarning(fmt.Sprintf("parsing episode .nfo for %q: %v (ignored)", episodePath, err))
+		pool.addWarning(fmt.Sprintf("parsing video .nfo for %q: %v (ignored)", videoPath, err))
 		return
 	}
 	applyCommonNFOFields(item, n.commonNFOFields)
-	if item.PremiereDate == nil && n.Aired != "" {
-		if t, ok := parseNFODate(n.Aired); ok {
-			item.PremiereDate = &t
-		}
-	}
 }

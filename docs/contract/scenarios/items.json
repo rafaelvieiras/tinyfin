@@ -13637,5 +13637,2414 @@
     }
    }
   ]
+ },
+ {
+  "id": "items.names.nfo-trims-surrounding-whitespace",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.names.R1",
+   "items.names.R2",
+   "items.names.R3"
+  ],
+  "requires": [
+   "item:trim-space",
+   "item:trim-tab",
+   "item:trim-variants",
+   "item:trim-inner",
+   "item:trim-zwsp",
+   "item:trim-blank",
+   "library:trim"
+  ],
+  "steps": [
+   {
+    "name": "titles, sort titles, original titles and plots of the .nfo files",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.trim-space.id}},{{item.trim-tab.id}},{{item.trim-variants.id}},{{item.trim-inner.id}},{{item.trim-zwsp.id}},{{item.trim-blank.id}}",
+      "Fields": "SortName,OriginalTitle,Overview"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 6
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Trim Lead and Trail"
+      },
+      {
+       "path": "$.Items[0].SortName",
+       "op": "eq",
+       "value": "trim sort"
+      },
+      {
+       "path": "$.Items[0].OriginalTitle",
+       "op": "eq",
+       "value": "Trim Original"
+      },
+      {
+       "path": "$.Items[0].Overview",
+       "op": "eq",
+       "value": "Trim plot line 1\nline 2"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Trim Tab"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Trim Variants"
+      },
+      {
+       "path": "$.Items[2].SortName",
+       "op": "eq",
+       "value": "trim variants"
+      },
+      {
+       "path": "$.Items[3].Name",
+       "op": "eq",
+       "value": "Trim   Inner  Run"
+      },
+      {
+       "path": "$.Items[4].Name",
+       "op": "eq",
+       "value": "\u200bTrim Zwsp\u200b"
+      },
+      {
+       "path": "$.Items[5].Name",
+       "op": "eq",
+       "value": "Trim Blank"
+      },
+      {
+       "path": "$.Items[5].Overview",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.names.file-derived-name-kept",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.names.R4"
+  ],
+  "requires": [
+   "item:trim-lead-file",
+   "library:trim"
+  ],
+  "steps": [
+   {
+    "name": "a movie name taken from the folder name is kept as written; its sort name is trimmed",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.trim-lead-file.id}}",
+      "Fields": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": " Trim Lead File"
+      },
+      {
+       "path": "$.Items[0].SortName",
+       "op": "eq",
+       "value": "trim lead file"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.names.series-folder-and-season-folder",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.names.R5",
+   "items.names.R6"
+  ],
+  "requires": [
+   "item:trimlead",
+   "item:trimlead-s1",
+   "item:trimlead-e1",
+   "library:trimshows"
+  ],
+  "steps": [
+   {
+    "name": "series name is trimmed, the year before it is read",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.trimlead.id}},{{item.trimlead-s1.id}},{{item.trimlead-e1.id}}",
+      "Fields": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Trim Lead Show"
+      },
+      {
+       "path": "$.Items[0].ProductionYear",
+       "op": "eq",
+       "value": 2111
+      },
+      {
+       "path": "$.Items[0].SortName",
+       "op": "eq",
+       "value": "trim lead show"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Season 1"
+      },
+      {
+       "path": "$.Items[1].IndexNumber",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "ep S01E01"
+      },
+      {
+       "path": "$.Items[2].ParentIndexNumber",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[2].IndexNumber",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.names.series-nfo-and-named-season",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.names.R1",
+   "items.names.R7"
+  ],
+  "requires": [
+   "item:trimshow",
+   "item:trimshow-s1",
+   "library:trimshows"
+  ],
+  "steps": [
+   {
+    "name": "series fields are trimmed, a named season is not",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.trimshow.id}},{{item.trimshow-s1.id}}",
+      "Fields": "SortName,OriginalTitle,Overview"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Trim Show Title"
+      },
+      {
+       "path": "$.Items[0].SortName",
+       "op": "eq",
+       "value": "trim show sort"
+      },
+      {
+       "path": "$.Items[0].OriginalTitle",
+       "op": "eq",
+       "value": "Trim Show Original"
+      },
+      {
+       "path": "$.Items[0].Overview",
+       "op": "eq",
+       "value": "Trim show plot"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": " Trim Named Season "
+      },
+      {
+       "path": "$.Items[1].IndexNumber",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.names.episodes",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.names.R1",
+   "items.names.R2",
+   "items.names.R8"
+  ],
+  "requires": [
+   "item:trimshow-e1",
+   "item:trimshow-e2",
+   "item:trimshow-e3",
+   "library:trimshows"
+  ],
+  "steps": [
+   {
+    "name": "episode names come from the .nfo (trimmed) or the whole file name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.trimshow-e1.id}},{{item.trimshow-e2.id}},{{item.trimshow-e3.id}}",
+      "Fields": "SortName,OriginalTitle,Overview"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Trim Ep Title"
+      },
+      {
+       "path": "$.Items[0].SortName",
+       "op": "eq",
+       "value": "trim ep sort"
+      },
+      {
+       "path": "$.Items[0].OriginalTitle",
+       "op": "eq",
+       "value": "Trim Ep Original"
+      },
+      {
+       "path": "$.Items[0].Overview",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[0].IndexNumber",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].ParentIndexNumber",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Trim Show S01E02 - File Title  "
+      },
+      {
+       "path": "$.Items[1].SortName",
+       "op": "eq",
+       "value": "001 - 0002 - Trim Show S01E02 - File Title  "
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Trim Tab Ep"
+      },
+      {
+       "path": "$.Items[2].SortName",
+       "op": "eq",
+       "value": "001 - 0003 - Trim Tab Ep"
+      },
+      {
+       "path": "$.Items[2].Overview",
+       "op": "eq",
+       "value": "Trim ep plot"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.runtime.series-from-nfo",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.runtime.R1",
+   "items.runtime.R2"
+  ],
+  "requires": [
+   "item:trimshow",
+   "item:run-twenty",
+   "item:run-none",
+   "item:run-text",
+   "item:run-negative",
+   "item:run-fraction",
+   "library:trimshows"
+  ],
+  "steps": [
+   {
+    "name": "series runtime in listings",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.trimshow.id}},{{item.run-twenty.id}},{{item.run-none.id}},{{item.run-text.id}},{{item.run-negative.id}},{{item.run-fraction.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].RunTimeTicks",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items[1].RunTimeTicks",
+       "op": "eq",
+       "value": 12000000000
+      },
+      {
+       "path": "$.Items[2].RunTimeTicks",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[3].RunTimeTicks",
+       "op": "eq",
+       "value": 12000000000
+      },
+      {
+       "path": "$.Items[4].RunTimeTicks",
+       "op": "eq",
+       "value": -3000000000
+      },
+      {
+       "path": "$.Items[5].RunTimeTicks",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "explicit field request gives the same",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.trimshow.id}},{{item.run-twenty.id}},{{item.run-none.id}},{{item.run-text.id}},{{item.run-negative.id}},{{item.run-fraction.id}}",
+      "Fields": "RunTimeTicks"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].RunTimeTicks",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items[1].RunTimeTicks",
+       "op": "eq",
+       "value": 12000000000
+      },
+      {
+       "path": "$.Items[2].RunTimeTicks",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "single item",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.trimshow.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.RunTimeTicks",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "single item, user route",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Users/{{user.admin.id}}/Items/{{item.run-twenty.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.RunTimeTicks",
+       "op": "eq",
+       "value": 12000000000
+      }
+     ]
+    }
+   },
+   {
+    "name": "single item without a runtime",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.run-none.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.RunTimeTicks",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.runtime.other-types",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.runtime.R3"
+  ],
+  "requires": [
+   "item:trimshow-s1",
+   "item:trimshow-e1",
+   "library:trimshows"
+  ],
+  "steps": [
+   {
+    "name": "a season has no runtime, an episode has the probed one",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.trimshow-s1.id}},{{item.trimshow-e1.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].RunTimeTicks",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[1].RunTimeTicks",
+       "op": "exists"
+      },
+      {
+       "path": "$.Items[1].RunTimeTicks",
+       "op": "gte",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "the library view has no runtime",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[?Name={{library.trimshows.name}}].RunTimeTicks",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.episodes.loose-files-names-and-numbers",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.episodes.R1",
+   "items.episodes.R2",
+   "items.episodes.R5",
+   "items.episodes.R6"
+  ],
+  "requires": [
+   "item:loose-short",
+   "item:loose-natal",
+   "item:loose-promo",
+   "item:loose-zed",
+   "item:loose-alpha",
+   "item:loose-s01e01",
+   "item:loose-inseason",
+   "item:loose-nfo",
+   "item:loose-pattern",
+   "item:loose-rootloose",
+   "item:loose-rootnfo",
+   "item:loose-rootnoseason",
+   "item:loose-s01e09",
+   "library:loose"
+  ],
+  "steps": [
+   {
+    "name": "episodes without a pattern, with and without an .nfo",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.loose-short.id}},{{item.loose-natal.id}},{{item.loose-promo.id}},{{item.loose-zed.id}},{{item.loose-alpha.id}},{{item.loose-s01e01.id}},{{item.loose-inseason.id}},{{item.loose-nfo.id}},{{item.loose-pattern.id}},{{item.loose-rootloose.id}},{{item.loose-rootnfo.id}},{{item.loose-rootnoseason.id}},{{item.loose-s01e09.id}}",
+      "Fields": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 13
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "Episode"
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Short One"
+      },
+      {
+       "path": "$.Items[0].SortName",
+       "op": "eq",
+       "value": "000 - Short One"
+      },
+      {
+       "path": "$.Items[0].ParentIndexNumber",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items[0].IndexNumber",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[1].Type",
+       "op": "eq",
+       "value": "Episode"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Holiday Special"
+      },
+      {
+       "path": "$.Items[1].SortName",
+       "op": "eq",
+       "value": "000 - Holiday Special"
+      },
+      {
+       "path": "$.Items[1].ParentIndexNumber",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items[1].IndexNumber",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[2].Type",
+       "op": "eq",
+       "value": "Episode"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "S00E01 - Promo"
+      },
+      {
+       "path": "$.Items[2].SortName",
+       "op": "eq",
+       "value": "000 - 0001 - S00E01 - Promo"
+      },
+      {
+       "path": "$.Items[2].ParentIndexNumber",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items[2].IndexNumber",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[3].Type",
+       "op": "eq",
+       "value": "Episode"
+      },
+      {
+       "path": "$.Items[3].Name",
+       "op": "eq",
+       "value": "Zed NoNfo"
+      },
+      {
+       "path": "$.Items[3].SortName",
+       "op": "eq",
+       "value": "Zed NoNfo"
+      },
+      {
+       "path": "$.Items[3].ParentIndexNumber",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[3].IndexNumber",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[4].Type",
+       "op": "eq",
+       "value": "Episode"
+      },
+      {
+       "path": "$.Items[4].Name",
+       "op": "eq",
+       "value": "Alpha With Ep"
+      },
+      {
+       "path": "$.Items[4].SortName",
+       "op": "eq",
+       "value": "000 - 0005 - Alpha With Ep"
+      },
+      {
+       "path": "$.Items[4].ParentIndexNumber",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items[4].IndexNumber",
+       "op": "eq",
+       "value": 5
+      },
+      {
+       "path": "$.Items[5].Type",
+       "op": "eq",
+       "value": "Episode"
+      },
+      {
+       "path": "$.Items[5].Name",
+       "op": "eq",
+       "value": "Loose Show S01E01"
+      },
+      {
+       "path": "$.Items[5].SortName",
+       "op": "eq",
+       "value": "001 - 0001 - Loose Show S01E01"
+      },
+      {
+       "path": "$.Items[5].ParentIndexNumber",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[5].IndexNumber",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[6].Type",
+       "op": "eq",
+       "value": "Episode"
+      },
+      {
+       "path": "$.Items[6].Name",
+       "op": "eq",
+       "value": "Loose In Season"
+      },
+      {
+       "path": "$.Items[6].SortName",
+       "op": "eq",
+       "value": "Loose In Season"
+      },
+      {
+       "path": "$.Items[6].ParentIndexNumber",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[6].IndexNumber",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[7].Type",
+       "op": "eq",
+       "value": "Episode"
+      },
+      {
+       "path": "$.Items[7].Name",
+       "op": "eq",
+       "value": "Loose Nfo Title"
+      },
+      {
+       "path": "$.Items[7].SortName",
+       "op": "eq",
+       "value": "001 - Loose Nfo Title"
+      },
+      {
+       "path": "$.Items[7].ParentIndexNumber",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[7].IndexNumber",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[8].Type",
+       "op": "eq",
+       "value": "Episode"
+      },
+      {
+       "path": "$.Items[8].Name",
+       "op": "eq",
+       "value": "Pattern Nfo"
+      },
+      {
+       "path": "$.Items[8].SortName",
+       "op": "eq",
+       "value": "001 - 0008 - Pattern Nfo"
+      },
+      {
+       "path": "$.Items[8].ParentIndexNumber",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[8].IndexNumber",
+       "op": "eq",
+       "value": 8
+      },
+      {
+       "path": "$.Items[9].Type",
+       "op": "eq",
+       "value": "Episode"
+      },
+      {
+       "path": "$.Items[9].Name",
+       "op": "eq",
+       "value": "Root Loose"
+      },
+      {
+       "path": "$.Items[9].SortName",
+       "op": "eq",
+       "value": "Root Loose"
+      },
+      {
+       "path": "$.Items[9].ParentIndexNumber",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[9].IndexNumber",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[10].Type",
+       "op": "eq",
+       "value": "Episode"
+      },
+      {
+       "path": "$.Items[10].Name",
+       "op": "eq",
+       "value": "Root Nfo Title"
+      },
+      {
+       "path": "$.Items[10].SortName",
+       "op": "eq",
+       "value": "002 - 0004 - Root Nfo Title"
+      },
+      {
+       "path": "$.Items[10].ParentIndexNumber",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[10].IndexNumber",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.Items[11].Type",
+       "op": "eq",
+       "value": "Episode"
+      },
+      {
+       "path": "$.Items[11].Name",
+       "op": "eq",
+       "value": "Root Nfo NoSeason Title"
+      },
+      {
+       "path": "$.Items[11].SortName",
+       "op": "eq",
+       "value": "0004 - Root Nfo NoSeason Title"
+      },
+      {
+       "path": "$.Items[11].ParentIndexNumber",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[11].IndexNumber",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.Items[12].Type",
+       "op": "eq",
+       "value": "Episode"
+      },
+      {
+       "path": "$.Items[12].Name",
+       "op": "eq",
+       "value": "Loose Show S01E09"
+      },
+      {
+       "path": "$.Items[12].SortName",
+       "op": "eq",
+       "value": "001 - 0009 - Loose Show S01E09"
+      },
+      {
+       "path": "$.Items[12].ParentIndexNumber",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[12].IndexNumber",
+       "op": "eq",
+       "value": 9
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.episodes.loose-files-seasons",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.episodes.R3",
+   "items.episodes.R4"
+  ],
+  "requires": [
+   "item:loose-show",
+   "item:loose-short",
+   "item:loose-natal",
+   "item:loose-promo",
+   "item:loose-zed",
+   "item:loose-alpha",
+   "item:loose-s01e01",
+   "item:loose-inseason",
+   "item:loose-nfo",
+   "item:loose-pattern",
+   "item:loose-rootloose",
+   "item:loose-rootnfo",
+   "item:loose-rootnoseason",
+   "item:loose-s01e09",
+   "library:loose"
+  ],
+  "steps": [
+   {
+    "name": "seasons of the series: the folders and the ones without a folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{item.loose-show.id}}",
+      "Fields": "Path"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Specials"
+      },
+      {
+       "path": "$.Items[0].IndexNumber",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Season 1"
+      },
+      {
+       "path": "$.Items[1].IndexNumber",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Season 2"
+      },
+      {
+       "path": "$.Items[2].IndexNumber",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[2].Path",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[3].Name",
+       "op": "eq",
+       "value": "Season Unknown"
+      },
+      {
+       "path": "$.Items[3].IndexNumber",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[3].Path",
+       "op": "absent"
+      }
+     ]
+    },
+    "capture": {
+     "s2": "$.Items[2].Id",
+     "unknown": "$.Items[3].Id",
+     "s0": "$.Items[0].Id",
+     "s1": "$.Items[1].Id"
+    }
+   },
+   {
+    "name": "season 0 holds the files of its folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.s0}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 5
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.loose-short.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.loose-zed.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "season 1 holds the files of its folder and the file of the series folder numbered 1",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.s1}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 5
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.loose-inseason.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.loose-pattern.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.loose-s01e09.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a file in the series folder with an .nfo season is in that season",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.s2}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.loose-rootnfo.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "files without a season are in the season without a number",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.unknown}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.loose-rootloose.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.loose-rootnoseason.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the file in the series folder numbered 1 reports that season",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.loose-s01e09.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.SeasonId",
+       "op": "eq",
+       "value": "{{capture.s1}}"
+      },
+      {
+       "path": "$.SeasonName",
+       "op": "eq",
+       "value": "Season 1"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the loose files are episodes of the series",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Shows/{{item.loose-show.id}}/Episodes"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 13
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.episodes.specials-folder-and-series-without-seasons",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.episodes.R3",
+   "items.episodes.R4"
+  ],
+  "requires": [
+   "item:loose-spec",
+   "item:loose-spec-s0",
+   "item:loose-spec-ep",
+   "item:loose-only",
+   "item:loose-only-ep",
+   "library:loose"
+  ],
+  "steps": [
+   {
+    "name": "a folder named Specials is season 0",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.loose-spec-s0.id}},{{item.loose-spec-ep.id}},{{item.loose-only-ep.id}}",
+      "Fields": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "Season"
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Specials"
+      },
+      {
+       "path": "$.Items[0].IndexNumber",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Sp One Title"
+      },
+      {
+       "path": "$.Items[1].ParentIndexNumber",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items[1].IndexNumber",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[1].SortName",
+       "op": "eq",
+       "value": "000 - Sp One Title"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Only One"
+      },
+      {
+       "path": "$.Items[2].IndexNumber",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[2].ParentIndexNumber",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a series with only loose files has a season without a number",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{item.loose-only.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Season Unknown"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.filter.is-folder-param-ignored",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.filter.R20"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "capture the library id",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[?Name={{library.movies.name}}].Id",
+       "op": "exists"
+      }
+     ]
+    },
+    "capture": {
+     "movies_lib": "$.Items[?Name={{library.movies.name}}].Id"
+    }
+   },
+   {
+    "name": "unfiltered",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.movies_lib}}",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 4
+      }
+     ]
+    }
+   },
+   {
+    "name": "IsFolder=true changes nothing",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.movies_lib}}",
+      "Recursive": "true",
+      "IsFolder": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 4
+      }
+     ]
+    }
+   },
+   {
+    "name": "IsFolder=false changes nothing",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.movies_lib}}",
+      "Recursive": "true",
+      "IsFolder": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 4
+      }
+     ]
+    }
+   },
+   {
+    "name": "an unparsable value is accepted",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.movies_lib}}",
+      "Recursive": "true",
+      "IsFolder": "maybe"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 4
+      }
+     ]
+    }
+   },
+   {
+    "name": "alone it does not make the request a query",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IsFolder": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Type",
+       "op": "contains",
+       "value": "CollectionFolder"
+      },
+      {
+       "path": "$.Items[*].Type",
+       "op": "notcontains",
+       "value": "Movie"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.homevideos.library-view",
+  "endpoint": "GET /UserViews",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.homevideos.R1"
+  ],
+  "requires": [
+   "library:home",
+   "item:home-game"
+  ],
+  "steps": [
+   {
+    "name": "the library is a view of type homevideos",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[?Name={{library.home.name}}].CollectionType",
+       "op": "eq",
+       "value": "homevideos"
+      },
+      {
+       "path": "$.Items[?Name={{library.home.name}}].Type",
+       "op": "eq",
+       "value": "CollectionFolder"
+      },
+      {
+       "path": "$.Items[?Name={{library.home.name}}].IsFolder",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.homevideos.library-first-level",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.homevideos.R2",
+   "items.homevideos.R4",
+   "items.homevideos.R5"
+  ],
+  "requires": [
+   "library:home",
+   "item:home-tv",
+   "item:home-rootvideo"
+  ],
+  "steps": [
+   {
+    "name": "capture the library id",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[?Name={{library.home.name}}].Id",
+       "op": "exists"
+      }
+     ]
+    },
+    "capture": {
+     "home_lib": "$.Items[?Name={{library.home.name}}].Id"
+    }
+   },
+   {
+    "name": "the first level: folders and videos, no root folder, nothing ignored",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.home_lib}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 6
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Dotted.Name.2002.1080p"
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "Video"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Empty Folder"
+      },
+      {
+       "path": "$.Items[1].Type",
+       "op": "eq",
+       "value": "Folder"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": " Lead Space Folder "
+      },
+      {
+       "path": "$.Items[2].Type",
+       "op": "eq",
+       "value": "Folder"
+      },
+      {
+       "path": "$.Items[3].Name",
+       "op": "eq",
+       "value": "Mixed Case"
+      },
+      {
+       "path": "$.Items[3].Type",
+       "op": "eq",
+       "value": "Folder"
+      },
+      {
+       "path": "$.Items[4].Name",
+       "op": "eq",
+       "value": "Root Video"
+      },
+      {
+       "path": "$.Items[4].Type",
+       "op": "eq",
+       "value": "Video"
+      },
+      {
+       "path": "$.Items[5].Name",
+       "op": "eq",
+       "value": "TV"
+      },
+      {
+       "path": "$.Items[5].Type",
+       "op": "eq",
+       "value": "Folder"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.homevideos.recursive-listing-and-filters",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.homevideos.R5",
+   "items.homevideos.R6",
+   "items.filter.R20"
+  ],
+  "requires": [
+   "library:home",
+   "item:home-root",
+   "item:home-game"
+  ],
+  "steps": [
+   {
+    "name": "capture the library id",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[?Name={{library.home.name}}].Id",
+       "op": "exists"
+      }
+     ]
+    },
+    "capture": {
+     "home_lib": "$.Items[?Name={{library.home.name}}].Id"
+    }
+   },
+   {
+    "name": "everything below the library: the root folder, nine folders, thirteen videos",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.home_lib}}",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 23
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.home-root.id}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "{{item.home-deep.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "IncludeItemTypes=Video",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.home_lib}}",
+      "IncludeItemTypes": "Video"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 13
+      },
+      {
+       "path": "$.Items[*].Type",
+       "op": "notcontains",
+       "value": "Folder"
+      }
+     ]
+    }
+   },
+   {
+    "name": "IncludeItemTypes=Folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.home_lib}}",
+      "IncludeItemTypes": "Folder"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 10
+      }
+     ]
+    }
+   },
+   {
+    "name": "MediaTypes=Video",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.home_lib}}",
+      "Recursive": "true",
+      "MediaTypes": "Video"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 13
+      },
+      {
+       "path": "$.Items[*].Type",
+       "op": "notcontains",
+       "value": "Folder"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Filters=IsNotFolder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.home_lib}}",
+      "Recursive": "true",
+      "Filters": "IsNotFolder"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 13
+      }
+     ]
+    }
+   },
+   {
+    "name": "Filters=IsFolder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.home_lib}}",
+      "Recursive": "true",
+      "Filters": "IsFolder"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 10
+      }
+     ]
+    }
+   },
+   {
+    "name": "IsFolder=false is ignored",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.home_lib}}",
+      "Recursive": "true",
+      "IsFolder": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 23
+      }
+     ]
+    }
+   },
+   {
+    "name": "searching does not find what is not cataloged",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "SearchTerm": "Secret",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "recycle bin",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "SearchTerm": "Gone",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "trailer files",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "SearchTerm": "trailer",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "a text file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "SearchTerm": "notes",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.homevideos.folder-children",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.homevideos.R5"
+  ],
+  "requires": [
+   "library:home",
+   "item:home-nick",
+   "item:home-tv",
+   "item:home-empty"
+  ],
+  "steps": [
+   {
+    "name": "children of a folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{item.home-nick.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Movie Nfo Video"
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "Video"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Nfo Video Title"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Nick Clip"
+      },
+      {
+       "path": "$.Items[3].Name",
+       "op": "eq",
+       "value": "Sub"
+      },
+      {
+       "path": "$.Items[3].Type",
+       "op": "eq",
+       "value": "Folder"
+      }
+     ]
+    }
+   },
+   {
+    "name": "everything below a folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{item.home-tv.id}}",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 10
+      }
+     ]
+    }
+   },
+   {
+    "name": "the folder item",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.home-nick.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Folder"
+      },
+      {
+       "path": "$.IsFolder",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Channel Two"
+      },
+      {
+       "path": "$.Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/Home/TV/Channel Two"
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an empty folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.home-empty.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Folder"
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "nothing below an empty folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{item.home-empty.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.homevideos.video-names-and-nfo",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.homevideos.R2",
+   "items.homevideos.R3",
+   "items.homevideos.R7"
+  ],
+  "requires": [
+   "item:home-game",
+   "item:home-dotted",
+   "item:home-leadfile",
+   "item:home-article",
+   "item:home-ten",
+   "item:home-two",
+   "item:home-nfo",
+   "item:home-movienfo",
+   "library:home"
+  ],
+  "steps": [
+   {
+    "name": "names are the file names, sort names follow the title rules",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Ids": "{{item.home-game.id}},{{item.home-dotted.id}},{{item.home-leadfile.id}},{{item.home-article.id}},{{item.home-ten.id}},{{item.home-two.id}},{{item.home-nfo.id}},{{item.home-movienfo.id}}",
+      "Fields": "SortName,Overview,Path"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Channel One - Bumper - 2002 - Game"
+      },
+      {
+       "path": "$.Items[0].SortName",
+       "op": "eq",
+       "value": "channel one  bumper  0000002002  game"
+      },
+      {
+       "path": "$.Items[0].ProductionYear",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Dotted.Name.2002.1080p"
+      },
+      {
+       "path": "$.Items[1].SortName",
+       "op": "eq",
+       "value": "dotted name 0000002002 0000001080p"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "  lead file "
+      },
+      {
+       "path": "$.Items[2].SortName",
+       "op": "eq",
+       "value": "lead file"
+      },
+      {
+       "path": "$.Items[3].SortName",
+       "op": "eq",
+       "value": "article"
+      },
+      {
+       "path": "$.Items[4].SortName",
+       "op": "eq",
+       "value": "0000000010 ten"
+      },
+      {
+       "path": "$.Items[5].SortName",
+       "op": "eq",
+       "value": "0000000002 two"
+      },
+      {
+       "path": "$.Items[6].Name",
+       "op": "eq",
+       "value": "Nfo Video Title"
+      },
+      {
+       "path": "$.Items[6].Overview",
+       "op": "eq",
+       "value": "Nfo plot"
+      },
+      {
+       "path": "$.Items[6].ProductionYear",
+       "op": "eq",
+       "value": 1999
+      },
+      {
+       "path": "$.Items[6].PremiereDate",
+       "op": "matches",
+       "value": "^1999-02-03"
+      },
+      {
+       "path": "$.Items[7].Name",
+       "op": "eq",
+       "value": "Movie Nfo Video"
+      },
+      {
+       "path": "$.Items[7].Overview",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "Video"
+      },
+      {
+       "path": "$.Items[0].MediaType",
+       "op": "eq",
+       "value": "Video"
+      },
+      {
+       "path": "$.Items[0].IsFolder",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "items.homevideos.video-media-and-playback",
+  "endpoint": "GET /Items",
+  "spec": "items.md#list",
+  "scope": "modern",
+  "tags": [
+   "items"
+  ],
+  "covers": [
+   "items.homevideos.R7"
+  ],
+  "requires": [
+   "item:home-nfo",
+   "item:home-nick",
+   "library:home"
+  ],
+  "steps": [
+   {
+    "name": "a video carries its probed media like a movie",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.home-nfo.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Video"
+      },
+      {
+       "path": "$.MediaType",
+       "op": "eq",
+       "value": "Video"
+      },
+      {
+       "path": "$.VideoType",
+       "op": "eq",
+       "value": "VideoFile"
+      },
+      {
+       "path": "$.RunTimeTicks",
+       "op": "gte",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].Id",
+       "op": "eq",
+       "value": "{{item.home-nfo.id}}"
+      },
+      {
+       "path": "$.MediaStreams",
+       "op": "exists"
+      },
+      {
+       "path": "$.Width",
+       "op": "eq",
+       "value": 320
+      },
+      {
+       "path": "$.Height",
+       "op": "eq",
+       "value": 240
+      }
+     ]
+    }
+   },
+   {
+    "name": "playback info",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.home-nfo.id}}/PlaybackInfo"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "a folder has nothing to play",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.home-nick.id}}/PlaybackInfo"
+    },
+    "expect": {
+     "status": 400
+    }
+   }
+  ]
  }
 ]

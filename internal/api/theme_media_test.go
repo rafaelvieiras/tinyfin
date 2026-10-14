@@ -196,8 +196,8 @@ func TestFolderShapedItemWithPathHasNoFileBehavior(t *testing.T) {
 
 	stream := get(http.MethodGet, "/Videos/"+string(itemID)+"/stream")
 	defer stream.Body.Close()
-	if stream.StatusCode != http.StatusNotFound {
-		t.Errorf("stream status = %d, want 404 for a folder-shaped item", stream.StatusCode)
+	if stream.StatusCode != http.StatusBadRequest {
+		t.Errorf("stream status = %d, want 400 for a folder-shaped item", stream.StatusCode)
 	}
 
 	theme := get(http.MethodGet, "/Items/"+string(itemID)+"/ThemeMedia")

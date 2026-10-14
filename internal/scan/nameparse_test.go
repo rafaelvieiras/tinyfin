@@ -31,7 +31,9 @@ func TestParseSeasonFolder(t *testing.T) {
 		{"season 1", 1, true},
 		{"Season 00", 0, true},
 		{"Season 12", 12, true},
-		{"Specials", 0, false},
+		{"Specials", 0, true},
+		{" season 3 ", 3, true},
+		{"Season 3 - Name", 0, false},
 		{"Extras", 0, false},
 	}
 	for _, c := range cases {

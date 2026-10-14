@@ -19,6 +19,11 @@ Rule IDs are stable (`items.<topic>.R<n>`); scenarios reference them through `co
   movies named `Bulk NNN`). Policy users `rating10` (`MaxParentalRating` 10), `rating17`, `rating17s1`
   (`MaxParentalSubRating` 1) and `blockunrated` (`BlockUnratedItems=[Movie]`) are fixtures. (Images: the reference extracts a `Primary` image from each movie and episode video, so `ImageTypes=Primary` matches those; series and seasons have none. Image-type scenarios therefore use types nothing has.)
   Videos are 320x240, about 4-6 seconds long.
+* Further lazy libraries, each created only around the scenarios that require it: `Trim` (movies whose `.nfo`
+  titles carry surrounding white space), `TrimShows` (series with white-space titles, named season, `<runtime>`
+  values), `Loose` (series with specials, loose files in season folders and files in the series folder) and
+  `Home` (a `homevideos` library: nested folders of videos with no naming scheme, a few ignored entries). Their
+  `.nfo` files start with a UTF-8 byte order mark, as the reference's own writer produces them.
 * Users: `admin`, `alice` (default policy), `nofolders` (`EnableAllFolders=false`, no enabled folders),
   `nodownload`, `disabled`. The `disabled` user cannot authenticate, so no scenario uses it.
 * Library ids used as `ParentId` are captured from `GET /UserViews` (libraries sort alphabetically: Movies, Shows).
@@ -169,6 +174,7 @@ the 12.2 reference with fixture items whose rating comes from a sidecar `.nfo` (
 - **items.filter.R17** Dimension filters work on the video stream. `IsHd` and `Is4K` pick resolution buckets and the picked buckets are united: `IsHd=false` is the SD bucket (width below 1200), `IsHd=true` the HD bucket (width of 1200 or more that is **not** 4K, so a 3840-wide item is not matched by `IsHd=true`), `Is4K=true` the 4K bucket (width of 3800 or more, or height of 2100 or more). `Is4K=false` picks no bucket: alone it matches nothing (empty result), together with `IsHd` it changes nothing. A narrow, tall item (for example 100x2100) is in both the SD and the 4K bucket. `MinWidth`/`MinHeight` keep items at least that large; `MaxWidth`/`MaxHeight` keep items at most that large (inclusive bounds). Observed on the reference with 320x240, 1280x720, 3840x2160 and edge-size clips (1198x100, 1200x100, 3800x100, 100x2100, 1300x2200); `scripts/conformance-media.sh` generates them.
 - **items.filter.R18** Metadata filters that nothing in the fixtures satisfies return an empty result with status 200: `Genres`, `Tags`, `OfficialRatings`, `Person`, `HasSubtitles=true`, `HasOverview=true`, `HasImdbId=true`, `HasTmdbId=true`, `MinCommunityRating`, `MinPremiereDate`, `ImageTypes` for types nothing has (`Backdrop`, `Logo`, `Banner`), `IsLocked=true`, `VideoTypes`, `Is3D=true`; `HasOverview=false` keeps items without an overview.
 - **items.filter.R19** Parental parameters on unrated items: `MaxOfficialRating` (known or unknown value), `HasParentalRating=false`, `MinOfficialRating` and `CollapseBoxSetItems=true` (no box sets exist) all leave unrated movies in the result.
+- **items.filter.R20** The boolean `IsFolder` query parameter has no effect: `IsFolder=true`, `IsFolder=false` and an unparsable value (`IsFolder=maybe`) all return the same set as the request without it (status 200), and on its own it does not turn the library-views listing into a query. Folders are selected through `Filters=IsFolder` / `Filters=IsNotFolder` (items.filter.R10).
 
 ### Rules: selecting by id
 
@@ -222,6 +228,42 @@ the 12.2 reference with fixture items whose rating comes from a sidecar `.nfo` (
 - **items.fields.R3** `UserData` is included by default for a user context; `EnableUserData=false` omits it. It carries `Played`, `IsFavorite`, `PlayCount`, `PlaybackPositionTicks` for the context user.
 - **items.fields.R4** `EnableImages`, `ImageTypeLimit` and `EnableImageTypes` shape image information only; they are accepted in any combination and never change which items match.
 - **items.fields.R5** `SortName` is an optional field like `Path`: listing items carry it only when `Fields` contains `SortName`; a single read (`GET /Items/{itemId}`) always carries it.
+
+### Rules: names taken from metadata files and file names
+
+- **items.names.R1** Text read from a sidecar `.nfo` is stored without surrounding white space: the title (`Name`), sort title, original title and plot (`Overview`) of movies, series, episodes and home videos lose every leading and trailing Unicode space character (space, tab, line breaks, no-break space U+00A0, ideographic space U+3000, ...). White space inside the text is kept (an `Overview` of two lines keeps its line break; `Trim   Inner  Run` stays). A character that is not white space is not trimmed: a zero width space (U+200B) around a title stays.
+- **items.names.R2** A value that is only white space is no value: a `<title>` of three spaces leaves the name taken from the folder or file, and a blank `<plot>` (or `<plot />`) leaves `Overview` absent.
+- **items.names.R3** The sort title is trimmed like the title and then feeds items.sort.R8 (`  The Trim Sort  ` gives `trim sort`); the sort name of an item whose title came from a file or folder name is derived without that name's surrounding white space (`Name` ` The Lead` sorts as `lead`), while `Name` itself is as written (items.names.R4).
+- **items.names.R4** A movie's name taken from its folder name, an episode's name taken from its file name and a home video's name taken from its file name (without the extension) are kept as written, white space included (a movie folder ` Trim Lead File` gives the name ` Trim Lead File`).
+- **items.names.R5** A series name taken from its folder is trimmed and the white space before a trailing `(Year)` is dropped: the folder ` Trim Lead Show  (2111) ` gives `Name` `Trim Lead Show` and `ProductionYear` 2111.
+- **items.names.R6** A season folder name matches `Season N` ignoring case, surrounding white space and repeated white space between the words (`Season 1 ` is season 1 with `Name` `Season 1`).
+- **items.names.R7** A season's name from a `<namedseason number="N">` entry of the series `.nfo` is used as written (surrounding white space kept); an entry that is only white space is no name.
+- **items.names.R8** An episode's name is its `.nfo` title, trimmed, otherwise the whole file name without the extension as written (`Trim Show S01E02 - File Title  `, not just the part after the numbering). An explicit sort title replaces the structural sort name of items.sort.R9 and is normalized on its own (episode sort title `The Trim Ep Sort` gives `trim ep sort`); a blank sort title is ignored.
+
+### Rules: runtime of series
+
+- **items.runtime.R1** A series carries `RunTimeTicks` only when its `tvshow.nfo` has a `<runtime>` (minutes): the value times 600,000,000. `<runtime>0</runtime>` gives `RunTimeTicks` 0, present (the member is not omitted), `<runtime>20</runtime>` gives 12,000,000,000; without `<runtime>` the member is absent. The value is the same in listings with and without `Fields=RunTimeTicks`, on `GET /Items/{itemId}` and on `GET /Users/{userId}/Items/{itemId}`.
+- **items.runtime.R2** The `<runtime>` text is read up to its first space as a base-10 integer with an optional sign that fits 32 bits: `20 min` is 20, `+5` is 5, `020` is 20, `-5` gives -3,000,000,000; `12.5`, `20.0`, `abc`, an empty tag, a value with a leading space and an out-of-range number give no runtime (absent).
+- **items.runtime.R3** Only series take a runtime from their `.nfo`. Seasons, folders and library views have no `RunTimeTicks`; movies, episodes and videos carry the duration of their media file (a `<runtime>` in their `.nfo` does not replace it).
+
+### Rules: episodes without a season/episode pattern
+
+- **items.episodes.R1** Every video file inside a season folder, and every video file directly inside a series folder, is an `Episode` of that series whether or not its name carries `SxxExx`/`NxM` numbering. Its `Name` follows items.names.R8 (`Short One` from the `.nfo`, `Zed NoNfo` from the file). Two files that claim the same numbers are both listed; nothing is merged.
+- **items.episodes.R2** `ParentIndexNumber` (season) and `IndexNumber` (episode) come from the file name when it has numbering, and are replaced by `<season>` and `<episode>` of the file's `.nfo` when those tags are present (each independently, so `<season>0</season>` alone gives season 0 and no episode number; `<episode>8</episode>` replaces the 7 of `S01E07`). A number nothing provides is absent: a loose file does not inherit its folder's number (`Loose In Season` in `Season 01` has neither `IndexNumber` nor `ParentIndexNumber`). A numbering of the form `S02E05` in a file inside `Season 01` gives season 2.
+- **items.episodes.R3** The season an episode belongs to (its `ParentId`, `SeasonId`, `SeasonName`, and the children of that season) is the season folder it sits in, whatever numbers it carries. A file directly in the series folder belongs to the season folder of its season number when there is one, otherwise to a season with no folder named `Season N` (`IndexNumber` N, no `Path`), created for it; a file with no season number belongs to a season named `Season Unknown` (no `IndexNumber`, no `Path`, sort name `Season Unknown`). A series whose files are all loose therefore has exactly one season, `Season Unknown`.
+- **items.episodes.R4** Season 0 is named `Specials` (a `Season 00` folder, a folder named `Specials` in any case, or a created season 0); other seasons are `Season N`. A `Specials` folder is season 0.
+- **items.episodes.R5** The structural sort name of an episode (items.sort.R9) uses only the numbers it has: season and episode `SSS - EEEE - title` (`000 - 0001 - S00E01 - Promo`), season only `SSS - title` (`000 - Short One`), episode only `EEEE - title` (`0004 - Root Nfo NoSeason Title`), neither the title as written, with its case and article (`Zed NoNfo`). `GET /Shows/{seriesId}/Episodes` lists every such episode.
+- **items.episodes.R6** Numbering recognized in a file name inside a season folder or the series folder: `SxxExx` (also `S02.E06`, `S02 E07`, `[S02E15]`, the first of `s02e11e12`), `NxM`. A name with only an episode number (`E04`, `Ep 03`, `Episode 8`, `01 - Title`, `12`) gives that episode number and, inside a season folder, that folder's season. Other numbering schemes of the reference (a bare three-digit number, a trailing ` - 05`, dates) are not read; see *Known differences*.
+
+### Rules: home-videos libraries
+
+- **items.homevideos.R1** A library of collection type `homevideos` is a view (`Type` `CollectionFolder`, `CollectionType` `homevideos`, `IsFolder` true) like the other libraries.
+- **items.homevideos.R2** Its content is cataloged without any naming scheme: every folder below the library path (at any depth, empty ones included) is an item of `Type` `Folder` (`IsFolder` true, `MediaType` not `Video`, `Path` the directory, no media sources) named after the directory as written, and every video file is an item of `Type` `Video` (`IsFolder` false, `MediaType` `Video`) named after the file without its extension as written (`Channel One - Bumper - 2002 - Game`, `Dotted.Name.2002.1080p`, `  lead file `). Nothing is parsed out of the name: no `ProductionYear`, no series or season. Sort names follow items.sort.R8 on the name (`dotted name 0000002002 0000001080p`; `2 Two` sorts before `10 Ten`). Video extensions are matched case-insensitively and include `mkv`, `mp4`, `avi`, `webm`, `m4v`, `ts`, `mov`, `wmv`, `flv`, `mpg`, `mpeg`, `ogv`, `3gp`, `m2ts`, `vob` and `divx`; files of other kinds (`.txt`, `.mp3`, `.nfo`, subtitles) are not items.
+- **items.homevideos.R3** A `<name>.nfo` beside a video (`<movie>` document) supplies the video's `Name`, sort title, original title, plot, year and premiere date under items.names.R1; a `movie.nfo` in the folder is not read for the videos next to it.
+- **items.homevideos.R4** Left out of the catalog: entries whose name starts with a dot; the folders `@eaDir`, `#recycle` and `metadata`; video files that are trailers or samples by name (`Movie-trailer.mp4`, `Movie.trailer.mp4`, `Movie.sample.mkv`, `sample.mp4`); the content of folders named `extras`, `sample` and `backdrops` (the folder itself is listed).
+- **items.homevideos.R5** Hierarchy: `ParentId` = the library lists the first level (folders and videos directly under the library path), not the library's own root folder item; `Recursive=true` also returns every descendant and that root folder item (`Type` `Folder`, named after the library directory). `ParentId` = a folder lists its direct children, and with `Recursive=true` everything below it; a folder item carries `ChildCount` (its direct children, 0 when empty).
+- **items.homevideos.R6** Type filters work as for other libraries: `IncludeItemTypes=Video` (recursive when `Recursive` is absent, items.list.R6), `IncludeItemTypes=Folder`, `MediaTypes=Video` (videos only, folders have no media type), `Filters=IsNotFolder` and `Filters=IsFolder`; `IsFolder` as a parameter is ignored (items.filter.R20).
+- **items.homevideos.R7** A `Video` item has the shape of a movie: `RunTimeTicks`, `MediaSources` (one source whose `Id` is the item id), `MediaStreams`, `VideoType` `VideoFile`, `Width` and `Height` from the probe; `POST /Items/{itemId}/PlaybackInfo` answers like it does for a movie; for a folder (or any item without a file) it answers **400**, as does the stream route.
 
 ---
 
@@ -349,6 +391,18 @@ These parameters are accepted but nothing observable can be asserted with the av
 special library views (`UserView` types such as latest, next-up, genres), remote-access and parental-schedule denial,
 API-key (no user) access. Naming a studio or an artist in a query also creates the by-name entity as a side effect in the
 reference; that is deliberately left unexercised.
+
+## Known differences
+
+Observed on the reference and deliberately not reproduced (they are not asserted by a scenario that runs against both):
+
+* **Year in a movie name.** For a movie without `.nfo` title the reference keeps the `(Year)` of the folder in `Name` (`Alpha Movie (2015)`, `ProductionYear` 2015) while Tinyfin names it `Alpha Movie`.
+* **Photos.** A home-videos library also catalogs pictures as `Photo` items (`MediaType` `Photo`) and a folder that holds pictures is a `PhotoAlbum`. Tinyfin catalogs no pictures: such a folder is a `Folder`, and the picture is not listed (a picture named like a video is that video's `Primary` image).
+* **Folders inside a series folder.** A folder of a series that is not a season folder is a season (named after the folder, no number, sort name as written) in the reference, with a nested `Folder` item for its own subfolders; Tinyfin does not scan it. An `Extras` folder inside a season folder is a special-features folder in both.
+* **Season number that differs from the folder.** An episode inside `Season 01` whose own numbers say season 3 stays under season 1; the reference also creates an empty `Season 3` (listing the episode as its child). Tinyfin creates none.
+* **More numbering schemes.** `Name - 05`, `Name 209`, dates (`2019-05-06`), `Name 2020 Special`, `Season 2 Episode 13` give numbers in the reference (and a name cut before the number for some of them); in Tinyfin those files are episodes without numbers.
+* **Several documents in one `.nfo`.** Two `<episodedetails>` in one file name the episode `A / B` in the reference; Tinyfin reads the first.
+* **Folder item shape.** `RecursiveItemCount` and `MediaType` `Unknown` on folders, seasons and series are not returned.
 
 ## Resolved questions
 
@@ -484,3 +538,28 @@ Every question that was open in earlier revisions has been settled by probing th
 | `items.legacy.R5` | `items.legacy.item-user-rules` |
 | `items.legacy.R6` | `items.legacy.item-alias-path-ids` |
 | `items.legacy.R7` | `items.legacy.item-alias-path-ids` |
+| `items.names.R1` | `items.names.nfo-trims-surrounding-whitespace`, `items.names.series-nfo-and-named-season`, `items.names.episodes` |
+| `items.names.R2` | `items.names.nfo-trims-surrounding-whitespace`, `items.names.episodes` |
+| `items.names.R3` | `items.names.nfo-trims-surrounding-whitespace` |
+| `items.names.R4` | `items.names.file-derived-name-kept` |
+| `items.names.R5` | `items.names.series-folder-and-season-folder` |
+| `items.names.R6` | `items.names.series-folder-and-season-folder` |
+| `items.names.R7` | `items.names.series-nfo-and-named-season` |
+| `items.names.R8` | `items.names.episodes` |
+| `items.runtime.R1` | `items.runtime.series-from-nfo` |
+| `items.runtime.R2` | `items.runtime.series-from-nfo` |
+| `items.runtime.R3` | `items.runtime.other-types` |
+| `items.episodes.R1` | `items.episodes.loose-files-names-and-numbers` |
+| `items.episodes.R2` | `items.episodes.loose-files-names-and-numbers` |
+| `items.episodes.R3` | `items.episodes.loose-files-seasons`, `items.episodes.specials-folder-and-series-without-seasons` |
+| `items.episodes.R4` | `items.episodes.loose-files-seasons`, `items.episodes.specials-folder-and-series-without-seasons` |
+| `items.episodes.R5` | `items.episodes.loose-files-names-and-numbers` |
+| `items.episodes.R6` | `items.episodes.loose-files-names-and-numbers` |
+| `items.homevideos.R1` | `items.homevideos.library-view` |
+| `items.homevideos.R2` | `items.homevideos.library-first-level`, `items.homevideos.video-names-and-nfo` |
+| `items.homevideos.R3` | `items.homevideos.video-names-and-nfo` |
+| `items.homevideos.R4` | `items.homevideos.library-first-level`, `items.homevideos.recursive-listing-and-filters` |
+| `items.homevideos.R5` | `items.homevideos.library-first-level`, `items.homevideos.recursive-listing-and-filters`, `items.homevideos.folder-children` |
+| `items.homevideos.R6` | `items.homevideos.recursive-listing-and-filters` |
+| `items.homevideos.R7` | `items.homevideos.video-names-and-nfo`, `items.homevideos.video-media-and-playback` |
+| `items.filter.R20` | `items.filter.is-folder-param-ignored`, `items.homevideos.recursive-listing-and-filters` |

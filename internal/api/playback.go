@@ -158,6 +158,11 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !item.HasMediaFile() {
+		writeNotPlayable(w)
+		return
+	}
+
 	profile := s.resolveDeviceProfile(r)
 	decision := playback.Decide(item, profile)
 	resp := playbackInfoResponse{PlaySessionID: randomID()}
@@ -252,6 +257,14 @@ func hlsMasterURL(itemID storage.ItemID, playSessionID, apiKey string) string {
 // (handleHLSSegment, hls.go) — segmentFilePattern validates it strictly
 // before that happens, since unlike item.Path this value comes directly
 // off the wire.
+// writeNotPlayable answers a playback request for an item that has no media
+// file (a series, season or folder) with the reference's opaque 400.
+func writeNotPlayable(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusBadRequest)
+	_, _ = w.Write([]byte("Error processing request."))
+}
+
 func (s *Server) handleVideoStream(w http.ResponseWriter, r *http.Request) {
 	file := r.PathValue("file")
 	itemID := storage.ItemID(r.PathValue("itemId"))
@@ -271,7 +284,7 @@ func (s *Server) handleVideoStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !item.HasMediaFile() {
-		w.WriteHeader(http.StatusNotFound)
+		writeNotPlayable(w)
 		return
 	}
 	http.ServeFile(w, r, item.Path)

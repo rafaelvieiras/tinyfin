@@ -136,4 +136,120 @@ for i in $(seq 0 149); do
   mkdir -p "$d"
   [ -f "$d/$n ($((2000 + i % 20))).mp4" ] || cp "$many_src" "$d/$n ($((2000 + i % 20))).mp4"
 done
+# Names with surrounding white space, series runtime, episodes without an
+# SxxExx pattern and a home-videos tree (own libraries "Trim", "TrimShows",
+# "Loose", "Home", lazy). Files are copies of one tiny clip; the .nfo files
+# carry a UTF-8 byte order mark as Jellyfin writes them.
+BOM=$'\xef\xbb\xbf'
+NBSP=$' '
+IDEO=$'　'
+ZWSP=$'​'
+vid() { mkdir -p "$(dirname "$1")"; [ -f "$1" ] || cp "$many_src" "$1"; }
+nfo() { mkdir -p "$(dirname "$1")"; printf '%s%s\n' "$BOM" "$2" >"$1"; }
+
+# Movies whose .nfo titles carry white space (and a few that are not
+# white space), plus names taken from file names.
+T="$ROOT/Trim"
+vid "$T/Trim Space (2101)/Trim Space (2101).mp4"
+nfo "$T/Trim Space (2101)/Trim Space (2101).nfo" "<movie><title>  Trim Lead and Trail  </title><sorttitle>  The Trim Sort  </sorttitle><originaltitle> Trim Original </originaltitle><plot>
+ Trim plot line 1
+line 2 
+</plot></movie>"
+vid "$T/Trim Tab (2102)/Trim Tab (2102).mp4"
+nfo "$T/Trim Tab (2102)/Trim Tab (2102).nfo" "<movie><title>	Trim Tab	</title></movie>"
+vid "$T/Trim Space Variants (2103)/Trim Space Variants (2103).mp4"
+nfo "$T/Trim Space Variants (2103)/Trim Space Variants (2103).nfo" "<movie><title>${NBSP}${IDEO} Trim Variants ${IDEO}${NBSP}</title></movie>"
+vid "$T/Trim Inner (2104)/Trim Inner (2104).mp4"
+nfo "$T/Trim Inner (2104)/Trim Inner (2104).nfo" "<movie><title>Trim   Inner  Run</title></movie>"
+vid "$T/Trim Zwsp (2105)/Trim Zwsp (2105).mp4"
+nfo "$T/Trim Zwsp (2105)/Trim Zwsp (2105).nfo" "<movie><title>${ZWSP}Trim Zwsp${ZWSP}</title></movie>"
+vid "$T/Trim Blank/Trim Blank.mp4"
+nfo "$T/Trim Blank/Trim Blank.nfo" "<movie><title>   </title><plot>  </plot></movie>"
+vid "$T/ Trim Lead File/ Trim Lead File .mp4"
+
+# Series: .nfo titles, named season, series runtime, a folder name with white
+# space, episodes named by file or by .nfo.
+TS="$ROOT/TrimShows"
+S="$TS/Trim Show (2110)"
+nfo "$S/tvshow.nfo" "<tvshow><title>  Trim Show Title  </title><sorttitle> The Trim Show Sort </sorttitle><originaltitle> Trim Show Original </originaltitle><plot> Trim show plot </plot><runtime>0</runtime><namedseason number=\"1\"> Trim Named Season </namedseason></tvshow>"
+vid "$S/Season 01/Trim Show S01E01.mp4"
+nfo "$S/Season 01/Trim Show S01E01.nfo" "<episodedetails><title> Trim Ep Title </title><sorttitle> The Trim Ep Sort </sorttitle><originaltitle> Trim Ep Original </originaltitle><season>1</season><episode>1</episode><plot /></episodedetails>"
+vid "$S/Season 01/Trim Show S01E02 - File Title  .mp4"
+vid "$S/Season 01/Trim Show S01E03.mp4"
+nfo "$S/Season 01/Trim Show S01E03.nfo" "<episodedetails><title>	Trim Tab Ep
+</title><plot>
+ Trim ep plot 
+</plot></episodedetails>"
+vid "$TS/ Trim Lead Show  (2111) /Season 1 /ep S01E01.mp4"
+S="$TS/Run Twenty (2112)"
+nfo "$S/tvshow.nfo" "<tvshow><title>Run Twenty</title><runtime>20</runtime></tvshow>"
+vid "$S/Season 01/Run Twenty S01E01.mp4"
+S="$TS/Run None (2113)"
+nfo "$S/tvshow.nfo" "<tvshow><title>Run None</title></tvshow>"
+vid "$S/Season 01/Run None S01E01.mp4"
+S="$TS/Run Text (2114)"
+nfo "$S/tvshow.nfo" "<tvshow><title>Run Text</title><runtime>20 min</runtime></tvshow>"
+vid "$S/Season 01/Run Text S01E01.mp4"
+S="$TS/Run Negative (2115)"
+nfo "$S/tvshow.nfo" "<tvshow><title>Run Negative</title><runtime>-5</runtime></tvshow>"
+vid "$S/Season 01/Run Negative S01E01.mp4"
+S="$TS/Run Fraction (2116)"
+nfo "$S/tvshow.nfo" "<tvshow><title>Run Fraction</title><runtime>12.5</runtime></tvshow>"
+vid "$S/Season 01/Run Fraction S01E01.mp4"
+
+# Episodes without an SxxExx pattern: specials, loose files in season folders
+# and files directly in the series folder.
+L="$ROOT/Loose/Loose Show (2120)"
+epnfo() { # <path without extension> <inner xml>
+  nfo "$1.nfo" "<episodedetails>$2</episodedetails>"
+}
+vid "$L/Season 00/Short One.mp4"
+epnfo "$L/Season 00/Short One" "<title>Short One</title><season>0</season><plot />"
+vid "$L/Season 00/Holiday Special - Story Name.mp4"
+epnfo "$L/Season 00/Holiday Special - Story Name" "<title>Holiday Special</title><season>0</season>"
+vid "$L/Season 00/S00E01 - Promo.mp4"
+vid "$L/Season 00/Zed NoNfo.mp4"
+vid "$L/Season 00/Alpha WithEp.mp4"
+epnfo "$L/Season 00/Alpha WithEp" "<title>Alpha With Ep</title><season>0</season><episode>5</episode>"
+vid "$L/Season 01/Loose Show S01E01.mp4"
+vid "$L/Season 01/Loose In Season.mp4"
+vid "$L/Season 01/Loose Nfo.mp4"
+epnfo "$L/Season 01/Loose Nfo" "<title>Loose Nfo Title</title><season>1</season>"
+vid "$L/Season 01/Pattern Nfo S01E07.mp4"
+epnfo "$L/Season 01/Pattern Nfo S01E07" "<title>Pattern Nfo</title><episode>8</episode>"
+vid "$L/Root Loose.mp4"
+vid "$L/Root Nfo.mp4"
+epnfo "$L/Root Nfo" "<title>Root Nfo Title</title><season>2</season><episode>4</episode>"
+vid "$L/Root Nfo NoSeason.mp4"
+epnfo "$L/Root Nfo NoSeason" "<title>Root Nfo NoSeason Title</title><episode>4</episode>"
+vid "$L/Loose Show S01E09.mp4"
+vid "$ROOT/Loose/Loose Only (2121)/Only One.mp4"
+vid "$ROOT/Loose/Loose Specials (2122)/Specials/Sp One.mp4"
+epnfo "$ROOT/Loose/Loose Specials (2122)/Specials/Sp One" "<title>Sp One Title</title><season>0</season>"
+vid "$ROOT/Loose/Loose Specials (2122)/Season 01/Loose Specials S01E01.mp4"
+
+# Home videos: nested folders, no naming scheme.
+H="$ROOT/Home"
+vid "$H/TV/Channel One/Bumper/Channel One - Bumper - 2002 - Game.mp4"
+vid "$H/TV/Channel Two/Nick Clip.mp4"
+vid "$H/TV/Channel Two/Nfo Video.mp4"
+nfo "$H/TV/Channel Two/Nfo Video.nfo" "<movie><title> Nfo Video Title </title><plot>Nfo plot</plot><year>1999</year><premiered>1999-02-03</premiered></movie>"
+vid "$H/TV/Channel Two/Movie Nfo Video.mp4"
+nfo "$H/TV/Channel Two/movie.nfo" "<movie><title>Folder Wide Title</title></movie>"
+vid "$H/TV/Channel Two/Sub/Deep/Deep Clip.mp4"
+vid "$H/Root Video.mp4"
+vid "$H/Dotted.Name.2002.1080p.mp4"
+vid "$H/Mixed Case/aaa lower.mp4"
+vid "$H/Mixed Case/Bbb Upper.mp4"
+vid "$H/Mixed Case/10 Ten.mp4"
+vid "$H/Mixed Case/2 Two.mp4"
+vid "$H/Mixed Case/The Article.mp4"
+mkdir -p "$H/Empty Folder"
+vid "$H/ Lead Space Folder /  lead file .mp4"
+# left out of the catalog
+printf 'notes' >"$H/TV/Channel Two/notes.txt"
+vid "$H/.hidden/Secret.mp4"
+vid "$H/#recycle/Gone.mp4"
+vid "$H/Root Video-trailer.mp4"
+
 echo "media tree ready under $ROOT"

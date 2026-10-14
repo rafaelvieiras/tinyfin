@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 // yearSuffix matches a trailing " (YYYY)" on a movie/series folder name —
@@ -38,12 +39,18 @@ func ParseTitleYear(name string) (title string, year int) {
 // "Season 00" (specials) — the Kodi/Jellyfin convention's standard season
 // folder shape. Case-insensitive: real libraries are inconsistent about
 // casing.
-var seasonFolder = regexp.MustCompile(`(?i)^Season\s+(\d{1,4})$`)
+var seasonFolder = regexp.MustCompile(`(?i)^\s*Season\s+(\d{1,4})\s*$`)
+
+// specialsFolder matches the folder name that stands for season 0.
+var specialsFolder = regexp.MustCompile(`(?i)^\s*Specials\s*$`)
 
 // ParseSeasonFolder returns a season directory's number and whether name
 // actually matched the convention (so a caller can tell "season 0" from
 // "not a season folder at all").
 func ParseSeasonFolder(name string) (season int, ok bool) {
+	if specialsFolder.MatchString(name) {
+		return 0, true
+	}
 	m := seasonFolder.FindStringSubmatch(name)
 	if m == nil {
 		return 0, false
@@ -61,7 +68,49 @@ func ParseSeasonFolder(name string) (season int, ok bool) {
 // anywhere in the filename, since real files commonly prefix the pattern
 // with the series name and suffix it with an episode title
 // ("Show Name - S01E02 - Episode Title.mkv").
-var episodePattern = regexp.MustCompile(`(?i)s(\d{1,4})e(\d{1,4})|(\d{1,4})x(\d{1,4})`)
+var episodePattern = regexp.MustCompile(`(?i)s(\d{1,4})[ ._-]?e(\d{1,4})|(\d{1,4})x(\d{1,4})`)
+
+// episodeOnlyPattern matches a bare episode number: "E04", "Ep 03",
+// "Episode 8" delimited by separators or brackets.
+var episodeOnlyPattern = regexp.MustCompile(`(?i)(?:^|[ ._\-\[(])(?:episode|ep|e)[ ._-]?(\d{1,4})(?:$|[ ._\-\])])`)
+
+// leadingNumberPattern matches a file name that starts with an episode
+// number: "01 - Title", "12".
+var leadingNumberPattern = regexp.MustCompile(`^(\d{1,3})(?:[ ._-]|$)`)
+
+// ParseEpisodeNumbers extracts the season and episode numbers a file name
+// carries; either may be absent. A pattern with both numbers (S01E02, 1x02)
+// gives both; the episode-only forms ("E04", "Ep 03", "01 - Title", "12")
+// give just the episode. A name with no number at all gives neither.
+func ParseEpisodeNumbers(filename string) (season, episode *int) {
+	if s, e, _, ok := ParseEpisode(filename); ok {
+		return &s, &e
+	}
+	name := strings.TrimSuffix(filename, filepath.Ext(filename))
+	for _, re := range []*regexp.Regexp{episodeOnlyPattern, leadingNumberPattern} {
+		if m := re.FindStringSubmatch(name); m != nil {
+			if n, err := strconv.Atoi(m[1]); err == nil {
+				return nil, &n
+			}
+		}
+	}
+	return nil, nil
+}
+
+// ParseSeriesTitleYear splits a series folder name into title and year. The
+// whole name is trimmed first and the white space before "(YYYY)" dropped,
+// so " Show  (2012) " gives ("Show", 2012).
+func ParseSeriesTitleYear(name string) (title string, year int) {
+	t := strings.TrimFunc(name, unicode.IsSpace)
+	if m := seriesYearSuffix.FindStringSubmatch(t); m != nil {
+		if y, err := strconv.Atoi(m[2]); err == nil {
+			return strings.TrimFunc(m[1], unicode.IsSpace), y
+		}
+	}
+	return t, 0
+}
+
+var seriesYearSuffix = regexp.MustCompile(`^(.*?)\s*\((\d{4})\)$`)
 
 // ParseEpisode extracts (season, episode, episodeTitle) from a filename
 // (extension included; stripped internally). ok is false if filename
@@ -104,6 +153,49 @@ func ParseEpisode(filename string) (season, episode int, episodeTitle string, ok
 // containers real libraries commonly hold.
 var videoExtensions = map[string]bool{
 	".mkv": true, ".mp4": true, ".avi": true, ".webm": true, ".m4v": true, ".ts": true, ".mov": true,
+	".wmv": true, ".flv": true, ".mpg": true, ".mpeg": true, ".ogv": true, ".3gp": true, ".m2ts": true,
+	".vob": true, ".divx": true,
+}
+
+// extraSuffixes end the base name of a file that is a trailer or a sample
+// rather than a video of its own; the bare words count too.
+var extraSuffixes = []string{"trailer", "sample"}
+
+// IsExtraVideo reports whether name is a trailer or a sample clip by its
+// name ("Movie-trailer.mp4", "Movie.sample.mkv", "sample.mp4").
+func IsExtraVideo(name string) bool {
+	base := strings.ToLower(strings.TrimSuffix(name, filepath.Ext(name)))
+	for _, w := range extraSuffixes {
+		if base == w {
+			return true
+		}
+		for _, sep := range []string{"-", ".", "_", " "} {
+			if strings.HasSuffix(base, sep+w) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// ignoredFolderNames are folders no scanner walks into: sidecar and
+// recycle-bin directories that file managers and NAS appliances create.
+var ignoredFolderNames = map[string]bool{"@eadir": true, "#recycle": true, "metadata": true}
+
+// IgnoredFolder reports whether a folder is left out of a home-videos scan:
+// hidden folders (leading dot) and sidecar or recycle-bin folders.
+func IgnoredFolder(name string) bool {
+	return strings.HasPrefix(name, ".") || ignoredFolderNames[strings.ToLower(name)]
+}
+
+// extrasFolderNames are folders that are listed but whose content is not
+// scanned as videos of their own.
+var extrasFolderNames = map[string]bool{"extras": true, "sample": true, "backdrops": true}
+
+// ExtrasFolder reports whether a folder's content is left out of a
+// home-videos scan while the folder itself is still listed.
+func ExtrasFolder(name string) bool {
+	return extrasFolderNames[strings.ToLower(name)]
 }
 
 // IsVideoFile reports whether name's extension is one Scan treats as a

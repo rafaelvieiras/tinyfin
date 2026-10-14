@@ -102,6 +102,12 @@ type ItemFilter struct {
 	// TopLevelOnly keeps only the direct children of a library root:
 	// items with no parent, excluding the library's own root Folder item.
 	TopLevelOnly bool
+	// RootFolderPaths are the paths of the library's own root Folder items.
+	// With TopLevelOnly they are the only parentless Folder items left out;
+	// a parentless Folder anywhere else (a first-level folder of a
+	// home-videos library) is a direct child. Empty: every parentless
+	// Folder is left out.
+	RootFolderPaths []string
 
 	// IDs selects specific items; OrderByIDs returns them in that order
 	// when no explicit SortBy is set. ExcludeIDs removes items.

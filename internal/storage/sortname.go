@@ -9,6 +9,7 @@ import (
 // NormalizeSortName derives the key items are ordered by (and that the
 // SortName field carries) from a title (contract: items.sort.R8):
 //
+//  0. surrounding white space (any Unicode space) is dropped;
 //  1. one leading article ("the ", "a ", "an ", any case) is dropped, unless
 //     that would leave nothing;
 //  2. the characters , & - { } ' are removed and . + % become a space;
@@ -21,7 +22,8 @@ import (
 //     outside the set the reference leaves alone is present, ASCII
 //     punctuation such as ! ( ) ? : ; is dropped as well.
 func NormalizeSortName(title string) string {
-	s := title
+	// Surrounding white space never takes part in the key.
+	s := strings.TrimFunc(title, unicode.IsSpace)
 	lower := strings.ToLower(s)
 	for _, art := range [...]string{"the ", "a ", "an "} {
 		if strings.HasPrefix(lower, art) && len(s) > len(art) {
@@ -65,10 +67,18 @@ func NormalizeSortName(title string) string {
 }
 
 // SortKey is the value stored as the item's sort name (items.sort.R8). An
-// episode orders by season, then episode number, then its own title, which
-// is kept as written; a season by its number; everything else by the
+// explicit sort title (ForcedSortName) is normalized on its own for every
+// type but seasons. Otherwise an episode orders by season, then episode
+// number, then its own title, which is kept as written; the parts that are
+// unknown drop out (items.sort.R9). A season orders by its number, a
+// season without one by its name as written; everything else by the
 // normalized title.
 func (it Item) SortKey() string {
+	if it.ForcedSortName != "" && it.Type != ItemTypeSeason {
+		if k := NormalizeSortName(it.ForcedSortName); k != "" {
+			return k
+		}
+	}
 	raw := it.SortName
 	if raw == "" {
 		raw = it.Name
@@ -78,10 +88,17 @@ func (it Item) SortKey() string {
 		if it.IndexNumber != nil {
 			return fmt.Sprintf("%04d", *it.IndexNumber)
 		}
+		return raw
 	case ItemTypeEpisode:
-		if it.ParentIndexNumber != nil && it.IndexNumber != nil {
+		switch {
+		case it.ParentIndexNumber != nil && it.IndexNumber != nil:
 			return fmt.Sprintf("%03d - %04d - %s", *it.ParentIndexNumber, *it.IndexNumber, raw)
+		case it.ParentIndexNumber != nil:
+			return fmt.Sprintf("%03d - %s", *it.ParentIndexNumber, raw)
+		case it.IndexNumber != nil:
+			return fmt.Sprintf("%04d - %s", *it.IndexNumber, raw)
 		}
+		return raw
 	}
 	return NormalizeSortName(raw)
 }

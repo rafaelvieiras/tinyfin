@@ -164,6 +164,22 @@ Tinyfin's scanner bounds `ffprobe` (and any other scan-time subprocess) concurre
 rather than spawning one per discovered file — a scan taking longer is an acceptable trade-off
 against a scan that can exhaust the memory budget this whole project exists to protect (`09`).
 
+## Library kinds and file layouts the scanner reads
+
+The observable behavior is specified in `docs/contract/specs/items.md` (rules `items.names`,
+`items.runtime`, `items.episodes`, `items.homevideos`); this section only records where it lives.
+
+- **`movies`**: one folder per movie holding the video file; **`tvshows`**: series folder, season
+  folders (`Season N`, `Specials`) and episode files. An episode file needs no `SxxExx`: its name,
+  numbers and season come from the file name, its `.nfo` and the folder it sits in, and files in
+  the series folder itself join the season of their number or a season created for them
+  (`seasonSet` in `scan.go`).
+- **`homevideos`**: every folder under the library path becomes a `Folder` item and every video
+  file a `Video` item (`walkHomeVideos`), with no name parsing and no provider lookup; pictures are
+  not cataloged yet.
+- Text from `.nfo` files is trimmed of surrounding white space when stored (`applyCommonNFOFields`);
+  a series takes its runtime from `<runtime>` of `tvshow.nfo` only.
+
 ## What the scanner does not do
 
 - Does not maintain its own competing "source of truth" for titles, artwork, or user overrides —

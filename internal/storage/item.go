@@ -32,6 +32,7 @@ const (
 	ItemTypeMusicGenre       ItemType = "MusicGenre"
 	ItemTypeStudio           ItemType = "Studio"
 	ItemTypeYear             ItemType = "Year"
+	ItemTypeVideo            ItemType = "Video" // a video file of a home-videos library
 	ItemTypeFolder           ItemType = "Folder"
 	ItemTypeCollectionFolder ItemType = "CollectionFolder" // a library root
 	ItemTypeUserView         ItemType = "UserView"         // a user's view of a library root
@@ -207,10 +208,14 @@ type Item struct {
 	Name          string
 	OriginalTitle string
 	SortName      string
-	Overview      string
-	Taglines      []string
-	Genres        []string
-	Tags          []string
+	// ForcedSortName is an explicit sort title from the item's metadata
+	// (a `<sorttitle>`). It is not persisted: UpsertItem folds it into the
+	// stored sort key, which then reads back through SortName.
+	ForcedSortName string
+	Overview       string
+	Taglines       []string
+	Genres         []string
+	Tags           []string
 
 	// Studios is derived, not guessed: populated only by a Provider that
 	// returns them (internal/metadata's TMDBProvider maps TMDB's "networks"
@@ -278,14 +283,18 @@ type Item struct {
 }
 
 // HasMediaFile reports whether Path names a playable file of the item's own.
-// A Series or Season stores its folder as Path (matching the reference
-// server, which reports the directory there) but has no file to play,
-// probe or stream.
+// A Series, Season or Folder stores its directory as Path (matching the
+// reference server, which reports the directory there) but has no file to
+// play, probe or stream.
 func (i Item) HasMediaFile() bool {
 	if i.Path == "" {
 		return false
 	}
-	return i.Type != ItemTypeSeries && i.Type != ItemTypeSeason
+	switch i.Type {
+	case ItemTypeSeries, ItemTypeSeason, ItemTypeFolder, ItemTypeCollectionFolder:
+		return false
+	}
+	return true
 }
 
 // SeriesActivity is one entry of QuerySeriesLatestActivity's result: a
