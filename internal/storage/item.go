@@ -130,6 +130,13 @@ type MediaStreamRef struct {
 	// since ffprobe only ever sees the one file it's pointed at.
 	IsExternal bool
 
+	// Path is the file an external subtitle stream comes from (empty for
+	// every embedded stream). IsHearingImpaired marks a subtitle stream for
+	// the deaf and hard of hearing (an external file named with a "sdh",
+	// "cc" or "hi" part).
+	Path              string
+	IsHearingImpaired bool
+
 	// IsOriginal marks the stream flagged as the original-language track
 	// — ffprobe's disposition.original, when the installed ffmpeg reports
 	// it (an older ffmpeg build simply omits the key, read as false).

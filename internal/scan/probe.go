@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"os/exec"
 	"strconv"
+	"strings"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
+	"github.com/rafaelvieiras/tinyfin/internal/subtitle"
 )
 
 // ffprobeStream is one entry of ffprobe -show_streams' JSON output. Field
@@ -45,6 +47,8 @@ type ffprobeStream struct {
 		Default  int `json:"default"`
 		Forced   int `json:"forced"`
 		Original int `json:"original"`
+		// HearingImpaired is the disposition flag of an SDH track.
+		HearingImpaired int `json:"hearing_impaired"`
 	} `json:"disposition"`
 	// Tags.Title/Language: an embedded per-track title/language tag, when
 	// the container carries one (e.g. Matroska's TrackEntry/Name and
@@ -179,13 +183,20 @@ func mediaStreamsFromProbe(info ffprobeOutput) []storage.MediaStreamRef {
 			streams = append(streams, ref)
 			idx++
 		case "subtitle":
+			lang := st.Tags.Language
+			if strings.EqualFold(lang, "und") {
+				// An undetermined language is no language for a subtitle track.
+				lang = ""
+			}
 			ref := storage.MediaStreamRef{
-				Index: idx, Type: storage.StreamTypeSubtitle, Codec: st.CodecName,
-				IsDefault:  st.Disposition.Default == 1,
-				IsForced:   st.Disposition.Forced == 1,
-				Title:      st.Tags.Title,
-				Language:   st.Tags.Language,
-				IsOriginal: st.Disposition.Original != 0,
+				Index: idx, Type: storage.StreamTypeSubtitle, Codec: subtitle.NormalizeCodec(st.CodecName),
+				IsDefault:         st.Disposition.Default == 1,
+				IsForced:          st.Disposition.Forced == 1,
+				IsHearingImpaired: st.Disposition.HearingImpaired == 1,
+				Title:             st.Tags.Title,
+				Language:          lang,
+				IsOriginal:        st.Disposition.Original != 0,
+				TimeBase:          st.TimeBase,
 			}
 			streams = append(streams, ref)
 			idx++

@@ -4,11 +4,14 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"strings"
 	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/collection"
 	"github.com/rafaelvieiras/tinyfin/internal/guid"
+	"github.com/rafaelvieiras/tinyfin/internal/playback"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
+	"github.com/rafaelvieiras/tinyfin/internal/subtitle"
 )
 
 // baseItemDto mirrors the OpenAPI schema's BaseItemDto, trimmed to fields
@@ -495,11 +498,12 @@ func (s *Server) unplayedItemCountFor(ctx context.Context, userID storage.UserID
 // with no playable file (item.Path empty — a folder-shaped item like a
 // Series/Season/BoxSet), matching PlaybackInfo's own 404 for such an item
 // (nothing to describe).
-func mediaSourcesFor(item storage.Item) []mediaSourceInfoDto {
+func (s *Server) mediaSourcesFor(ctx context.Context, item storage.Item) []mediaSourceInfoDto {
 	if !item.HasMediaFile() {
 		return nil
 	}
 	source := baseMediaSourceInfo(item, item.Container)
+	s.applyStreamDefaults(ctx, &source, item.MediaStreams)
 	// No device profile to negotiate against here (this function's doc
 	// comment) — SupportsDirectPlay/TranscodingSubProtocol mirror
 	// handlePlaybackInfo's own ModeDirectPlay branch (playback.go) since a
@@ -577,32 +581,50 @@ type baseItemDtoQueryResult struct {
 // compute DisplayTitle below, and exposed on the wire since the reference
 // server does too).
 type mediaStreamDto struct {
-	Codec                  string   `json:"Codec,omitempty"`
-	Language               string   `json:"Language,omitempty"`
-	Title                  string   `json:"Title,omitempty"`
-	DisplayTitle           string   `json:"DisplayTitle,omitempty"`
-	Type                   string   `json:"Type"`
-	Index                  int      `json:"Index"`
-	IsDefault              bool     `json:"IsDefault"`
-	IsForced               bool     `json:"IsForced"`
-	IsInterlaced           bool     `json:"IsInterlaced"`
-	IsHearingImpaired      bool     `json:"IsHearingImpaired"`
-	IsOriginal             bool     `json:"IsOriginal"`
-	IsExternal             bool     `json:"IsExternal"`
-	IsTextSubtitleStream   bool     `json:"IsTextSubtitleStream"`
-	SupportsExternalStream bool     `json:"SupportsExternalStream"`
-	Channels               *int     `json:"Channels,omitempty"`
-	Width                  *int     `json:"Width,omitempty"`
-	Height                 *int     `json:"Height,omitempty"`
-	BitRate                *int64   `json:"BitRate,omitempty"`
-	Profile                string   `json:"Profile,omitempty"`
-	ChannelLayout          string   `json:"ChannelLayout,omitempty"`
-	TimeBase               string   `json:"TimeBase,omitempty"`
-	AspectRatio            string   `json:"AspectRatio,omitempty"`
-	RefFrames              *int     `json:"RefFrames,omitempty"`
-	PixelFormat            string   `json:"PixelFormat,omitempty"`
-	Level                  *float64 `json:"Level,omitempty"`
-	SampleRate             *int     `json:"SampleRate,omitempty"`
+	Codec                  string `json:"Codec,omitempty"`
+	Language               string `json:"Language,omitempty"`
+	Title                  string `json:"Title,omitempty"`
+	DisplayTitle           string `json:"DisplayTitle,omitempty"`
+	Type                   string `json:"Type"`
+	Index                  int    `json:"Index"`
+	IsDefault              bool   `json:"IsDefault"`
+	IsForced               bool   `json:"IsForced"`
+	IsInterlaced           bool   `json:"IsInterlaced"`
+	IsHearingImpaired      bool   `json:"IsHearingImpaired"`
+	IsOriginal             bool   `json:"IsOriginal"`
+	IsExternal             bool   `json:"IsExternal"`
+	IsTextSubtitleStream   bool   `json:"IsTextSubtitleStream"`
+	SupportsExternalStream bool   `json:"SupportsExternalStream"`
+	// Path is the file of an external subtitle stream. Score ranks a
+	// subtitle stream for automatic selection (subtitle streams only); the
+	// Localized* members are the labels the reference attaches to every
+	// subtitle stream (English: the server has no localization system).
+	Path                     string `json:"Path,omitempty"`
+	Score                    *int   `json:"Score,omitempty"`
+	LocalizedUndefined       string `json:"LocalizedUndefined,omitempty"`
+	LocalizedDefault         string `json:"LocalizedDefault,omitempty"`
+	LocalizedForced          string `json:"LocalizedForced,omitempty"`
+	LocalizedExternal        string `json:"LocalizedExternal,omitempty"`
+	LocalizedHearingImpaired string `json:"LocalizedHearingImpaired,omitempty"`
+	LocalizedLanguage        string `json:"LocalizedLanguage,omitempty"`
+	// DeliveryMethod/DeliveryUrl/IsExternalUrl say how a subtitle stream
+	// reaches the player; set by PlaybackInfo only, and only when the
+	// request carries a device profile.
+	DeliveryMethod string   `json:"DeliveryMethod,omitempty"`
+	DeliveryURL    string   `json:"DeliveryUrl,omitempty"`
+	IsExternalURL  *bool    `json:"IsExternalUrl,omitempty"`
+	Channels       *int     `json:"Channels,omitempty"`
+	Width          *int     `json:"Width,omitempty"`
+	Height         *int     `json:"Height,omitempty"`
+	BitRate        *int64   `json:"BitRate,omitempty"`
+	Profile        string   `json:"Profile,omitempty"`
+	ChannelLayout  string   `json:"ChannelLayout,omitempty"`
+	TimeBase       string   `json:"TimeBase,omitempty"`
+	AspectRatio    string   `json:"AspectRatio,omitempty"`
+	RefFrames      *int     `json:"RefFrames,omitempty"`
+	PixelFormat    string   `json:"PixelFormat,omitempty"`
+	Level          *float64 `json:"Level,omitempty"`
+	SampleRate     *int     `json:"SampleRate,omitempty"`
 }
 
 func mediaStreamDtos(streams []storage.MediaStreamRef) []mediaStreamDto {
@@ -611,31 +633,51 @@ func mediaStreamDtos(streams []storage.MediaStreamRef) []mediaStreamDto {
 	}
 	dtos := make([]mediaStreamDto, 0, len(streams))
 	for _, s := range streams {
-		dtos = append(dtos, mediaStreamDto{
-			Codec:         s.Codec,
-			Language:      s.Language,
-			Title:         s.Title,
-			DisplayTitle:  displayTitleFor(s),
-			Type:          string(s.Type),
-			Index:         s.Index,
-			IsDefault:     s.IsDefault,
-			IsForced:      s.IsForced,
-			IsInterlaced:  s.IsInterlaced,
-			IsOriginal:    s.IsOriginal,
-			IsExternal:    s.IsExternal,
-			Channels:      s.Channels,
-			Width:         s.Width,
-			Height:        s.Height,
-			BitRate:       s.BitRate,
-			Profile:       s.Profile,
-			ChannelLayout: s.ChannelLayout,
-			TimeBase:      s.TimeBase,
-			AspectRatio:   s.AspectRatio,
-			RefFrames:     s.RefFrames,
-			PixelFormat:   s.PixelFormat,
-			Level:         s.Level,
-			SampleRate:    s.SampleRate,
-		})
+		d := mediaStreamDto{
+			Codec:             s.Codec,
+			Language:          s.Language,
+			Title:             s.Title,
+			DisplayTitle:      displayTitleFor(s),
+			Type:              string(s.Type),
+			Index:             s.Index,
+			IsDefault:         s.IsDefault,
+			IsForced:          s.IsForced,
+			IsInterlaced:      s.IsInterlaced,
+			IsOriginal:        s.IsOriginal,
+			IsExternal:        s.IsExternal,
+			IsHearingImpaired: s.IsHearingImpaired,
+			Channels:          s.Channels,
+			Width:             s.Width,
+			Height:            s.Height,
+			BitRate:           s.BitRate,
+			Profile:           s.Profile,
+			ChannelLayout:     s.ChannelLayout,
+			TimeBase:          s.TimeBase,
+			AspectRatio:       s.AspectRatio,
+			RefFrames:         s.RefFrames,
+			PixelFormat:       s.PixelFormat,
+			Level:             s.Level,
+			SampleRate:        s.SampleRate,
+		}
+		if s.Type == storage.StreamTypeSubtitle {
+			d.SupportsExternalStream = true
+			d.IsTextSubtitleStream = subtitle.IsTextCodec(s.Codec)
+			d.Path = s.Path
+			// An embedded ASS/SSA stream carries no score.
+			if codec := strings.ToLower(s.Codec); s.IsExternal || (codec != "ass" && codec != "ssa") {
+				score := playback.SubtitleScore(s)
+				d.Score = &score
+			}
+			d.LocalizedUndefined = "Undefined"
+			d.LocalizedDefault = "Default"
+			d.LocalizedForced = "Forced"
+			d.LocalizedExternal = "External"
+			d.LocalizedHearingImpaired = "Hearing Impaired"
+			if isUsableLanguage(s.Language) {
+				d.LocalizedLanguage = subtitle.DisplayName(s.Language)
+			}
+		}
+		dtos = append(dtos, d)
 	}
 	return dtos
 }
@@ -1030,7 +1072,7 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		GenreItems:              genreItemsFor(item.Genres),
 		Studios:                 studioItemsFor(item.Studios),
 		ExternalUrls:            externalURLsFor(item.Type, item.ProviderIDs),
-		MediaSources:            mediaSourcesFor(item),
+		MediaSources:            s.mediaSourcesFor(ctx, item),
 		LocationType:            locationTypeFor(item),
 	}
 	if item.ExtraType != "" && !internalExtraType(item.ExtraType) {

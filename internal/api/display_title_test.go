@@ -261,7 +261,7 @@ func TestSubtitleDisplayTitle(t *testing.T) {
 		{
 			name: "undefined language",
 			s:    storage.MediaStreamRef{Type: storage.StreamTypeSubtitle, Codec: "subrip"},
-			want: "Und - SUBRIP",
+			want: "Undefined - SUBRIP",
 		},
 		{
 			name: "language, default, forced",

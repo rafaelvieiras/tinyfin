@@ -49,11 +49,17 @@ func (s *Scanner) probeOrReuse(ctx context.Context, pool *jobPool, itemID storag
 		res.mtimeNS = fi.ModTime().UnixNano()
 	}
 
+	// The subtitle files beside the video change independently of the
+	// video's own (size, mtime) signature, so they are listed on every
+	// scan (one cached folder listing) and merged into whatever the probe
+	// step returns.
+	external := externalSubtitles(ctx, path)
+
 	sigs, hasSigs := s.store.(signatureStore)
 	if hasSigs && statErr == nil && !s.forceProbe {
 		if sSize, sMtime, ok, err := sigs.GetScanSignature(ctx, itemID); err == nil && ok && sSize == size && sMtime == res.mtimeNS {
 			if old, err := s.store.GetItem(ctx, itemID); err == nil && len(old.MediaStreams) > 0 && old.RunTimeTicks != nil {
-				res.streams = old.MediaStreams
+				res.streams = withExternalSubtitles(stripExternalSubtitles(old.MediaStreams), external)
 				res.ticks = old.RunTimeTicks
 				pool.countSkipped()
 				return res
@@ -64,7 +70,7 @@ func (s *Scanner) probeOrReuse(ctx context.Context, pool *jobPool, itemID storag
 	info, err := s.probe(ctx, path)
 	pool.countProbed()
 	res.err = err
-	res.streams = mediaStreamsFromProbe(info)
+	res.streams = withExternalSubtitles(mediaStreamsFromProbe(info), external)
 	res.ticks = runtimeTicksFromProbe(info)
 	res.record = hasSigs && err == nil && statErr == nil
 	return res

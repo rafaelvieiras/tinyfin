@@ -1510,6 +1510,9 @@ func (s *Scanner) RefreshItem(ctx context.Context, itemID storage.ItemID, replac
 		return fmt.Errorf("refreshing item %s: %w", itemID, err)
 	}
 
+	// A refresh also re-reads the subtitle files beside the video.
+	refreshSubtitles(ctx, &item)
+
 	if item.Type == storage.ItemTypeVideo {
 		// A home video has no provider lookup: its picture and .nfo only.
 		pool := newJobPool(1)

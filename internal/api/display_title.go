@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
+	"github.com/rafaelvieiras/tinyfin/internal/subtitle"
 )
 
 // resolutionBreakpoint is one entry of the width/height -> resolution-label
@@ -283,17 +284,19 @@ func audioDisplayTitle(s storage.MediaStreamRef) string {
 
 // subtitleDisplayTitle implements docs/12's "Subtitle streams" section —
 // recorded there for completeness (same field/mechanism) though out of
-// scope for the movie/episode gaps that motivated this file. IsHearingImpaired
-// is skipped: storage.MediaStreamRef carries no such field today (no
-// hearing-impaired detection anywhere in this project, mediaStreamDto's own
-// doc comment), so there is nothing to test it against here.
+// scope for the movie/episode gaps that motivated this file. The attribute
+// order is language, hearing impaired, default, forced, codec, external
+// (verified against the reference with external files).
 func subtitleDisplayTitle(s storage.MediaStreamRef) string {
 	var attrs []string
 
 	if isUsableLanguage(s.Language) {
-		attrs = append(attrs, languageName(s.Language))
+		attrs = append(attrs, subtitle.DisplayName(s.Language))
 	} else {
-		attrs = append(attrs, "Und")
+		attrs = append(attrs, "Undefined")
+	}
+	if s.IsHearingImpaired {
+		attrs = append(attrs, "Hearing Impaired")
 	}
 	if s.IsDefault {
 		attrs = append(attrs, "Default")

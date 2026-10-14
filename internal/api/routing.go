@@ -130,6 +130,17 @@ var routePaths = []string{
 	"/Videos/{itemId}/AdditionalParts",
 	"/Videos/{itemId}/master.m3u8",
 	"/Videos/{itemId}/main.m3u8",
+	// Subtitle routes: 7 and 8 segments (including the leading empty split
+	// element), 4 for the upload/remote routes; the literal "Subtitles"
+	// segment is the case-normalized one.
+	"/Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/{file}",
+	"/Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/{startTicks}/{file}",
+	"/Videos/{itemId}/Subtitles",
+	"/Videos/{itemId}/Subtitles/{index}",
+	"/Items/{itemId}/RemoteSearch/Subtitles/{language}",
+	"/Providers/Subtitles/Subtitles/{subtitleId}",
+	"/FallbackFont/Fonts",
+	"/FallbackFont/Fonts/{name}",
 	"/Videos/{itemId}/{file}",
 	// 3 segments (including the leading empty split element), same count
 	// as several entries above ("/Items/Latest", "/UserItems/Resume",

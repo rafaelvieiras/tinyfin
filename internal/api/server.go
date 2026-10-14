@@ -582,6 +582,20 @@ func (s *Server) routes() {
 	// hls.go — HLS segment files (seg_00000.ts) too; handleVideoStream
 	// itself dispatches on the segment shape (see playback.go).
 	s.mux.HandleFunc("GET /Videos/{itemId}/{file}", requireAuth(s.handleVideoStream))
+	// Subtitles (subtitles.go). The file segment is "Stream.{format}" or
+	// "subtitles.m3u8": ServeMux wildcards cover whole segments, so the
+	// handler splits it itself. The reference serves the stream routes
+	// anonymously; Tinyfin requires a token (divergence, specs/subtitles.md
+	// subtitles.auth.R1) — the delivery URLs carry the ApiKey.
+	s.mux.HandleFunc("GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/{file}", requireAuth(s.handleSubtitleStream))
+	s.mux.HandleFunc("GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/{startTicks}/{file}", requireAuth(s.handleSubtitleStream))
+	s.mux.HandleFunc("POST /Videos/{itemId}/Subtitles", requireSubtitleManagement(s.handleSubtitleUpload))
+	s.mux.HandleFunc("DELETE /Videos/{itemId}/Subtitles/{index}", requireAdmin(s.handleSubtitleDelete))
+	s.mux.HandleFunc("GET /Items/{itemId}/RemoteSearch/Subtitles/{language}", requireSubtitleManagement(s.handleRemoteSubtitleSearch))
+	s.mux.HandleFunc("POST /Items/{itemId}/RemoteSearch/Subtitles/{subtitleId}", requireSubtitleManagement(s.handleRemoteSubtitleDownload))
+	s.mux.HandleFunc("GET /Providers/Subtitles/Subtitles/{subtitleId}", requireSubtitleManagement(s.handleRemoteSubtitleGet))
+	s.mux.HandleFunc("GET /FallbackFont/Fonts", requireAuth(s.handleFallbackFontList))
+	s.mux.HandleFunc("GET /FallbackFont/Fonts/{name}", requireAuth(s.handleFallbackFont))
 	// Bandwidth probe fired before a playback session starts
 	// (playback.go's handlePlaybackBitrateTest doc comment) — found
 	// 404ing by testing a real jellyfin-web build via Playwright.

@@ -11,6 +11,7 @@
 package api
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -21,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/rafaelvieiras/tinyfin/internal/deviceprofile"
+	"github.com/rafaelvieiras/tinyfin/internal/guid"
 	"github.com/rafaelvieiras/tinyfin/internal/playback"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
@@ -75,9 +77,13 @@ type mediaSourceInfoDto struct {
 	// source; "hls" is reported for the other three modes, matching
 	// TranscodingUrl's own protocol (hls.go serves HLS exclusively — no
 	// progressive-remux "http" transcoding path exists in this project).
-	TranscodingSubProtocol string           `json:"TranscodingSubProtocol"`
-	HasSegments            bool             `json:"HasSegments"`
-	MediaStreams           []mediaStreamDto `json:"MediaStreams,omitempty"`
+	TranscodingSubProtocol string `json:"TranscodingSubProtocol"`
+	// DefaultAudioStreamIndex/DefaultSubtitleStreamIndex are the streams the
+	// caller's preferences select (absent when there is none).
+	DefaultAudioStreamIndex    *int             `json:"DefaultAudioStreamIndex,omitempty"`
+	DefaultSubtitleStreamIndex *int             `json:"DefaultSubtitleStreamIndex,omitempty"`
+	HasSegments                bool             `json:"HasSegments"`
+	MediaStreams               []mediaStreamDto `json:"MediaStreams,omitempty"`
 }
 
 // playbackInfoResponse mirrors the OpenAPI schema's PlaybackInfoResponse.
@@ -106,20 +112,29 @@ type playbackInfoRequestBody struct {
 // Client string off the Authorization header; otherwise the conservative
 // Default().
 func (s *Server) resolveDeviceProfile(r *http.Request) deviceprofile.DeviceProfile {
+	p, _ := s.resolveDeviceProfileInline(r)
+	return p
+}
+
+// resolveDeviceProfileInline is resolveDeviceProfile that also reports
+// whether the profile came from the request body: the subtitle delivery
+// members of PlaybackInfo are filled only then (the reference sets none
+// for a request without a device profile).
+func (s *Server) resolveDeviceProfileInline(r *http.Request) (deviceprofile.DeviceProfile, bool) {
 	if r.Method == http.MethodPost {
 		var body playbackInfoRequestBody
 		if err := json.NewDecoder(r.Body).Decode(&body); err == nil && body.DeviceProfile != nil {
-			return *body.DeviceProfile
+			return *body.DeviceProfile, true
 		}
 	}
 
 	if ac, ok := AuthFromContext(r.Context()); ok && ac != nil {
 		if p, found := deviceprofile.Lookup(ac.Client); found {
-			return p
+			return p, false
 		}
 	}
 
-	return deviceprofile.Default()
+	return deviceprofile.Default(), false
 }
 
 // baseMediaSourceInfo builds the fields of a mediaSourceInfoDto that don't
@@ -170,11 +185,15 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	profile := s.resolveDeviceProfile(r)
+	profile, inline := s.resolveDeviceProfileInline(r)
 	decision := playback.Decide(item, profile)
 	resp := playbackInfoResponse{PlaySessionID: randomID()}
 
 	source := baseMediaSourceInfo(item, decision.Container)
+	s.applyStreamDefaults(r.Context(), &source, item.MediaStreams)
+	if inline {
+		s.applySubtitleDelivery(r, &source, item, profile.SubtitleProfiles)
+	}
 
 	switch decision.Mode {
 	case playback.ModeDirectPlay:
@@ -397,4 +416,89 @@ func (s *Server) handlePlaybackBitrateTest(w http.ResponseWriter, r *http.Reques
 	w.Header().Set("Content-Length", strconv.Itoa(len(out)))
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(out)
+}
+
+// splitLanguages splits a language preference ("eng", "eng,por", "eng|por").
+func splitLanguages(pref string) []string {
+	return strings.FieldsFunc(pref, func(r rune) bool { return r == ',' || r == '|' || r == ' ' })
+}
+
+// applyStreamDefaults sets the default audio and subtitle stream of src as
+// the caller's preferences (SubtitleMode, SubtitleLanguagePreference,
+// AudioLanguagePreference) select them.
+func (s *Server) applyStreamDefaults(ctx context.Context, src *mediaSourceInfoDto, streams []storage.MediaStreamRef) {
+	if len(streams) == 0 {
+		return
+	}
+	mode, subLangs, audioPref := "Default", []string(nil), ""
+	if ac, ok := AuthFromContext(ctx); ok && ac != nil && !ac.IsAPIKey && ac.User.ID != "" {
+		cfg := defaultUserConfiguration()
+		if raw, err := s.store.GetUserConfiguration(ctx, ac.User.ID); err == nil && raw != "" {
+			if json.Unmarshal([]byte(raw), &cfg) != nil {
+				cfg = defaultUserConfiguration()
+			}
+			cfg.normalize()
+		}
+		mode = string(cfg.SubtitleMode)
+		subLangs = splitLanguages(cfg.SubtitleLanguagePreference)
+		if cfg.AudioLanguagePreference != nil {
+			audioPref = *cfg.AudioLanguagePreference
+		}
+	}
+	src.DefaultAudioStreamIndex = playback.DefaultAudioIndex(streams, audioPref)
+	audioLang := ""
+	if src.DefaultAudioStreamIndex != nil {
+		for _, st := range streams {
+			if st.Type == storage.StreamTypeAudio && st.Index == *src.DefaultAudioStreamIndex {
+				audioLang = st.Language
+			}
+		}
+	}
+	src.DefaultSubtitleStreamIndex = playback.DefaultSubtitleIndex(streams, mode, subLangs, audioLang)
+}
+
+// subtitleDeliveryURL is the path of a subtitle stream served as format. The
+// item is written in its dashed form, the media source id as it is.
+func subtitleDeliveryURL(itemID, sourceID string, index int, format, apiKey string) string {
+	u := fmt.Sprintf("/Videos/%s/%s/Subtitles/%d/0/Stream.%s", guid.Dashed(itemID), sourceID, index, format)
+	if apiKey != "" {
+		u += "?ApiKey=" + url.QueryEscape(apiKey)
+	}
+	return u
+}
+
+// applySubtitleDelivery sets DeliveryMethod/DeliveryUrl on the subtitle
+// streams of src for the subtitle profiles of the caller's device profile.
+func (s *Server) applySubtitleDelivery(r *http.Request, src *mediaSourceInfoDto, item storage.Item, profiles []deviceprofile.SubtitleProfile) {
+	var token string
+	if ac, ok := AuthFromContext(r.Context()); ok && ac != nil {
+		token = ac.Token
+	}
+	byIndex := map[int]storage.MediaStreamRef{}
+	for _, st := range item.MediaStreams {
+		byIndex[st.Index] = st
+	}
+	// When the stream the caller's preferences select cannot be delivered
+	// without transcoding (burned in or through the HLS manifest), the source
+	// is transcoded and no embedded track can stay in the container.
+	allowEmbed := true
+	if src.DefaultSubtitleStreamIndex != nil {
+		if def, ok := byIndex[*src.DefaultSubtitleStreamIndex]; ok {
+			m := playback.DeliverSubtitle(def, profiles, true).Method
+			allowEmbed = m != "Encode" && m != "Hls"
+		}
+	}
+	for i := range src.MediaStreams {
+		d := &src.MediaStreams[i]
+		if d.Type != string(storage.StreamTypeSubtitle) {
+			continue
+		}
+		del := playback.DeliverSubtitle(byIndex[d.Index], profiles, allowEmbed)
+		d.DeliveryMethod = del.Method
+		if del.Method == "External" {
+			d.DeliveryURL = subtitleDeliveryURL(string(item.ID), src.ID, d.Index, del.Format, token)
+			f := false
+			d.IsExternalURL = &f
+		}
+	}
 }

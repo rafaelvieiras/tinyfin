@@ -61,6 +61,7 @@ func (s *Server) versionSources(ctx context.Context, item storage.Item) []mediaS
 	var out []mediaSourceInfoDto
 	for _, v := range s.extrasOf(ctx, item.ID, storage.ExtraTypeVersion) {
 		src := baseMediaSourceInfo(v, v.Container)
+		s.applyStreamDefaults(ctx, &src, v.MediaStreams)
 		src.Name = v.Name
 		src.SupportsDirectPlay = true
 		src.TranscodingSubProtocol = "http"
