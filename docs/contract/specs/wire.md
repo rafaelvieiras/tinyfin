@@ -46,3 +46,8 @@ A failure that the route does not describe with an explicit message of its own i
 | `wire.problem.R1` | `wire.problem.not-found` |
 | `wire.problem.R2` | `wire.problem.validation` |
 | `wire.problem.R3` | `wire.problem.api-key-is-not-a-user` |
+
+<a id="server-identity"></a>
+## Server identity
+
+- **wire.identity.R1** `GET /System/Info/Public` (anonymous) and `GET /System/Info` report `ProductName` `"Jellyfin Server"` (a literal that clients compare against) and a `Version` that is the numeric semantic version of the Jellyfin generation the server implements, `12.<minor>.<patch>` with no pre-release suffix (the reference 12.2 image reports `12.2.0`). jellyfin-web gates features on this value, so a server reporting an older generation is offered the older feature set.

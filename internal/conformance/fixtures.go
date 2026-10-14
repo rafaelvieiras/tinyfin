@@ -329,6 +329,14 @@ func (c *Client) SetupAPIKey(ctx context.Context) error {
 	return fmt.Errorf("created key %q not found in the listing", app)
 }
 
+// SetupFresh prepares a Client for a server that was never set up (the
+// first-run wizard, scenarios tagged fresh-server): there is no account to
+// log in as, so no identity, fixture or API key exists; scenarios create
+// what they need through the wizard and capture tokens themselves.
+func (c *Client) SetupFresh(mediaRoot string) {
+	c.Vars["server.mediaroot"] = mediaRoot
+}
+
 // Teardown revokes the run's API key.
 func (c *Client) Teardown(ctx context.Context) error {
 	if c.apiKeyID == "" {

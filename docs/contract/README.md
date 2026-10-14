@@ -58,6 +58,7 @@ reference source open in the same session.
 | `../../internal/conformance` | Runner, assertions, fixtures, clean-room lint |
 | `../../cmd/conformance` | CLI |
 | `../../scripts/conformance-media.sh` | Generates the synthetic media tree |
+| `specs/startup.md`, `scenarios/startup.json` | First-run wizard (`/Startup/*`); the scenarios are `fresh-server` ones, see *Fresh-server scenarios* |
 
 ## Scenario format
 
@@ -218,6 +219,42 @@ runner-generated id; those use `{{device.<identity>}}` instead.
 `scripts/conformance-ref-up.sh` honors `REF_NAME` (parallel containers) and
 `REF_DOCKER_ARGS="--dns 127.0.0.1"` (keeps the reference offline so online
 metadata providers cannot rename the fixture titles).
+
+## Fresh-server scenarios (the first-run wizard)
+
+The wizard is reachable only before setup completes and each run consumes it,
+so its scenarios cannot share the bootstrapped server the rest of the suite
+needs (the runner logs in as an existing administrator). They are tagged
+`fresh-server` and handled by a runner mode:
+
+```sh
+# reference: a fresh container, nothing configured (no scripts/conformance-ref-up.sh)
+docker run -d --name ref-wiz --dns 127.0.0.1 -p 18380:8096 --tmpfs /config:uid=1000 --tmpfs /cache:uid=1000 jellyfin/jellyfin:12.2
+go run ./cmd/conformance run -base http://127.0.0.1:18380 -fresh-server -reference
+# tinyfin: an empty database, NOT seeded
+tinyfin -data /path/to/empty/tinyfin.db -addr 127.0.0.1:18390 &
+go run ./cmd/conformance run -base http://127.0.0.1:18390 -fresh-server
+```
+
+* `-fresh-server` runs **only** the `fresh-server` scenarios, in file order,
+  without an administrator login, fixtures or an API key (`-admin-*`,
+  `-media-root` are unused). Without the flag the runner never selects them,
+  so the normal run, CI and the baseline are unchanged.
+* The scenarios of one run are one story on one server: the first creates
+  the state the next ones need, so the run is all-or-nothing. A second run
+  needs a new empty server (a Tinyfin database that completed setup, or any
+  seeded one, makes the first scenario fail).
+* States that need a *different* fresh server (completing setup with no
+  account, a database that already holds accounts) cannot share the run;
+  those rules are tagged `[untestable]` in the spec and covered by Go tests in
+  `internal/api/startup_test.go` and
+  `internal/storage/sqlite/migration_0017_test.go`.
+* `scripts/conformance-ref-up.sh` keeps driving the reference wizard by hand
+  (Configuration, User, Complete) to bootstrap an administrator for the
+  normal run; it is unchanged.
+* Rules marked divergent in `specs/startup.md` (an account is not created
+  on `GET /Startup/User`) are skipped with `-reference` like every other
+  divergence.
 
 ## Baseline and ratchet
 

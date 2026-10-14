@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Starts a fresh, throwaway Tinyfin for conformance runs on 127.0.0.1:<port>
-# with an admin seeded directly in the database (no first-run wizard exists).
+# with an admin seeded directly in the database (the seed also marks the
+# first-run wizard as completed; the wizard itself is covered by the
+# fresh-server scenarios, see docs/contract/README.md).
 #
 #   scripts/conformance-tinyfin-up.sh [port]   # prints pid + connection details
 #

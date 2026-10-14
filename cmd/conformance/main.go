@@ -101,6 +101,7 @@ func run(args []string) int {
 	writeBaseline := fs.String("write-baseline", "", "write the run's per-scenario statuses to this baseline file (refresh)")
 	refReport := fs.String("ref-report", "", "with -write-baseline: a -json report of a -reference run, recorded in the baseline")
 	refImage := fs.String("ref-image", "jellyfin/jellyfin:12.2", "with -ref-report: reference image name recorded in the baseline")
+	fresh := fs.Bool("fresh-server", false, "the target is a server that never completed setup: run only the scenarios tagged fresh-server (they drive the first-run wizard, in file order, and consume it); no administrator login or fixtures are needed")
 	jsonOut := fs.String("json", "", "write results as JSON to this path")
 	verbose := fs.Bool("v", false, "print passing scenarios too")
 	_ = fs.Parse(args)
@@ -114,6 +115,11 @@ func run(args []string) int {
 	want := splitCSV(*tags)
 	skip := splitCSV(*skipTags)
 	for _, s := range list {
+		// fresh-server scenarios need a never-set-up server and consume it:
+		// they run only in -fresh-server mode, and then they are all that runs.
+		if hasAny(s.Tags, []string{"fresh-server"}) != *fresh {
+			continue
+		}
 		if hasAny(s.Tags, skip) {
 			continue
 		}
@@ -156,10 +162,15 @@ func run(args []string) int {
 		_ = c.Teardown(context.Background())
 		os.Exit(130)
 	}()
-	warns, err := c.Setup(ctx, *adminUser, *adminPass, *mediaRoot, fx)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "setup:", err)
-		return 2
+	var warns []string
+	if *fresh {
+		c.SetupFresh(*mediaRoot)
+	} else {
+		warns, err = c.Setup(ctx, *adminUser, *adminPass, *mediaRoot, fx)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "setup:", err)
+			return 2
+		}
 	}
 	for _, w := range warns {
 		fmt.Println("setup warning:", w)
@@ -312,9 +323,10 @@ func hasAll(have, want []string) bool {
 }
 
 // seedAdmin creates the initial administrator in a fresh Tinyfin database.
-// Tinyfin has no first-run wizard, and POST /Users/New needs an existing
-// admin, so conformance runs bootstrap one directly through the storage
-// layer (the reference server is bootstrapped through its own wizard).
+// POST /Users/New needs an existing admin, so conformance runs bootstrap one
+// directly through the storage layer (the reference server is bootstrapped
+// through its first-run wizard; Tinyfin's own wizard is exercised by the
+// fresh-server scenarios, see docs/contract/README.md).
 func seedAdmin(args []string) int {
 	fs := flag.NewFlagSet("seed-admin", flag.ExitOnError)
 	db := fs.String("db", "tinyfin.db", "SQLite database path")
@@ -338,6 +350,12 @@ func seedAdmin(args []string) int {
 	}
 	id, err := st.CreateUser(context.Background(), storage.User{Name: *user, PasswordHash: string(hash), IsAdministrator: true})
 	if err != nil {
+		fmt.Fprintln(os.Stderr, "seed-admin:", err)
+		return 2
+	}
+	// A seeded administrator means the server is set up: keep the anonymous
+	// first-run wizard closed.
+	if err := st.SetSetting(context.Background(), storage.SettingStartupWizardCompleted, "true"); err != nil {
 		fmt.Fprintln(os.Stderr, "seed-admin:", err)
 		return 2
 	}

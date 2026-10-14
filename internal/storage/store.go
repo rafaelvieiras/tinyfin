@@ -268,6 +268,12 @@ type APIKeyStore interface {
 	RevokeAPIKey(ctx context.Context, token string) error
 }
 
+// SettingStartupWizardCompleted is the SettingStore key that records the
+// first-run setup wizard as finished ("true"). Out-of-band provisioning (the
+// conformance seed-admin command, a restored database) writes it so the
+// anonymous setup routes stay closed.
+const SettingStartupWizardCompleted = "StartupWizardCompleted"
+
 // SettingStore persists small server-wide runtime settings as strings.
 type SettingStore interface {
 	// GetSetting returns the stored value; ok is false when never set.

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -88,13 +89,23 @@ func (s *Server) loadLocalNetwork() {
 
 type networkConfigurationDto struct {
 	LocalNetworkSubnets []string `json:"LocalNetworkSubnets"`
+	// EnableRemoteAccess is stored by POST /Startup/RemoteAccess and the
+	// network section (default true). Tinyfin records it but does not yet
+	// enforce it as a network-wide gate.
+	EnableRemoteAccess bool `json:"EnableRemoteAccess"`
+	// EnableUPnP is always false: automatic port mapping is not implemented
+	// (startup.remote.R2).
+	EnableUPnP bool `json:"EnableUPnP"`
 }
 
 // handleNetworkConfigurationGet is GET /System/Configuration/network
 // (administrator only): the part of the reference's network configuration
 // section Tinyfin honors.
 func (s *Server) handleNetworkConfigurationGet(w http.ResponseWriter, r *http.Request) {
-	out := networkConfigurationDto{LocalNetworkSubnets: []string{}}
+	out := networkConfigurationDto{LocalNetworkSubnets: []string{}, EnableRemoteAccess: true}
+	if v, ok, err := s.store.GetSetting(r.Context(), settingRemoteAccess); err == nil && ok {
+		out.EnableRemoteAccess = v == "true"
+	}
 	if ln := s.localNet.Load(); ln != nil {
 		out.LocalNetworkSubnets = ln.raw
 	}
@@ -107,10 +118,17 @@ func (s *Server) handleNetworkConfigurationGet(w http.ResponseWriter, r *http.Re
 func (s *Server) handleNetworkConfigurationPost(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		LocalNetworkSubnets *[]string `json:"LocalNetworkSubnets"`
+		EnableRemoteAccess  *bool     `json:"EnableRemoteAccess"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeInvalidBody(w)
 		return
+	}
+	if body.EnableRemoteAccess != nil {
+		if err := s.store.SetSetting(r.Context(), settingRemoteAccess, strconv.FormatBool(*body.EnableRemoteAccess)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 	if body.LocalNetworkSubnets != nil {
 		ln, ok := parseSubnets(*body.LocalNetworkSubnets)

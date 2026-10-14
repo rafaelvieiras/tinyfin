@@ -24,15 +24,12 @@ type publicSystemInfo struct {
 func (s *Server) handleSystemInfoPublic(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, publicSystemInfo{
 		LocalAddress: localAddress(r),
-		ServerName:   s.cfg.ServerName,
+		ServerName:   s.effectiveServerName(),
 		Version:      Version,
 		ProductName:  ProductName,
 		ID:           s.cfg.ServerID,
-		// No startup wizard exists in Tinyfin (no plugin/first-run
-		// configuration flow, docs/01), so "completed" is always true —
-		// this keeps a client from redirecting the user into a wizard
-		// screen that doesn't exist.
-		StartupWizardCompleted: true,
+		// startup.state.R1: false until POST /Startup/Complete.
+		StartupWizardCompleted: s.setupComplete(r.Context()),
 	})
 }
 
@@ -62,12 +59,12 @@ type systemInfo struct {
 func (s *Server) handleSystemInfo(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, systemInfo{
 		LocalAddress:           localAddress(r),
-		ServerName:             s.cfg.ServerName,
+		ServerName:             s.effectiveServerName(),
 		Version:                Version,
 		ProductName:            ProductName,
 		OperatingSystem:        runtime.GOOS,
 		ID:                     s.cfg.ServerID,
-		StartupWizardCompleted: true,
+		StartupWizardCompleted: s.setupComplete(r.Context()),
 		// No filesystem watcher, restart supervisor, or plugin/install
 		// pipeline exists yet, so these are honest defaults rather than
 		// fabricated telemetry — not "unknown", they are actually false.

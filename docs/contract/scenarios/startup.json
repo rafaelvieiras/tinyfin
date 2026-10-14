@@ -1,0 +1,1424 @@
+[
+  {
+    "id": "startup.wizard.pre-setup",
+    "endpoint": "GET /Startup/Configuration",
+    "spec": "startup.md#configuration",
+    "scope": "modern",
+    "tags": [
+      "fresh-server",
+      "wizard"
+    ],
+    "covers": [
+      "startup.state.R1",
+      "startup.state.R2",
+      "startup.state.R3",
+      "startup.state.R4",
+      "startup.access.R1",
+      "startup.access.R5",
+      "startup.config.R1",
+      "startup.config.R2",
+      "startup.config.R3",
+      "startup.user.R1",
+      "startup.user.R2",
+      "startup.user.R3",
+      "startup.remote.R1"
+    ],
+    "steps": [
+      {
+        "name": "public info before setup",
+        "request": {
+          "method": "GET",
+          "path": "/System/Info/Public"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.StartupWizardCompleted",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$.ServerName",
+              "op": "ne",
+              "value": ""
+            }
+          ]
+        }
+      },
+      {
+        "name": "system info is anonymous before setup",
+        "request": {
+          "method": "GET",
+          "path": "/System/Info"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.StartupWizardCompleted",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "no public users",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Public"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$",
+              "op": "len",
+              "value": 0
+            }
+          ]
+        }
+      },
+      {
+        "name": "branding",
+        "request": {
+          "method": "GET",
+          "path": "/Branding/Configuration"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.SplashscreenEnabled",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "login with no accounts",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "root",
+            "Pw": "x"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-startup{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "user list needs auth",
+        "request": {
+          "method": "GET",
+          "path": "/Users"
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "user creation needs an administrator",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "sneaky",
+            "Password": "x"
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "server configuration needs auth",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration"
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "default startup configuration",
+        "request": {
+          "method": "GET",
+          "path": "/Startup/Configuration"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.ServerName",
+              "op": "eq",
+              "value": ""
+            },
+            {
+              "path": "$.UICulture",
+              "op": "eq",
+              "value": "en-US"
+            },
+            {
+              "path": "$.MetadataCountryCode",
+              "op": "eq",
+              "value": "US"
+            },
+            {
+              "path": "$.PreferredMetadataLanguage",
+              "op": "eq",
+              "value": "en"
+            }
+          ]
+        }
+      },
+      {
+        "name": "user page not opened yet",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/User",
+          "body": {
+            "Name": "adm",
+            "Password": "x"
+          }
+        },
+        "expect": {
+          "status": 404,
+          "problem": 404
+        }
+      },
+      {
+        "name": "configuration body is not an object",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/Configuration",
+          "body": "notjson"
+        },
+        "expect": {
+          "status": 400,
+          "problem": 400
+        }
+      },
+      {
+        "name": "anonymous unknown token is accepted",
+        "as": "token:bogus",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/Configuration",
+          "body": {
+            "UICulture": "xx-ZZ"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read back unvalidated culture",
+        "request": {
+          "method": "GET",
+          "path": "/Startup/Configuration"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.ServerName",
+              "op": "eq",
+              "value": ""
+            },
+            {
+              "path": "$.UICulture",
+              "op": "eq",
+              "value": "xx-ZZ"
+            },
+            {
+              "path": "$.MetadataCountryCode",
+              "op": "eq",
+              "value": ""
+            },
+            {
+              "path": "$.PreferredMetadataLanguage",
+              "op": "eq",
+              "value": ""
+            }
+          ]
+        }
+      },
+      {
+        "name": "empty server name means the default name",
+        "request": {
+          "method": "GET",
+          "path": "/System/Info/Public"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.ServerName",
+              "op": "ne",
+              "value": ""
+            }
+          ]
+        }
+      },
+      {
+        "name": "post all members",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/Configuration",
+          "body": {
+            "ServerName": "Wizard Test",
+            "UICulture": "pt-BR",
+            "MetadataCountryCode": "BR",
+            "PreferredMetadataLanguage": "pt"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "post again is idempotent",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/Configuration",
+          "body": {
+            "ServerName": "Wizard Test",
+            "UICulture": "pt-BR",
+            "MetadataCountryCode": "BR",
+            "PreferredMetadataLanguage": "pt"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "read back",
+        "request": {
+          "method": "GET",
+          "path": "/Startup/Configuration"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.ServerName",
+              "op": "eq",
+              "value": "Wizard Test"
+            },
+            {
+              "path": "$.UICulture",
+              "op": "eq",
+              "value": "pt-BR"
+            },
+            {
+              "path": "$.MetadataCountryCode",
+              "op": "eq",
+              "value": "BR"
+            },
+            {
+              "path": "$.PreferredMetadataLanguage",
+              "op": "eq",
+              "value": "pt"
+            }
+          ]
+        }
+      },
+      {
+        "name": "public info reports the server name",
+        "request": {
+          "method": "GET",
+          "path": "/System/Info/Public"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.ServerName",
+              "op": "eq",
+              "value": "Wizard Test"
+            },
+            {
+              "path": "$.StartupWizardCompleted",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "offered user name",
+        "request": {
+          "method": "GET",
+          "path": "/Startup/User"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Name",
+              "op": "eq",
+              "value": "root"
+            }
+          ]
+        }
+      },
+      {
+        "name": "offered user name (first-user alias)",
+        "request": {
+          "method": "GET",
+          "path": "/Startup/FirstUser"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Name",
+              "op": "eq",
+              "value": "root"
+            }
+          ]
+        }
+      },
+      {
+        "name": "remote access has no GET",
+        "request": {
+          "method": "GET",
+          "path": "/Startup/RemoteAccess"
+        },
+        "expect": {
+          "status": 405
+        }
+      },
+      {
+        "name": "first-user alias has no POST",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/FirstUser",
+          "body": {
+            "Name": "adm",
+            "Password": "x"
+          }
+        },
+        "expect": {
+          "status": 405
+        }
+      },
+      {
+        "name": "remote access body is not an object",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/RemoteAccess",
+          "body": "x"
+        },
+        "expect": {
+          "status": 400,
+          "problem": 400
+        }
+      },
+      {
+        "name": "password is required",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/User",
+          "body": {
+            "Name": "adm"
+          }
+        },
+        "expect": {
+          "status": 400,
+          "json": [
+            {
+              "path": "$",
+              "op": "eq",
+              "value": "Password must not be empty"
+            }
+          ]
+        }
+      },
+      {
+        "name": "password null",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/User",
+          "body": {
+            "Name": "adm",
+            "Password": null
+          }
+        },
+        "expect": {
+          "status": 400,
+          "json": [
+            {
+              "path": "$",
+              "op": "eq",
+              "value": "Password must not be empty"
+            }
+          ]
+        }
+      },
+      {
+        "name": "password empty",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/User",
+          "body": {
+            "Name": "adm",
+            "Password": ""
+          }
+        },
+        "expect": {
+          "status": 400,
+          "json": [
+            {
+              "path": "$",
+              "op": "eq",
+              "value": "Password must not be empty"
+            }
+          ]
+        }
+      },
+      {
+        "name": "password whitespace",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/User",
+          "body": {
+            "Name": "adm",
+            "Password": " "
+          }
+        },
+        "expect": {
+          "status": 400,
+          "json": [
+            {
+              "path": "$",
+              "op": "eq",
+              "value": "Password must not be empty"
+            }
+          ]
+        }
+      },
+      {
+        "name": "password is checked before the name",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/User",
+          "body": {
+            "Name": "bad/name"
+          }
+        },
+        "expect": {
+          "status": 400,
+          "json": [
+            {
+              "path": "$",
+              "op": "eq",
+              "value": "Password must not be empty"
+            }
+          ]
+        }
+      },
+      {
+        "name": "empty name",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/User",
+          "body": {
+            "Name": "",
+            "Password": "x"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "blank name",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/User",
+          "body": {
+            "Name": "   ",
+            "Password": "x"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "name with a slash",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/User",
+          "body": {
+            "Name": "bad/name",
+            "Password": "x"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "name with surrounding spaces",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/User",
+          "body": {
+            "Name": "  pad  ",
+            "Password": "x"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "name unchanged after failures",
+        "request": {
+          "method": "GET",
+          "path": "/Startup/User"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Name",
+              "op": "eq",
+              "value": "root"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "startup.wizard.no-default-login",
+    "endpoint": "POST /Users/AuthenticateByName",
+    "spec": "startup.md#safety",
+    "scope": "modern",
+    "tags": [
+      "fresh-server",
+      "wizard"
+    ],
+    "covers": [
+      "startup.safety.R1"
+    ],
+    "divergence": {
+      "reason": "the reference creates an administrator named root with an empty password when the user page is opened and lets anyone sign in as it; Tinyfin creates no account before the page's POST"
+    },
+    "steps": [
+      {
+        "name": "root with empty password",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "root",
+            "Pw": ""
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-startup{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "root with any password",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "root",
+            "Pw": "x"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-startup{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      }
+    ]
+  },
+  {
+    "id": "startup.wizard.user-and-complete",
+    "endpoint": "POST /Startup/User",
+    "spec": "startup.md#user",
+    "scope": "modern",
+    "tags": [
+      "fresh-server",
+      "wizard"
+    ],
+    "covers": [
+      "startup.user.R4",
+      "startup.user.R5",
+      "startup.user.R6",
+      "startup.user.R7",
+      "startup.remote.R2",
+      "startup.complete.R1",
+      "startup.state.R1",
+      "startup.state.R2",
+      "startup.access.R2",
+      "startup.access.R3",
+      "startup.access.R4",
+      "startup.config.R3"
+    ],
+    "steps": [
+      {
+        "name": "create the first account",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/User",
+          "body": {
+            "Name": "Wizard Admin",
+            "Password": "Wizard-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "configured name",
+        "request": {
+          "method": "GET",
+          "path": "/Startup/User"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Name",
+              "op": "eq",
+              "value": "Wizard Admin"
+            }
+          ]
+        }
+      },
+      {
+        "name": "configured name (alias)",
+        "request": {
+          "method": "GET",
+          "path": "/Startup/FirstUser"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Name",
+              "op": "eq",
+              "value": "Wizard Admin"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a second account is refused",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/User",
+          "body": {
+            "Name": "other",
+            "Password": "x"
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "refusal precedes validation",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/User",
+          "body": {}
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "name unchanged",
+        "request": {
+          "method": "GET",
+          "path": "/Startup/User"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Name",
+              "op": "eq",
+              "value": "Wizard Admin"
+            }
+          ]
+        }
+      },
+      {
+        "name": "still hidden from the login screen",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Public"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$",
+              "op": "len",
+              "value": 0
+            }
+          ]
+        }
+      },
+      {
+        "name": "sign in before completion",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "Wizard Admin",
+            "Pw": "Wizard-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-startup{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.AccessToken",
+              "op": "exists"
+            }
+          ]
+        },
+        "capture": {
+          "adm": "$.AccessToken"
+        }
+      },
+      {
+        "name": "account policy",
+        "as": "token:{{capture.adm}}",
+        "request": {
+          "method": "GET",
+          "path": "/Users/Me"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Name",
+              "op": "eq",
+              "value": "Wizard Admin"
+            },
+            {
+              "path": "$.Policy.IsAdministrator",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.Policy.EnableContentDeletion",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.Policy.EnableRemoteControlOfOtherUsers",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.Policy.IsHidden",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "the token administers",
+        "as": "token:{{capture.adm}}",
+        "request": {
+          "method": "POST",
+          "path": "/Users/New",
+          "body": {
+            "Name": "wiz-plain",
+            "Password": "Plain-Pass-1"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Policy.IsAdministrator",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$.Policy.EnableContentDeletion",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        },
+        "capture": {
+          "plainId": "$.Id"
+        }
+      },
+      {
+        "name": "remote access off",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/RemoteAccess",
+          "body": {
+            "EnableRemoteAccess": false,
+            "EnableAutomaticPortMapping": true
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "remote access stored",
+        "as": "token:{{capture.adm}}",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration/network"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.EnableRemoteAccess",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$.EnableUPnP",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "remote access on, mapping off",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/RemoteAccess",
+          "body": {
+            "EnableRemoteAccess": true,
+            "EnableAutomaticPortMapping": false
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "remote access stored on",
+        "as": "token:{{capture.adm}}",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration/network"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.EnableRemoteAccess",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.EnableUPnP",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "absent remote access means off",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/RemoteAccess",
+          "body": {}
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "stored off",
+        "as": "token:{{capture.adm}}",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration/network"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.EnableRemoteAccess",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "configuration persisted",
+        "as": "token:{{capture.adm}}",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.ServerName",
+              "op": "eq",
+              "value": "Wizard Test"
+            },
+            {
+              "path": "$.UICulture",
+              "op": "eq",
+              "value": "pt-BR"
+            },
+            {
+              "path": "$.MetadataCountryCode",
+              "op": "eq",
+              "value": "BR"
+            },
+            {
+              "path": "$.PreferredMetadataLanguage",
+              "op": "eq",
+              "value": "pt"
+            }
+          ]
+        }
+      },
+      {
+        "name": "setup still open",
+        "request": {
+          "method": "GET",
+          "path": "/System/Info/Public"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.StartupWizardCompleted",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "complete",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/Complete"
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "setup complete",
+        "request": {
+          "method": "GET",
+          "path": "/System/Info/Public"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.StartupWizardCompleted",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.ServerName",
+              "op": "eq",
+              "value": "Wizard Test"
+            }
+          ]
+        }
+      },
+      {
+        "name": "system info needs auth now",
+        "request": {
+          "method": "GET",
+          "path": "/System/Info"
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "GET configuration anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/Startup/Configuration"
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "GET user anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/Startup/User"
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "GET first user anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/Startup/FirstUser"
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "POST configuration anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/Configuration",
+          "body": {
+            "ServerName": "Hacked"
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "POST user anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/User",
+          "body": {
+            "Name": "hacker",
+            "Password": "x"
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "POST remote access anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/RemoteAccess",
+          "body": {
+            "EnableRemoteAccess": true
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "POST complete anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/Complete"
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "POST configuration unknown token",
+        "as": "token:bogus",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/Configuration",
+          "body": {
+            "ServerName": "Hacked"
+          }
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "name not changed by the refused calls",
+        "request": {
+          "method": "GET",
+          "path": "/System/Info/Public"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.ServerName",
+              "op": "eq",
+              "value": "Wizard Test"
+            }
+          ]
+        }
+      },
+      {
+        "name": "administrator GET configuration",
+        "as": "token:{{capture.adm}}",
+        "request": {
+          "method": "GET",
+          "path": "/Startup/Configuration"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.ServerName",
+              "op": "eq",
+              "value": "Wizard Test"
+            },
+            {
+              "path": "$.UICulture",
+              "op": "eq",
+              "value": "pt-BR"
+            },
+            {
+              "path": "$.MetadataCountryCode",
+              "op": "eq",
+              "value": "BR"
+            },
+            {
+              "path": "$.PreferredMetadataLanguage",
+              "op": "eq",
+              "value": "pt"
+            }
+          ]
+        }
+      },
+      {
+        "name": "administrator GET user",
+        "as": "token:{{capture.adm}}",
+        "request": {
+          "method": "GET",
+          "path": "/Startup/User"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Name",
+              "op": "eq",
+              "value": "Wizard Admin"
+            }
+          ]
+        }
+      },
+      {
+        "name": "administrator POST configuration",
+        "as": "token:{{capture.adm}}",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/Configuration",
+          "body": {
+            "ServerName": "Wizard Test",
+            "UICulture": "pt-BR",
+            "MetadataCountryCode": "BR",
+            "PreferredMetadataLanguage": "pt"
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "administrator POST remote access",
+        "as": "token:{{capture.adm}}",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/RemoteAccess",
+          "body": {
+            "EnableRemoteAccess": true
+          }
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "administrator POST complete again",
+        "as": "token:{{capture.adm}}",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/Complete"
+        },
+        "expect": {
+          "status": 204,
+          "empty": true
+        }
+      },
+      {
+        "name": "administrator POST user",
+        "as": "token:{{capture.adm}}",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/User",
+          "body": {
+            "Name": "hacker",
+            "Password": "x"
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "sign in as a non-administrator",
+        "request": {
+          "method": "POST",
+          "path": "/Users/AuthenticateByName",
+          "body": {
+            "Username": "wiz-plain",
+            "Pw": "Plain-Pass-1"
+          },
+          "headers": {
+            "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-startup{{run.suffix}}\", Version=\"1.0.0\""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.AccessToken",
+              "op": "exists"
+            }
+          ]
+        },
+        "capture": {
+          "plain": "$.AccessToken"
+        }
+      },
+      {
+        "name": "non-administrator GET configuration",
+        "as": "token:{{capture.plain}}",
+        "request": {
+          "method": "GET",
+          "path": "/Startup/Configuration"
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "non-administrator GET user",
+        "as": "token:{{capture.plain}}",
+        "request": {
+          "method": "GET",
+          "path": "/Startup/User"
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "non-administrator POST configuration",
+        "as": "token:{{capture.plain}}",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/Configuration",
+          "body": {
+            "ServerName": "Hacked"
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "non-administrator POST remote access",
+        "as": "token:{{capture.plain}}",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/RemoteAccess",
+          "body": {}
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "non-administrator POST user",
+        "as": "token:{{capture.plain}}",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/User",
+          "body": {
+            "Name": "hacker",
+            "Password": "x"
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "non-administrator POST complete",
+        "as": "token:{{capture.plain}}",
+        "request": {
+          "method": "POST",
+          "path": "/Startup/Complete"
+        },
+        "expect": {
+          "status": 403
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "cleanup: delete the second account",
+        "as": "token:{{capture.adm}}",
+        "request": {
+          "method": "DELETE",
+          "path": "/Users/{{capture.plainId}}"
+        },
+        "expect": {
+          "status": 204
+        }
+      }
+    ]
+  }
+]

@@ -30,22 +30,18 @@ import (
 )
 
 // Version is the wire-visible server version reported in PublicSystemInfo
-// and SystemInfo. Tinyfin has no release-tagging/version-tracking system
-// yet (that's outside this slice's scope; see open item O1) so this is a
-// hardcoded placeholder until one exists. Two constraints on its value,
-// both found by testing against a real jellyfin-web build rather than
-// something docs/04 could have predicted from the OpenAPI schema alone:
+// and SystemInfo. It is the Jellyfin generation Tinyfin implements
+// (wire.identity.R1: the reference 12.2 image reports 12.2.0), not a Tinyfin
+// release number: jellyfin-web gates features on this value, so a lower one
+// makes it offer the older feature set. Two constraints on its shape, both
+// found by testing against a real jellyfin-web build:
 //
 //   - Must be a plain numeric-only semver (no "-dev"/pre-release suffix)
 //     — the reference client SDK's compareVersions rejects anything else.
 //   - Must be >= @jellyfin/sdk's compiled-in MINIMUM_VERSION, or the
 //     client refuses to connect at all ("this server needs to be
-//     updated"). That constant is 10.10.0 as of the jellyfin-web build
-//     this was verified against; report the same value here as the
-//     compatibility baseline this project targets — the same number O1
-//     still needs to pin formally, this is not a substitute for that
-//     decision, just what unblocks manual testing today.
-const Version = "10.10.0"
+//     updated").
+const Version = "12.2.0"
 
 // ProductName is the wire-visible product name (PublicSystemInfo.ProductName
 // / SystemInfo.ProductName). This is NOT Tinyfin's own identity — it's a
@@ -148,6 +144,15 @@ type Server struct {
 	pinLimit   *pinThrottle
 	// localNet is the runtime LocalNetworkSubnets setting (nil: unset).
 	localNet atomic.Pointer[localNetwork]
+	// serverName is the runtime ServerName setting (startup wizard or
+	// POST /System/Configuration); nil means cfg.ServerName applies.
+	serverName atomic.Pointer[string]
+	// wizardDone latches once setup is known complete, so the hot
+	// StartupWizardCompleted reads never touch the store afterwards.
+	wizardDone atomic.Bool
+	// wizardMu serializes the wizard's state transitions (first account,
+	// completion) so two concurrent posts cannot both win.
+	wizardMu sync.Mutex
 }
 
 // NewServer builds a Server backed by store, applying cfg defaults where
@@ -398,7 +403,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /Branding/Configuration", s.handleBrandingConfiguration)
 
 	// Everything else in this slice's scope requires a valid token.
-	s.mux.HandleFunc("GET /System/Info", requireAuth(s.handleSystemInfo))
+	s.mux.HandleFunc("GET /System/Info", s.openUntilSetUp(s.handleSystemInfo))
+	s.registerStartupRoutes()
 	// Called once per session right after sign-in by every official client
 	// (system.go's handleSystemEndpoint doc comment) — found 404ing by
 	// testing a real jellyfin-web build via Playwright.
