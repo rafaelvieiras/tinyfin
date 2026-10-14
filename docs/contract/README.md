@@ -313,5 +313,5 @@ scenario that is not pending or divergent; `risky` ones run only with
 | playstate | 107 | 107 | 0 | 0 | 0 |
 | quickconnect | 16 | 16 | 0 | 0 | 0 |
 | users | 202 | 202 | 0 | 0 | 0 |
-| wire | 13 | 13 | 0 | 0 | 0 |
-| **Total** | 459 | 459 | 0 | 0 | 0 |
+| wire | 14 | 14 | 0 | 0 | 0 |
+| **Total** | 460 | 460 | 0 | 0 | 0 |

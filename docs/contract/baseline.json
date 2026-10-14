@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 459
+    "pass": 460
   },
   "scenarios": {
     "items.fields.enable-user-data": "pass",
@@ -455,6 +455,7 @@
     "wire.id.dashed-input-accepted": "pass",
     "wire.id.item-objects": "pass",
     "wire.id.user-objects": "pass",
+    "wire.identity.version": "pass",
     "wire.path.case-insensitive": "pass",
     "wire.path.empty-segment": "pass",
     "wire.path.trailing-slash-reads": "pass",
