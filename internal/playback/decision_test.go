@@ -1,6 +1,7 @@
 package playback
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/rafaelvieiras/tinyfin/internal/deviceprofile"
@@ -183,5 +184,37 @@ func TestDecideEmptyContainerSkipsToTranscode(t *testing.T) {
 	got := Decide(item, profile)
 	if got.Mode != ModeTranscode {
 		t.Fatalf("Mode = %v, want ModeTranscode for an item with no known container", got.Mode)
+	}
+}
+
+func TestDecideWith_AudioTrackAndBurnIn(t *testing.T) {
+	item := storage.Item{Container: "mkv", MediaStreams: []storage.MediaStreamRef{
+		{Index: 0, Type: storage.StreamTypeVideo, Codec: "h264"},
+		{Index: 1, Type: storage.StreamTypeAudio, Codec: "aac", IsDefault: true},
+		{Index: 2, Type: storage.StreamTypeAudio, Codec: "mp3"},
+	}}
+	profile := deviceprofile.DeviceProfile{
+		DirectPlayProfiles:  []deviceprofile.DirectPlayProfile{{Container: "mkv", Type: "Video", VideoCodec: "h264", AudioCodec: "aac"}},
+		TranscodingProfiles: []deviceprofile.TranscodingProfile{{Container: "ts", Type: "Video", VideoCodec: "h264", AudioCodec: "aac"}},
+	}
+	two := 2
+	if d := DecideWith(item, profile, Options{}); d.Mode != ModeDirectPlay || d.AudioStream == nil || *d.AudioStream != 1 {
+		t.Fatalf("default: %+v", d)
+	}
+	d := DecideWith(item, profile, Options{AudioStreamIndex: &two})
+	if d.Mode != ModeDirectStream || d.AudioCodec != "aac" || *d.AudioStream != 2 || !reflect.DeepEqual(d.Reasons, []string{"AudioCodecNotSupported"}) {
+		t.Fatalf("mp3 track: %+v", d)
+	}
+	d = DecideWith(item, profile, Options{BurnSubtitle: true})
+	if d.Mode != ModeTranscode || d.VideoCodec != "h264" || !reflect.DeepEqual(d.Reasons, []string{"SubtitleCodecNotSupported"}) {
+		t.Fatalf("burn-in: %+v", d)
+	}
+	d = DecideWith(item, profile, Options{AudioStreamIndex: &two, BurnSubtitle: true})
+	if !reflect.DeepEqual(d.Reasons, []string{"AudioCodecNotSupported", "SubtitleCodecNotSupported"}) {
+		t.Fatalf("both: %+v", d)
+	}
+	nine := 9
+	if d := DecideWith(item, profile, Options{AudioStreamIndex: &nine}); *d.AudioStream != 1 {
+		t.Fatalf("unknown index must fall back to the default: %+v", d)
 	}
 }

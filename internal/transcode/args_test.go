@@ -2,6 +2,7 @@ package transcode
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -194,5 +195,41 @@ func TestBuildArgs_EmptyVideoAudioCodecTreatedAsCopy(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("empty-codec args mismatch:\n got: %#v\nwant: %#v", got, want)
+	}
+}
+
+func TestBuildArgs_AudioStreamAndBurn(t *testing.T) {
+	two := 2
+	got := strings.Join(buildArgs(Request{
+		InputPath: "in.mkv", VideoCodec: "h264", AudioCodec: "aac", Container: "ts",
+		AudioStreamIndex: &two, MaxHeight: 480,
+		Subtitle: &Subtitle{Path: "/m/it's (1).mkv", Embedded: true, Index: 1},
+	}), " ")
+	for _, want := range []string{
+		"-map 0:v:0", "-map 0:2",
+		`-vf subtitles=filename=/m/it\\\'s (1).mkv:si=1,scale=-2:480`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("args lack %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "0:a:0") {
+		t.Errorf("default audio mapped as well:\n%s", got)
+	}
+
+	// copied video cannot be filtered: the burn is dropped, not half applied
+	got = strings.Join(buildArgs(Request{InputPath: "in.mkv", VideoCodec: "copy", Subtitle: &Subtitle{Path: "s.srt"}}), " ")
+	if strings.Contains(got, "subtitles=") {
+		t.Errorf("burn-in on a copied picture:\n%s", got)
+	}
+
+	got = strings.Join(buildArgs(Request{
+		InputPath: "in.mkv", VideoCodec: "h264", MaxHeight: 360,
+		Subtitle: &Subtitle{Path: "in.mkv", Bitmap: true, StreamIndex: 3},
+	}), " ")
+	for _, want := range []string{"-filter_complex [0:v:0][0:3]overlay=", "scale=-2:360[v]", "-map [v]"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("bitmap args lack %q:\n%s", want, got)
+		}
 	}
 }

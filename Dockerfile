@@ -47,7 +47,7 @@ FROM web-${WITH_WEB} AS webassets
 FROM debian:bookworm-slim AS ffmpeg
 ARG TARGETARCH
 ARG JELLYFIN_FFMPEG_VERSION
-RUN apt-get update && apt-get install -y --no-install-recommends curl xz-utils ca-certificates \
+RUN apt-get update && apt-get install -y --no-install-recommends curl xz-utils ca-certificates fonts-dejavu-core \
 	&& rm -rf /var/lib/apt/lists/* \
 	&& arch="$( [ "$TARGETARCH" = "arm64" ] && echo linuxarm64-gpl || echo linux64-gpl )" \
 	&& curl -fsSL -o /tmp/jellyfin-ffmpeg.tar.xz \
@@ -67,6 +67,9 @@ COPY --from=webassets /web /web
 # Final ffmpeg/ffprobe path other Tinyfin code (internal/transcode) should target:
 #   /usr/lib/jellyfin-ffmpeg/ffmpeg and /usr/lib/jellyfin-ffmpeg/ffprobe
 COPY --from=ffmpeg /jellyfin-ffmpeg /usr/lib/jellyfin-ffmpeg
+# Fonts for burned-in text subtitles (libass fontsdir): the image has no fontconfig data of its own.
+COPY --from=ffmpeg /usr/share/fonts/truetype/dejavu /usr/share/fonts/truetype/dejavu
+ENV TINYFIN_FONTS_DIR=/usr/share/fonts/truetype/dejavu
 VOLUME ["/data"]
 EXPOSE 8096
 ENTRYPOINT ["/tinyfin"]
