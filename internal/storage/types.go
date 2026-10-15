@@ -132,6 +132,17 @@ type ItemFilter struct {
 	ParentIndexNumber *int
 	IndexNumber       *int
 
+	// Music filters. ArtistNames matches an item whose track artists (or
+	// album artist) include any of the names, AlbumArtistNames one whose
+	// album artist is any of them, AlbumIDs an item whose parent is any of
+	// the albums (the tracks of an album).
+	ArtistNames      []string
+	AlbumArtistNames []string
+	AlbumIDs         []ItemID
+	// ArtistRole narrows a MusicArtist listing to the artists that appear on
+	// a track ("Artist") or on an album ("AlbumArtist") of the same library.
+	ArtistRole string
+
 	// Video dimension filters, evaluated against the primary video stream.
 	MinWidth, MinHeight, MaxWidth, MaxHeight *int
 	IsHD                                     *bool

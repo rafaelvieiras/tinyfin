@@ -32,6 +32,11 @@ type probeResult struct {
 	mtimeNS int64
 	// title is the title tag of the file, read when the file was probed.
 	title string
+	// tags are the file's tags (lower-cased names) when it was freshly
+	// probed; nil when the probe was reused. embeddedArt is the picture
+	// attached to an audio file, found by the same probe.
+	tags        map[string]string
+	embeddedArt *embeddedArt
 	// sigSize, when not zero, is the size the signature is recorded with
 	// (a disc is probed from several files); size otherwise.
 	sigSize int64
@@ -86,6 +91,8 @@ func (s *Scanner) probeOrReuse(ctx context.Context, pool *jobPool, itemID storag
 	res.ticks = runtimeTicksFromProbe(info)
 	res.chapters = chaptersFromProbe(info)
 	res.title = info.Format.title()
+	res.tags = audioTags(info)
+	res.embeddedArt = attachedPicture(info)
 	res.record = hasSigs && err == nil && statErr == nil
 	return res
 }

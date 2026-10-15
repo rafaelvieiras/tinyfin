@@ -60,7 +60,8 @@
     {"key": "searchshows", "name": "SearchShows", "type": "tvshows", "path": "SearchShows", "lazy": true},
     {"key": "punct", "name": "Punct", "type": "movies", "path": "Punct", "lazy": true},
     {"key": "trickplay", "name": "Trickplay", "type": "movies", "path": "Trickplay", "lazy": true, "options": {"EnableTrickplayImageExtraction": true, "ExtractTrickplayImagesDuringLibraryScan": true}},
-    {"key": "trickplayoff", "name": "TrickplayOff", "type": "movies", "path": "TrickplayOff", "lazy": true}
+    {"key": "trickplayoff", "name": "TrickplayOff", "type": "movies", "path": "TrickplayOff", "lazy": true},
+    {"key": "music", "name": "Music", "type": "music", "path": "Music", "lazy": true}
   ],
   "items": [
     {"key": "alpha", "type": "Movie", "path": "Movies/Alpha Movie (2015)/Alpha Movie (2015).mp4"},
@@ -408,6 +409,20 @@
     {"key": "tpshort", "type": "Movie", "library": "trickplay", "path": "Trickplay/Tp Short (2501)/Tp Short (2501).mp4"},
     {"key": "tpbig", "type": "Movie", "library": "trickplay", "path": "Trickplay/Tp Big (2502)/Tp Big (2502).mp4"},
     {"key": "tpnarrow", "type": "Movie", "library": "trickplay", "path": "Trickplay/Tp Narrow (2503)/Tp Narrow (2503).mp4"},
-    {"key": "tpoff", "type": "Movie", "library": "trickplayoff", "path": "TrickplayOff/Tp Off (2504)/Tp Off (2504).mp4"}
+    {"key": "tpoff", "type": "Movie", "library": "trickplayoff", "path": "TrickplayOff/Tp Off (2504)/Tp Off (2504).mp4"},
+    {"key": "mfirst", "type": "Audio", "library": "music", "path": "Music/Artist One/Album Alpha (2019)/01 - First Song.mp3"},
+    {"key": "msecond", "type": "Audio", "library": "music", "path": "Music/Artist One/Album Alpha (2019)/02 - Second Song.mp3"},
+    {"key": "mopening", "type": "Audio", "library": "music", "path": "Music/Artist One/Album Beta/01 - Opening.flac"},
+    {"key": "muntagged", "type": "Audio", "library": "music", "path": "Music/Artist Two/Album Gamma/01 - Untagged Track.mp3"},
+    {"key": "membedded", "type": "Audio", "library": "music", "path": "Music/Artist Two/Album Delta/01 - Embedded Cover.mp3"},
+    {"key": "mguest", "type": "Audio", "library": "music", "path": "Music/Various Artists/Mix Tape/01 - Guest Spot.mp3"},
+    {"key": "malpha", "type": "MusicAlbum", "library": "music", "path": "Music/Artist One/Album Alpha (2019)"},
+    {"key": "mbeta", "type": "MusicAlbum", "library": "music", "path": "Music/Artist One/Album Beta"},
+    {"key": "mgamma", "type": "MusicAlbum", "library": "music", "path": "Music/Artist Two/Album Gamma"},
+    {"key": "mdelta", "type": "MusicAlbum", "library": "music", "path": "Music/Artist Two/Album Delta"},
+    {"key": "mmixtape", "type": "MusicAlbum", "library": "music", "path": "Music/Various Artists/Mix Tape"},
+    {"key": "martist1", "type": "MusicArtist", "library": "music", "path": "Music/Artist One"},
+    {"key": "martist2", "type": "MusicArtist", "library": "music", "path": "Music/Artist Two"},
+    {"key": "mvarious", "type": "MusicArtist", "library": "music", "path": "Music/Various Artists"}
   ]
 }

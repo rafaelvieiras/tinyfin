@@ -2,21 +2,21 @@
  "reference": "jellyfin/jellyfin:12.2 /api-docs/openapi.json 12.2.0",
  "totals": {
   "features_by_status": {
-   "not-planned": 19,
-   "partial": 18,
+   "not-planned": 17,
+   "partial": 20,
    "planned": 13,
    "supported": 60
   },
   "operations": 364,
-  "registered": 168,
+  "registered": 170,
   "routes_by_status": {
    "divergent-by-design": 16,
-   "not-planned": 109,
+   "not-planned": 107,
    "partial": 12,
    "planned": 87,
-   "supported": 140
+   "supported": 142
   },
-  "verified": 126
+  "verified": 128
  },
  "routes": [
   {
@@ -24,24 +24,26 @@
    "tag": "Artist",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "not-planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Music libraries are not scanned (video-first scope, docs/01); not on ROADMAP.md.",
-   "priority": "low"
+   "scenarios": [
+    "music.artists.list"
+   ]
   },
   {
    "id": "GET /Artists/AlbumArtists",
    "tag": "Artist",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "not-planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Music libraries are not scanned (video-first scope, docs/01); not on ROADMAP.md.",
-   "priority": "low"
+   "scenarios": [
+    "music.artists.list"
+   ]
   },
   {
    "id": "GET /Artists/{name}",
@@ -64,6 +66,10 @@
    "registered": false,
    "verified": false,
    "web": false,
+   "scenarios": [
+    "music.stream.direct",
+    "music.stream.unknown"
+   ],
    "notes": "Music is not cataloged or streamed (video-first scope, docs/01).",
    "priority": "low"
   },
@@ -76,6 +82,10 @@
    "registered": false,
    "verified": false,
    "web": false,
+   "scenarios": [
+    "music.stream.direct",
+    "music.stream.unknown"
+   ],
    "notes": "Music is not cataloged or streamed (video-first scope, docs/01).",
    "priority": "low"
   },
@@ -1061,7 +1071,8 @@
    "verified": true,
    "web": true,
    "scenarios": [
-    "images.api.index-lookup"
+    "images.api.index-lookup",
+    "music.image.album"
    ]
   },
   {
@@ -1074,7 +1085,8 @@
    "verified": true,
    "web": true,
    "scenarios": [
-    "images.api.index-lookup"
+    "images.api.index-lookup",
+    "music.image.album"
    ]
   },
   {
@@ -1798,6 +1810,11 @@
     "items.user.unknown-user",
     "items.userdata.folder-unplayed-count",
     "items.userdata.reflected-in-listing",
+    "music.album.tracks",
+    "music.artist.detail",
+    "music.artists.list",
+    "music.list.artist-filter",
+    "music.scan.library",
     "playlists.acl.matrix",
     "playlists.create.basic",
     "playlists.create.errors",
@@ -1957,6 +1974,14 @@
     "items.seasons.episode-folder",
     "items.seasons.folder-without-videos",
     "items.seasons.merged-folders",
+    "music.album.detail",
+    "music.artist.detail",
+    "music.artists.list",
+    "music.image.album",
+    "music.track.guest-artist",
+    "music.track.id3",
+    "music.track.untagged",
+    "music.track.vorbis",
     "playlists.create.basic",
     "playlists.create.for-user",
     "playlists.create.variants",
@@ -3116,6 +3141,7 @@
    "web": true,
    "scenarios": [
     "items.homevideos.video-media-and-playback",
+    "music.playback.info",
     "playback.audio.body",
     "playback.audio.ignored",
     "playback.audio.selection",
@@ -6268,13 +6294,60 @@
   {
    "id": "library-types.music",
    "title": "Music",
-   "status": "not-planned",
-   "description": "Accepted as a library type but not scanned; no audio file extensions, no Audio/MusicAlbum/MusicArtist items, no audio playback decision.",
+   "status": "partial",
+   "description": "Scanned: folders with audio files become MusicAlbum, root folders MusicArtist, files Audio items with ID3/Vorbis tags (title, artist, album, album artist, track, disc, year, genre) and folder fallbacks; album picture from cover/folder/poster files or a picture embedded in a track; artist listings and direct audio streaming.",
    "reference": "Music library with artists, albums, tracks, lyrics and instant mixes.",
-   "notes": "Video-first scope (docs/01); not on ROADMAP.md.",
+   "notes": "First slice. Left out: Instant Mix, lyrics, MusicGenres, music videos, audio transcoding, People on tracks, artist images, disc subfolders (specs/music.md, Not covered).",
+   "spec_rules": [
+    "music.album.R1",
+    "music.album.R2",
+    "music.album.R3",
+    "music.album.R4",
+    "music.artist.R1",
+    "music.artist.R2",
+    "music.artist.R3",
+    "music.image.R1",
+    "music.image.R2",
+    "music.image.R3",
+    "music.list.R1",
+    "music.list.R2",
+    "music.list.R3",
+    "music.list.R4",
+    "music.scan.R1",
+    "music.scan.R2",
+    "music.scan.R3",
+    "music.scan.R4",
+    "music.scan.R5",
+    "music.scan.R6",
+    "music.scan.R7",
+    "music.stream.R1",
+    "music.stream.R2",
+    "music.stream.R3",
+    "music.stream.R4",
+    "music.track.R1",
+    "music.track.R2",
+    "music.track.R3"
+   ],
+   "scenarios": [
+    "music.scan.library",
+    "music.track.id3",
+    "music.track.vorbis",
+    "music.track.untagged",
+    "music.track.guest-artist",
+    "music.album.detail",
+    "music.album.tracks",
+    "music.artist.detail",
+    "music.artists.list",
+    "music.list.artist-filter",
+    "music.image.album",
+    "music.stream.direct",
+    "music.stream.unknown",
+    "music.playback.info"
+   ],
    "code": [
-    "internal/scan/scan.go",
-    "internal/scan/nameparse.go"
+    "internal/scan/music.go",
+    "internal/api/music.go",
+    "internal/playback/decision.go"
    ]
   },
   {
@@ -6914,7 +6987,7 @@
    "status": "not-planned",
    "description": "No lyric files cataloged or served.",
    "reference": "LRC/TXT lyrics for audio.",
-   "notes": "Music is not cataloged.",
+   "notes": "Tracks are cataloged (music.md), but no lyric files are read: HasLyrics is always false.",
    "code": [
     "internal/storage/lyric.go"
    ]
@@ -6922,10 +6995,25 @@
   {
    "id": "playback.audio",
    "title": "Audio streaming and universal endpoint",
-   "status": "not-planned",
-   "description": "No audio items.",
+   "status": "partial",
+   "description": "`GET /Audio/{id}/stream` serves a track as it is (range support) and PlaybackInfo offers it for direct play; no audio transcoding.",
    "reference": "`/Audio/{id}/stream`, `/universal`.",
-   "notes": "Music is not cataloged.",
+   "notes": "Without static=true the reference transcodes to AAC; Tinyfin serves the file as it is. `/universal` is not implemented.",
+   "spec_rules": [
+    "music.stream.R1",
+    "music.stream.R2",
+    "music.stream.R3",
+    "music.stream.R4"
+   ],
+   "scenarios": [
+    "music.stream.direct",
+    "music.stream.unknown",
+    "music.playback.info"
+   ],
+   "code": [
+    "internal/api/music.go",
+    "internal/playback/decision.go"
+   ],
    "routes": [
     "GET /Audio/{itemId}/universal"
    ]
@@ -8048,6 +8136,7 @@
  "registered_not_in_openapi": [
   "DELETE /Users/{userId}/FavoriteItems/{itemId}",
   "DELETE /Users/{userId}/PlayedItems/{itemId}",
+  "GET /Audio/{itemId}/{file}",
   "GET /Users/{userId}/Items",
   "GET /Users/{userId}/Items/{itemId}",
   "GET /Users/{userId}/Items/{itemId}/Intros",

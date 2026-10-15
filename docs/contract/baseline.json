@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 695
+    "pass": 709
   },
   "scenarios": {
     "admin.backup.create": "pass",
@@ -251,6 +251,20 @@
     "misc.localization": "pass",
     "misc.ping": "pass",
     "misc.utc-time": "pass",
+    "music.album.detail": "pass",
+    "music.album.tracks": "pass",
+    "music.artist.detail": "pass",
+    "music.artists.list": "pass",
+    "music.image.album": "pass",
+    "music.list.artist-filter": "pass",
+    "music.playback.info": "pass",
+    "music.scan.library": "pass",
+    "music.stream.direct": "pass",
+    "music.stream.unknown": "pass",
+    "music.track.guest-artist": "pass",
+    "music.track.id3": "pass",
+    "music.track.untagged": "pass",
+    "music.track.vorbis": "pass",
     "playback.audio.body": "pass",
     "playback.audio.ignored": "pass",
     "playback.audio.selection": "pass",

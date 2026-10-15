@@ -14,8 +14,8 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ⛔ not-planned | `GET /Audio/{itemId}/stream` | Anonymous |  |  | Music is not cataloged or streamed (video-first scope, docs/01). (priority: low) |
-| ⛔ not-planned | `HEAD /Audio/{itemId}/stream` | Anonymous |  |  | Music is not cataloged or streamed (video-first scope, docs/01). (priority: low) |
+| ⛔ not-planned | `GET /Audio/{itemId}/stream` | Anonymous |  | 2/2 | Music is not cataloged or streamed (video-first scope, docs/01). (priority: low) |
+| ⛔ not-planned | `HEAD /Audio/{itemId}/stream` | Anonymous |  | 2/2 | Music is not cataloged or streamed (video-first scope, docs/01). (priority: low) |
 | ⛔ not-planned | `GET /Audio/{itemId}/stream.{container}` | Anonymous |  |  | Music is not cataloged or streamed (video-first scope, docs/01). (priority: low) |
 | ⛔ not-planned | `HEAD /Audio/{itemId}/stream.{container}` | Anonymous |  |  | Music is not cataloged or streamed (video-first scope, docs/01). (priority: low) |
 | ⛔ not-planned | `GET /Audio/{itemId}/universal` | DefaultAuthorization |  |  | Music is not cataloged or streamed (video-first scope, docs/01). (priority: low) |
@@ -37,7 +37,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
 | ✅ supported | `GET /Items/{itemId}/PlaybackInfo` | DefaultAuthorization | yes | 4/4 |  |
-| ✅ supported | `POST /Items/{itemId}/PlaybackInfo` | DefaultAuthorization | yes | 11/11 |  |
+| ✅ supported | `POST /Items/{itemId}/PlaybackInfo` | DefaultAuthorization | yes | 12/12 |  |
 | ⛔ not-planned | `POST /LiveStreams/Close` | DefaultAuthorization | yes |  | Out of scope for v1 (docs/01, decision D8). Live streams belong to tuners. (priority: low) |
 | ⛔ not-planned | `POST /LiveStreams/Open` | DefaultAuthorization | yes |  | Out of scope for v1 (docs/01, decision D8). Live streams belong to tuners. (priority: low) |
 | ✅ supported *(no scenario)* | `GET /Playback/BitrateTest` | DefaultAuthorization | yes |  |  |

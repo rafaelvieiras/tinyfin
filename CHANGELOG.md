@@ -23,6 +23,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`GET /System/Logs`, `/System/Logs/Log`, daily files under `<data dir>/log`), snapshot backups
   (`GET /Backup`, `POST /Backup/Create`, `GET /Backup/Manifest`; restore validates and answers 501)
   and empty `/Plugins`, `/Packages`, `/Repositories` lists (no plugin system, by design).
+- Music libraries (`CollectionType` `music`, first slice): a folder that holds audio files is a
+  `MusicAlbum`, a root folder an artist (`MusicArtist`), each audio file an `Audio` item with its
+  ID3/Vorbis tags (title, artist, album, album artist, track, disc, year, genre; the file and
+  folder names when untagged), duration and stream info. The album picture is a `cover`/`folder`/
+  `poster` file or a picture embedded in a track (extracted with ffmpeg). Artists the tags name
+  without a folder are artists too. New: `GET /Artists`, `GET /Artists/AlbumArtists`,
+  `ArtistIds`/`AlbumArtistIds`/`AlbumIds` filters on `/Items`, `GET /Audio/{id}/stream` (the file
+  as it is, with ranges) and direct play decisions for tracks. `MediaType` of albums and artists is
+  now `Unknown`. Contract: `specs/music.md`, 14 scenarios. Left out: Instant Mix, lyrics,
+  MusicGenres, music videos, audio transcoding.
 - Chapters: the scan reads the chapter marks of a file (`ffprobe -show_chapters`, stored per item,
   migration 0026 re-probes existing items once) and `Chapters` is returned on a single read and
   with `Fields=Chapters` (title, or `Chapter N` when the file gives none). No chapter pictures.

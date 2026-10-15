@@ -819,6 +819,18 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 		}
 		*nf.dst = append(*nf.dst, names...)
 	}
+	if !s.applyMusicFilters(ctx, q, &filter) {
+		filter.NoMatch = true
+	}
+	for _, t := range filter.ItemTypes {
+		if t == storage.ItemTypeMusicArtist {
+			filter.IncludeExtras = true // artists that have no folder are listed too
+		}
+	}
+	if role, ok := ctx.Value(artistListingKey{}).(string); ok {
+		filter.ItemTypes = []storage.ItemType{storage.ItemTypeMusicArtist}
+		filter.IncludeExtras, filter.Recursive, filter.ArtistRole = true, true, role
+	}
 	if filter.Played != nil || filter.Favorite != nil || filter.Resumable {
 		uid := user.ID
 		filter.UserID = &uid

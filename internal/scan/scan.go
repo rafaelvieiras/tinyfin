@@ -242,7 +242,7 @@ func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, 
 	var live, skipped []string
 	for _, root := range lib.Paths {
 		switch lib.CollectionType {
-		case storage.CollectionTypeMovies, storage.CollectionTypeTVShows, storage.CollectionTypeHomeVideos:
+		case storage.CollectionTypeMovies, storage.CollectionTypeTVShows, storage.CollectionTypeHomeVideos, storage.CollectionTypeMusic:
 			if entries, err := os.ReadDir(root); err != nil || len(entries) == 0 {
 				log.Printf("scan: library %q: folder %s is inaccessible or empty, skipping", lib.Name, root)
 				skipped = append(skipped, root)
@@ -260,6 +260,9 @@ func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, 
 		case storage.CollectionTypeHomeVideos:
 			s.recordRootFolder(ctx, lib, root)
 			s.walkHomeVideos(ctx, pool, lib, root, nil)
+		case storage.CollectionTypeMusic:
+			s.recordRootFolder(ctx, lib, root)
+			s.walkMusic(ctx, pool, lib, root, nil, 0)
 		case storage.CollectionTypePlaylists:
 			// Playlists are made through the API; nothing to walk.
 		case storage.CollectionTypeBoxSets:
@@ -267,7 +270,7 @@ func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, 
 			// by the automatic collections below; there is no directory to
 			// walk.
 		default:
-			// Music/Mixed aren't in this scanner's scope yet — a
+			// Mixed isn't in this scanner's scope yet — a
 			// documented gap (docs/08 describes the video-first v1 scope
 			// this project targets), not a silent no-op: logged once per
 			// path so an operator adding an unsupported library type sees
@@ -277,6 +280,9 @@ func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, 
 	}
 
 	stats := pool.wait()
+	if lib.CollectionType == storage.CollectionTypeMusic && pool.failed == 0 && ctx.Err() == nil {
+		s.syncVirtualArtists(ctx, lib)
+	}
 	if len(live) > 0 && pool.failed == 0 && ctx.Err() == nil {
 		stats.Removed = s.forgetVanished(ctx, lib, forgetScope{roots: live, skipped: skipped})
 	}

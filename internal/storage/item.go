@@ -92,6 +92,9 @@ const (
 	StreamTypeSubtitle StreamType = "Subtitle"
 	// StreamTypeData is a data track (timecodes, DVD navigation packets).
 	StreamTypeData StreamType = "Data"
+	// StreamTypeEmbeddedImage is a picture embedded in an audio file (the
+	// attached cover of a track).
+	StreamTypeEmbeddedImage StreamType = "EmbeddedImage"
 )
 
 // MediaStreamRef is one scan-derived embedded track on an item's media
@@ -356,6 +359,9 @@ const (
 	ExtraTypeThemeSong       = "ThemeSong"
 	ExtraTypeThemeVideo      = "ThemeVideo"
 	ExtraTypePart            = "Part"
+	// ExtraTypeVirtualArtist is a music artist that has no folder in the
+	// library, only a name its tracks carry.
+	ExtraTypeVirtualArtist = "VirtualArtist"
 	// ExtraTypeVersion is another file of the same movie or episode (a
 	// quality or cut), listed among its media sources.
 	ExtraTypeVersion = "Version"

@@ -51,6 +51,8 @@ type ffprobeStream struct {
 		Original int `json:"original"`
 		// HearingImpaired is the disposition flag of an SDH track.
 		HearingImpaired int `json:"hearing_impaired"`
+		// AttachedPic marks a picture embedded in an audio file.
+		AttachedPic int `json:"attached_pic"`
 	} `json:"disposition"`
 	// Tags.Title/Language: an embedded per-track title/language tag, when
 	// the container carries one (e.g. Matroska's TrackEntry/Name and
@@ -62,10 +64,31 @@ type ffprobeStream struct {
 	// instead of the plain attribute-join branch — leaving these two
 	// unextracted meant DisplayTitle never actually exercised that branch
 	// for any real file.
-	Tags struct {
-		Title    string `json:"title"`
-		Language string `json:"language"`
-	} `json:"tags"`
+	Tags streamTags `json:"tags"`
+}
+
+// streamTags are the tags of one stream: the title and language the stream
+// listings use, and every tag by lower-cased name (an Ogg file carries the
+// file's tags on its stream).
+type streamTags struct {
+	Title    string
+	Language string
+	All      map[string]string
+}
+
+func (t *streamTags) UnmarshalJSON(data []byte) error {
+	var raw map[string]any
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil // not an object: no tags
+	}
+	t.All = make(map[string]string, len(raw))
+	for k, v := range raw {
+		if str, ok := v.(string); ok {
+			t.All[strings.ToLower(k)] = str
+		}
+	}
+	t.Title, t.Language = t.All["title"], t.All["language"]
+	return nil
 }
 
 type ffprobeOutput struct {
@@ -178,6 +201,15 @@ func mediaStreamsFromProbe(info ffprobeOutput) []storage.MediaStreamRef {
 	var streams []storage.MediaStreamRef
 	idx := 0
 	for _, st := range info.Streams {
+		if st.CodecType == "video" && st.Disposition.AttachedPic == 1 {
+			// The cover of an audio file, not a video track.
+			streams = append(streams, storage.MediaStreamRef{
+				Index: idx, Type: storage.StreamTypeEmbeddedImage, Codec: st.CodecName,
+				Title: st.Tags.Title,
+			})
+			idx++
+			continue
+		}
 		switch st.CodecType {
 		case "video":
 			w, h := st.Width, st.Height
@@ -267,4 +299,39 @@ func runtimeTicksFromProbe(info ffprobeOutput) *int64 {
 	}
 	ticks := int64(d * 10_000_000)
 	return &ticks
+}
+
+// embeddedArt is a picture attached to an audio file: the index of its
+// stream in the file and its codec.
+type embeddedArt struct {
+	index int
+	codec string
+}
+
+// attachedPicture finds the picture embedded in an audio file, if any.
+func attachedPicture(info ffprobeOutput) *embeddedArt {
+	for i, st := range info.Streams {
+		if st.CodecType == "video" && st.Disposition.AttachedPic == 1 {
+			return &embeddedArt{index: i, codec: st.CodecName}
+		}
+	}
+	return nil
+}
+
+// audioTags returns the tags of an audio file: the container's, completed
+// with the first audio stream's (Ogg keeps them there). Names are lower-cased.
+func audioTags(info ffprobeOutput) map[string]string {
+	out := map[string]string{}
+	for _, st := range info.Streams {
+		if st.CodecType == "audio" {
+			for k, v := range st.Tags.All {
+				out[k] = v
+			}
+			break
+		}
+	}
+	for k, v := range info.Format.Tags {
+		out[strings.ToLower(k)] = v
+	}
+	return out
 }
