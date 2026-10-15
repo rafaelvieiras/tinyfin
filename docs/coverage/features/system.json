@@ -51,19 +51,21 @@
    "id": "system.tasks",
    "title": "Scheduled tasks",
    "status": "partial",
-   "description": "One task (library scan) with start; reported over the socket.",
+   "description": "Three real tasks (library scan, trickplay generation, activity-log cleanup) with State/progress/LastExecutionResult, persisted triggers (Daily/Weekly/Interval/Startup) run by a small scheduler, start/stop and the ScheduledTasksInfo socket push.",
    "reference": "Many tasks (cleanup, trickplay, subtitles, plugins) with triggers.",
-   "notes": "No triggers API, no other tasks.",
+   "notes": "Only the tasks Tinyfin implements; cleanup of logs/cache/transcodes, subtitle and plugin tasks do not exist. Stopping an idle task is a 204 no-op.",
    "code": [
-    "internal/api/scheduled_tasks.go"
+    "internal/api/scheduled_tasks.go",
+    "internal/api/scheduled_tasks_engine.go"
    ],
    "routes": [
     "GET /ScheduledTasks",
-    "POST /ScheduledTasks/Running/{taskId}"
+    "GET /ScheduledTasks/{taskId}",
+    "POST /ScheduledTasks/Running/{taskId}",
+    "DELETE /ScheduledTasks/Running/{taskId}",
+    "POST /ScheduledTasks/{taskId}/Triggers"
    ],
-   "priority": "low",
-   "unverified": true,
-   "unverified_reason": "No scenario."
+   "priority": "low"
   },
   {
    "id": "system.activity",

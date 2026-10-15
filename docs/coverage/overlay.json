@@ -408,6 +408,38 @@
    "status": "partial",
    "notes": "Answers 500 like the reference does for an id no provider issued. Searching and downloading from remote subtitle providers is not planned (it needs provider plugins and network access).",
    "priority": "low"
+  },
+  "GET /ScheduledTasks": {
+   "status": "divergent-by-design",
+   "notes": "Lists only the tasks Tinyfin really runs (RefreshLibrary, RefreshTrickplayImages, CleanActivityLog) with the reference's Ids and Keys; the reference's ~20 tasks (plugin updates, subtitle/lyric downloads, ...) belong to subsystems that do not exist. See specs/admin.md."
+  },
+  "DELETE /ScheduledTasks/Running/{taskId}": {
+   "status": "divergent-by-design",
+   "notes": "Cancels a running library scan or trickplay batch; stopping a task that is not running is a 204 no-op (the reference answers 500)."
+  },
+  "POST /Backup/Create": {
+   "status": "partial",
+   "notes": "Snapshots the SQLite database only (zip with manifest.json + database/tinyfin.db); Metadata/Trickplay/Subtitles options are echoed but ignored. Unlike the reference it also works during a library scan."
+  },
+  "POST /Backup/Restore": {
+   "status": "partial",
+   "notes": "Validates the request (400/404) and answers 501: restoring over a running server's database is not planned; copy database/tinyfin.db over the database file with the server stopped."
+  },
+  "GET /System/Logs": {
+   "status": "partial",
+   "notes": "Lists the daily log_YYYYMMDD.log files cmd/tinyfin tees its output to; the log format is the Go standard logger's, with no retention."
+  },
+  "GET /Plugins": {
+   "status": "divergent-by-design",
+   "notes": "No plugin system (D8, D11): always an empty list, where the reference lists its bundled providers and a default repository."
+  },
+  "GET /Packages": {
+   "status": "divergent-by-design",
+   "notes": "No plugin system (D8, D11): always an empty list, where the reference lists its bundled providers and a default repository."
+  },
+  "GET /Repositories": {
+   "status": "divergent-by-design",
+   "notes": "No plugin system (D8, D11): always an empty list, where the reference lists its bundled providers and a default repository."
   }
  }
 }

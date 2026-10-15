@@ -4,9 +4,9 @@
 
 Virtual folders, remote metadata search/apply, metadata editing, the file-system browser and scheduled tasks.
 
-[Overview](../COVERAGE.md) · 32 operations · 12 registered (38%) · 2 verified · ✅ 12 · 🗓️ 17 · ⛔ 3
+[Overview](../COVERAGE.md) · 32 operations · 13 registered (41%) · 5 verified · ✅ 11 · 🗓️ 16 · ⛔ 3 · ↔️ 2
 
-✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔
+✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔↔️
 
 Columns: **Auth** is the reference's authorization policy; **Web** = mentioned in docs/11 (called by the official web client); **Tests** = scenarios that exercise the route (passing / total).
 
@@ -61,11 +61,11 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ✅ supported *(no scenario)* | `GET /ScheduledTasks` | RequiresElevation | yes |  |  |
-| 🗓️ planned | `DELETE /ScheduledTasks/Running/{taskId}` | RequiresElevation | yes |  | Only the library-scan task and its start route exist. (priority: low) |
-| ✅ supported *(no scenario)* | `POST /ScheduledTasks/Running/{taskId}` | RequiresElevation | yes |  |  |
-| 🗓️ planned | `GET /ScheduledTasks/{taskId}` | RequiresElevation | yes |  | Only the library-scan task and its start route exist. (priority: low) |
-| 🗓️ planned | `POST /ScheduledTasks/{taskId}/Triggers` | RequiresElevation |  |  | Only the library-scan task and its start route exist. (priority: low) |
+| ↔️ divergent-by-design | `GET /ScheduledTasks` | RequiresElevation | yes | 2/2 | Lists only the tasks Tinyfin really runs (RefreshLibrary, RefreshTrickplayImages, CleanActivityLog) with the reference's Ids and Keys; the reference's ~20 tasks (plugin updates, subtitle/lyric downloads, ...) belong to subsystems that do not exist. See specs/admin.md. |
+| ↔️ divergent-by-design | `DELETE /ScheduledTasks/Running/{taskId}` | RequiresElevation | yes | 2/2 | Cancels a running library scan or trickplay batch; stopping a task that is not running is a 204 no-op (the reference answers 500). |
+| 🗓️ planned | `POST /ScheduledTasks/Running/{taskId}` | RequiresElevation | yes | 2/2 | Only the library-scan task and its start route exist. (priority: low) |
+| ✅ supported | `GET /ScheduledTasks/{taskId}` | RequiresElevation | yes | 3/3 |  |
+| 🗓️ planned | `POST /ScheduledTasks/{taskId}/Triggers` | RequiresElevation |  | 1/1 | Only the library-scan task and its start route exist. (priority: low) |
 
 ## Related features
 

@@ -165,6 +165,8 @@ type Server struct {
 	scanner     *scan.Scanner
 	trickplay   *trickplay.Generator
 	scanState   *scanTracker
+	taskRTOnce  sync.Once
+	taskRTv     *taskRuntime
 	// scanLibSem bounds libraries scanning concurrently (runScan).
 	scanLibSem chan struct{}
 	sessions   *sessionRegistry
@@ -235,6 +237,7 @@ func NewServer(store storage.Store, cfg Config) *Server {
 	s.routes()
 	go s.runWSWatchdog(context.Background())
 	go s.runLibraryMonitor(context.Background())
+	go s.runTaskScheduler(context.Background())
 	return s
 }
 
@@ -256,10 +259,62 @@ type scanTracker struct {
 	lastStart time.Time
 	lastEnd   time.Time
 	lastErr   error
+	// batchTotal/batchDone count the scans started/finished since the
+	// tracker was last idle, the basis of the task's progress percentage.
+	batchTotal, batchDone int
+	cancelSeq             int
+	cancels               map[int]context.CancelFunc
+	lastCancelled         bool
+}
+
+// register stores cancel so cancelAll can stop the scan; the returned func
+// unregisters it.
+func (t *scanTracker) register(cancel context.CancelFunc) func() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.cancels == nil {
+		t.cancels = map[int]context.CancelFunc{}
+	}
+	t.cancelSeq++
+	id := t.cancelSeq
+	t.cancels[id] = cancel
+	return func() {
+		t.mu.Lock()
+		delete(t.cancels, id)
+		t.mu.Unlock()
+	}
+}
+
+// cancelAll cancels every in-flight scan and reports whether there was one.
+func (t *scanTracker) cancelAll() bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	for _, c := range t.cancels {
+		c()
+	}
+	if len(t.cancels) > 0 {
+		t.lastCancelled = true
+	}
+	return len(t.cancels) > 0
+}
+
+// progress returns the completed share of the current batch, in percent.
+func (t *scanTracker) progress() float64 {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.batchTotal == 0 {
+		return 0
+	}
+	return float64(t.batchDone) / float64(t.batchTotal) * 100
 }
 
 func (t *scanTracker) begin() {
 	t.mu.Lock()
+	if t.running == 0 {
+		t.batchTotal, t.batchDone = 0, 0
+		t.lastCancelled = false
+	}
+	t.batchTotal++
 	t.running++
 	t.lastStart = time.Now().UTC()
 	t.mu.Unlock()
@@ -268,6 +323,7 @@ func (t *scanTracker) begin() {
 func (t *scanTracker) end(err error) {
 	t.mu.Lock()
 	t.running--
+	t.batchDone++
 	t.lastEnd = time.Now().UTC()
 	t.lastErr = err
 	t.mu.Unlock()
@@ -303,6 +359,9 @@ func (s *Server) runScan(lib storage.Library) {
 
 // runScanCtx is runScan with a caller-prepared context (scan.WithoutCollections).
 func (s *Server) runScanCtx(ctx context.Context, lib storage.Library) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer s.scanState.register(cancel)()
+	defer cancel()
 	s.scanState.begin()
 	s.notifyScheduledTasks(ctx, true)
 	// Bound how many libraries scan at once; the scan counts as running
@@ -490,7 +549,20 @@ func (s *Server) routes() {
 	// (DELETE on this same path) and per-task GET/Triggers stay a documented
 	// gap (docs/11) — no scan cancellation exists, and nothing today calls
 	// them for this project's one synthetic task.
-	s.mux.HandleFunc("POST /ScheduledTasks/Running/{taskId}", requireAdmin(s.handleScheduledTaskStart))
+	s.mux.HandleFunc("DELETE /ScheduledTasks/Running/{taskId}", requireAdmin(s.handleScheduledTaskStop))
+	s.mux.HandleFunc("GET /ScheduledTasks/{taskId}", requireAdmin(s.handleScheduledTaskGet))
+	// "Running/{taskId}" and "{taskId}/Triggers" overlap for ServeMux, so
+	// one pattern dispatches both.
+	s.mux.HandleFunc("POST /ScheduledTasks/{first}/{second}", requireAdmin(s.handleScheduledTaskPost))
+	s.mux.HandleFunc("GET /System/Logs", requireAdmin(s.handleSystemLogs))
+	s.mux.HandleFunc("GET /System/Logs/Log", requireAdmin(s.handleSystemLogFile))
+	s.mux.HandleFunc("GET /Backup", requireAdmin(s.handleBackupList))
+	s.mux.HandleFunc("POST /Backup/Create", requireAdmin(s.handleBackupCreate))
+	s.mux.HandleFunc("GET /Backup/Manifest", requireAdmin(s.handleBackupManifest))
+	s.mux.HandleFunc("POST /Backup/Restore", requireAdmin(s.handleBackupRestore))
+	s.mux.HandleFunc("GET /Plugins", requireAdmin(s.handleEmptyList))
+	s.mux.HandleFunc("GET /Packages", requireAdmin(s.handleEmptyList))
+	s.mux.HandleFunc("GET /Repositories", requireAdmin(s.handleEmptyList))
 	s.mux.HandleFunc("GET /System/ActivityLog/Entries", requireAdmin(s.handleActivityLogEntries))
 	// Dashboard overview page, called unconditionally on mount — see
 	// handleConfigurationPages' doc comment (system.go).

@@ -270,11 +270,16 @@ func TestSocketScheduledTasksInfoPushOnScanStateChange(t *testing.T) {
 		t.Fatalf("message type = %q, want ScheduledTasksInfo", msg.MessageType)
 	}
 	tasks, ok := msg.Data.([]any)
-	if !ok || len(tasks) != 1 {
-		t.Fatalf("ScheduledTasksInfo Data = %#v, want a one-element array", msg.Data)
+	var task map[string]any
+	for _, x := range tasks {
+		if m, isMap := x.(map[string]any); isMap && m["Key"] == "RefreshLibrary" {
+			task = m
+		}
 	}
-	task, ok := tasks[0].(map[string]any)
-	if !ok || task["State"] != "Running" {
+	if !ok || task == nil {
+		t.Fatalf("ScheduledTasksInfo Data = %#v, want an array with RefreshLibrary", msg.Data)
+	}
+	if task["State"] != "Running" {
 		t.Fatalf("task = %#v, want State \"Running\"", task)
 	}
 }

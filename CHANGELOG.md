@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   without permission; a permitted caller is still refused with 403, files are never deleted) and
   `CanDelete`/`CanDownload` on items reflect the policy. The first-run and seeded administrators
   get `EnableContentDeletion`. Contract: `specs/policy.md`, 8 scenarios.
+- Administration (`docs/contract/specs/admin.md`): `GET /ScheduledTasks/{taskId}`,
+  `DELETE /ScheduledTasks/Running/{taskId}` and `POST /ScheduledTasks/{taskId}/Triggers`; the task list now
+  has the reference's Ids and three real tasks (library scan, trickplay generation, activity-log
+  cleanup) with progress, last result, persisted triggers and a scheduler that fires them. Logs
+  (`GET /System/Logs`, `/System/Logs/Log`, daily files under `<data dir>/log`), snapshot backups
+  (`GET /Backup`, `POST /Backup/Create`, `GET /Backup/Manifest`; restore validates and answers 501)
+  and empty `/Plugins`, `/Packages`, `/Repositories` lists (no plugin system, by design).
 - Chapters: the scan reads the chapter marks of a file (`ffprobe -show_chapters`, stored per item,
   migration 0026 re-probes existing items once) and `Chapters` is returned on a single read and
   with `Fields=Chapters` (title, or `Chapter N` when the file gives none). No chapter pictures.

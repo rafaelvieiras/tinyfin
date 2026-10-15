@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/rafaelvieiras/tinyfin/internal/api"
 	"github.com/rafaelvieiras/tinyfin/internal/guid"
+	"github.com/rafaelvieiras/tinyfin/internal/logfile"
 	"github.com/rafaelvieiras/tinyfin/internal/storage/sqlite"
 )
 
@@ -83,6 +85,12 @@ func main() {
 	trickplayConc := flag.Int("trickplay-concurrency", envInt("TINYFIN_TRICKPLAY_CONCURRENCY", 0),
 		"max simultaneous ffmpeg processes generating trickplay sheets (default 1, each single-threaded). Overridable via TINYFIN_TRICKPLAY_CONCURRENCY.")
 	flag.Parse()
+
+	// Tee the log into <data dir>/log/log_YYYYMMDD.log so the admin log
+	// routes (GET /System/Logs) have files to serve.
+	logFiles := logfile.New(filepath.Join(filepath.Dir(*dataPath), "log"))
+	defer logFiles.Close()
+	log.SetOutput(io.MultiWriter(os.Stderr, logFiles))
 
 	store, err := sqlite.New(*dataPath)
 	if err != nil {

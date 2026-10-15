@@ -106,6 +106,21 @@ type Generator struct {
 	mu       sync.Mutex
 	inflight map[storage.ItemID]bool
 	wg       sync.WaitGroup
+
+	// taskMu guards the manual-run (scheduled task) state: how many task
+	// jobs are in flight, the cancel func of the current batch and when it
+	// last finished.
+	taskMu     sync.Mutex
+	taskJobs   int
+	taskCancel context.CancelFunc
+	taskCtx    context.Context
+	taskLast   TaskResult
+}
+
+// TaskResult describes the most recently finished task batch.
+type TaskResult struct {
+	Start, End time.Time
+	Cancelled  bool
 }
 
 // New returns a Generator that writes under dataDir/trickplay and runs at
@@ -118,6 +133,67 @@ func New(store storage.Store, ffmpegPath, dataDir string, concurrency int) *Gene
 		ffmpegPath = "ffmpeg"
 	}
 	return &Generator{store: store, ffmpeg: ffmpegPath, dataDir: dataDir, sem: make(chan struct{}, concurrency), inflight: map[storage.ItemID]bool{}}
+}
+
+// TaskRunning reports whether a task-initiated batch (RunTask) is in flight.
+func (g *Generator) TaskRunning() bool {
+	g.taskMu.Lock()
+	defer g.taskMu.Unlock()
+	return g.taskJobs > 0
+}
+
+// TaskLast returns the last finished batch (zero Start when none yet).
+func (g *Generator) TaskLast() TaskResult {
+	g.taskMu.Lock()
+	defer g.taskMu.Unlock()
+	return g.taskLast
+}
+
+// CancelTask stops the in-flight task batch; it reports whether there was one.
+func (g *Generator) CancelTask() bool {
+	g.taskMu.Lock()
+	defer g.taskMu.Unlock()
+	if g.taskJobs == 0 || g.taskCancel == nil {
+		return false
+	}
+	g.taskCancel()
+	return true
+}
+
+// RunTask generates missing sheets for every library that has trickplay
+// enabled, regardless of the DuringScan option, as the "Generate Trickplay
+// Images" task does. It returns immediately; the work runs in the background.
+func (g *Generator) RunTask(libs []storage.Library) {
+	g.taskMu.Lock()
+	if g.taskJobs > 0 {
+		g.taskMu.Unlock()
+		return
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	g.taskCtx, g.taskCancel = ctx, cancel
+	g.taskJobs = 1
+	start := time.Now().UTC()
+	g.taskMu.Unlock()
+	g.wg.Add(1)
+	go func() {
+		defer g.wg.Done()
+		for _, lib := range libs {
+			opts := ParseLibraryOptions(lib.LibraryOptions)
+			if !opts.Enable || ctx.Err() != nil {
+				continue
+			}
+			g.eachItem(ctx, lib, func(it storage.Item) {
+				if ctx.Err() == nil {
+					g.process(ctx, it, opts, false)
+				}
+			})
+		}
+		g.taskMu.Lock()
+		g.taskLast = TaskResult{Start: start, End: time.Now().UTC(), Cancelled: ctx.Err() != nil}
+		g.taskJobs = 0
+		g.taskMu.Unlock()
+		cancel()
+	}()
 }
 
 // Wait blocks until every queued job has finished (tests).

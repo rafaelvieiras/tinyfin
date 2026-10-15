@@ -8,15 +8,15 @@
    "supported": 60
   },
   "operations": 364,
-  "registered": 158,
+  "registered": 168,
   "routes_by_status": {
-   "divergent-by-design": 11,
-   "not-planned": 116,
-   "partial": 9,
-   "planned": 90,
-   "supported": 138
+   "divergent-by-design": 16,
+   "not-planned": 109,
+   "partial": 12,
+   "planned": 87,
+   "supported": 140
   },
-  "verified": 114
+  "verified": 126
  },
  "routes": [
   {
@@ -500,48 +500,54 @@
    "tag": "Backup",
    "group": "system",
    "policy": "RequiresElevation",
-   "status": "not-planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "State is one SQLite file (docs/05), so a backup is a file copy; the reference's archive format is specific to it.",
-   "priority": "low"
+   "scenarios": [
+    "admin.backup.create"
+   ]
   },
   {
    "id": "POST /Backup/Create",
    "tag": "Backup",
    "group": "system",
    "policy": "RequiresElevation",
-   "status": "not-planned",
-   "registered": false,
-   "verified": false,
+   "status": "partial",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "State is one SQLite file (docs/05), so a backup is a file copy; the reference's archive format is specific to it.",
-   "priority": "low"
+   "scenarios": [
+    "admin.backup.create"
+   ],
+   "notes": "Snapshots the SQLite database only (zip with manifest.json + database/tinyfin.db); Metadata/Trickplay/Subtitles options are echoed but ignored. Unlike the reference it also works during a library scan."
   },
   {
    "id": "GET /Backup/Manifest",
    "tag": "Backup",
    "group": "system",
    "policy": "RequiresElevation",
-   "status": "not-planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "State is one SQLite file (docs/05), so a backup is a file copy; the reference's archive format is specific to it.",
-   "priority": "low"
+   "scenarios": [
+    "admin.backup.create"
+   ]
   },
   {
    "id": "POST /Backup/Restore",
    "tag": "Backup",
    "group": "system",
    "policy": "RequiresElevation",
-   "status": "not-planned",
-   "registered": false,
-   "verified": false,
+   "status": "partial",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "State is one SQLite file (docs/05), so a backup is a file copy; the reference's archive format is specific to it.",
-   "priority": "low"
+   "scenarios": [
+    "admin.backup.restore-validation"
+   ],
+   "notes": "Validates the request (400/404) and answers 501: restoring over a running server's database is not planned; copy database/tinyfin.db over the database file with the server stopped."
   },
   {
    "id": "GET /Branding/Configuration",
@@ -3426,12 +3432,14 @@
    "tag": "Plugin",
    "group": "system",
    "policy": "RequiresElevation",
-   "status": "not-planned",
-   "registered": false,
-   "verified": false,
+   "status": "divergent-by-design",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "No plugin system (decisions D8, D11).",
-   "priority": "low"
+   "scenarios": [
+    "admin.plugins.list"
+   ],
+   "notes": "No plugin system (D8, D11): always an empty list, where the reference lists its bundled providers and a default repository."
   },
   {
    "id": "POST /Packages/Installed/{name}",
@@ -3474,12 +3482,14 @@
    "tag": "Plugin",
    "group": "system",
    "policy": "RequiresElevation",
-   "status": "not-planned",
-   "registered": false,
-   "verified": false,
+   "status": "divergent-by-design",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "No plugin system (decisions D8, D11).",
-   "priority": "low"
+   "scenarios": [
+    "admin.plugins.list"
+   ],
+   "notes": "No plugin system (D8, D11): always an empty list, where the reference lists its bundled providers and a default repository."
   },
   {
    "id": "DELETE /Plugins/{pluginId}",
@@ -3582,12 +3592,14 @@
    "tag": "Plugin",
    "group": "system",
    "policy": "RequiresElevation",
-   "status": "not-planned",
-   "registered": false,
-   "verified": false,
+   "status": "divergent-by-design",
+   "registered": true,
+   "verified": true,
    "web": false,
-   "notes": "No plugin system (decisions D8, D11).",
-   "priority": "low"
+   "scenarios": [
+    "admin.plugins.list"
+   ],
+   "notes": "No plugin system (D8, D11): always an empty list, where the reference lists its bundled providers and a default repository."
   },
   {
    "id": "POST /Repositories",
@@ -3665,44 +3677,61 @@
    "tag": "ScheduledTask",
    "group": "library-admin",
    "policy": "RequiresElevation",
-   "status": "supported",
+   "status": "divergent-by-design",
    "registered": true,
-   "verified": false,
-   "web": true
+   "verified": true,
+   "web": true,
+   "scenarios": [
+    "admin.tasks.auth",
+    "admin.tasks.list"
+   ],
+   "notes": "Lists only the tasks Tinyfin really runs (RefreshLibrary, RefreshTrickplayImages, CleanActivityLog) with the reference's Ids and Keys; the reference's ~20 tasks (plugin updates, subtitle/lyric downloads, ...) belong to subsystems that do not exist. See specs/admin.md."
   },
   {
    "id": "DELETE /ScheduledTasks/Running/{taskId}",
    "tag": "ScheduledTask",
    "group": "library-admin",
    "policy": "RequiresElevation",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "divergent-by-design",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Only the library-scan task and its start route exist.",
-   "priority": "low"
+   "scenarios": [
+    "admin.tasks.run",
+    "admin.tasks.stop-idle"
+   ],
+   "notes": "Cancels a running library scan or trickplay batch; stopping a task that is not running is a 204 no-op (the reference answers 500)."
   },
   {
    "id": "POST /ScheduledTasks/Running/{taskId}",
    "tag": "ScheduledTask",
    "group": "library-admin",
    "policy": "RequiresElevation",
-   "status": "supported",
-   "registered": true,
+   "status": "planned",
+   "registered": false,
    "verified": false,
-   "web": true
+   "web": true,
+   "scenarios": [
+    "admin.tasks.auth",
+    "admin.tasks.run"
+   ],
+   "notes": "Only the library-scan task and its start route exist.",
+   "priority": "low"
   },
   {
    "id": "GET /ScheduledTasks/{taskId}",
    "tag": "ScheduledTask",
    "group": "library-admin",
    "policy": "RequiresElevation",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Only the library-scan task and its start route exist.",
-   "priority": "low"
+   "scenarios": [
+    "admin.tasks.get",
+    "admin.tasks.run",
+    "admin.tasks.triggers"
+   ]
   },
   {
    "id": "POST /ScheduledTasks/{taskId}/Triggers",
@@ -3713,6 +3742,9 @@
    "registered": false,
    "verified": false,
    "web": false,
+   "scenarios": [
+    "admin.tasks.triggers"
+   ],
    "notes": "Only the library-scan task and its start route exist.",
    "priority": "low"
   },
@@ -4842,24 +4874,28 @@
    "tag": "System",
    "group": "system",
    "policy": "RequiresElevation",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "partial",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Not implemented.",
-   "priority": "low"
+   "scenarios": [
+    "admin.logs.file",
+    "admin.logs.list"
+   ],
+   "notes": "Lists the daily log_YYYYMMDD.log files cmd/tinyfin tees its output to; the log format is the Go standard logger's, with no retention."
   },
   {
    "id": "GET /System/Logs/Log",
    "tag": "System",
    "group": "system",
    "policy": "RequiresElevation",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Not implemented.",
-   "priority": "low"
+   "scenarios": [
+    "admin.logs.file"
+   ]
   },
   {
    "id": "GET /System/Ping",
@@ -7616,19 +7652,21 @@
    "id": "system.tasks",
    "title": "Scheduled tasks",
    "status": "partial",
-   "description": "One task (library scan) with start; reported over the socket.",
+   "description": "Three real tasks (library scan, trickplay generation, activity-log cleanup) with State/progress/LastExecutionResult, persisted triggers (Daily/Weekly/Interval/Startup) run by a small scheduler, start/stop and the ScheduledTasksInfo socket push.",
    "reference": "Many tasks (cleanup, trickplay, subtitles, plugins) with triggers.",
-   "notes": "No triggers API, no other tasks.",
+   "notes": "Only the tasks Tinyfin implements; cleanup of logs/cache/transcodes, subtitle and plugin tasks do not exist. Stopping an idle task is a 204 no-op.",
    "code": [
-    "internal/api/scheduled_tasks.go"
+    "internal/api/scheduled_tasks.go",
+    "internal/api/scheduled_tasks_engine.go"
    ],
    "routes": [
     "GET /ScheduledTasks",
-    "POST /ScheduledTasks/Running/{taskId}"
+    "GET /ScheduledTasks/{taskId}",
+    "POST /ScheduledTasks/Running/{taskId}",
+    "DELETE /ScheduledTasks/Running/{taskId}",
+    "POST /ScheduledTasks/{taskId}/Triggers"
    ],
-   "priority": "low",
-   "unverified": true,
-   "unverified_reason": "No scenario."
+   "priority": "low"
   },
   {
    "id": "system.activity",
@@ -8018,6 +8056,7 @@
   "GET /Videos/{itemId}/main.m3u8",
   "GET /Videos/{itemId}/master.m3u8",
   "GET /socket",
+  "POST /ScheduledTasks/{first}/{second}",
   "POST /Users/{userId}",
   "POST /Users/{userId}/Configuration",
   "POST /Users/{userId}/FavoriteItems/{itemId}",

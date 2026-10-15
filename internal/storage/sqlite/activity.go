@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
@@ -106,4 +107,23 @@ func (s *Store) QueryActivityEntries(ctx context.Context, filter storage.Activit
 		return nil, 0, fmt.Errorf("sqlite: iterating activity log rows: %w", err)
 	}
 	return entries, total, nil
+}
+
+// DeleteActivityEntriesBefore implements the retention sweep of the
+// "Clean Activity Log" scheduled task.
+func (s *Store) DeleteActivityEntriesBefore(ctx context.Context, cutoff time.Time) (int64, error) {
+	res, err := s.exec(ctx, `DELETE FROM activity_log WHERE date < ?`, cutoff)
+	if err != nil {
+		return 0, fmt.Errorf("sqlite: deleting old activity log entries: %w", err)
+	}
+	return res.RowsAffected()
+}
+
+// SnapshotTo writes a consistent copy of the database to path (which must
+// not exist) with VACUUM INTO; used by the /Backup/Create route.
+func (s *Store) SnapshotTo(ctx context.Context, path string) error {
+	if _, err := s.exec(ctx, `VACUUM INTO ?`, path); err != nil {
+		return fmt.Errorf("sqlite: snapshot to %s: %w", path, err)
+	}
+	return nil
 }
