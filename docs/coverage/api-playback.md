@@ -4,9 +4,9 @@
 
 Playback negotiation, direct/HLS streaming, subtitles, lyrics, trickplay and media segments.
 
-[Overview](../COVERAGE.md) · 38 operations · 19 registered (50%) · 13 verified · ✅ 14 · 🟡 3 · 🗓️ 2 · ⛔ 17 · ↔️ 2
+[Overview](../COVERAGE.md) · 38 operations · 21 registered (55%) · 15 verified · ✅ 16 · 🟡 3 · ⛔ 17 · ↔️ 2
 
-✅✅✅✅✅✅✅🟡🟡🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔↔️
+✅✅✅✅✅✅✅✅🟡🟡⛔⛔⛔⛔⛔⛔⛔⛔⛔↔️
 
 Columns: **Auth** is the reference's authorization policy; **Web** = mentioned in docs/11 (called by the official web client); **Tests** = scenarios that exercise the route (passing / total).
 
@@ -67,8 +67,8 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| 🗓️ planned | `GET /Videos/{itemId}/Trickplay/{width}/tiles.m3u8` | DefaultAuthorization |  |  | The storage interface has a trickplay store, but nothing generates or serves tiles. (priority: low) |
-| 🗓️ planned | `GET /Videos/{itemId}/Trickplay/{width}/{index}.jpg` | DefaultAuthorization |  |  | The storage interface has a trickplay store, but nothing generates or serves tiles. (priority: low) |
+| ✅ supported | `GET /Videos/{itemId}/Trickplay/{width}/tiles.m3u8` | DefaultAuthorization |  | 4/4 |  |
+| ✅ supported | `GET /Videos/{itemId}/Trickplay/{width}/{index}.jpg` | DefaultAuthorization |  | 2/2 |  |
 
 ## Video
 

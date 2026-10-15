@@ -94,6 +94,8 @@ change, not a code change, exactly per decision **D6**.
 
 ## Trickplay
 
-Seek-preview thumbnails, pre-generated at scan time (optionally hardware-accelerated) and served
-as a sprite sheet — this is a scan-time concern more than a playback-time one; see `08` for where
-it sits relative to the scanner.
+Seek-preview thumbnails, pre-generated after the scan and served as sprite sheets — this is a
+scan-time concern more than a playback-time one. Implemented in `internal/trickplay` (behavior in
+`contract/specs/trickplay.md`): opt-in per library, one single-threaded ffmpeg at a time by default
+(`-trickplay-concurrency`), incremental by file size and mtime, stored under `<data dir>/trickplay`.
+Hardware acceleration is not used.

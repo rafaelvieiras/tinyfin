@@ -262,6 +262,9 @@ type baseItemDto struct {
 	// PartCount: the number of files of a stacked movie, present only for
 	// one that has more than one.
 	PartCount *int `json:"PartCount,omitempty"`
+	// Trickplay: seek-thumbnail sheets, {mediaSourceId: {width: info}};
+	// empty for a video with none, absent on folders (trickplay.go).
+	Trickplay *map[string]map[string]trickplayDto `json:"Trickplay,omitempty"`
 	// ExtraType: what a trailer, feature or theme item is.
 	ExtraType      string        `json:"ExtraType,omitempty"`
 	RemoteTrailers []mediaURLDto `json:"RemoteTrailers,omitempty"`

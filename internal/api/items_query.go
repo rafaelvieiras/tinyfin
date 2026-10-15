@@ -1006,6 +1006,9 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 			if wantExtras {
 				s.applyExtraInfo(ctx, &dto, it)
 			}
+			if iq.fields["trickplay"] {
+				s.applyTrickplay(ctx, &dto, it)
+			}
 			items = append(items, shape(dto))
 		}
 	}
@@ -1048,6 +1051,9 @@ func (s *Server) writeSearchItems(ctx context.Context, w http.ResponseWriter, fi
 			dto := s.baseItemDto(ctx, *h.Item)
 			if wantExtras {
 				s.applyExtraInfo(ctx, &dto, *h.Item)
+			}
+			if iq.fields["trickplay"] {
+				s.applyTrickplay(ctx, &dto, *h.Item)
 			}
 			items = append(items, shapeListItem(dto, iq))
 		case h.Named != nil:
@@ -1288,6 +1294,7 @@ func (s *Server) handleItemGet(w http.ResponseWriter, r *http.Request) {
 	}
 	dto := s.baseItemDto(ctx, item)
 	s.applyExtraInfo(ctx, &dto, item)
+	s.applyTrickplay(ctx, &dto, item)
 	if item.Type == storage.ItemTypePlaylist {
 		s.applyPlaylistDetail(ctx, &dto, item)
 	}

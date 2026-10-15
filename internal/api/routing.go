@@ -155,6 +155,10 @@ var routePaths = []string{
 	// /Videos/{itemId}/{file}, and normalizePathCase stops at the first
 	// same-length match.
 	"/Videos/{itemId}/AdditionalParts",
+	// 6 segments, same count as /Items/{itemId}/Images/{imageType}/{imageIndex}
+	// but "Trickplay" is a literal the other does not share.
+	"/Videos/{itemId}/Trickplay/{width}/tiles.m3u8",
+	"/Videos/{itemId}/Trickplay/{width}/{file}",
 	"/Videos/{itemId}/master.m3u8",
 	"/Videos/{itemId}/main.m3u8",
 	// Subtitle routes: 7 and 8 segments (including the leading empty split

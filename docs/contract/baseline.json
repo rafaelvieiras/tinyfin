@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 661
+    "pass": 671
   },
   "scenarios": {
     "browse.facets": "pass",
@@ -448,6 +448,16 @@
     "subtitles.stream.offsets": "pass",
     "subtitles.stream.route-forms": "pass",
     "subtitles.stream.text-edge": "pass",
+    "trickplay.item.big": "pass",
+    "trickplay.item.list": "pass",
+    "trickplay.item.narrow": "pass",
+    "trickplay.item.off": "pass",
+    "trickplay.item.short": "pass",
+    "trickplay.playlist.big": "pass",
+    "trickplay.playlist.errors": "pass",
+    "trickplay.playlist.short": "pass",
+    "trickplay.sheet.errors": "pass",
+    "trickplay.sheet.serve": "pass",
     "users.auth.access-schedule": "pass",
     "users.auth.activity-failed-login-entry": "pass",
     "users.auth.activity-lockout-entry": "pass",
