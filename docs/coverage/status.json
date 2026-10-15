@@ -6589,7 +6589,7 @@
    "status": "partial",
    "description": "One rendition: master playlist, growing media playlist, MPEG-TS segments through `jellyfin-ffmpeg`; the audio track and the burned-in subtitle chosen by the URL (`AudioStreamIndex`, `SubtitleStreamIndex` + `SubtitleMethod=Encode`), one transcode job per selection, replaced when a play session changes track; scale by MaxHeight.",
    "reference": "Adaptive ladders, fMP4, hardware acceleration, tone mapping, VOD-shaped playlists.",
-   "notes": "H.264/HEVC targets only; no VAAPI/NVENC/QSV flags; burn-in is libass (text) or overlay (bitmap, argument-tested only) with system fonts or `-fonts-dir`; no subtitle group in the playlist; StartTimeTicks of the URL is not applied.",
+   "notes": "H.264/HEVC targets only; no VAAPI/NVENC/QSV flags; burn-in is libass (text) or overlay (bitmap, argument-tested only) with system fonts or `-fonts-dir`; no subtitle group in the playlist; StartTimeTicks of the URL is not applied. The transcoded content (track mapping, rendering) is checked by Go tests with a real ffmpeg, not by the contract runner.",
    "spec_rules": [
     "playback.hls.R1"
    ],
@@ -6606,9 +6606,7 @@
     "GET /Videos/{itemId}/master.m3u8",
     "GET /Videos/{itemId}/main.m3u8"
    ],
-   "priority": "medium",
-   "unverified": true,
-   "unverified_reason": "The master playlist is a scenario; the transcoded content (track mapping, rendering) is checked by Go tests with a real ffmpeg, not by the contract runner."
+   "priority": "medium"
   },
   {
    "id": "playback.hwaccel",
