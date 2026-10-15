@@ -140,6 +140,9 @@ type Config struct {
 // Server is the API/metadata role's HTTP surface (docs/03). The zero value
 // is not usable — construct with NewServer.
 type Server struct {
+	// monitorKick wakes the real-time monitor's reconcile loop (kickMonitor).
+	monitorKick chan struct{}
+
 	store     storage.Store
 	cfg       Config
 	mux       *http.ServeMux
@@ -210,6 +213,7 @@ func NewServer(store storage.Store, cfg Config) *Server {
 		pinLimit:   newPinThrottle(),
 	}
 	s.loadRuntimeSettings()
+	s.monitorKick = make(chan struct{}, 1)
 	s.loadLocalNetwork()
 	s.routes()
 	go s.runWSWatchdog(context.Background())

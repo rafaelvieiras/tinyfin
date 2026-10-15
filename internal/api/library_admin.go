@@ -100,6 +100,7 @@ func (s *Server) handleAddVirtualFolder(w http.ResponseWriter, r *http.Request) 
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	s.kickMonitor()
 
 	if q.Get("refreshLibrary") == "true" {
 		go s.runScan(lib)
@@ -206,6 +207,7 @@ func (s *Server) handleSaveLibraryOptions(w http.ResponseWriter, r *http.Request
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	s.kickMonitor()
 	w.WriteHeader(http.StatusNoContent)
 }
 

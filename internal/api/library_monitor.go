@@ -96,7 +96,19 @@ func (s *Server) runLibraryMonitor(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-tick.C:
+		case <-s.monitorKick:
 		}
+	}
+}
+
+// kickMonitor makes the monitor reconcile its watched libraries now instead
+// of at the next tick, so a library created or changed starts being watched
+// before the first change under it (a change made between the library's
+// creation and the next tick would otherwise be missed).
+func (s *Server) kickMonitor() {
+	select {
+	case s.monitorKick <- struct{}{}:
+	default:
 	}
 }
 
