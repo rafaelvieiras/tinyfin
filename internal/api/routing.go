@@ -99,6 +99,7 @@ var routePaths = []string{
 	"/Items/{itemId}/Ancestors",
 	"/Items/{itemId}/Similar",
 	"/Items/{itemId}/Intros",
+	"/Items/{itemId}/InstantMix",
 	"/Items/{itemId}/Collections",
 	// Same segment count (4, including the leading empty split element) as
 	// the two entries above and /Items/{itemId}/PlaybackInfo below, but no
@@ -125,8 +126,15 @@ var routePaths = []string{
 	"/Studios/{name}",
 	"/Artists",
 	"/Artists/AlbumArtists",
+	"/Artists/InstantMix",
 	"/Artists/{name}",
+	"/Artists/{itemId}/InstantMix",
+	"/Albums/{itemId}/InstantMix",
+	"/Songs/{itemId}/InstantMix",
+	"/Playlists/{itemId}/InstantMix",
+	"/MusicGenres/{genreName}/InstantMix",
 	"/MusicGenres",
+	"/MusicGenres/InstantMix",
 	"/MusicGenres/{genreName}",
 	"/Audio/{itemId}/Lyrics",
 	"/Audio/{itemId}/{file}",

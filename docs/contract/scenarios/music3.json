@@ -1,0 +1,834 @@
+[
+ {
+  "id": "music.mix.song",
+  "endpoint": "GET /Items/{itemId}/InstantMix",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.mix.R1",
+   "music.mix.R2",
+   "music.mix.R3"
+  ],
+  "requires": [
+   "library:music",
+   "item:mfirst",
+   "item:muntagged"
+  ],
+  "steps": [
+   {
+    "name": "tracks sharing the genre, the seed included",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mfirst.id}}/InstantMix"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "First Song"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Second Song"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Opening"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Guest Spot"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the songs route is the same",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Songs/{{item.mfirst.id}}/InstantMix"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "First Song"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Second Song"
+      }
+     ]
+    }
+   },
+   {
+    "name": "limit cuts the page, not the total",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mfirst.id}}/InstantMix",
+     "query": {
+      "limit": "1"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "a track with no genre mixes every track",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.muntagged.id}}/InstantMix"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 6
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 6
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "First Song"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Opening"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Embedded Cover"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Guest Spot"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Second Song"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an unknown id",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/00000000000000000000000000000001/InstantMix"
+    },
+    "expect": {
+     "status": 404
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "music.mix.album-artist",
+  "endpoint": "GET /Albums/{itemId}/InstantMix",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.mix.R4",
+   "music.mix.R5"
+  ],
+  "requires": [
+   "library:music",
+   "item:malpha",
+   "item:mbeta",
+   "item:mdelta",
+   "item:martist1",
+   "item:martist2"
+  ],
+  "steps": [
+   {
+    "name": "album",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Albums/{{item.malpha.id}}/InstantMix"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "First Song"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Second Song"
+      }
+     ]
+    }
+   },
+   {
+    "name": "album of another genre",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Albums/{{item.mbeta.id}}/InstantMix"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Opening"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an album of untagged tracks",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Albums/{{item.mdelta.id}}/InstantMix"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 6
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 6
+      }
+     ]
+    }
+   },
+   {
+    "name": "the generic route takes an album too",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.malpha.id}}/InstantMix"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "First Song"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Second Song"
+      }
+     ]
+    }
+   },
+   {
+    "name": "artist: the genres of all its tracks",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists/{{item.martist1.id}}/InstantMix"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "First Song"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Second Song"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Opening"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Guest Spot"
+      }
+     ]
+    }
+   },
+   {
+    "name": "artist by id query",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists/InstantMix",
+     "query": {
+      "id": "{{item.martist1.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Opening"
+      }
+     ]
+    }
+   },
+   {
+    "name": "artist with untagged tracks",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists/{{item.martist2.id}}/InstantMix"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 6
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 6
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "music.mix.genre",
+  "endpoint": "GET /MusicGenres/{genreName}/InstantMix",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.mix.R6"
+  ],
+  "requires": [
+   "library:music",
+   "item:mfirst"
+  ],
+  "steps": [
+   {
+    "name": "genre item",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MusicGenres/Rock"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "rock": "$.Id"
+    }
+   },
+   {
+    "name": "by name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MusicGenres/Jazz/InstantMix"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Opening"
+      }
+     ]
+    }
+   },
+   {
+    "name": "name is case-insensitive",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MusicGenres/rock/InstantMix"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "First Song"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Second Song"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a genre nobody has",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MusicGenres/Nope/InstantMix"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "an id is not a name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MusicGenres/{{capture.rock}}/InstantMix"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "by id query",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MusicGenres/InstantMix",
+     "query": {
+      "id": "{{capture.rock}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "First Song"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Second Song"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the generic route takes a genre id",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.rock}}/InstantMix"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "First Song"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Second Song"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "music.mix.playlist",
+  "endpoint": "GET /Playlists/{itemId}/InstantMix",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.mix.R7"
+  ],
+  "requires": [
+   "library:music",
+   "item:mopening",
+   "item:muntagged",
+   "item:mguest",
+   "item:mfirst"
+  ],
+  "steps": [
+   {
+    "name": "create",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf Mix PL",
+      "Ids": [
+       "{{item.mopening.id}}",
+       "{{item.muntagged.id}}"
+      ],
+      "MediaType": "Audio"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pl": "$.Id"
+    }
+   },
+   {
+    "name": "genres of the entries: Jazz only (an untagged entry adds none)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/InstantMix"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Opening"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the generic route is the same",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.pl}}/InstantMix"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Opening"
+      }
+     ]
+    }
+   },
+   {
+    "name": "create a second",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf Mix PL 2",
+      "Ids": [
+       "{{item.mguest.id}}",
+       "{{item.mfirst.id}}",
+       "{{item.mopening.id}}"
+      ],
+      "MediaType": "Audio"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pl2": "$.Id"
+    }
+   },
+   {
+    "name": "union of the genres",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl2}}/InstantMix"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "First Song"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Second Song"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Opening"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete pl",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "delete pl2",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl2}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ }
+]
