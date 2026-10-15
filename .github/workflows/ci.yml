@@ -70,7 +70,7 @@ jobs:
         run: |
           go run ./cmd/conformance run -base "http://${{ steps.tf.outputs.ip }}:18098" \
             -admin-user admin -admin-pass 'Conformance-Admin-1' \
-            -media-root "$RUNNER_TEMP/media" \
+            -media-root "$RUNNER_TEMP/media" -media-local-root "$RUNNER_TEMP/media" \
             -server-data-dir "${{ steps.tf.outputs.dir }}" \
             -baseline docs/contract/baseline.json -skip-tags time-dependent,expiry,risky -device-suffix auto
       - name: Start a second throwaway Tinyfin for the risky scenarios

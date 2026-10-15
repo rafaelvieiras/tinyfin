@@ -559,4 +559,89 @@ setmovie Sets "Saga Case Lower" 2011 "<set><name>case saga</name></set>"
 setmovie SetsOff "Saga Gamma One" 2008 "<set><name>Gamma Saga</name></set>"
 setmovie SetsOff "Saga Gamma Two" 2009 "<set><name>Gamma Saga</name></set>"
 
+# Exclusion rules (own library "Ignore", lazy): .ignore files (empty, blank,
+# patterns, negation, nearest file wins), .nomedia (no effect), hidden and
+# fixed-name folders.
+IG="$ROOT/Ignore"
+vid "$IG/Plain (2301)/Plain (2301).mp4"
+vid "$IG/Gone (2302)/Gone (2302).mp4"; : >"$IG/Gone (2302)/.ignore"
+vid "$IG/Blank (2303)/Blank (2303).mp4"; printf '  \n\r\n' >"$IG/Blank (2303)/.ignore"
+vid "$IG/NoMedia (2304)/NoMedia (2304).mp4"; : >"$IG/NoMedia (2304)/.nomedia"
+vid "$IG/Pat/Keep One (2305).mp4"; vid "$IG/Pat/Skip Sample (2306).mp4"; vid "$IG/Pat/Skip Two (2307).mp4"
+vid "$IG/Pat/sub1/Sub One (2308).mp4"; vid "$IG/Pat/sub2/Sub Two (2309).mp4"
+printf '# note\r\n*SAMPLE*\r\nskip two*\r\nsub1/\r\n' >"$IG/Pat/.ignore"
+vid "$IG/Anch/top-skip.mp4"; vid "$IG/Anch/top-keep.mp4"; vid "$IG/Anch/a/deep-skip.mp4"; vid "$IG/Anch/a/deep-keep.mp4"
+vid "$IG/Anch/x/x-keep.mp4"
+printf '*-skip*\nx/*.mp4\n' >"$IG/Anch/.ignore"
+vid "$IG/Own/one-e2.mp4"; vid "$IG/Own/one-keep.mp4"; vid "$IG/Own/x/two-e2.mp4"; vid "$IG/Own/x/two-e3.mp4"
+printf '*-e2*\n' >"$IG/Own/.ignore"; printf '*-e3*\n' >"$IG/Own/x/.ignore"
+vid "$IG/Neg/da-one.mp4"; vid "$IG/Neg/da-two.mp4"; vid "$IG/Neg/db-keep.mp4"
+printf 'da-*\n!da-two.mp4\n' >"$IG/Neg/.ignore"
+# extras-named folders directly under the library root are ordinary folders
+vid "$IG/extras/Root Extra (2320).mp4"; vid "$IG/trailers/Root Trailer (2321).mp4"; vid "$IG/sample/Root Sample (2322).mp4"
+n=2310
+for d in '@eaDir' '#recycle' '.hidden' 'Subs' 'metadata' 'lost+found' 'System Volume Information' '$RECYCLE.BIN' 'Backup'; do
+  n=$((n + 1)); vid "$IG/$d/In Folder $n ($n).mp4"
+done
+
+# Disc structures and images (own library "Discs", lazy). The VOB files are
+# real MPEG-PS clips (the DVD muxer), everything else is a small placeholder
+# the way a disc rip tool leaves it.
+DS="$ROOT/Discs"
+junk() { mkdir -p "$(dirname "$1")"; [ -f "$1" ] || head -c "${2:-2048}" /dev/zero >"$1"; }
+vob_src="$ROOT/.src/disc.vob"
+if [ ! -f "$vob_src" ]; then
+  mkdir -p "$ROOT/.src"
+  "$FFMPEG" -v error -y -f lavfi -i "testsrc=duration=2:size=320x240:rate=25" -f lavfi -i "sine=frequency=330:duration=2" \
+    -c:v mpeg2video -c:a ac3 -f dvd "$vob_src" 2>/dev/null || head -c 4096 /dev/zero >"$vob_src"
+fi
+vob() { mkdir -p "$(dirname "$1")"; [ -f "$1" ] || cp "$vob_src" "$1"; }
+vob "$DS/Dvd Real (2321)/VIDEO_TS/VTS_01_1.VOB"; junk "$DS/Dvd Real (2321)/VIDEO_TS/VIDEO_TS.IFO"; junk "$DS/Dvd Real (2321)/VIDEO_TS/VTS_01_0.IFO"
+vob "$DS/Dvd Multi (2322)/VIDEO_TS/VTS_01_1.VOB"; vob "$DS/Dvd Multi (2322)/VIDEO_TS/VTS_01_2.VOB"; vob "$DS/Dvd Multi (2322)/VIDEO_TS/VTS_02_1.VOB"
+junk "$DS/Dvd Multi (2322)/VIDEO_TS/VIDEO_TS.IFO"; junk "$DS/Dvd Multi (2322)/VIDEO_TS/VTS_01_0.IFO"; junk "$DS/Dvd Multi (2322)/VIDEO_TS/VTS_01_0.VOB"
+junk "$DS/Dvd Junk (2323)/VIDEO_TS/VIDEO_TS.IFO"; junk "$DS/Dvd Junk (2323)/VIDEO_TS/VTS_01_1.VOB" 4096
+junk "$DS/Dvd Root (2324)/VIDEO_TS.IFO"; junk "$DS/Dvd Root (2324)/VTS_01_1.VOB" 4096
+junk "$DS/Bd Junk (2325)/BDMV/index.bdmv"; junk "$DS/Bd Junk (2325)/BDMV/STREAM/00000.m2ts" 4096; junk "$DS/Bd Junk (2325)/BDMV/PLAYLIST/00000.mpls"
+junk "$DS/Nested/Bd Nested (2326)/BDMV/index.bdmv"; junk "$DS/Nested/Bd Nested (2326)/BDMV/STREAM/00000.m2ts" 4096
+junk "$DS/Iso Junk (2327)/Iso Junk (2327).iso" 4096
+junk "$DS/Loose Iso (2328).iso" 4096
+vid "$DS/Mixed (2330)/Mixed (2330).mp4"; junk "$DS/Mixed (2330)/VIDEO_TS/VIDEO_TS.IFO"; junk "$DS/Mixed (2330)/VIDEO_TS/VTS_01_1.VOB" 4096
+junk "$DS/Vob Only (2331)/VTS_01_1.VOB" 4096
+junk "$DS/Img Junk (2332)/Img Junk (2332).img" 4096
+# a VIDEO_TS folder with IFO files only is a movie of its own beside the file
+vid "$DS/Ifo Only (2333)/Ifo Only (2333).mp4"; junk "$DS/Ifo Only (2333)/VIDEO_TS/VIDEO_TS.IFO"
+# A real image (own library "DiscIso", lazy, needs xorriso): a DVD structure in
+# an ISO 9660 volume.
+DI="$ROOT/DiscIso"
+if command -v xorriso >/dev/null 2>&1 && [ ! -f "$DI/Iso Dvd (2329)/Iso Dvd (2329).iso" ]; then
+  isosrc="$(mktemp -d)"
+  mkdir -p "$isosrc/VIDEO_TS"; cp "$vob_src" "$isosrc/VIDEO_TS/VTS_01_1.VOB"; head -c 2048 /dev/zero >"$isosrc/VIDEO_TS/VIDEO_TS.IFO"
+  mkdir -p "$DI/Iso Dvd (2329)"
+  xorriso -as mkisofs -quiet -o "$DI/Iso Dvd (2329)/Iso Dvd (2329).iso" "$isosrc" >/dev/null 2>&1 || rm -f "$DI/Iso Dvd (2329)/Iso Dvd (2329).iso"
+  rm -rf "$isosrc"
+fi
+
+# .strm files (own libraries "Strm" and "StrmShows", lazy): an address that
+# nothing listens on, a local path, an empty file.
+SM="$ROOT/Strm"
+mkdir -p "$SM/Strm Url (2341)" "$SM/Strm Local (2342)" "$SM/Strm Empty (2343)"
+printf 'http://127.0.0.1:1/unreachable.mp4\n' >"$SM/Strm Url (2341)/Strm Url (2341).strm"
+printf '/nonexistent/path/video.mp4\n' >"$SM/Strm Local (2342)/Strm Local (2342).strm"
+: >"$SM/Strm Empty (2343)/Strm Empty (2343).strm"
+SS="$ROOT/StrmShows/Strm Show (2344)"
+mkdir -p "$SS/Season 01"
+printf 'http://127.0.0.1:1/episode.mp4\n' >"$SS/Season 01/Strm Show S01E01.strm"
+
+# Forgetting what vanished (own libraries "Forget", "ForgetRoot",
+# "ForgetShows", lazy). The scenarios remove and restore files here.
+FG="$ROOT/Forget"
+vid "$FG/Forget Keep (2351)/Forget Keep (2351).mp4"
+vid "$FG/Forget Gone (2352)/Forget Gone (2352).mp4"
+vid "$FG/Forget Played (2353)/Forget Played (2353).mp4"
+vid "$FG/Forget Loose/Loose One (2354).mp4"; vid "$FG/Forget Loose/Loose Two (2355).mp4"
+vid "$ROOT/ForgetRoot/Lib/Forget Root (2356)/Forget Root (2356).mp4"
+FS="$ROOT/ForgetShows/Forget Show (2357)"
+vid "$FS/Season 01/Forget Show S01E01.mp4"; vid "$FS/Season 01/Forget Show S01E02.mp4"; vid "$FS/Season 02/Forget Show S02E01.mp4"
+mkdir -p "$ROOT/ForgetBackup"
+
 echo "media tree ready under $ROOT"

@@ -105,6 +105,9 @@ func (c *Client) Setup(ctx context.Context, adminUser, adminPass, mediaRoot stri
 	if c.serverFileAvailable() {
 		c.Available["serverfile:read"] = true
 	}
+	if c.MediaLocalRoot != "" {
+		c.Available["fs:write"] = true
+	}
 
 	// users
 	existing := map[string]string{}

@@ -71,6 +71,11 @@ type Client struct {
 	clockCalibrated bool
 	clockOffset     time.Duration // server local time minus UTC
 
+	// MediaLocalRoot is the media root as the runner itself sees it, when it
+	// may change files in it (fs steps, capability "fs:write"). Empty: fs
+	// steps and the scenarios that require "fs:write" are BLOCKED.
+	MediaLocalRoot string
+
 	mediaRoot string
 	lazyLibs  map[string]*lazyLibrary
 	apiKeyID  string // access token of the run's API key (for Teardown)
@@ -513,6 +518,8 @@ func (c *Client) runStep(ctx context.Context, st Step, rs *runState) error {
 			return err
 		}
 		resp = r
+	case st.FS != nil:
+		return c.applyFS(st.FS, scratch)
 	case st.Request.Path == "" && (st.SleepMs > 0 || st.Config != nil):
 		return nil
 	default:
@@ -520,11 +527,25 @@ func (c *Client) runStep(ctx context.Context, st Step, rs *runState) error {
 		if as == "" {
 			as = "anonymous"
 		}
-		r, err := c.do(ctx, as, st.Request, scratch)
-		if err != nil {
-			return err
+		deadline := time.Now().Add(time.Duration(st.RetryMs) * time.Millisecond)
+		for {
+			r, err := c.do(ctx, as, st.Request, scratch)
+			if err != nil {
+				return err
+			}
+			resp = r
+			if st.RetryMs <= 0 || time.Now().After(deadline) {
+				break
+			}
+			if c.checkExpect(st, resp, scratch) == nil {
+				break
+			}
+			select {
+			case <-time.After(500 * time.Millisecond):
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 		}
-		resp = r
 	}
 	return c.checkExpect(st, resp, scratch)
 }

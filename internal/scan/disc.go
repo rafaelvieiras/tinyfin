@@ -33,6 +33,25 @@ type discRef struct {
 	self bool
 }
 
+// exclusive reports whether the disc takes its whole folder: a Blu-ray folder,
+// or a DVD structure that holds VOB files. A DVD structure with nothing but
+// IFO files is just a VIDEO_TS folder beside whatever else the folder holds.
+func (d *discRef) exclusive() bool {
+	if d.kind == storage.VideoTypeBluRay {
+		return true
+	}
+	entries, err := os.ReadDir(d.path)
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		if !e.IsDir() && strings.EqualFold(filepath.Ext(e.Name()), ".vob") {
+			return true
+		}
+	}
+	return false
+}
+
 // discDirKind returns the disc kind a folder name stands for ("" when none).
 func discDirKind(name string) string {
 	switch strings.ToLower(name) {

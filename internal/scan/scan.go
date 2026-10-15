@@ -581,6 +581,11 @@ func movieDirContent(ctx context.Context, dir string, versionsOfFolder bool) (gr
 			disc = &discRef{kind: storage.VideoTypeDvd, path: dir, self: true}
 		}
 	}
+	if disc != nil && disc.exclusive() {
+		// A disc with its media is the whole folder: the other videos and
+		// folders beside it are not cataloged.
+		return []movieGroup{{primary: dirName + ".disc", disc: disc}}, nil
+	}
 	type file struct {
 		base string
 		name string

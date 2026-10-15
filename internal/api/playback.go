@@ -381,7 +381,14 @@ func (s *Server) handleVideoStream(w http.ResponseWriter, r *http.Request) {
 	}
 	switch {
 	case item.VideoType == storage.VideoTypeDvd || item.VideoType == storage.VideoTypeBluRay:
-		// A disc folder has no single file to send.
+		// A disc folder has no single file to send. One that could not be
+		// read at all is an error.
+		if len(item.MediaStreams) == 0 {
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte("Error processing request."))
+			return
+		}
 		w.Header().Set("Content-Type", "video/mpeg")
 		w.Header().Set("Content-Length", "0")
 		w.WriteHeader(http.StatusOK)

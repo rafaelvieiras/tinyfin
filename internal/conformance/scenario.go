@@ -79,6 +79,34 @@ type Step struct {
 	// the file as if it were a response: status 200 with the content (JSON
 	// when it parses), or 404 when the file does not exist.
 	ServerFile *ServerFileStep `json:"serverFile,omitempty"`
+	// FS changes the media tree (see FSStep); the scenario requires
+	// "fs:write" and the files it changes are put back in its Cleanup.
+	FS *FSStep `json:"fs,omitempty"`
+	// RetryMs repeats the HTTP request of the step, every half second, until
+	// its expectations hold or this many milliseconds passed: the way a
+	// scenario waits for a background refresh to show.
+	RetryMs int `json:"retryMs,omitempty"`
+}
+
+// FSStep is one change of the media tree, paths relative to the media root
+// (templates are expanded). Exactly one of the operations is set.
+type FSStep struct {
+	// Write creates the file (and its folders) with Content.
+	Write   string `json:"write,omitempty"`
+	Content string `json:"content,omitempty"`
+	// Mkdir creates a folder (and its parents).
+	Mkdir string `json:"mkdir,omitempty"`
+	// Remove deletes a file or a whole folder.
+	Remove string `json:"remove,omitempty"`
+	// Rename moves the path to To. With IfExists a missing source is not an
+	// error (a cleanup step that must be safe to run whatever happened);
+	// with Replace an existing To is removed first.
+	Rename   string `json:"rename,omitempty"`
+	IfExists bool   `json:"ifExists,omitempty"`
+	Replace  bool   `json:"replace,omitempty"`
+	// Copy copies the file Copy to To.
+	Copy string `json:"copy,omitempty"`
+	To   string `json:"to,omitempty"`
 }
 
 // ServerFileStep names a file on the server's filesystem.
