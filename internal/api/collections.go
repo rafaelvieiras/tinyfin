@@ -226,6 +226,10 @@ func (s *Server) handleDeleteItem(w http.ResponseWriter, r *http.Request) {
 		writeItemsProblem(w, http.StatusNotFound, "Not Found")
 		return
 	}
+	if item.Type == storage.ItemTypePlaylist {
+		s.deletePlaylist(w, r, item)
+		return
+	}
 	if item.Type != storage.ItemTypeBoxSet {
 		if ac.User.IsAdministrator || storedUserPolicy(ac.User).EnableContentDeletion {
 			w.WriteHeader(http.StatusForbidden)

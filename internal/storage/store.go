@@ -15,6 +15,8 @@ import "context"
 // elsewhere in the codebase holds a SQL/driver-specific type.
 type Store interface {
 	ItemStore
+	NamedStore
+	PlaylistStore
 	UserStore
 	DeviceStore
 	PlaystateStore
@@ -113,6 +115,38 @@ type ItemStore interface {
 	// set name, grouped by the name as written: the backing query of the
 	// automatic collections. Names are returned in first-seen order.
 	MoviesWithSet(ctx context.Context, libraryIDs []LibraryID) ([]SetGroup, error)
+}
+
+// NamedStore covers the named virtual items (genres, studios, people,
+// years) and the ranked search over items and names. Everything is derived
+// from the items that carry the names, never stored as items of its own.
+type NamedStore interface {
+	// QueryNamed lists the distinct names of one kind carried by the items
+	// of the query's scope, with the number of carriers by type.
+	QueryNamed(ctx context.Context, q NamedQuery) (NamedPage, error)
+	// FindNamed resolves the identifier of a named item; ok is false when
+	// no item ever carried the name.
+	FindNamed(ctx context.Context, id ItemID) (ref NamedRef, ok bool, err error)
+	// CountNamed reports how many items of the scope carry one name, by
+	// type; the zero value when none does.
+	CountNamed(ctx context.Context, ref NamedRef, scope ItemFilter) (NamedEntry, error)
+	// SearchHints ranks the media items and the names that match a term.
+	SearchHints(ctx context.Context, q SearchQuery) (SearchPage, error)
+}
+
+// PlaylistStore covers playlist ownership, sharing and entries. A playlist
+// itself is an item of type Playlist (ItemStore).
+type PlaylistStore interface {
+	// GetPlaylistAccess returns the access record of a playlist; the error
+	// wraps ErrNotFound when the item has none.
+	GetPlaylistAccess(ctx context.Context, id ItemID) (PlaylistAccess, error)
+	// SetPlaylistAccess replaces the access record, shares included.
+	SetPlaylistAccess(ctx context.Context, a PlaylistAccess) error
+	// PlaylistEntries lists the entries of a playlist in order; an item
+	// repeated in the playlist appears once per occurrence.
+	PlaylistEntries(ctx context.Context, id ItemID) ([]ItemID, error)
+	// SetPlaylistEntries replaces the entries of a playlist.
+	SetPlaylistEntries(ctx context.Context, id ItemID, entries []ItemID) error
 }
 
 // UserStore covers accounts and auth tokens (the "Users, sessions,

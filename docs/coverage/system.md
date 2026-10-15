@@ -4,9 +4,9 @@
 
 Server information, configuration, tasks, logs and branding.
 
-[Overview](../COVERAGE.md) · 11 features · ✅ 3 · 🟡 5 · 🗓️ 2 · ⛔ 1
+[Overview](../COVERAGE.md) · 12 features · ✅ 4 · 🟡 5 · 🗓️ 2 · ⛔ 1
 
-✅✅✅✅✅🟡🟡🟡🟡🟡🟡🟡🟡🟡🗓️🗓️🗓️🗓️⛔⛔
+✅✅✅✅✅✅✅🟡🟡🟡🟡🟡🟡🟡🟡🗓️🗓️🗓️⛔⛔
 
 | Status | Feature | Jellyfin 12.2 | Tinyfin | Evidence | Notes |
 |---|---|---|---|---|---|
@@ -21,4 +21,5 @@ Server information, configuration, tasks, logs and branding.
 | ⛔ not-planned | **Backup and restore**<br>`system.backup` | Backup archive of config and database. | No archive format; the SQLite file is the backup. | routes: `POST /Backup/Create` | Decision-free: not on ROADMAP.md. |
 | ✅ supported *(unverified)* | **Bundled web client**<br>`system.web` | Bundled. | Official `jellyfin-web` served at `/web/` when built with `WITH_WEB=true`. | code: [`cmd/tinyfin/main.go`](../../cmd/tinyfin/main.go) | Unverified: Build option; verified by the browser end-to-end suite in e2e/. |
 | ✅ supported | **Path case and trailing slash**<br>`system.casing` | Same. | Routes match case-insensitively and with a trailing slash. | spec: [`wire.path.R1`](../contract/specs/wire.md)<br>scenarios 2/2 pass: [`wire.path.case-insensitive`](../contract/scenarios/wire.json)<br>[`wire.path.trailing-slash-reads`](../contract/scenarios/wire.json)<br>code: [`internal/api/routing.go`](../../internal/api/routing.go) |  |
+| ✅ supported | **Ping, UTC time and localization lists**<br>`system.small-routes` | Same. | `/System/Ping` (GET and POST), `/GetUtcTime`, `/Localization/Options`, `/Localization/ParentalRatings`, `/Localization/Cultures`, `/Localization/Countries`. | spec: [`misc.ping.R1`](../contract/specs/misc.md)<br>[`misc.time.R1`](../contract/specs/misc.md)<br>[`misc.localization.R1`](../contract/specs/misc.md)<br>[`misc.localization.R2`](../contract/specs/misc.md)<br>scenarios 3/3 pass: [`misc.ping`](../contract/scenarios/misc.json)<br>[`misc.utc-time`](../contract/scenarios/misc.json)<br>[`misc.localization`](../contract/scenarios/misc.json)<br>code: [`internal/api/misc_routes.go`](../../internal/api/misc_routes.go)<br>[`internal/api/localization.go`](../../internal/api/localization.go)<br>routes: `GET /System/Ping`<br>`POST /System/Ping`<br>`GET /GetUtcTime`<br>`GET /Localization/Options`<br>`GET /Localization/ParentalRatings` |  |
 

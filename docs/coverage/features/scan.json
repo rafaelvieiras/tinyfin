@@ -208,16 +208,18 @@
    "id": "scan.nfo",
    "title": "NFO sidecars",
    "status": "supported",
-   "description": "`<movie>`, `<tvshow>`, `<episodedetails>` (several documents merge), `<namedseason>`; title, originaltitle, sorttitle, plot, year, premiered/aired, genre, tag, mpaa, ratings, uniqueid, set, runtime, season/episode.",
+   "description": "`<movie>`, `<tvshow>`, `<episodedetails>` (several documents merge), `<namedseason>`; title, originaltitle, sorttitle, plot, year, premiered/aired, genre, tag, mpaa, ratings, uniqueid, set, runtime, season/episode. Also `<studio>`, `<actor>` (role, type, order), `<director>`, `<credits>` and `<writer>`.",
    "reference": "Reads the Kodi NFO schema including cast and studios.",
-   "notes": "Not read: `<actor>`, `<studio>`, `<director>`, `<credits>`, `<trailer>`, `<fileinfo>`, artist/album NFOs.",
+   "notes": "Not read: `<trailer>`, `<fileinfo>`, actor thumbnails, artist/album NFOs.",
    "spec_rules": [
-    "items.names.R6"
+    "items.names.R6",
+    "browse.persons.R4"
    ],
    "scenarios": [
     "items.names.series-nfo-and-named-season",
     "items.names.nfo-trims-surrounding-whitespace",
-    "items.runtime.series-from-nfo"
+    "items.runtime.series-from-nfo",
+    "browse.persons.credits"
    ],
    "code": [
     "internal/scan/nfo.go"

@@ -38,7 +38,10 @@
     {"key": "resid", "name": "Resid", "type": "tvshows", "path": "Resid", "lazy": true},
     {"key": "phototypes", "name": "PhotoTypes", "type": "homevideos", "path": "PhotoTypes", "lazy": true},
     {"key": "sets", "name": "Sets", "type": "movies", "path": "Sets", "lazy": true, "options": {"AutomaticallyAddToCollection": true}},
-    {"key": "setsoff", "name": "SetsOff", "type": "movies", "path": "SetsOff", "lazy": true}
+    {"key": "setsoff", "name": "SetsOff", "type": "movies", "path": "SetsOff", "lazy": true},
+    {"key": "search", "name": "Search", "type": "movies", "path": "Search", "lazy": true},
+    {"key": "searchshows", "name": "SearchShows", "type": "tvshows", "path": "SearchShows", "lazy": true},
+    {"key": "punct", "name": "Punct", "type": "movies", "path": "Punct", "lazy": true}
   ],
   "items": [
     {"key": "alpha", "type": "Movie", "path": "Movies/Alpha Movie (2015)/Alpha Movie (2015).mp4"},
@@ -310,6 +313,18 @@
     {"key": "scu", "type": "Movie", "library": "sets", "path": "Sets/Saga Case Upper (2010)/Saga Case Upper (2010).mp4"},
     {"key": "scl", "type": "Movie", "library": "sets", "path": "Sets/Saga Case Lower (2011)/Saga Case Lower (2011).mp4"},
     {"key": "sg1", "type": "Movie", "library": "setsoff", "path": "SetsOff/Saga Gamma One (2008)/Saga Gamma One (2008).mp4"},
-    {"key": "sg2", "type": "Movie", "library": "setsoff", "path": "SetsOff/Saga Gamma Two (2009)/Saga Gamma Two (2009).mp4"}
+    {"key": "sg2", "type": "Movie", "library": "setsoff", "path": "SetsOff/Saga Gamma Two (2009)/Saga Gamma Two (2009).mp4"},
+    {"key": "szeta", "type": "Movie", "library": "search", "path": "Search/Zeta Quest (2011)/Zeta Quest (2011).mp4"},
+    {"key": "syankee", "type": "Movie", "library": "search", "path": "Search/Yankee Dawn (2012)/Yankee Dawn (2012).mp4"},
+    {"key": "sxray", "type": "Movie", "library": "search", "path": "Search/Xray Vision (2013)/Xray Vision (2013).mp4"},
+    {"key": "swhiskey", "type": "Movie", "library": "search", "path": "Search/Whiskey Alpha (2013)/Whiskey Alpha (2013).mp4"},
+    {"key": "swolf", "type": "Movie", "library": "search", "path": "Search/Alpha Wolf (2014)/Alpha Wolf (2014).mp4"},
+    {"key": "swriters", "type": "Movie", "library": "search", "path": "Search/Writers Cut (2017)/Writers Cut (2017).mp4"},
+    {"key": "sshow", "type": "Series", "library": "searchshows", "path": "SearchShows/Search Show (2016)"},
+    {"key": "pname", "type": "Movie", "library": "punct", "path": "Punct/Mr. O'Neil-Smith_Jr: Part 2! & 3 (2019)/Mr. O'Neil-Smith_Jr: Part 2! & 3 (2019).mp4"},
+    {"key": "pcafe", "type": "Movie", "library": "punct", "path": "Punct/Café Über Straße (2018)/Café Über Straße (2018).mp4"},
+    {"key": "pdot", "type": "Movie", "library": "punct", "path": "Punct/Dot.Dash (2017)/Dot.Dash (2017).mp4"},
+    {"key": "pcomma", "type": "Movie", "library": "punct", "path": "Punct/Comma,Join (2016)/Comma,Join (2016).mp4"},
+    {"key": "spilot", "type": "Episode", "library": "searchshows", "path": "SearchShows/Search Show (2016)/Season 01/Search Show (2016) S01E01.mp4"}
   ]
 }

@@ -60,6 +60,10 @@ reference source open in the same session.
 | `../../cmd/conformance` | CLI |
 | `../../scripts/conformance-media.sh` | Generates the synthetic media tree |
 | `specs/collections.md`, `scenarios/collections.json` | Collections (`BoxSet`): routes, listing, visibility and the automatic collections; lazy libraries `Sets`/`SetsOff` |
+| `specs/search.md`, `scenarios/search.json` | Search hints and `SearchTerm` matching/ranking; lazy libraries `Search`, `SearchShows`, `Punct` |
+| `specs/browse.md`, `scenarios/browse.json` | Genres, studios, people, years, facets, similar, recommendations |
+| `specs/playlists.md`, `scenarios/playlists.json` | Playlists, entries, access, view |
+| `specs/misc.md`, `scenarios/misc.json` | Ping, UTC time, localization lists |
 | `specs/startup.md`, `scenarios/startup.json` | First-run wizard (`/Startup/*`); the scenarios are `fresh-server` ones, see *Fresh-server scenarios* |
 
 ## Scenario format
@@ -311,12 +315,16 @@ scenario that is not pending or divergent; `risky` ones run only with
 
 | Area | Scenarios | Pass | Fail | Blocked | Skipped |
 |---|---|---|---|---|---|
+| browse | 15 | 15 | 0 | 0 | 0 |
 | collections | 30 | 30 | 0 | 0 | 0 |
 | extras | 15 | 15 | 0 | 0 | 0 |
 | images | 13 | 13 | 0 | 0 | 0 |
 | items | 156 | 156 | 0 | 0 | 0 |
+| misc | 3 | 3 | 0 | 0 | 0 |
+| playlists | 23 | 23 | 0 | 0 | 0 |
 | playstate | 107 | 107 | 0 | 0 | 0 |
 | quickconnect | 16 | 16 | 0 | 0 | 0 |
+| search | 14 | 14 | 0 | 0 | 0 |
 | users | 202 | 202 | 0 | 0 | 0 |
 | wire | 14 | 14 | 0 | 0 | 0 |
-| **Total** | 553 | 553 | 0 | 0 | 0 |
+| **Total** | 608 | 608 | 0 | 0 | 0 |

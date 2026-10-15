@@ -1,0 +1,95 @@
+{
+ "area": "playlists",
+ "title": "Playlists",
+ "summary": "Playlist items, their entries, ownership and sharing, and the Playlists view.",
+ "features": [
+  {
+   "id": "playlists.model",
+   "title": "Playlists and entries",
+   "status": "supported",
+   "description": "Create (body or query form), read, update, add, remove and move entries; an item may repeat; series, seasons, folders and collections expand to their playable items; genres, studios, rating and running time are derived from the entries.",
+   "reference": "Same routes.",
+   "notes": "A move to an index outside the list is 400 (the reference answers 500); metadata is refreshed on every change.",
+   "spec_rules": [
+    "playlists.create.R1",
+    "playlists.create.R5",
+    "playlists.entries.R2",
+    "playlists.entries.R3",
+    "playlists.entries.R4",
+    "playlists.item.R2"
+   ],
+   "scenarios": [
+    "playlists.create.basic",
+    "playlists.create.expand",
+    "playlists.entries.mutate",
+    "playlists.item.metadata"
+   ],
+   "code": [
+    "internal/api/playlists.go",
+    "internal/playlist/playlist.go",
+    "internal/storage/sqlite/playlist.go"
+   ],
+   "routes": [
+    "POST /Playlists",
+    "GET /Playlists/{playlistId}",
+    "POST /Playlists/{playlistId}",
+    "GET /Playlists/{playlistId}/Items",
+    "POST /Playlists/{playlistId}/Items",
+    "DELETE /Playlists/{playlistId}/Items",
+    "POST /Playlists/{playlistId}/Items/{itemId}/Move/{newIndex}"
+   ]
+  },
+  {
+   "id": "playlists.access",
+   "title": "Ownership, open access and shares",
+   "status": "supported",
+   "description": "Owner, open flag and per-user share with a CanEdit flag; hidden playlists are 404; the owner lists and manages shares.",
+   "reference": "Same model; the reference's share removal is a no-op and its share-add can leave edit access ungranted.",
+   "spec_rules": [
+    "playlists.acl.R1",
+    "playlists.acl.R2",
+    "playlists.acl.R3",
+    "playlists.users.R1",
+    "playlists.users.R3",
+    "playlists.users.R4"
+   ],
+   "scenarios": [
+    "playlists.acl.matrix",
+    "playlists.users.read",
+    "playlists.users.manage",
+    "playlists.users.unshare"
+   ],
+   "code": [
+    "internal/api/playlists.go",
+    "internal/storage/sqlite/playlist.go"
+   ],
+   "routes": [
+    "GET /Playlists/{playlistId}/Users",
+    "GET /Playlists/{playlistId}/Users/{userId}",
+    "POST /Playlists/{playlistId}/Users/{userId}",
+    "DELETE /Playlists/{playlistId}/Users/{userId}"
+   ]
+  },
+  {
+   "id": "playlists.view",
+   "title": "Playlists view and deletion",
+   "status": "supported",
+   "description": "A Playlists view in the user's views once a playlist is readable, listing the readable playlists; the owner deletes a playlist through `DELETE /Items/{id}`.",
+   "reference": "Same.",
+   "spec_rules": [
+    "playlists.view.R1",
+    "playlists.view.R2",
+    "playlists.delete.R1"
+   ],
+   "scenarios": [
+    "playlists.view",
+    "playlists.delete"
+   ],
+   "code": [
+    "internal/api/playlists.go",
+    "internal/api/library.go",
+    "internal/api/collections.go"
+   ]
+  }
+ ]
+}

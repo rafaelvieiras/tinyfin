@@ -78,7 +78,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `GET /UserItems/{itemId}/UserData` | DefaultAuthorization | yes | 14/14 |  |
 | ✅ supported | `POST /UserItems/{itemId}/UserData` | DefaultAuthorization | yes | 31/31 |  |
 | ✅ supported | `DELETE /UserPlayedItems/{itemId}` | DefaultAuthorization | yes | 19/19 |  |
-| ✅ supported | `POST /UserPlayedItems/{itemId}` | DefaultAuthorization | yes | 44/44 |  |
+| ✅ supported | `POST /UserPlayedItems/{itemId}` | DefaultAuthorization | yes | 46/46 |  |
 
 ## Related features
 

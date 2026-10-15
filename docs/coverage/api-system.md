@@ -4,9 +4,9 @@
 
 Server information and configuration, logs, backup, branding, localization, plugins and packages.
 
-[Overview](../COVERAGE.md) · 47 operations · 13 registered (28%) · 3 verified · ✅ 10 · 🟡 3 · 🗓️ 14 · ⛔ 20
+[Overview](../COVERAGE.md) · 47 operations · 18 registered (38%) · 10 verified · ✅ 15 · 🟡 3 · 🗓️ 9 · ⛔ 20
 
-✅✅✅✅🟡🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔
+✅✅✅✅✅✅🟡🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔
 
 Columns: **Auth** is the reference's authorization policy; **Web** = mentioned in docs/11 (called by the official web client); **Tests** = scenarios that exercise the route (passing / total).
 
@@ -31,10 +31,10 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ✅ supported *(no scenario)* | `GET /Localization/Countries` | FirstTimeSetupOrDefault | yes |  |  |
-| ✅ supported *(no scenario)* | `GET /Localization/Cultures` | FirstTimeSetupOrDefault | yes |  |  |
-| 🗓️ planned | `GET /Localization/Options` | FirstTimeSetupOrDefault |  |  | Setup wizard and profile pages call it; clients fall back to a built-in list. (priority: medium) |
-| 🗓️ planned | `GET /Localization/ParentalRatings` | FirstTimeSetupOrDefault |  |  | Used by the user policy page; not implemented. (priority: medium) |
+| ✅ supported | `GET /Localization/Countries` | FirstTimeSetupOrDefault | yes | 1/1 |  |
+| ✅ supported | `GET /Localization/Cultures` | FirstTimeSetupOrDefault | yes | 1/1 |  |
+| ✅ supported | `GET /Localization/Options` | FirstTimeSetupOrDefault |  | 1/1 |  |
+| ✅ supported | `GET /Localization/ParentalRatings` | FirstTimeSetupOrDefault |  | 1/1 |  |
 
 ## Plugin
 
@@ -63,7 +63,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
 | 🗓️ planned | `POST /ClientLog/Document` | DefaultAuthorization | yes |  | Not implemented. (priority: low) |
-| 🗓️ planned | `GET /GetUtcTime` | Anonymous | yes |  | Used by clients for clock sync; not implemented. (priority: medium) |
+| ✅ supported | `GET /GetUtcTime` | Anonymous | yes | 1/1 |  |
 | ✅ supported | `GET /System/ActivityLog/Entries` | RequiresElevation | yes | 18/18 |  |
 | ✅ supported *(no scenario)* | `GET /System/Configuration` | DefaultAuthorization | yes | 0/2 |  |
 | ✅ supported *(no scenario)* | `POST /System/Configuration` | RequiresElevation | yes |  |  |
@@ -73,12 +73,12 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | 🟡 partial | `POST /System/Configuration/{key}` | RequiresElevation | yes |  | Served by `POST /System/Configuration/network`. Only the network key is served (POST /System/Configuration/network). |
 | ✅ supported *(no scenario)* | `GET /System/Endpoint` | DefaultAuthorization | yes |  |  |
 | ✅ supported | `GET /System/Info` | FirstTimeSetupOrIgnoreParentalControl | yes | 2/4 |  |
-| ✅ supported | `GET /System/Info/Public` | Anonymous | yes | 3/5 |  |
+| ✅ supported | `GET /System/Info/Public` | Anonymous | yes | 4/6 |  |
 | ✅ supported *(no scenario)* | `GET /System/Info/Storage` | RequiresElevation | yes |  |  |
 | 🗓️ planned | `GET /System/Logs` | RequiresElevation | yes |  | Not implemented. (priority: low) |
 | 🗓️ planned | `GET /System/Logs/Log` | RequiresElevation | yes |  | Not implemented. (priority: low) |
-| 🗓️ planned | `GET /System/Ping` | Anonymous | yes |  | Trivial and used by some clients for reachability; not implemented. (priority: medium) |
-| 🗓️ planned | `POST /System/Ping` | Anonymous | yes |  | Trivial and used by some clients for reachability; not implemented. (priority: medium) |
+| ✅ supported | `GET /System/Ping` | Anonymous | yes | 1/1 |  |
+| ✅ supported | `POST /System/Ping` | Anonymous | yes | 1/1 |  |
 | 🗓️ planned | `POST /System/Restart` | LocalAccessOrRequiresElevation | yes |  | Not implemented; a supervisor restarts the process. (priority: low) |
 | 🗓️ planned | `POST /System/Shutdown` | RequiresElevation | yes |  | Not implemented. (priority: low) |
 
@@ -92,3 +92,4 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 - [`system.restart`](system.md) Restart and shutdown
 - [`system.branding`](system.md) Branding
 - [`system.backup`](system.md) Backup and restore
+- [`system.small-routes`](system.md) Ping, UTC time and localization lists

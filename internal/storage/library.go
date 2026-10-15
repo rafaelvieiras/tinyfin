@@ -16,7 +16,9 @@ const (
 	CollectionTypeTVShows CollectionType = "tvshows"
 	CollectionTypeMusic   CollectionType = "music"
 	CollectionTypeBoxSets CollectionType = "boxsets"
-	CollectionTypeMixed   CollectionType = "mixed"
+	// CollectionTypePlaylists is the hidden library that holds playlists.
+	CollectionTypePlaylists CollectionType = "playlists"
+	CollectionTypeMixed     CollectionType = "mixed"
 	// CollectionTypeHomeVideos holds loose video files in any folder
 	// structure: no naming scheme, no series or movie identification.
 	CollectionTypeHomeVideos CollectionType = "homevideos"

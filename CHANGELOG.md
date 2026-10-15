@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `GET /Items?SearchTerm` matches without regard to accents and punctuation,
+  ranks (starts with, ends a word, seasons and episodes, rest) and, with no
+  type list, also finds genre, studio and person names; an episode is no
+  longer found by the name of its series.
+- The `Genres` and `Studios` filters of `GET /Items` take `|`-separated values,
+  match any of them and ignore case; `Person` takes `PersonTypes`;
+  `GenreIds`, `StudioIds` and `PersonIds` are honored.
+- `GET /Items/{itemId}/Similar`, `/Items/Filters` and `/Items/Filters2` are
+  real (they used to answer empty), `GET /Studios` lists the studios.
+- `.nfo` files: `<studio>`, `<actor>`, `<director>`, `<credits>` and `<writer>`
+  are read; repeated genres and studios in another case collapse to one.
 - A media source is named after its file, like the reference.
 - `ImageTags`, `BackdropImageTags` and `ImageBlurHashes` are always present on an
   item (empty when it has no picture).
@@ -23,6 +34,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `GET /Search/Hints`: ranked hints over media items and over genre, studio and
+  person names, with the include flags, media types, parent and paging of the
+  reference (spec `docs/contract/specs/search.md`).
+- Browse by name: `GET /Genres`, `/Studios`, `/Persons`, `/Years` and their
+  single forms, openable by id through `/Items/{id}`; `GET /Movies/Recommendations`,
+  `/Items/Suggestions`, `/Items/{id}/Collections`, `/Items/{id}/Intros`,
+  `/Movies|Shows|Trailers/{id}/Similar`, `GET /Items/Root`
+  (spec `docs/contract/specs/browse.md`).
+- Playlists: `POST /Playlists`, read and update, entries (add, remove, move,
+  list), owners, open access and shares, the Playlists view, deletion by the
+  owner (spec `docs/contract/specs/playlists.md`). New migrations
+  `0022_playlists` and `0023_named_items`.
+- `GET`/`POST /System/Ping`, `GET /GetUtcTime`, `GET /Localization/Options`,
+  `GET /Localization/ParentalRatings` (spec `docs/contract/specs/misc.md`).
+- Contract fixtures: lazy libraries `Search`, `SearchShows` and `Punct`.
 - Coverage tracker: `docs/COVERAGE.md` (overview, per controller and per
   subsystem) and `docs/coverage/` (every operation of the Jellyfin 12.2
   OpenAPI document with a status computed from the registered routes and the

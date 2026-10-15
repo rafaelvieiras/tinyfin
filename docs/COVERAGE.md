@@ -19,34 +19,34 @@ How to read and edit this: [`docs/coverage/README.md`](coverage/README.md). Mach
 | Measure | Value |
 |---|---|
 | Reference operations (OpenAPI 12.2.0) | 364 |
-| Registered by Tinyfin | **113** (31%) |
-| Registered **and** a passing contract scenario | **66** (18%) |
-| Called by the official web client (docs/11) and registered | 82 of 161 (51%) |
-| Routes Tinyfin serves that the OpenAPI document lacks | 14 (legacy aliases the web client needs, `/socket`, HLS) |
-| Non-route features tracked | 96 (✅ 41 · 🟡 17 · 🗓️ 19 · ⛔ 19) |
+| Registered by Tinyfin | **145** (40%) |
+| Registered **and** a passing contract scenario | **100** (27%) |
+| Called by the official web client (docs/11) and registered | 105 of 164 (64%) |
+| Routes Tinyfin serves that the OpenAPI document lacks | 15 (legacy aliases the web client needs, `/socket`, HLS) |
+| Non-route features tracked | 106 (✅ 51 · 🟡 16 · 🗓️ 20 · ⛔ 19) |
 
 ### Routes by status
 
-✅✅✅✅✅🟡🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔↔️ ✅ 95 · 🟡 9 · 🗓️ 135 · ⛔ 116 · ↔️ 9
+✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔↔️ ✅ 130 · 🟡 6 · 🗓️ 103 · ⛔ 116 · ↔️ 9
 
 ```mermaid
 pie showData title Reference operations by status
-    "supported" : 95
-    "partial" : 9
-    "planned" : 135
+    "supported" : 130
+    "partial" : 6
+    "planned" : 103
     "not-planned" : 116
     "divergent-by-design" : 9
 ```
 
 ### Non-route features by status
 
-✅✅✅✅✅✅✅✅🟡🟡🟡🟡🗓️🗓️🗓️🗓️⛔⛔⛔⛔ ✅ 41 · 🟡 17 · 🗓️ 19 · ⛔ 19
+✅✅✅✅✅✅✅✅✅✅🟡🟡🟡🗓️🗓️🗓️🗓️⛔⛔⛔ ✅ 51 · 🟡 16 · 🗓️ 20 · ⛔ 19
 
 ```mermaid
 pie showData title Features by status
-    "supported" : 41
-    "partial" : 17
-    "planned" : 19
+    "supported" : 51
+    "partial" : 16
+    "planned" : 20
     "not-planned" : 19
 ```
 
@@ -56,14 +56,14 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 
 | Group | Ops | Registered | Verified | Progress | Status |
 |---|---|---|---|---|---|
-| [Collections, playlists and mixes](coverage/api-collections-playlists.md) | 21 | 3 (14%) | 3 (14%) | ✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔↔️ | ✅ 2 · 🗓️ 11 · ⛔ 7 · ↔️ 1 |
+| [Collections, playlists and mixes](coverage/api-collections-playlists.md) | 21 | 14 (67%) | 14 (67%) | ✅✅✅✅✅✅✅✅✅✅✅✅⛔⛔⛔⛔⛔⛔⛔↔️ | ✅ 13 · ⛔ 7 · ↔️ 1 |
 | [Images](coverage/api-images.md) | 40 | 9 (22%) | 5 (12%) | ✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️ | ✅ 9 · 🗓️ 31 |
 | [Library administration](coverage/api-library-admin.md) | 32 | 12 (38%) | 2 (6%) | ✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔ | ✅ 12 · 🗓️ 17 · ⛔ 3 |
-| [Library browsing and metadata queries](coverage/api-library-browse.md) | 58 | 23 (40%) | 18 (31%) | ✅✅✅✅✅✅🟡🟡🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔ | ✅ 18 · 🟡 4 · 🗓️ 30 · ⛔ 5 · ↔️ 1 |
+| [Library browsing and metadata queries](coverage/api-library-browse.md) | 58 | 39 (67%) | 34 (59%) | ✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔ | ✅ 37 · 🟡 1 · 🗓️ 14 · ⛔ 5 · ↔️ 1 |
 | [Live TV and channels](coverage/api-live-tv.md) | 43 | 1 (2%) | 0 (0%) | ⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔ | 🟡 1 · ⛔ 42 |
 | [Playback, streaming and subtitles](coverage/api-playback.md) | 38 | 9 (24%) | 3 (8%) | ✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 9 · 🗓️ 12 · ⛔ 17 |
 | [Sessions, play state and realtime](coverage/api-sessions-realtime.md) | 50 | 15 (30%) | 11 (22%) | ✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 14 · 🟡 1 · 🗓️ 13 · ⛔ 22 |
-| [System, branding, localization and plugins](coverage/api-system.md) | 47 | 13 (28%) | 3 (6%) | ✅✅✅✅🟡🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 10 · 🟡 3 · 🗓️ 14 · ⛔ 20 |
+| [System, branding, localization and plugins](coverage/api-system.md) | 47 | 18 (38%) | 10 (21%) | ✅✅✅✅✅✅🟡🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 15 · 🟡 3 · 🗓️ 9 · ⛔ 20 |
 | [Users, authentication and first-run setup](coverage/api-users-auth.md) | 35 | 28 (80%) | 21 (60%) | ✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️↔️↔️↔️↔️ | ✅ 21 · 🗓️ 7 · ↔️ 7 |
 
 ### By OpenAPI tag (controller)
@@ -80,55 +80,57 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | Device | 5 | 0 | 0 | 🗓️ 5 |
 | DisplayPreference | 2 | 2 | 0 | ✅ 2 |
 | Environment | 5 | 5 | 0 | ✅ 5 |
-| Filter | 2 | 2 | 0 | 🟡 2 |
-| Genre | 2 | 0 | 0 | 🗓️ 2 |
+| Filter | 2 | 2 | 2 | ✅ 1 · 🟡 1 |
+| Genre | 2 | 2 | 2 | ✅ 2 |
 | Image | 37 | 9 | 5 | ✅ 9 · 🗓️ 28 |
 | InstantMix | 7 | 0 | 0 | ⛔ 7 |
 | ItemLookup | 11 | 0 | 0 | 🗓️ 11 |
 | ItemUpdate | 3 | 0 | 0 | ⛔ 3 |
-| Library | 34 | 16 | 15 | ✅ 14 · 🟡 1 · 🗓️ 18 · ↔️ 1 |
+| Library | 34 | 22 | 18 | ✅ 21 · 🗓️ 12 · ↔️ 1 |
 | LibraryStructure | 8 | 5 | 2 | ✅ 5 · 🗓️ 3 |
 | LiveTv | 38 | 1 | 0 | 🟡 1 · ⛔ 37 |
-| Localization | 4 | 2 | 0 | ✅ 2 · 🗓️ 2 |
+| Localization | 4 | 4 | 4 | ✅ 4 |
 | Lyric | 6 | 0 | 0 | ⛔ 6 |
 | MediaInfo | 5 | 3 | 2 | ✅ 3 · ⛔ 2 |
 | MediaSegment | 1 | 1 | 0 | ✅ 1 |
-| Movie | 1 | 0 | 0 | 🗓️ 1 |
+| Movie | 1 | 1 | 1 | ✅ 1 |
 | MusicGenre | 1 | 0 | 0 | ⛔ 1 |
-| Person | 2 | 0 | 0 | 🗓️ 2 |
-| Playlist | 11 | 0 | 0 | 🗓️ 11 |
+| Person | 2 | 2 | 2 | ✅ 2 |
+| Playlist | 11 | 11 | 11 | ✅ 11 |
 | Plugin | 17 | 1 | 0 | 🟡 1 · ⛔ 16 |
 | RemoteImage | 3 | 0 | 0 | 🗓️ 3 |
 | ScheduledTask | 5 | 2 | 0 | ✅ 2 · 🗓️ 3 |
-| Search | 1 | 0 | 0 | 🗓️ 1 |
+| Search | 1 | 1 | 1 | ✅ 1 |
 | Session | 18 | 7 | 6 | ✅ 6 · 🟡 1 · 🗓️ 11 |
 | Show | 4 | 3 | 2 | ✅ 3 · 🗓️ 1 |
 | Startup | 7 | 7 | 0 | ✅ 6 · ↔️ 1 |
-| Studio | 2 | 1 | 0 | 🟡 1 · 🗓️ 1 |
+| Studio | 2 | 2 | 2 | ✅ 2 |
 | Subtitle | 10 | 0 | 0 | 🗓️ 10 |
-| Suggestion | 1 | 0 | 0 | 🗓️ 1 |
+| Suggestion | 1 | 1 | 1 | ✅ 1 |
 | SyncPlay | 22 | 0 | 0 | ⛔ 22 |
-| System | 19 | 9 | 3 | ✅ 7 · 🟡 2 · 🗓️ 10 |
+| System | 19 | 12 | 6 | ✅ 10 · 🟡 2 · 🗓️ 7 |
 | Trailer | 1 | 0 | 0 | ⛔ 1 |
 | TrickPlay | 2 | 0 | 0 | 🗓️ 2 |
 | User | 10 | 10 | 10 | ✅ 7 · ↔️ 3 |
 | UserData | 8 | 6 | 5 | ✅ 6 · 🗓️ 2 |
 | UserView | 2 | 1 | 1 | ✅ 1 · 🗓️ 1 |
 | Video | 8 | 5 | 1 | ✅ 5 · ⛔ 3 |
-| Year | 2 | 0 | 0 | 🗓️ 2 |
+| Year | 2 | 2 | 2 | ✅ 2 |
 
 ## Subsystems and features
 
 | Area | Features | Progress | Status |
 |---|---|---|---|
+| [Browse by name and discovery](coverage/browse.md) | 6 | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅🟡🟡🟡🗓️🗓️🗓️ | ✅ 4 · 🟡 1 · 🗓️ 1 |
 | [Collections](coverage/collections.md) | 5 | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️ | ✅ 4 · 🗓️ 1 |
 | [Library types](coverage/library-types.md) | 11 | ✅✅✅✅✅✅✅🟡🟡🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 4 · 🟡 1 · 🗓️ 1 · ⛔ 5 |
-| [Item metadata and DTO fields](coverage/metadata.md) | 8 | ✅✅✅✅✅✅✅✅✅✅✅✅✅🟡🟡🟡🟡🟡🗓️🗓️ | ✅ 5 · 🟡 2 · 🗓️ 1 |
+| [Item metadata and DTO fields](coverage/metadata.md) | 8 | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️ | ✅ 7 · 🗓️ 1 |
 | [Platform features and out-of-scope subsystems](coverage/platform.md) | 9 | ✅✅🟡🟡🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 1 · 🟡 1 · 🗓️ 2 · ⛔ 5 |
 | [Playback, streaming and transcoding](coverage/playback.md) | 12 | ✅✅✅✅✅🟡🟡🟡🟡🟡🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔⛔ | ✅ 3 · 🟡 3 · 🗓️ 4 · ⛔ 2 |
+| [Playlists](coverage/playlists.md) | 3 | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅ | ✅ 3 |
 | [Sessions, WebSocket and play reporting](coverage/realtime.md) | 6 | ✅✅✅🟡🟡🟡🟡🟡🟡🟡🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔⛔ | ✅ 1 · 🟡 2 · 🗓️ 2 · ⛔ 1 |
 | [Library scanning](coverage/scan.md) | 24 | ✅✅✅✅✅✅✅✅✅✅🟡🟡🟡🗓️🗓️🗓️🗓️⛔⛔⛔ | ✅ 12 · 🟡 3 · 🗓️ 5 · ⛔ 4 |
-| [System, configuration and operations](coverage/system.md) | 11 | ✅✅✅✅✅🟡🟡🟡🟡🟡🟡🟡🟡🟡🗓️🗓️🗓️🗓️⛔⛔ | ✅ 3 · 🟡 5 · 🗓️ 2 · ⛔ 1 |
+| [System, configuration and operations](coverage/system.md) | 12 | ✅✅✅✅✅✅✅🟡🟡🟡🟡🟡🟡🟡🟡🗓️🗓️🗓️⛔⛔ | ✅ 4 · 🟡 5 · 🗓️ 2 · ⛔ 1 |
 | [Users, authentication and parental controls](coverage/users.md) | 10 | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️⛔⛔ | ✅ 8 · 🗓️ 1 · ⛔ 1 |
 
 ## Behavior contract (derived)
@@ -137,16 +139,20 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 
 | Spec | Rules | Rules with a scenario | Scenarios | Passing |
 |---|---|---|---|---|
+| [browse](contract/specs/browse.md) | 29 | 29 | 15 | 15 |
 | [collections](contract/specs/collections.md) | 51 | 51 | 30 | 30 |
 | [extras](contract/specs/extras.md) | 21 | 21 | 15 | 15 |
 | [images](contract/specs/images.md) | 15 | 15 | 13 | 13 |
 | [items](contract/specs/items.md) | 170 | 170 | 156 | 156 |
+| [misc](contract/specs/misc.md) | 5 | 5 | 3 | 3 |
+| [playlists](contract/specs/playlists.md) | 33 | 33 | 23 | 23 |
 | [playstate](contract/specs/playstate.md) | 91 | 89 | 107 | 107 |
 | [quickconnect](contract/specs/quickconnect.md) | 26 | 26 | 23 | 23 |
+| [search](contract/specs/search.md) | 16 | 16 | 14 | 14 |
 | [startup](contract/specs/startup.md) | 25 | 23 | 3 | 0 |
 | [users](contract/specs/users.md) | 188 | 188 | 195 | 195 |
 | [wire](contract/specs/wire.md) | 15 | 14 | 14 | 14 |
-| **total** | 602 | 597 | 556 | 553 |
+| **total** | 685 | 680 | 611 | 608 |
 
 ## Biggest gaps (planned or not planned, web-client facing)
 
@@ -169,8 +175,6 @@ Operations the official web client mentions (docs/11) that Tinyfin does not regi
 | `GET /Devices/Info` | 🗓️ planned | Users, authentication and first-run setup | Devices are stored (internal/storage/device.go) and appear in sessions, but there are no device-management routes, so the dashboard's Devices page 404s. |
 | `GET /Devices/Options` | 🗓️ planned | Users, authentication and first-run setup | Devices are stored (internal/storage/device.go) and appear in sessions, but there are no device-management routes, so the dashboard's Devices page 404s. |
 | `POST /Devices/Options` | 🗓️ planned | Users, authentication and first-run setup | Devices are stored (internal/storage/device.go) and appear in sessions, but there are no device-management routes, so the dashboard's Devices page 404s. |
-| `GET /Genres` | 🗓️ planned | Library browsing and metadata queries | Genres are read from NFO and TMDB and stored on items, but there is no genre browse route (docs/11 gap). |
-| `GET /Genres/{genreName}` | 🗓️ planned | Library browsing and metadata queries | Genres are read from NFO and TMDB and stored on items, but there is no genre browse route (docs/11 gap). |
 | `DELETE /Branding/Splashscreen` | 🗓️ planned | Images | Not implemented. |
 | `GET /Branding/Splashscreen` | 🗓️ planned | Images | Not implemented. |
 | `POST /Branding/Splashscreen` | 🗓️ planned | Images | Not implemented. |
@@ -180,10 +184,6 @@ Operations the official web client mentions (docs/11) that Tinyfin does not regi
 | `GET /Studios/{name}/Images/{imageType}` | 🗓️ planned | Images | Not implemented. |
 | `POST /Items/{itemId}` | ⛔ not-planned | Library administration | Metadata editing is left to an external cataloging tool (README, 'Not a media organizer'). |
 | `DELETE /Items` | 🗓️ planned | Library browsing and metadata queries | Library notification hooks and file/download endpoints are not implemented. |
-| `GET /Items/Root` | 🗓️ planned | Library browsing and metadata queries | Library notification hooks and file/download endpoints are not implemented. |
-| `GET /Items/{itemId}/Collections` | 🗓️ planned | Library browsing and metadata queries | Called on every item detail page ('part of a collection'); 404 today (docs/11). |
-| `GET /Movies/{itemId}/Similar` | 🗓️ planned | Library browsing and metadata queries | Library notification hooks and file/download endpoints are not implemented. |
-| `GET /Trailers/{itemId}/Similar` | 🗓️ planned | Library browsing and metadata queries | Library notification hooks and file/download endpoints are not implemented. |
 | `DELETE /Library/VirtualFolders/Paths` | 🗓️ planned | Library administration | Adding, removing and updating the paths of an existing library is not implemented; a library's paths are set when it is created. |
 | `POST /Library/VirtualFolders/Paths` | 🗓️ planned | Library administration | Adding, removing and updating the paths of an existing library is not implemented; a library's paths are set when it is created. |
 | `POST /Library/VirtualFolders/Paths/Update` | 🗓️ planned | Library administration | Adding, removing and updating the paths of an existing library is not implemented; a library's paths are set when it is created. |
@@ -193,15 +193,6 @@ Operations the official web client mentions (docs/11) that Tinyfin does not regi
 | `POST /Audio/{itemId}/Lyrics` | ⛔ not-planned | Playback, streaming and subtitles | Music is not cataloged (video-first scope, docs/01). |
 | `POST /LiveStreams/Close` | ⛔ not-planned | Playback, streaming and subtitles | Out of scope for v1 (docs/01, decision D8). Live streams belong to tuners. |
 | `POST /LiveStreams/Open` | ⛔ not-planned | Playback, streaming and subtitles | Out of scope for v1 (docs/01, decision D8). Live streams belong to tuners. |
-| `GET /Movies/Recommendations` | 🗓️ planned | Library browsing and metadata queries | Recommendation carousel not implemented. |
-| `GET /Persons` | 🗓️ planned | Library browsing and metadata queries | People are stored from TMDB, but there is no person browse route (docs/11: the search screen's cast query 404s). |
-| `GET /Persons/{name}` | 🗓️ planned | Library browsing and metadata queries | People are stored from TMDB, but there is no person browse route (docs/11: the search screen's cast query 404s). |
-| `POST /Playlists` | 🗓️ planned | Collections, playlists and mixes | Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage. |
-| `GET /Playlists/{playlistId}` | 🗓️ planned | Collections, playlists and mixes | Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage. |
-| `POST /Playlists/{playlistId}` | 🗓️ planned | Collections, playlists and mixes | Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage. |
-| `DELETE /Playlists/{playlistId}/Items` | 🗓️ planned | Collections, playlists and mixes | Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage. |
-| `GET /Playlists/{playlistId}/Items` | 🗓️ planned | Collections, playlists and mixes | Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage. |
-| `POST /Playlists/{playlistId}/Items` | 🗓️ planned | Collections, playlists and mixes | Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage. |
 | `GET /Packages` | ⛔ not-planned | System, branding, localization and plugins | No plugin system (decisions D8, D11). |
 | `GET /Packages/{name}` | ⛔ not-planned | System, branding, localization and plugins | No plugin system (decisions D8, D11). |
 | `GET /Plugins` | ⛔ not-planned | System, branding, localization and plugins | No plugin system (decisions D8, D11). |
@@ -211,22 +202,17 @@ Operations the official web client mentions (docs/11) that Tinyfin does not regi
 | `GET /ScheduledTasks/{taskId}` | 🗓️ planned | Library administration | Only the library-scan task and its start route exist. |
 | `POST /Sessions/{sessionId}/Command` | 🗓️ planned | Sessions, play state and realtime | Remote control of other sessions is not implemented (the /socket transport exists). |
 | `GET /Shows/Upcoming` | 🗓️ planned | Library browsing and metadata queries | Not implemented. |
-| `GET /Studios/{name}` | 🗓️ planned | Library browsing and metadata queries | Studios are stored from TMDB; the per-studio detail route is not implemented. |
 | `GET /Items/{itemId}/RemoteSearch/Subtitles/{language}` | 🗓️ planned | Playback, streaming and subtitles | Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged. |
 | `POST /Items/{itemId}/RemoteSearch/Subtitles/{subtitleId}` | 🗓️ planned | Playback, streaming and subtitles | Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged. |
 | `GET /Providers/Subtitles/Subtitles/{subtitleId}` | 🗓️ planned | Playback, streaming and subtitles | Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged. |
 | `POST /Videos/{itemId}/Subtitles` | 🗓️ planned | Playback, streaming and subtitles | Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged. |
 | `GET /SyncPlay/List` | ⛔ not-planned | Sessions, play state and realtime | Not in scope for v1; the web client treats 404 on /SyncPlay/List as 'unavailable'. |
 | `POST /ClientLog/Document` | 🗓️ planned | System, branding, localization and plugins | Not implemented. |
-| `GET /GetUtcTime` | 🗓️ planned | System, branding, localization and plugins | Used by clients for clock sync; not implemented. |
 | `POST /System/Configuration/Branding` | 🗓️ planned | System, branding, localization and plugins | Not implemented. |
 | `GET /System/Logs` | 🗓️ planned | System, branding, localization and plugins | Not implemented. |
 | `GET /System/Logs/Log` | 🗓️ planned | System, branding, localization and plugins | Not implemented. |
-| `GET /System/Ping` | 🗓️ planned | System, branding, localization and plugins | Trivial and used by some clients for reachability; not implemented. |
-| `POST /System/Ping` | 🗓️ planned | System, branding, localization and plugins | Trivial and used by some clients for reachability; not implemented. |
 | `POST /System/Restart` | 🗓️ planned | System, branding, localization and plugins | Not implemented; a supervisor restarts the process. |
 | `POST /System/Shutdown` | 🗓️ planned | System, branding, localization and plugins | Not implemented. |
 | `DELETE /UserItems/{itemId}/Rating` | 🗓️ planned | Sessions, play state and realtime | Star ratings are not implemented (likes are, through UserData). |
 | `POST /UserItems/{itemId}/Rating` | 🗓️ planned | Sessions, play state and realtime | Star ratings are not implemented (likes are, through UserData). |
-| `GET /Years` | 🗓️ planned | Library browsing and metadata queries | Not implemented (year filter on /Items works; the Years browse routes do not). |
 

@@ -48,6 +48,10 @@ func isMarkFolder(t storage.ItemType) bool {
 // UnplayedItemCount and, for series and seasons, the played state derived
 // from the leaves below (playstate.folder.R2-R5, items.userdata.R8).
 func (s *Server) applyFolderUserData(ctx context.Context, userID storage.UserID, item storage.Item, dto *userItemDataDto) {
+	if item.Type == storage.ItemTypePlaylist {
+		s.playlistUserData(ctx, userID, item, dto)
+		return
+	}
 	if !childCountItemTypes[item.Type] {
 		return
 	}

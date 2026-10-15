@@ -1,0 +1,5201 @@
+[
+ {
+  "id": "playlists.auth.anonymous",
+  "endpoint": "POST /Playlists",
+  "spec": "playlists.md#create",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.auth.R1"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "create",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf Anon"
+     }
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "read",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/00000000000000000000000000000001"
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "items",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/00000000000000000000000000000001/Items"
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "add",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/00000000000000000000000000000001/Items",
+     "query": {
+      "ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "users",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/00000000000000000000000000000001/Users"
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ]
+ },
+ {
+  "id": "playlists.create.basic",
+  "endpoint": "POST /Playlists",
+  "spec": "playlists.md#create",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.create.R1",
+   "playlists.read.R1",
+   "playlists.item.R1"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "create Conf PL Basic",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Basic",
+      "Ids": [
+       "{{item.alpha.id}}",
+       "{{item.bravo.id}}",
+       "{{item.alpha.id}}"
+      ],
+      "MediaType": "Video"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pl": "$.Id"
+    }
+   },
+   {
+    "name": "read",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.OpenAccess",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.Shares",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.ItemIds[0]",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.ItemIds[1]",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      },
+      {
+       "path": "$.ItemIds[2]",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "entries",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Items"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.StartIndex",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Items[1].Id",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      },
+      {
+       "path": "$.Items[2].Id",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Items[0].PlaylistItemId",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Items[1].PlaylistItemId",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "Movie"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the item",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Playlist"
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Conf PL Basic"
+      },
+      {
+       "path": "$.IsFolder",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaType",
+       "op": "eq",
+       "value": "Video"
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.RecursiveItemCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.RunTimeTicks",
+       "op": "eq",
+       "value": 180000000
+      },
+      {
+       "path": "$.LocationType",
+       "op": "eq",
+       "value": "FileSystem"
+      },
+      {
+       "path": "$.CanDelete",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "in a listing the entries are counted",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "Playlist",
+      "Recursive": "true",
+      "SearchTerm": "Conf PL Basic"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].ChildCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "Playlist"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete pl",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "playlists.create.variants",
+  "endpoint": "POST /Playlists",
+  "spec": "playlists.md#create",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.create.R2",
+   "playlists.create.R3",
+   "playlists.create.R4"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:collmgr"
+  ],
+  "steps": [
+   {
+    "name": "create from the query: private",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "query": {
+      "name": "Conf PL Query",
+      "ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "q": "$.Id"
+    }
+   },
+   {
+    "name": "private to the owner",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.q}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.OpenAccess",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "hidden from another user",
+    "as": "collmgr",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.q}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "create body without IsPublic: open",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Open",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ]
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "open": "$.Id"
+    }
+   },
+   {
+    "name": "open to everybody",
+    "as": "collmgr",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.open}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.OpenAccess",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "create IsPublic false",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Closed",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ],
+      "IsPublic": false
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "closed": "$.Id"
+    }
+   },
+   {
+    "name": "closed",
+    "as": "collmgr",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.closed}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "create empty, no media type",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Empty"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "empty": "$.Id"
+    }
+   },
+   {
+    "name": "an empty playlist is an audio playlist",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.empty}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaType",
+       "op": "eq",
+       "value": "Audio"
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.RunTimeTicks",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "create video entries, no media type",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Infer",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ]
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "infer": "$.Id"
+    }
+   },
+   {
+    "name": "media type from the entries",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.infer}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaType",
+       "op": "eq",
+       "value": "Video"
+      }
+     ]
+    }
+   },
+   {
+    "name": "create explicit media type",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Audio",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ],
+      "MediaType": "Audio"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "aud": "$.Id"
+    }
+   },
+   {
+    "name": "explicit media type wins",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.aud}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaType",
+       "op": "eq",
+       "value": "Audio"
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "create same name again",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Open",
+      "Ids": [
+       "{{item.bravo.id}}"
+      ]
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "open2": "$.Id"
+    }
+   },
+   {
+    "name": "a second playlist with the name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "Playlist",
+      "Recursive": "true",
+      "SearchTerm": "Conf PL Open"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete q",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.q}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "delete open",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.open}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "delete closed",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.closed}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "delete empty",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.empty}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "delete infer",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.infer}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "delete aud",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.aud}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "delete open2",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.open2}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "playlists.create.expand",
+  "endpoint": "POST /Playlists",
+  "spec": "playlists.md#create",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.create.R5"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "item:show",
+   "item:s01e01",
+   "item:s01e02",
+   "item:s02e01",
+   "library:shows"
+  ],
+  "steps": [
+   {
+    "name": "create from a series",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Series",
+      "Ids": [
+       "{{item.show.id}}",
+       "{{item.alpha.id}}"
+      ]
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pl": "$.Id"
+    }
+   },
+   {
+    "name": "episodes in order, then the movie",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 4
+      },
+      {
+       "path": "$.ItemIds[0]",
+       "op": "eq",
+       "value": "{{item.s01e01.id}}"
+      },
+      {
+       "path": "$.ItemIds[1]",
+       "op": "eq",
+       "value": "{{item.s01e02.id}}"
+      },
+      {
+       "path": "$.ItemIds[2]",
+       "op": "eq",
+       "value": "{{item.s02e01.id}}"
+      },
+      {
+       "path": "$.ItemIds[3]",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the entries are items",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Items"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "Episode"
+      },
+      {
+       "path": "$.Items[3].Type",
+       "op": "eq",
+       "value": "Movie"
+      },
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 4
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete pl",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "playlists.create.errors",
+  "endpoint": "POST /Playlists",
+  "spec": "playlists.md#create",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.create.R6"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "no name",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Ids": [
+       "{{item.alpha.id}}"
+      ]
+     }
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   },
+   {
+    "name": "an id that names nothing",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Bad",
+      "Ids": [
+       "00000000000000000000000000000001"
+      ]
+     }
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "an id that is not a guid",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Bad",
+      "Ids": [
+       "nope"
+      ]
+     }
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   },
+   {
+    "name": "another user's playlist, not an administrator",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Other",
+      "UserId": "{{user.admin.id}}"
+     }
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "nothing was created",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "Playlist",
+      "Recursive": "true",
+      "SearchTerm": "Conf PL Bad"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playlists.create.for-user",
+  "endpoint": "POST /Playlists",
+  "spec": "playlists.md#create",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.create.R7"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "create as an administrator, for alice",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL ForAlice",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ],
+      "UserId": "{{user.alice.id}}",
+      "IsPublic": false
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pl": "$.Id"
+    }
+   },
+   {
+    "name": "alice owns it",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.OpenAccess",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "the creator does not see it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "alice can delete it",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.CanDelete",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete pl",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "playlists.entries.mutate",
+  "endpoint": "POST /Playlists/{playlistId}/Items",
+  "spec": "playlists.md#entries",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.entries.R1",
+   "playlists.entries.R2",
+   "playlists.entries.R3",
+   "playlists.entries.R4"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "create Conf PL Mutate",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Mutate",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ]
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pl": "$.Id"
+    }
+   },
+   {
+    "name": "append",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Items",
+     "query": {
+      "ids": "{{item.bravo.id}},{{item.charlie.id}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "appended in order",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.ItemIds[0]",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.ItemIds[1]",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      },
+      {
+       "path": "$.ItemIds[2]",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "insert at a position",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Items",
+     "query": {
+      "ids": "{{item.charlie.id}}",
+      "position": "1"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "inserted",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 4
+      },
+      {
+       "path": "$.ItemIds[0]",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.ItemIds[1]",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      },
+      {
+       "path": "$.ItemIds[2]",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      },
+      {
+       "path": "$.ItemIds[3]",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a position past the end appends",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Items",
+     "query": {
+      "ids": "{{item.alpha.id}}",
+      "position": "99"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "appended",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 5
+      },
+      {
+       "path": "$.ItemIds[0]",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.ItemIds[1]",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      },
+      {
+       "path": "$.ItemIds[2]",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      },
+      {
+       "path": "$.ItemIds[3]",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      },
+      {
+       "path": "$.ItemIds[4]",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a negative position inserts first",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Items",
+     "query": {
+      "ids": "{{item.bravo.id}}",
+      "position": "-1"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "first",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 6
+      },
+      {
+       "path": "$.ItemIds[0]",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      },
+      {
+       "path": "$.ItemIds[1]",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.ItemIds[2]",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      },
+      {
+       "path": "$.ItemIds[3]",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      },
+      {
+       "path": "$.ItemIds[4]",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      },
+      {
+       "path": "$.ItemIds[5]",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "ids that name nothing are ignored",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Items",
+     "query": {
+      "ids": "00000000000000000000000000000001,nope"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "unchanged",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 6
+      }
+     ]
+    }
+   },
+   {
+    "name": "move to the end",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Items/{{item.bravo.id}}/Move/5"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "the first entry of the item moved",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 6
+      },
+      {
+       "path": "$.ItemIds[0]",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.ItemIds[1]",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      },
+      {
+       "path": "$.ItemIds[2]",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      },
+      {
+       "path": "$.ItemIds[3]",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      },
+      {
+       "path": "$.ItemIds[4]",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.ItemIds[5]",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "move to the front",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Items/{{item.charlie.id}}/Move/0"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "moved",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 6
+      },
+      {
+       "path": "$.ItemIds[0]",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      },
+      {
+       "path": "$.ItemIds[1]",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.ItemIds[2]",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      },
+      {
+       "path": "$.ItemIds[3]",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      },
+      {
+       "path": "$.ItemIds[4]",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.ItemIds[5]",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an item that is not in the playlist",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Items/{{capture.pl}}/Move/1"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "unchanged after the no-op move",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 6
+      },
+      {
+       "path": "$.ItemIds[0]",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      },
+      {
+       "path": "$.ItemIds[1]",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.ItemIds[2]",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      },
+      {
+       "path": "$.ItemIds[3]",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      },
+      {
+       "path": "$.ItemIds[4]",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.ItemIds[5]",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "remove every entry of two items",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Playlists/{{capture.pl}}/Items",
+     "query": {
+      "entryIds": "{{item.alpha.id}},{{item.bravo.id}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "removed",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.ItemIds[0]",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      },
+      {
+       "path": "$.ItemIds[1]",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an entry id that names nothing",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Playlists/{{capture.pl}}/Items",
+     "query": {
+      "entryIds": "nope"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "the list is intact",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Items"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      }
+     ]
+    }
+   },
+   {
+    "name": "the item counts the distinct items",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.RunTimeTicks",
+       "op": "eq",
+       "value": 120000000
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete pl",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "playlists.entries.paging",
+  "endpoint": "GET /Playlists/{playlistId}/Items",
+  "spec": "playlists.md#entries",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.entries.R5"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "create Conf PL Paging",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Paging",
+      "Ids": [
+       "{{item.alpha.id}}",
+       "{{item.bravo.id}}",
+       "{{item.charlie.id}}"
+      ]
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pl": "$.Id"
+    }
+   },
+   {
+    "name": "limit",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Items",
+     "query": {
+      "limit": "2"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[1].Id",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "start index",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Items",
+     "query": {
+      "startIndex": "1",
+      "limit": "1"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.StartIndex",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "fields",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Items",
+     "query": {
+      "fields": "Overview,Path"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Path",
+       "op": "exists"
+      }
+     ]
+    }
+   },
+   {
+    "name": "user data off",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Items",
+     "query": {
+      "enableUserData": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].UserData",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "another user's view, not an administrator",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Items",
+     "query": {
+      "userId": "{{user.admin.id}}"
+     }
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "a playlist that does not exist",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/00000000000000000000000000000044/Items"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "not a guid",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/nope/Items"
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete pl",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "playlists.update",
+  "endpoint": "POST /Playlists/{playlistId}",
+  "spec": "playlists.md#update",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.update.R1",
+   "playlists.update.R2"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:alice",
+   "user:collmgr"
+  ],
+  "steps": [
+   {
+    "name": "create Conf PL Update",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Update",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ],
+      "IsPublic": false
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pl": "$.Id"
+    }
+   },
+   {
+    "name": "open it",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}",
+     "body": {
+      "IsPublic": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "open",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.OpenAccess",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "share it",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}",
+     "body": {
+      "IsPublic": false,
+      "Users": [
+       {
+        "UserId": "{{user.alice.id}}",
+        "CanEdit": true
+       }
+      ]
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "shared",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.OpenAccess",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.Shares",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Shares[0].UserId",
+       "op": "eq",
+       "value": "{{user.alice.id}}"
+      },
+      {
+       "path": "$.Shares[0].CanEdit",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "an empty body changes nothing",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}",
+     "body": {}
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "unchanged",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Shares",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.OpenAccess",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "an editor may update",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}",
+     "body": {
+      "IsPublic": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "by alice",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.OpenAccess",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "and close it again",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}",
+     "body": {
+      "IsPublic": false
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "closed",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.OpenAccess",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "a user who cannot see it",
+    "as": "collmgr",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}",
+     "body": {
+      "Name": "x"
+     }
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "not a guid",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/nope",
+     "body": {
+      "Name": "x"
+     }
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete pl",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "playlists.update.entries",
+  "endpoint": "POST /Playlists/{playlistId}",
+  "spec": "playlists.md#update",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.update.R1"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "create Conf PL UpdateIds",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL UpdateIds",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ],
+      "IsPublic": false
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pl": "$.Id"
+    }
+   },
+   {
+    "name": "replace the entries",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}",
+     "body": {
+      "Ids": [
+       "{{item.bravo.id}}",
+       "{{item.charlie.id}}"
+      ]
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "replaced",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.ItemIds[0]",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      },
+      {
+       "path": "$.ItemIds[1]",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      },
+      {
+       "path": "$.OpenAccess",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "replace again, with an access change",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}",
+     "body": {
+      "IsPublic": true,
+      "Ids": [
+       "{{item.charlie.id}}",
+       "{{item.bravo.id}}",
+       "{{item.alpha.id}}"
+      ]
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "replaced and open",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.ItemIds[0]",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      },
+      {
+       "path": "$.ItemIds[1]",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      },
+      {
+       "path": "$.ItemIds[2]",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.OpenAccess",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "ids that name nothing",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}",
+     "body": {
+      "Ids": [
+       "00000000000000000000000000000001"
+      ]
+     }
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "unchanged by the bad request",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.ItemIds[0]",
+       "op": "eq",
+       "value": "{{item.charlie.id}}"
+      },
+      {
+       "path": "$.ItemIds[1]",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      },
+      {
+       "path": "$.ItemIds[2]",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an empty list empties it",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}",
+     "body": {
+      "Ids": []
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "empty",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete pl",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ],
+  "divergence": {
+   "reason": "The reference applies the Ids of an update only in some combinations of members (for a private playlist the entries are left as they were unless Name or Users is sent too)."
+  }
+ },
+ {
+  "id": "playlists.update.rename",
+  "endpoint": "POST /Playlists/{playlistId}",
+  "spec": "playlists.md#update",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.update.R1"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "create Conf PL Rename From",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Rename From",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ],
+      "IsPublic": true
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pl": "$.Id"
+    }
+   },
+   {
+    "name": "rename",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}",
+     "body": {
+      "Name": "Conf PL Rename To"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "renamed",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Conf PL Rename To"
+      }
+     ]
+    }
+   },
+   {
+    "name": "found by the new name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "Playlist",
+      "Recursive": "true",
+      "SearchTerm": "Conf PL Rename To"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "not by the old",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "Playlist",
+      "Recursive": "true",
+      "SearchTerm": "Conf PL Rename From"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete pl",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ],
+  "divergence": {
+   "reason": "The reference does not keep a rename sent on its own; a later read of the playlist shows the old name."
+  }
+ },
+ {
+  "id": "playlists.acl.matrix",
+  "endpoint": "GET /Playlists/{playlistId}",
+  "spec": "playlists.md#access",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.acl.R1",
+   "playlists.acl.R2",
+   "playlists.acl.R3"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:alice",
+   "user:collmgr"
+  ],
+  "steps": [
+   {
+    "name": "create private",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Private",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ],
+      "IsPublic": false
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "priv": "$.Id"
+    }
+   },
+   {
+    "name": "create shared",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Shared",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ],
+      "IsPublic": false,
+      "Users": [
+       {
+        "UserId": "{{user.alice.id}}",
+        "CanEdit": true
+       }
+      ]
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "shared": "$.Id"
+    }
+   },
+   {
+    "name": "create shared read-only",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL ReadOnly",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ],
+      "IsPublic": false,
+      "Users": [
+       {
+        "UserId": "{{user.alice.id}}",
+        "CanEdit": false
+       }
+      ]
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "ro": "$.Id"
+    }
+   },
+   {
+    "name": "create open",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Public",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ],
+      "IsPublic": true
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pub": "$.Id"
+    }
+   },
+   {
+    "name": "owner reads private",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.priv}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.OpenAccess",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "others do not see private",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.priv}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "others do not see private (items)",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.priv}}/Items"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "shared with alice",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.shared}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Shares",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "not shared with collmgr",
+    "as": "collmgr",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.shared}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "open to all",
+    "as": "collmgr",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pub}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.OpenAccess",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "an editor adds",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.shared}}/Items",
+     "query": {
+      "ids": "{{item.bravo.id}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "a reader cannot add",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.ro}}/Items",
+     "query": {
+      "ids": "{{item.bravo.id}}"
+     }
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "a reader of an open playlist cannot add",
+    "as": "collmgr",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pub}}/Items",
+     "query": {
+      "ids": "{{item.bravo.id}}"
+     }
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "a reader cannot remove",
+    "as": "collmgr",
+    "request": {
+     "method": "DELETE",
+     "path": "/Playlists/{{capture.pub}}/Items",
+     "query": {
+      "entryIds": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "a reader cannot move",
+    "as": "collmgr",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pub}}/Items/{{item.alpha.id}}/Move/0"
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "a reader cannot update",
+    "as": "collmgr",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pub}}",
+     "body": {
+      "Name": "x"
+     }
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "a user who cannot see it cannot add",
+    "as": "collmgr",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.priv}}/Items",
+     "query": {
+      "ids": "{{item.bravo.id}}"
+     }
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "the added entry",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.shared}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.ItemIds[0]",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.ItemIds[1]",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "lists show what the user may read",
+    "as": "collmgr",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "Playlist",
+      "Recursive": "true",
+      "SearchTerm": "Conf PL"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Conf PL Public"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the owner's list holds all four",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "Playlist",
+      "Recursive": "true",
+      "SearchTerm": "Conf PL"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 4
+      },
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 4
+      }
+     ]
+    }
+   },
+   {
+    "name": "alice's list",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "Playlist",
+      "Recursive": "true",
+      "SearchTerm": "Conf PL"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Conf PL Private"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a private playlist is not readable by the administrator of another owner",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.priv}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete priv",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.priv}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "delete shared",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.shared}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "delete ro",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.ro}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "delete pub",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pub}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "playlists.users.read",
+  "endpoint": "GET /Playlists/{playlistId}/Users",
+  "spec": "playlists.md#users",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.users.R1",
+   "playlists.users.R2"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:alice",
+   "user:collmgr"
+  ],
+  "steps": [
+   {
+    "name": "create shared",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Users",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ],
+      "IsPublic": false,
+      "Users": [
+       {
+        "UserId": "{{user.alice.id}}",
+        "CanEdit": true
+       },
+       {
+        "UserId": "{{user.collmgr.id}}",
+        "CanEdit": false
+       }
+      ]
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pl": "$.Id"
+    }
+   },
+   {
+    "name": "the owner lists the shares",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Users"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$[0].UserId",
+       "op": "eq",
+       "value": "{{user.alice.id}}"
+      },
+      {
+       "path": "$[0].CanEdit",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$[1].UserId",
+       "op": "eq",
+       "value": "{{user.collmgr.id}}"
+      },
+      {
+       "path": "$[1].CanEdit",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "a shared user may not",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Users"
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "the owner's own entry",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Users/{{user.admin.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.UserId",
+       "op": "eq",
+       "value": "{{user.admin.id}}"
+      },
+      {
+       "path": "$.CanEdit",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "a shared user's own entry",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Users/{{user.alice.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.UserId",
+       "op": "eq",
+       "value": "{{user.alice.id}}"
+      },
+      {
+       "path": "$.CanEdit",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "a read-only user's own entry",
+    "as": "collmgr",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Users/{{user.collmgr.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.CanEdit",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "an editor may ask about another user",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Users/{{user.collmgr.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.UserId",
+       "op": "eq",
+       "value": "{{user.collmgr.id}}"
+      },
+      {
+       "path": "$.CanEdit",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "a reader may not",
+    "as": "collmgr",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Users/{{user.alice.id}}"
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "an editor asks about a user with no record",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Users/{{user.rating10.id}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "hidden playlist",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/00000000000000000000000000000044/Users"
+    },
+    "expect": {
+     "status": 404
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete pl",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "playlists.users.owner-asks",
+  "endpoint": "GET /Playlists/{playlistId}/Users/{userId}",
+  "spec": "playlists.md#users",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.users.R2"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "create shared",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL OwnerAsks",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ],
+      "IsPublic": false,
+      "Users": [
+       {
+        "UserId": "{{user.alice.id}}",
+        "CanEdit": false
+       }
+      ]
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pl": "$.Id"
+    }
+   },
+   {
+    "name": "the owner asks about a shared user",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Users/{{user.alice.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.UserId",
+       "op": "eq",
+       "value": "{{user.alice.id}}"
+      },
+      {
+       "path": "$.CanEdit",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete pl",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ],
+  "divergence": {
+   "reason": "The reference answers the owner's own record (CanEdit true) when the owner asks about a shared user."
+  }
+ },
+ {
+  "id": "playlists.users.manage",
+  "endpoint": "POST /Playlists/{playlistId}/Users/{userId}",
+  "spec": "playlists.md#users",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.users.R3"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:alice",
+   "user:collmgr"
+  ],
+  "steps": [
+   {
+    "name": "create open",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Manage",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ],
+      "IsPublic": true
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pl": "$.Id"
+    }
+   },
+   {
+    "name": "share with collmgr (edit)",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Users/{{user.collmgr.id}}",
+     "body": {
+      "CanEdit": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "listed",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Users"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[0].UserId",
+       "op": "eq",
+       "value": "{{user.collmgr.id}}"
+      },
+      {
+       "path": "$[0].CanEdit",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "change to read-only",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Users/{{user.collmgr.id}}",
+     "body": {
+      "CanEdit": false
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "changed",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Users"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[0].CanEdit",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "an omitted CanEdit is false",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Users/{{user.collmgr.id}}",
+     "body": {
+      "CanEdit": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "omitted",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Users/{{user.collmgr.id}}",
+     "body": {}
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "false",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Users"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[0].CanEdit",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "a reader cannot manage",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Users/{{user.alice.id}}",
+     "body": {
+      "CanEdit": true
+     }
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "not a guid",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Users/nope",
+     "body": {
+      "CanEdit": true
+     }
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete pl",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "playlists.users.grant",
+  "endpoint": "POST /Playlists/{playlistId}/Users/{userId}",
+  "spec": "playlists.md#users",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.users.R3"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:collmgr"
+  ],
+  "steps": [
+   {
+    "name": "create open",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Grant",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ],
+      "IsPublic": true
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pl": "$.Id"
+    }
+   },
+   {
+    "name": "a reader cannot edit",
+    "as": "collmgr",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Items",
+     "query": {
+      "ids": "{{item.bravo.id}}"
+     }
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "share with edit",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Users/{{user.collmgr.id}}",
+     "body": {
+      "CanEdit": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "now the user may edit",
+    "as": "collmgr",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Items",
+     "query": {
+      "ids": "{{item.bravo.id}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "added",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.ItemIds[0]",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.ItemIds[1]",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "withdraw edit",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Users/{{user.collmgr.id}}",
+     "body": {
+      "CanEdit": false
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "a reader again",
+    "as": "collmgr",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Items",
+     "query": {
+      "ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 403
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete pl",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ],
+  "divergence": {
+   "reason": "In the reference a share made with this route is listed but does not give the user edit access until the playlist is updated through POST /Playlists/{id}."
+  }
+ },
+ {
+  "id": "playlists.users.unshare",
+  "endpoint": "DELETE /Playlists/{playlistId}/Users/{userId}",
+  "spec": "playlists.md#users",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.users.R4"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:alice",
+   "user:collmgr"
+  ],
+  "steps": [
+   {
+    "name": "create shared",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Unshare",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ],
+      "IsPublic": false,
+      "Users": [
+       {
+        "UserId": "{{user.alice.id}}",
+        "CanEdit": true
+       }
+      ]
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pl": "$.Id"
+    }
+   },
+   {
+    "name": "unshare",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Playlists/{{capture.pl}}/Users/{{user.alice.id}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "no shares",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Users"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "alice no longer sees it",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "a user that was never shared with",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Playlists/{{capture.pl}}/Users/{{user.collmgr.id}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete pl",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ],
+  "divergence": {
+   "reason": "The reference answers 204 to the removal of a share and keeps the share."
+  }
+ },
+ {
+  "id": "playlists.view",
+  "endpoint": "GET /UserViews",
+  "spec": "playlists.md#view",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.view.R1",
+   "playlists.view.R2",
+   "playlists.view.R3"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:alice",
+   "user:collmgr"
+  ],
+  "steps": [
+   {
+    "name": "no playlist, no view",
+    "as": "collmgr",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].CollectionType",
+       "op": "notcontains",
+       "value": "playlists"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the root form lists the Playlists folder",
+    "as": "collmgr",
+    "request": {
+     "method": "GET",
+     "path": "/Items"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[?Type=ManualPlaylistsFolder].Name",
+       "op": "eq",
+       "value": "Playlists"
+      }
+     ]
+    }
+   },
+   {
+    "name": "create Conf PL View B",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL View B",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ],
+      "IsPublic": false
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "b": "$.Id"
+    }
+   },
+   {
+    "name": "create Conf PL View A",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL View A",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ],
+      "IsPublic": true
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "a": "$.Id"
+    }
+   },
+   {
+    "name": "the view appears",
+    "as": "collmgr",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].CollectionType",
+       "op": "contains",
+       "value": "playlists"
+      },
+      {
+       "path": "$.Items[?CollectionType=playlists].Type",
+       "op": "eq",
+       "value": "UserView"
+      },
+      {
+       "path": "$.Items[?CollectionType=playlists].Name",
+       "op": "eq",
+       "value": "Playlists"
+      },
+      {
+       "path": "$.Items[?CollectionType=playlists].IsFolder",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    },
+    "capture": {
+     "view": "$.Items[?CollectionType=playlists].Id"
+    }
+   },
+   {
+    "name": "the view lists the playlists the user may read",
+    "as": "collmgr",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.view}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Conf PL View A"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the owner sees both, by name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.view}}",
+      "SortBy": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Conf PL View A"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Conf PL View B"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the view item",
+    "as": "collmgr",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.view}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "UserView"
+      },
+      {
+       "path": "$.CollectionType",
+       "op": "eq",
+       "value": "playlists"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a playlist's parent is the folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.a}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ParentId",
+       "op": "hex32"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a recursive listing includes the playlists",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Playlist"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete a",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.a}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "delete b",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.b}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "playlists.delete",
+  "endpoint": "DELETE /Items/{itemId}",
+  "spec": "playlists.md#delete",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.delete.R1",
+   "playlists.delete.R2"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "user:alice",
+   "user:collmgr"
+  ],
+  "steps": [
+   {
+    "name": "create open",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Delete",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ],
+      "IsPublic": true
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pl": "$.Id"
+    }
+   },
+   {
+    "name": "a reader cannot delete",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "still there",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "create private",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Delete Hidden",
+      "Ids": [
+       "{{item.alpha.id}}"
+      ],
+      "IsPublic": false
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "hidden": "$.Id"
+    }
+   },
+   {
+    "name": "a user who cannot see it",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.hidden}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "the owner deletes",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "gone",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "the item is gone",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "the movie is still there",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "{{item.alpha.name}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "listing",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "Playlist",
+      "Recursive": "true",
+      "SearchTerm": "Conf PL Delete"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete hidden",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.hidden}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "playlists.entries.visibility",
+  "endpoint": "GET /Playlists/{playlistId}/Items",
+  "spec": "playlists.md#entries",
+  "scope": "modern",
+  "tags": [
+   "playlists",
+   "parental"
+  ],
+  "covers": [
+   "playlists.entries.R6"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies",
+   "item:rated-g",
+   "item:rated-r",
+   "library:rated",
+   "user:rating10",
+   "user:nofolders"
+  ],
+  "steps": [
+   {
+    "name": "create mixed ratings",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Rated",
+      "Ids": [
+       "{{item.rated-g.id}}",
+       "{{item.rated-r.id}}",
+       "{{item.alpha.id}}"
+      ],
+      "IsPublic": true
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pl": "$.Id"
+    }
+   },
+   {
+    "name": "parental limit hides entries",
+    "as": "rating10",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Items"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.rated-g.id}}"
+      },
+      {
+       "path": "$.Items[1].Id",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the ids list is not filtered",
+    "as": "rating10",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ItemIds",
+       "op": "len",
+       "value": 3
+      }
+     ]
+    }
+   },
+   {
+    "name": "library access does not hide entries",
+    "as": "nofolders",
+    "request": {
+     "method": "GET",
+     "path": "/Playlists/{{capture.pl}}/Items"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      }
+     ]
+    }
+   },
+   {
+    "name": "but the item itself is not readable",
+    "as": "nofolders",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "the listing counts every entry",
+    "as": "rating10",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "IncludeItemTypes": "Playlist",
+      "Recursive": "true",
+      "SearchTerm": "Conf PL Rated"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].ChildCount",
+       "op": "eq",
+       "value": 3
+      }
+     ]
+    }
+   },
+   {
+    "name": "parent listing applies the limit",
+    "as": "rating10",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.pl}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete pl",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "playlists.item.metadata",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "playlists.md#item",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.item.R2",
+   "playlists.item.R3"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "create two movies",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL Meta",
+      "Ids": [
+       "{{item.szeta.id}}",
+       "{{item.syankee.id}}"
+      ],
+      "IsPublic": true
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pl": "$.Id"
+    }
+   },
+   {
+    "name": "derived from the entries",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.pl}}",
+     "query": {
+      "Fields": "Genres,Studios,People"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.OfficialRating",
+       "op": "eq",
+       "value": "PG"
+      },
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.Genres[0]",
+       "op": "eq",
+       "value": "Action"
+      },
+      {
+       "path": "$.Genres[1]",
+       "op": "eq",
+       "value": "Comedy"
+      },
+      {
+       "path": "$.Genres[2]",
+       "op": "eq",
+       "value": "Drama"
+      },
+      {
+       "path": "$.Studios",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Studios[0].Name",
+       "op": "eq",
+       "value": "Acme Pictures"
+      },
+      {
+       "path": "$.Studios[1].Name",
+       "op": "eq",
+       "value": "Bolt Films"
+      },
+      {
+       "path": "$.RunTimeTicks",
+       "op": "gte",
+       "value": 10000000
+      }
+     ]
+    }
+   },
+   {
+    "name": "and found by name for a user who may read it",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "Conf PL Meta"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].Type",
+       "op": "eq",
+       "value": "Playlist"
+      },
+      {
+       "path": "$.SearchHints[0].IsFolder",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete pl",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "playlists.item.metadata-refresh",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "playlists.md#item",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.item.R2",
+   "playlists.item.R3"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "create one movie",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL MetaRefresh",
+      "Ids": [
+       "{{item.szeta.id}}"
+      ],
+      "IsPublic": true
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pl": "$.Id"
+    }
+   },
+   {
+    "name": "rating and genres",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.pl}}",
+     "query": {
+      "Fields": "Genres,Studios"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.OfficialRating",
+       "op": "eq",
+       "value": "PG"
+      },
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Studios",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "add a movie with a lower rating, a genre and a studio",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Items",
+     "query": {
+      "ids": "{{item.swhiskey.id}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "the union grows, the rating drops",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.pl}}",
+     "query": {
+      "Fields": "Genres,Studios"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.OfficialRating",
+       "op": "eq",
+       "value": "G"
+      },
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 4
+      },
+      {
+       "path": "$.Genres[2]",
+       "op": "eq",
+       "value": "Animation"
+      },
+      {
+       "path": "$.Studios",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Studios[1].Name",
+       "op": "eq",
+       "value": "Cartoon Co"
+      }
+     ]
+    }
+   },
+   {
+    "name": "add a movie of the first genre again",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists/{{capture.pl}}/Items",
+     "query": {
+      "ids": "{{item.sxray.id}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "remove it",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Playlists/{{capture.pl}}/Items",
+     "query": {
+      "entryIds": "{{item.szeta.id}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "only the others remain in the union",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.pl}}",
+     "query": {
+      "Fields": "Genres"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.Genres[*]",
+       "op": "notcontains",
+       "value": "Comedy"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the playlist carries its genres",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres",
+     "query": {
+      "includeItemTypes": "Playlist"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Action"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Animation"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Family"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete pl",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ],
+  "divergence": {
+   "reason": "The reference refreshes the metadata of a playlist after an entry change only sometimes (the rating and genres can stay as they were)."
+  }
+ },
+ {
+  "id": "playlists.item.userdata",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "playlists.md#item",
+  "scope": "modern",
+  "tags": [
+   "playlists"
+  ],
+  "covers": [
+   "playlists.item.R4"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "create two",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Playlists",
+     "body": {
+      "Name": "Conf PL UserData",
+      "Ids": [
+       "{{item.alpha.id}}",
+       "{{item.bravo.id}}",
+       "{{item.alpha.id}}"
+      ],
+      "MediaType": "Video"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pl": "$.Id"
+    }
+   },
+   {
+    "name": "nothing played",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.UserData.UnplayedItemCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.UserData.PlayedPercentage",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.UserData.Played",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "play one",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/UserPlayedItems/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "half played, distinct items",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.UserData.UnplayedItemCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.UserData.PlayedPercentage",
+       "op": "eq",
+       "value": 50
+      },
+      {
+       "path": "$.UserData.Played",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "play the other",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/UserPlayedItems/{{item.bravo.id}}"
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "played",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.UserData.UnplayedItemCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.UserData.PlayedPercentage",
+       "op": "eq",
+       "value": 100
+      },
+      {
+       "path": "$.UserData.Played",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "unplay a",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "unplay b",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.bravo.id}}"
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "delete pl",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.pl}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ }
+]

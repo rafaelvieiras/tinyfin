@@ -1,0 +1,143 @@
+{
+ "area": "browse",
+ "title": "Browse by name and discovery",
+ "summary": "Genres, studios, people and years as browsable items; filter facets; similar items, recommendations and suggestions.",
+ "features": [
+  {
+   "id": "browse.named",
+   "title": "Genres, studios, people, years",
+   "status": "supported",
+   "description": "`GET /Genres`, `/Studios`, `/Persons`, `/Years` and their single forms: distinct names carried by what the user may see, counts by type, name filters, paging; opened by id through `/Items/{id}`.",
+   "reference": "Same lists; genre images are generated collages.",
+   "notes": "Image slots are empty; a person nothing visible credits is 404 (the reference answers 200); `TotalRecordCount` of `/Years` is the number of years.",
+   "spec_rules": [
+    "browse.genres.R1",
+    "browse.genres.R2",
+    "browse.genres.R3",
+    "browse.persons.R3",
+    "browse.years.R2",
+    "browse.item.R1"
+   ],
+   "scenarios": [
+    "browse.genres.list",
+    "browse.genres.query",
+    "browse.genres.single",
+    "browse.studios",
+    "browse.persons",
+    "browse.years"
+   ],
+   "code": [
+    "internal/api/named.go",
+    "internal/storage/sqlite/named.go"
+   ],
+   "routes": [
+    "GET /Genres",
+    "GET /Genres/{genreName}",
+    "GET /Studios",
+    "GET /Studios/{name}",
+    "GET /Persons",
+    "GET /Persons/{name}",
+    "GET /Years",
+    "GET /Years/{year}"
+   ]
+  },
+  {
+   "id": "browse.facets",
+   "title": "Filter facets",
+   "status": "partial",
+   "description": "`/Items/Filters` (genres, tags, ratings, years of a parent) and `/Items/Filters2` (genres with ids, tags, audio languages).",
+   "reference": "Also lists subtitle languages and uses the user's views.",
+   "notes": "SubtitleLanguages is always empty; AudioLanguages only when item types are named.",
+   "spec_rules": [
+    "browse.facets.R1",
+    "browse.facets.R2"
+   ],
+   "scenarios": [
+    "browse.facets"
+   ],
+   "code": [
+    "internal/api/named.go"
+   ],
+   "routes": [
+    "GET /Items/Filters",
+    "GET /Items/Filters2"
+   ],
+   "priority": "low"
+  },
+  {
+   "id": "browse.similar",
+   "title": "Similar items",
+   "status": "supported",
+   "description": "Movies and series ranked by the number of shared genres, studios, people and tags.",
+   "reference": "Same idea; the reference's ranking of ties is not specified.",
+   "spec_rules": [
+    "browse.similar.R1"
+   ],
+   "scenarios": [
+    "browse.similar"
+   ],
+   "code": [
+    "internal/api/similar.go",
+    "internal/storage/sqlite/item.go"
+   ],
+   "routes": [
+    "GET /Items/{itemId}/Similar",
+    "GET /Movies/{itemId}/Similar",
+    "GET /Shows/{itemId}/Similar",
+    "GET /Trailers/{itemId}/Similar"
+   ]
+  },
+  {
+   "id": "browse.recommendations",
+   "title": "Movie recommendations and suggestions",
+   "status": "supported",
+   "description": "Categories from the movies the user played last (similar, same director, same actor); a random sample of items as suggestions.",
+   "reference": "Same category kinds (also liked-item categories); suggestions are an unspecified mix of everything.",
+   "spec_rules": [
+    "browse.recommendations.R2",
+    "browse.suggestions.R1"
+   ],
+   "scenarios": [
+    "browse.recommendations",
+    "browse.suggestions"
+   ],
+   "code": [
+    "internal/api/similar.go"
+   ],
+   "routes": [
+    "GET /Movies/Recommendations",
+    "GET /Items/Suggestions"
+   ]
+  },
+  {
+   "id": "browse.item-extras",
+   "title": "Intros and collections of an item",
+   "status": "supported",
+   "description": "`/Items/{id}/Intros` is empty (no pre-roll content exists); `/Items/{id}/Collections` lists the collections holding the item.",
+   "reference": "Same.",
+   "spec_rules": [
+    "browse.intros.R1",
+    "browse.collections.R1"
+   ],
+   "scenarios": [
+    "browse.intros-and-collections"
+   ],
+   "code": [
+    "internal/api/similar.go"
+   ],
+   "routes": [
+    "GET /Items/{itemId}/Intros",
+    "GET /Items/{itemId}/Collections"
+   ]
+  },
+  {
+   "id": "browse.named-favorites",
+   "title": "Favorites of genres, people and studios",
+   "status": "planned",
+   "description": "Named items have no stored user data: they are never favorites and `IsFavorite` filters list nothing.",
+   "reference": "A person or genre can be favorited.",
+   "notes": "Needs a per-user store keyed by name rather than by item row.",
+   "priority": "low"
+  }
+ ]
+}

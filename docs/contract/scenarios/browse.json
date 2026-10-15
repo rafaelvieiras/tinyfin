@@ -1,0 +1,3796 @@
+[
+ {
+  "id": "browse.genres.list",
+  "endpoint": "GET /Genres",
+  "spec": "browse.md#genres",
+  "scope": "modern",
+  "tags": [
+   "browse"
+  ],
+  "covers": [
+   "browse.genres.R1",
+   "browse.genres.R2"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "item:sshow",
+   "item:spilot",
+   "library:searchshows",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Genres"
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "all genres, alphabetical",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 6
+      },
+      {
+       "path": "$.StartIndex",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 6
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Action"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Animation"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Comedy"
+      },
+      {
+       "path": "$.Items[3].Name",
+       "op": "eq",
+       "value": "Drama"
+      },
+      {
+       "path": "$.Items[4].Name",
+       "op": "eq",
+       "value": "Family"
+      },
+      {
+       "path": "$.Items[5].Name",
+       "op": "eq",
+       "value": "Horror"
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "Genre"
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "hex32"
+      },
+      {
+       "path": "$.Items[0].MediaType",
+       "op": "eq",
+       "value": "Unknown"
+      },
+      {
+       "path": "$.Items[0].UserData",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[0].ChildCount",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[0].MovieCount",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "counts with ItemCounts",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres",
+     "query": {
+      "Fields": "ItemCounts"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[?Name=Drama].ChildCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[?Name=Drama].MovieCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[?Name=Drama].SeriesCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[?Name=Drama].EpisodeCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[?Name=Action].ChildCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[?Name=Action].MovieCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[?Name=Action].SeriesCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items[?Name=Horror].ChildCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[?Name=Comedy].MovieCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[?Name=Comedy].SeriesCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "sort name and path on request",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres",
+     "query": {
+      "Fields": "SortName,Path"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].SortName",
+       "op": "eq",
+       "value": "action"
+      },
+      {
+       "path": "$.Items[0].Path",
+       "op": "exists"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a genre spelled two ways is one",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres",
+     "query": {
+      "searchTerm": "action"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Action"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "browse.genres.query",
+  "endpoint": "GET /Genres",
+  "spec": "browse.md#genres",
+  "scope": "modern",
+  "tags": [
+   "browse",
+   "parental"
+  ],
+  "covers": [
+   "browse.genres.R3",
+   "browse.genres.R4",
+   "browse.genres.R6"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "item:sshow",
+   "item:spilot",
+   "library:searchshows",
+   "library:movies",
+   "user:alice",
+   "user:nofolders",
+   "user:rating10"
+  ],
+  "steps": [
+   {
+    "name": "limit and start index",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres",
+     "query": {
+      "limit": "2",
+      "startIndex": "1"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 6
+      },
+      {
+       "path": "$.StartIndex",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Animation"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Comedy"
+      }
+     ]
+    }
+   },
+   {
+    "name": "descending",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres",
+     "query": {
+      "sortBy": "SortName",
+      "sortOrder": "Descending",
+      "limit": "3"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Horror"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Family"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Drama"
+      }
+     ]
+    }
+   },
+   {
+    "name": "name starts with",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres",
+     "query": {
+      "nameStartsWith": "A"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Action"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Animation"
+      }
+     ]
+    }
+   },
+   {
+    "name": "name less than",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres",
+     "query": {
+      "nameLessThan": "C"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Action"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Animation"
+      }
+     ]
+    }
+   },
+   {
+    "name": "name starts with or greater",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres",
+     "query": {
+      "nameStartsWithOrGreater": "D"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Drama"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Family"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Horror"
+      }
+     ]
+    }
+   },
+   {
+    "name": "search term",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres",
+     "query": {
+      "searchTerm": "ma"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Animation"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Drama"
+      }
+     ]
+    }
+   },
+   {
+    "name": "by series",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres",
+     "query": {
+      "includeItemTypes": "Series"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Comedy"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Drama"
+      },
+      {
+       "path": "$.Items[1].ChildCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[1].MovieCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "excluding movies",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres",
+     "query": {
+      "excludeItemTypes": "Movie",
+      "Fields": "ItemCounts"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[?Name=Drama].MovieCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items[?Name=Drama].ChildCount",
+       "op": "eq",
+       "value": 2
+      }
+     ]
+    }
+   },
+   {
+    "name": "episodes carry no genre of their own",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres",
+     "query": {
+      "includeItemTypes": "Episode"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "inside a library",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres",
+     "query": {
+      "parentId": "{{library.search.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 6
+      }
+     ]
+    }
+   },
+   {
+    "name": "inside a library without genres",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres",
+     "query": {
+      "parentId": "{{library.movies.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "bad parent id",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres",
+     "query": {
+      "parentId": "bad"
+     }
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   },
+   {
+    "name": "a user with no library",
+    "as": "nofolders",
+    "request": {
+     "method": "GET",
+     "path": "/Genres"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "a user with a rating limit",
+    "as": "rating10",
+    "request": {
+     "method": "GET",
+     "path": "/Genres"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Horror"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Drama"
+      }
+     ]
+    }
+   },
+   {
+    "name": "not favorites",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres",
+     "query": {
+      "isFavorite": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "browse.genres.single",
+  "endpoint": "GET /Genres/{genreName}",
+  "spec": "browse.md#genres",
+  "scope": "modern",
+  "tags": [
+   "browse"
+  ],
+  "covers": [
+   "browse.genres.R5",
+   "browse.item.R1"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "item:sshow",
+   "item:spilot",
+   "library:searchshows",
+   "user:alice",
+   "user:nofolders"
+  ],
+  "steps": [
+   {
+    "name": "a genre",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres/Drama"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Drama"
+      },
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Genre"
+      },
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.MovieCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SeriesCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.EpisodeCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.UserData.IsFavorite",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.UserData.Key",
+       "op": "eq",
+       "value": "Genre-Drama"
+      },
+      {
+       "path": "$.MediaType",
+       "op": "eq",
+       "value": "Unknown"
+      },
+      {
+       "path": "$.LocationType",
+       "op": "eq",
+       "value": "FileSystem"
+      }
+     ]
+    },
+    "capture": {
+     "drama": "$.Id"
+    }
+   },
+   {
+    "name": "same id for any spelling",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres/drama"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Drama"
+      },
+      {
+       "path": "$.Id",
+       "op": "eq",
+       "value": "{{capture.drama}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the carried spelling wins",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres/ACTION"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Action"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a genre nothing carries",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres/Nope"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Nope"
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.MovieCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    }
+   },
+   {
+    "name": "by item id",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.drama}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Drama"
+      },
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Genre"
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 3
+      }
+     ]
+    }
+   },
+   {
+    "name": "by item id, per-user form",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Users/{{user.alice.id}}/Items/{{capture.drama}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Drama"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a user with no library sees no carrier",
+    "as": "nofolders",
+    "request": {
+     "method": "GET",
+     "path": "/Genres/Drama"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Genres/Drama"
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ]
+ },
+ {
+  "id": "browse.studios",
+  "endpoint": "GET /Studios",
+  "spec": "browse.md#studios",
+  "scope": "modern",
+  "tags": [
+   "browse"
+  ],
+  "covers": [
+   "browse.studios.R1",
+   "browse.studios.R2"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "item:sshow",
+   "item:spilot",
+   "library:searchshows",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "studios, alphabetical, with user data",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Studios"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Acme Pictures"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Bolt Films"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Cartoon Co"
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "Studio"
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "hex32"
+      },
+      {
+       "path": "$.Items[0].UserData.IsFavorite",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.Items[0].ChildCount",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "counts",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Studios",
+     "query": {
+      "Fields": "ItemCounts"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[?Name=Bolt Films].ChildCount",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.Items[?Name=Bolt Films].MovieCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[?Name=Bolt Films].SeriesCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[?Name=Bolt Films].EpisodeCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[?Name=Acme Pictures].MovieCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[?Name=Cartoon Co].ChildCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "user data off",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Studios",
+     "query": {
+      "enableUserData": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].UserData",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "one studio",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Studios/Bolt Films"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Bolt Films"
+      },
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Studio"
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.MovieCount",
+       "op": "eq",
+       "value": 2
+      }
+     ]
+    }
+   },
+   {
+    "name": "a studio nothing carries",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Studios/Nope"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Nope"
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "total not asked for",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Studios",
+     "query": {
+      "enableTotalRecordCount": "false",
+      "limit": "2"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "browse.persons",
+  "endpoint": "GET /Persons",
+  "spec": "browse.md#persons",
+  "scope": "modern",
+  "tags": [
+   "browse"
+  ],
+  "covers": [
+   "browse.persons.R1",
+   "browse.persons.R2",
+   "browse.persons.R3"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "item:sshow",
+   "item:spilot",
+   "library:searchshows",
+   "user:alice",
+   "user:nofolders"
+  ],
+  "steps": [
+   {
+    "name": "people, alphabetical",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Persons"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 10
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Ann Actor"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Bob Player"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Cy Cast"
+      },
+      {
+       "path": "$.Items[3].Name",
+       "op": "eq",
+       "value": "Dana Director"
+      },
+      {
+       "path": "$.Items[4].Name",
+       "op": "eq",
+       "value": "Dee Second"
+      },
+      {
+       "path": "$.Items[5].Name",
+       "op": "eq",
+       "value": "Evan Eye"
+      },
+      {
+       "path": "$.Items[6].Name",
+       "op": "eq",
+       "value": "Gus Guest"
+      },
+      {
+       "path": "$.Items[7].Name",
+       "op": "eq",
+       "value": "Wally Writer"
+      },
+      {
+       "path": "$.Items[8].Name",
+       "op": "eq",
+       "value": "Walt Writer"
+      },
+      {
+       "path": "$.Items[9].Name",
+       "op": "eq",
+       "value": "Zed Last"
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "Person"
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "hex32"
+      },
+      {
+       "path": "$.Items[0].UserData.Key",
+       "op": "eq",
+       "value": "Person-Ann Actor"
+      }
+     ]
+    }
+   },
+   {
+    "name": "directors",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Persons",
+     "query": {
+      "personTypes": "Director"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Dana Director"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Dee Second"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Evan Eye"
+      }
+     ]
+    }
+   },
+   {
+    "name": "excluding actors",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Persons",
+     "query": {
+      "excludePersonTypes": "Actor"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 6
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Dana Director"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Dee Second"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Evan Eye"
+      },
+      {
+       "path": "$.Items[3].Name",
+       "op": "eq",
+       "value": "Gus Guest"
+      },
+      {
+       "path": "$.Items[4].Name",
+       "op": "eq",
+       "value": "Wally Writer"
+      },
+      {
+       "path": "$.Items[5].Name",
+       "op": "eq",
+       "value": "Walt Writer"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a credit type other than actor",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Persons",
+     "query": {
+      "personTypes": "GuestStar"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Gus Guest"
+      }
+     ]
+    }
+   },
+   {
+    "name": "search term",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Persons",
+     "query": {
+      "searchTerm": "an"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Ann Actor"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Dana Director"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Evan Eye"
+      }
+     ]
+    }
+   },
+   {
+    "name": "name starts with",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Persons",
+     "query": {
+      "nameStartsWith": "W"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Wally Writer"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Walt Writer"
+      }
+     ]
+    }
+   },
+   {
+    "name": "paging",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Persons",
+     "query": {
+      "limit": "2",
+      "startIndex": "1"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 10
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Bob Player"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Cy Cast"
+      }
+     ]
+    }
+   },
+   {
+    "name": "appearing in an item",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Persons",
+     "query": {
+      "appearsInItemId": "{{item.szeta.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Ann Actor"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Bob Player"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Dana Director"
+      }
+     ]
+    }
+   },
+   {
+    "name": "favorites",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Persons",
+     "query": {
+      "isFavorite": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "a person",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Persons/Ann Actor"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Ann Actor"
+      },
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Person"
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 5
+      },
+      {
+       "path": "$.MovieCount",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.SeriesCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.EpisodeCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    },
+    "capture": {
+     "ann": "$.Id"
+    }
+   },
+   {
+    "name": "credited as actor and director",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Persons/Dana Director"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.MovieCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.EpisodeCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "by item id",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.ann}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Ann Actor"
+      },
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Person"
+      }
+     ]
+    }
+   },
+   {
+    "name": "unknown person",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Persons/Nobody"
+    },
+    "expect": {
+     "status": 404,
+     "problem": 404
+    }
+   },
+   {
+    "name": "a user with no library",
+    "as": "nofolders",
+    "request": {
+     "method": "GET",
+     "path": "/Persons"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "browse.persons.hidden",
+  "endpoint": "GET /Persons/{name}",
+  "spec": "browse.md#persons",
+  "scope": "modern",
+  "tags": [
+   "browse"
+  ],
+  "covers": [
+   "browse.persons.R3"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "item:sshow",
+   "item:spilot",
+   "library:searchshows",
+   "user:nofolders"
+  ],
+  "steps": [
+   {
+    "name": "a person only hidden items credit",
+    "as": "nofolders",
+    "request": {
+     "method": "GET",
+     "path": "/Persons/Ann Actor"
+    },
+    "expect": {
+     "status": 404,
+     "problem": 404
+    }
+   }
+  ],
+  "divergence": {
+   "reason": "The reference answers 200 (zero counts) for a person that exists only in libraries the user cannot see, which tells that the person exists."
+  }
+ },
+ {
+  "id": "browse.persons.credits",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "browse.md#persons",
+  "scope": "modern",
+  "tags": [
+   "browse",
+   "scan"
+  ],
+  "covers": [
+   "browse.persons.R4"
+  ],
+  "requires": [
+   "item:swriters",
+   "library:search",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "credits in order",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.swriters.id}}",
+     "query": {
+      "Fields": "People,Studios,Genres"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.People[0].Name",
+       "op": "eq",
+       "value": "Ann Actor"
+      },
+      {
+       "path": "$.People[0].Type",
+       "op": "eq",
+       "value": "Actor"
+      },
+      {
+       "path": "$.People[0].Role",
+       "op": "eq",
+       "value": "First"
+      },
+      {
+       "path": "$.People[1].Name",
+       "op": "eq",
+       "value": "Gus Guest"
+      },
+      {
+       "path": "$.People[1].Type",
+       "op": "eq",
+       "value": "GuestStar"
+      },
+      {
+       "path": "$.People[1].Role",
+       "op": "eq",
+       "value": "Cameo"
+      },
+      {
+       "path": "$.People[2].Name",
+       "op": "eq",
+       "value": "Zed Last"
+      },
+      {
+       "path": "$.People[3].Name",
+       "op": "eq",
+       "value": "Dana Director"
+      },
+      {
+       "path": "$.People[3].Type",
+       "op": "eq",
+       "value": "Actor"
+      },
+      {
+       "path": "$.People[3].Role",
+       "op": "eq",
+       "value": "Self"
+      },
+      {
+       "path": "$.People[4].Name",
+       "op": "eq",
+       "value": "Dana Director"
+      },
+      {
+       "path": "$.People[4].Type",
+       "op": "eq",
+       "value": "Director"
+      },
+      {
+       "path": "$.People[5].Name",
+       "op": "eq",
+       "value": "Dee Second"
+      },
+      {
+       "path": "$.People[5].Type",
+       "op": "eq",
+       "value": "Director"
+      },
+      {
+       "path": "$.People[6].Name",
+       "op": "eq",
+       "value": "Wally Writer"
+      },
+      {
+       "path": "$.People[6].Type",
+       "op": "eq",
+       "value": "Writer"
+      },
+      {
+       "path": "$.People[7].Name",
+       "op": "eq",
+       "value": "Walt Writer"
+      },
+      {
+       "path": "$.People[7].Type",
+       "op": "eq",
+       "value": "Writer"
+      },
+      {
+       "path": "$.People",
+       "op": "len",
+       "value": 8
+      },
+      {
+       "path": "$.People[0].Id",
+       "op": "hex32"
+      },
+      {
+       "path": "$.People[3].Id",
+       "op": "exists"
+      },
+      {
+       "path": "$.Studios",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Studios[0].Name",
+       "op": "eq",
+       "value": "Acme Pictures"
+      },
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "browse.years",
+  "endpoint": "GET /Years",
+  "spec": "browse.md#years",
+  "scope": "modern",
+  "tags": [
+   "browse"
+  ],
+  "covers": [
+   "browse.years.R1",
+   "browse.years.R2"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "item:sshow",
+   "item:spilot",
+   "library:searchshows",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "sorted by year",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Years",
+     "query": {
+      "sortBy": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "2011"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "2019"
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "2011"
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "Year"
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "hex32"
+      },
+      {
+       "path": "$.Items[0].UserData.Key",
+       "op": "eq",
+       "value": "Year-2011"
+      }
+     ]
+    }
+   },
+   {
+    "name": "descending",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Years",
+     "query": {
+      "sortBy": "SortName",
+      "sortOrder": "Descending",
+      "limit": "1"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "2020"
+      }
+     ]
+    }
+   },
+   {
+    "name": "series years",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Years",
+     "query": {
+      "includeItemTypes": "Series",
+      "sortBy": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "2016"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "2019"
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      }
+     ]
+    }
+   },
+   {
+    "name": "a year",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Years/2013"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "2013"
+      },
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Year"
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.MovieCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.SeriesCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.SortName",
+       "op": "eq",
+       "value": "0000002013"
+      }
+     ]
+    },
+    "capture": {
+     "y": "$.Id"
+    }
+   },
+   {
+    "name": "a year nothing has",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Years/1999"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "1999"
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "by item id",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.y}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "2013"
+      },
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Year"
+      }
+     ]
+    }
+   },
+   {
+    "name": "not a number",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Years/abc"
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   }
+  ]
+ },
+ {
+  "id": "browse.years.total",
+  "endpoint": "GET /Years",
+  "spec": "browse.md#years",
+  "scope": "modern",
+  "tags": [
+   "browse"
+  ],
+  "covers": [
+   "browse.years.R3"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "item:sshow",
+   "item:spilot",
+   "library:searchshows",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "the total counts the years",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Years",
+     "query": {
+      "includeItemTypes": "Series"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      }
+     ]
+    }
+   }
+  ],
+  "divergence": {
+   "reason": "The reference reports the number of items it scanned (not the number of years) as TotalRecordCount of GET /Years; a paging client needs the number of years."
+  }
+ },
+ {
+  "id": "browse.facets",
+  "endpoint": "GET /Items/Filters",
+  "spec": "browse.md#facets",
+  "scope": "modern",
+  "tags": [
+   "browse"
+  ],
+  "covers": [
+   "browse.facets.R1",
+   "browse.facets.R2"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "item:sshow",
+   "item:spilot",
+   "library:searchshows",
+   "library:movies",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "legacy facets need a parent",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Filters"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.Tags",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.OfficialRatings",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.Years",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "legacy facets of a library",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Filters",
+     "query": {
+      "parentId": "{{library.search.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Genres[0]",
+       "op": "eq",
+       "value": "Action"
+      },
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 6
+      },
+      {
+       "path": "$.Tags[0]",
+       "op": "eq",
+       "value": "cult"
+      },
+      {
+       "path": "$.Tags[1]",
+       "op": "eq",
+       "value": "indie"
+      },
+      {
+       "path": "$.Tags",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.OfficialRatings[0]",
+       "op": "eq",
+       "value": "G"
+      },
+      {
+       "path": "$.OfficialRatings[1]",
+       "op": "eq",
+       "value": "PG"
+      },
+      {
+       "path": "$.OfficialRatings[2]",
+       "op": "eq",
+       "value": "R"
+      },
+      {
+       "path": "$.OfficialRatings",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.Years[0]",
+       "op": "eq",
+       "value": 2011
+      },
+      {
+       "path": "$.Years[4]",
+       "op": "eq",
+       "value": 2017
+      },
+      {
+       "path": "$.Years",
+       "op": "len",
+       "value": 5
+      }
+     ]
+    }
+   },
+   {
+    "name": "legacy facets of the movies library",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Filters",
+     "query": {
+      "parentId": "{{library.movies.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.Years[0]",
+       "op": "eq",
+       "value": 2015
+      },
+      {
+       "path": "$.Years",
+       "op": "len",
+       "value": 3
+      }
+     ]
+    }
+   },
+   {
+    "name": "facets",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Filters2",
+     "query": {
+      "parentId": "{{library.search.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 6
+      },
+      {
+       "path": "$.Genres[0].Name",
+       "op": "eq",
+       "value": "Action"
+      },
+      {
+       "path": "$.Genres[0].Id",
+       "op": "hex32"
+      },
+      {
+       "path": "$.Tags[0]",
+       "op": "eq",
+       "value": "cult"
+      },
+      {
+       "path": "$.Tags",
+       "op": "len",
+       "value": 2
+      }
+     ]
+    }
+   },
+   {
+    "name": "facets of a series library",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Filters2",
+     "query": {
+      "parentId": "{{library.searchshows.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Tags",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "facets narrowed by item type",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Filters2",
+     "query": {
+      "includeItemTypes": "Series"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 2
+      }
+     ]
+    }
+   },
+   {
+    "name": "facets over everything",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Filters2"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 6
+      },
+      {
+       "path": "$.Tags",
+       "op": "len",
+       "value": 2
+      }
+     ]
+    }
+   },
+   {
+    "name": "a flag only live TV has",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Filters2",
+     "query": {
+      "isSeries": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.Tags",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "browse.item-filters",
+  "endpoint": "GET /Items",
+  "spec": "browse.md#item-filters",
+  "scope": "modern",
+  "tags": [
+   "browse",
+   "items"
+  ],
+  "covers": [
+   "browse.item.R2",
+   "browse.item.R3",
+   "browse.item.R4"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "item:sshow",
+   "item:spilot",
+   "library:searchshows",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "genres, any of (pipe), case-insensitive",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie,Series",
+      "Genres": "drama|HORROR"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Yankee Dawn"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Alpha Wolf"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Search Show"
+      }
+     ]
+    }
+   },
+   {
+    "name": "repeated genres, any of",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "Genres": "Animation"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "a comma is part of the name",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie,Series",
+      "Genres": "Drama,Horror"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "studios, any of, case-insensitive",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie,Series",
+      "Studios": "acme pictures|Cartoon Co"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Whiskey Alpha"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Writers Cut"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Yankee Dawn"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Zeta Quest"
+      }
+     ]
+    }
+   },
+   {
+    "name": "person by name",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "Person": "Dana Director"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Pilot Search"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Zeta Quest"
+      }
+     ]
+    }
+   },
+   {
+    "name": "person by name is exact",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "Person": "dana director"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "person and credit type",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "Person": "Dana Director",
+      "PersonTypes": "Actor"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Writers Cut"
+      }
+     ]
+    }
+   },
+   {
+    "name": "person types alone change nothing",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "PersonTypes": "Director"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "gte",
+       "value": 9
+      }
+     ]
+    }
+   },
+   {
+    "name": "capture ids",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Persons"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 10
+      }
+     ]
+    },
+    "capture": {
+     "ann": "$.Items[?Name=Ann Actor].Id",
+     "bob": "$.Items[?Name=Bob Player].Id"
+    }
+   },
+   {
+    "name": "capture genre ids",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Genres"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 6
+      }
+     ]
+    },
+    "capture": {
+     "drama": "$.Items[?Name=Drama].Id",
+     "horror": "$.Items[?Name=Horror].Id"
+    }
+   },
+   {
+    "name": "capture studio ids",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Studios"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      }
+     ]
+    },
+    "capture": {
+     "bolt": "$.Items[?Name=Bolt Films].Id"
+    }
+   },
+   {
+    "name": "person ids, any of",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie,Series",
+      "PersonIds": "{{capture.ann}},{{capture.bob}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 5
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Search Show"
+      }
+     ]
+    }
+   },
+   {
+    "name": "genre ids, any of",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie,Series",
+      "GenreIds": "{{capture.drama}},{{capture.horror}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      }
+     ]
+    }
+   },
+   {
+    "name": "studio ids",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie,Series",
+      "StudioIds": "{{capture.bolt}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Xray Vision"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Yankee Dawn"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Search Show"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an id that names nothing matches nothing",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "GenreIds": "00000000000000000000000000000001"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "tags",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "Tags": "CULT"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "browse.similar",
+  "endpoint": "GET /Items/{itemId}/Similar",
+  "spec": "browse.md#similar",
+  "scope": "modern",
+  "tags": [
+   "browse"
+  ],
+  "covers": [
+   "browse.similar.R1",
+   "browse.similar.R2",
+   "browse.similar.R3"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "item:sshow",
+   "item:spilot",
+   "library:searchshows",
+   "user:alice",
+   "user:rating10",
+   "item:alpha"
+  ],
+  "steps": [
+   {
+    "name": "most shared first",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.szeta.id}}/Similar"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 4
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Writers Cut"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Yankee Dawn"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Whiskey Alpha"
+      },
+      {
+       "path": "$.Items[3].Name",
+       "op": "eq",
+       "value": "Xray Vision"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.szeta.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "limit",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.szeta.id}}/Similar",
+     "query": {
+      "limit": "2"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Writers Cut"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Yankee Dawn"
+      }
+     ]
+    }
+   },
+   {
+    "name": "from another movie",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.syankee.id}}/Similar"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Zeta Quest"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Writers Cut"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Whiskey Alpha"
+      },
+      {
+       "path": "$.Items[3].Name",
+       "op": "eq",
+       "value": "Xray Vision"
+      }
+     ]
+    }
+   },
+   {
+    "name": "nothing shared",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.swolf.id}}/Similar"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "a movie with no metadata",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}/Similar"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "series are compared with series",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sshow.id}}/Similar"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "episodes have none",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.spilot.id}}/Similar"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "movies alias",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Movies/{{item.szeta.id}}/Similar"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 4
+      }
+     ]
+    }
+   },
+   {
+    "name": "what the caller may see",
+    "as": "rating10",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.szeta.id}}/Similar"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Yankee Dawn"
+      }
+     ]
+    }
+   },
+   {
+    "name": "fields",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.szeta.id}}/Similar",
+     "query": {
+      "limit": "1",
+      "Fields": "Genres"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Genres",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "unknown item",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/00000000000000000000000000000077/Similar"
+    },
+    "expect": {
+     "status": 404,
+     "problem": 404
+    }
+   },
+   {
+    "name": "not a guid",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/nope/Similar"
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   },
+   {
+    "name": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.szeta.id}}/Similar"
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ]
+ },
+ {
+  "id": "browse.recommendations",
+  "endpoint": "GET /Movies/Recommendations",
+  "spec": "browse.md#recommendations",
+  "scope": "modern",
+  "tags": [
+   "browse"
+  ],
+  "covers": [
+   "browse.recommendations.R1",
+   "browse.recommendations.R2"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "item:sshow",
+   "item:spilot",
+   "library:searchshows",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "nothing played, nothing recommended",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Movies/Recommendations"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "play a movie",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/UserPlayedItems/{{item.szeta.id}}"
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "categories from the played movie",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Movies/Recommendations"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[0].RecommendationType",
+       "op": "eq",
+       "value": "SimilarToRecentlyPlayed"
+      },
+      {
+       "path": "$[0].BaselineItemName",
+       "op": "eq",
+       "value": "Zeta Quest"
+      },
+      {
+       "path": "$[0].CategoryId",
+       "op": "eq",
+       "value": "{{item.szeta.id}}"
+      },
+      {
+       "path": "$[0].Items[0].Name",
+       "op": "eq",
+       "value": "Writers Cut"
+      },
+      {
+       "path": "$[0].Items",
+       "op": "len",
+       "value": 4
+      },
+      {
+       "path": "$[0].Items[*].Id",
+       "op": "notcontains",
+       "value": "{{item.szeta.id}}"
+      },
+      {
+       "path": "$[1].RecommendationType",
+       "op": "eq",
+       "value": "HasDirectorFromRecentlyPlayed"
+      },
+      {
+       "path": "$[1].BaselineItemName",
+       "op": "eq",
+       "value": "Dana Director"
+      },
+      {
+       "path": "$[1].Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$[2].RecommendationType",
+       "op": "eq",
+       "value": "HasActorFromRecentlyPlayed"
+      },
+      {
+       "path": "$[2].BaselineItemName",
+       "op": "eq",
+       "value": "Ann Actor"
+      },
+      {
+       "path": "$[2].Items",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$",
+       "op": "len",
+       "value": 3
+      }
+     ]
+    }
+   },
+   {
+    "name": "limits",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Movies/Recommendations",
+     "query": {
+      "categoryLimit": "1",
+      "itemLimit": "1"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[0].Items",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "unplay",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.szeta.id}}"
+    },
+    "expect": {
+     "status": 200
+    }
+   }
+  ]
+ },
+ {
+  "id": "browse.suggestions",
+  "endpoint": "GET /Items/Suggestions",
+  "spec": "browse.md#suggestions",
+  "scope": "modern",
+  "tags": [
+   "browse"
+  ],
+  "covers": [
+   "browse.suggestions.R1"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "item:sshow",
+   "item:spilot",
+   "library:searchshows",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Suggestions"
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "movies",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Suggestions",
+     "query": {
+      "type": "Movie",
+      "limit": "4"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 4
+      },
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "Movie"
+      },
+      {
+       "path": "$.Items[3].Type",
+       "op": "eq",
+       "value": "Movie"
+      }
+     ]
+    }
+   },
+   {
+    "name": "without a limit the total is the candidates",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Suggestions",
+     "query": {
+      "type": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "gte",
+       "value": 9
+      }
+     ]
+    }
+   },
+   {
+    "name": "series",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Suggestions",
+     "query": {
+      "type": "Series"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      }
+     ]
+    }
+   },
+   {
+    "name": "default types are playable media",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Suggestions",
+     "query": {
+      "limit": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "gte",
+       "value": 10
+      },
+      {
+       "path": "$.StartIndex",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "a user sees only what they may",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Suggestions",
+     "query": {
+      "type": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "exists"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "browse.intros-and-collections",
+  "endpoint": "GET /Items/{itemId}/Intros",
+  "spec": "browse.md#item-extras",
+  "scope": "modern",
+  "tags": [
+   "browse",
+   "collections"
+  ],
+  "covers": [
+   "browse.intros.R1",
+   "browse.collections.R1"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "library:movies",
+   "user:alice",
+   "user:collmgr"
+  ],
+  "steps": [
+   {
+    "name": "intros: none",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}/Intros"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "intros: per-user form",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Users/{{user.alice.id}}/Items/{{item.alpha.id}}/Intros"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "intros: unknown item",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/00000000000000000000000000000077/Intros"
+    },
+    "expect": {
+     "status": 404,
+     "problem": 404
+    }
+   },
+   {
+    "name": "collections: none yet",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}/Collections"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "create a collection",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "Name": "Conf Browse Box",
+      "Ids": "{{item.alpha.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "box": "$.Id"
+    }
+   },
+   {
+    "name": "collections: the item is in one",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}/Collections"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{capture.box}}"
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "BoxSet"
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Conf Browse Box"
+      }
+     ]
+    }
+   },
+   {
+    "name": "collections: another item is in none",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.bravo.id}}/Collections"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "collections: unknown item",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/00000000000000000000000000000077/Collections"
+    },
+    "expect": {
+     "status": 404,
+     "problem": 404
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete the collection",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.box}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ }
+]

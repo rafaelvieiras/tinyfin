@@ -189,8 +189,8 @@ the 12.2 reference with fixture items whose rating comes from a sidecar `.nfo` (
 
 ### Rules: search
 
-- **items.search.R1** `SearchTerm` matches case-insensitively as a substring of the item's name (exact, prefix and inner matches all qualify); the query is recursive over accessible libraries; no match gives an empty list with status 200.
-- **items.search.R2** When the search finds results, the order is by relevance (best match first, then sort name ascending) and `SortBy`/`SortOrder` are ignored.
+- **items.search.R1** `SearchTerm` matches as a substring of the item's name (exact, prefix and inner matches all qualify) without regard to case, accents or punctuation, and by the rules of search.hints.R3 (search.md owns them); the query is recursive over accessible libraries; no match gives an empty list with status 200. Without a type list it also finds genre, studio and person names (search.items.R1).
+- **items.search.R2** When the search finds results, the order is by relevance (search.hints.R5: starts with, ends a word, seasons and episodes, the rest; then sort name ascending) and `SortBy`/`SortOrder` are ignored.
 - **items.search.R3** `SearchTerm` combines with `IncludeItemTypes`, `ParentId` and `Recursive`; a `ParentId` limits matches to that subtree.
 
 ### Rules: sorting
@@ -253,7 +253,7 @@ the 12.2 reference with fixture items whose rating comes from a sidecar `.nfo` (
 
 ### Rules: what a scan reads (metadata files, no online provider)
 
-- **items.scan.R1** The scan reads Kodi-style `.nfo` files beside the media: `<movie>` documents (`movie.nfo` in a movie's folder, or `<video name>.nfo` beside the file; for videos of a home-videos library or several movies sharing a folder only `<video name>.nfo`), `<tvshow>` (`tvshow.nfo` in the series folder, also giving `<runtime>` and `<namedseason>` names) and `<episodedetails>` (`<episode file name>.nfo`, one or several documents, items.episodes.R10). The fields taken are `<title>`, `<originaltitle>`, `<sorttitle>`, `<plot>`, `<year>`, `<premiered>` (episodes also `<aired>`, `<season>`, `<episode>`), `<genre>`, `<tag>`, `<mpaa>`, `<rating>`/`<ratings>` and `<uniqueid type="tmdb">`; a value that is only white space is no value (items.names.R1, R2). A file that is not valid XML is ignored.
+- **items.scan.R1** The scan reads Kodi-style `.nfo` files beside the media: `<movie>` documents (`movie.nfo` in a movie's folder, or `<video name>.nfo` beside the file; for videos of a home-videos library or several movies sharing a folder only `<video name>.nfo`), `<tvshow>` (`tvshow.nfo` in the series folder, also giving `<runtime>` and `<namedseason>` names) and `<episodedetails>` (`<episode file name>.nfo`, one or several documents, items.episodes.R10). The fields taken are `<title>`, `<originaltitle>`, `<sorttitle>`, `<plot>`, `<year>`, `<premiered>` (episodes also `<aired>`, `<season>`, `<episode>`), `<genre>`, `<tag>`, `<mpaa>`, `<rating>`/`<ratings>`, `<uniqueid type="tmdb">` and the credits `<studio>`, `<actor>` (`<name>`, `<role>`, `<type>`, `<order>`), `<director>`, `<credits>` and `<writer>` (browse.persons.R4); a value that is only white space is no value (items.names.R1, R2). A file that is not valid XML is ignored.
 - **items.scan.R2** With no `.nfo` and no online provider (the reference with its network cut, Tinyfin with no provider key) an item is still cataloged and playable: its names, numbers and years come from folder and file names alone (items.names.R9 to R11, items.episodes.R6 to R9, items.seasons.R1 to R3); it has no `Overview`, genres, ratings, people or artwork other than local files next to it (`poster`, `folder`, `fanart`, `backdrop`, `logo`, `banner`, season posters); a series' `ProductionYear` is the year in its folder name.
 
 ### Rules: runtime of series

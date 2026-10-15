@@ -128,6 +128,9 @@ func (s *Server) handleSystemInfoStorage(w http.ResponseWriter, r *http.Request)
 	}
 	out.Libraries = make([]libraryStorageInfo, 0, len(libs))
 	for _, lib := range libs {
+		if lib.CollectionType == storage.CollectionTypePlaylists {
+			continue
+		}
 		out.Libraries = append(out.Libraries, libraryStorageInfoFor(lib))
 	}
 

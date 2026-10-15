@@ -79,12 +79,16 @@ var routePaths = []string{
 	// above — normalizePathCase stops at the first same-length match, and
 	// these are the same length (2 segments) as /Items/{itemId}.
 	"/Items/Latest",
+	"/Items/Root",
+	"/Items/Suggestions",
 	"/Items/Filters",
 	"/Items/Filters2",
 	"/Items/Counts",
 	"/Items/{itemId}",
 	"/Items/{itemId}/Ancestors",
 	"/Items/{itemId}/Similar",
+	"/Items/{itemId}/Intros",
+	"/Items/{itemId}/Collections",
 	// Same segment count (4, including the leading empty split element) as
 	// the two entries above and /Items/{itemId}/PlaybackInfo below, but no
 	// collision risk: normalizePathCase checks every non-wildcard segment,
@@ -107,6 +111,29 @@ var routePaths = []string{
 	// server.go's registration comment for this route.
 	"/Shows/NextUp",
 	"/Studios",
+	"/Studios/{name}",
+	"/Genres",
+	"/Genres/{genreName}",
+	"/Persons",
+	"/Persons/{name}",
+	"/Years",
+	"/Years/{year}",
+	"/Search/Hints",
+	"/Movies/Recommendations",
+	"/Movies/{itemId}/Similar",
+	"/Shows/{itemId}/Similar",
+	"/Trailers/{itemId}/Similar",
+	"/Users/{userId}/Items/{itemId}/Intros",
+	"/Playlists",
+	"/Playlists/{playlistId}",
+	"/Playlists/{playlistId}/Items",
+	"/Playlists/{playlistId}/Items/{itemId}/Move/{newIndex}",
+	"/Playlists/{playlistId}/Users",
+	"/Playlists/{playlistId}/Users/{userId}",
+	"/System/Ping",
+	"/GetUtcTime",
+	"/Localization/Options",
+	"/Localization/ParentalRatings",
 	// 3 segments (including the leading empty split element), same count as
 	// "/Playback/BitrateTest"/"/Items/Latest"/"/UserItems/Resume"/
 	// "/System/Endpoint" above — no collision risk: this pattern's second

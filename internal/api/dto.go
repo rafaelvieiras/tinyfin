@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/collection"
-	"github.com/rafaelvieiras/tinyfin/internal/guid"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
 
@@ -50,6 +49,10 @@ type baseItemDto struct {
 	Type     string `json:"Type"`
 	SeriesID string `json:"SeriesId,omitempty"`
 	SeasonID string `json:"SeasonId,omitempty"`
+
+	// PlaylistItemID identifies an entry of a playlist (it equals the id of
+	// the item the entry links to); only playlist entry listings carry it.
+	PlaylistItemID string `json:"PlaylistItemId,omitempty"`
 
 	// SeriesName/SeasonName: found missing, not just unpolished, by testing
 	// an episode detail page against a real jellyfin-web build — its header
@@ -186,6 +189,10 @@ type baseItemDto struct {
 	// present where it means something" convention for this field.
 	ChildCount *int `json:"ChildCount,omitempty"`
 
+	// CumulativeRunTimeTicks is the running time of everything a playlist
+	// holds (the single-item form only).
+	CumulativeRunTimeTicks *int64 `json:"CumulativeRunTimeTicks,omitempty"`
+
 	// RecursiveItemCount is how many items below a folder-shaped item are not
 	// folders themselves (episodes below a series, videos below a folder).
 	RecursiveItemCount *int `json:"RecursiveItemCount,omitempty"`
@@ -292,9 +299,7 @@ type nameIDPairDto struct {
 // kept as its own small copy per those functions' doc comments on why: a
 // genre appearing on more than one item needs to resolve to the same Id
 // every time, not a fresh one per response.
-func genreID(name string) string {
-	return guid.Derive("genre-" + name)
-}
+func genreID(name string) string { return namedItemID(storage.NamedGenre, name) }
 
 // genreItemsFor builds BaseItemDto.GenreItems from the same genre names
 // Genres already carries.
@@ -313,9 +318,7 @@ func genreItemsFor(genres []string) []nameIDPairDto {
 // same guid.Derive technique as genreID above, with its own "studio-"
 // prefix so a studio and a genre that happen to share a name don't collide
 // on the same Id.
-func studioID(name string) string {
-	return guid.Derive("studio-" + name)
-}
+func studioID(name string) string { return namedItemID(storage.NamedStudio, name) }
 
 // studioItemsFor builds BaseItemDto.Studios from the same studio names
 // item.Studios already carries — mirrors genreItemsFor above.
@@ -532,9 +535,7 @@ type baseItemPersonDto struct {
 // files' doc comments on why) so the same actor/director appearing across
 // different items, or across a re-scan, always gets the same Id instead of
 // a fresh one per response.
-func personID(name string) string {
-	return guid.Derive("person-" + name)
-}
+func personID(name string) string { return namedItemID(storage.NamedPerson, name) }
 
 func peopleDtos(people []storage.Person) []baseItemPersonDto {
 	if len(people) == 0 {
@@ -649,7 +650,8 @@ func isFolderType(t storage.ItemType) bool {
 		storage.ItemTypeMusicArtist, storage.ItemTypeMusicAlbum,
 		storage.ItemTypeBoxSet, storage.ItemTypePlaylist,
 		storage.ItemTypeFolder, storage.ItemTypeCollectionFolder,
-		storage.ItemTypeUserView, storage.ItemTypePhotoAlbum:
+		storage.ItemTypeUserView, storage.ItemTypePhotoAlbum,
+		storage.ItemTypeManualPlaylistsFolder:
 		return true
 	default:
 		return false
@@ -1120,6 +1122,9 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		dto.CanDownload = ac.User.IsAdministrator && !isFolderType(item.Type)
 		dto.Etag = etagFor(item)
 		dto.DisplayPreferencesID = displayPreferencesIDFor(item.Type)
+	}
+	if item.Type == storage.ItemTypePlaylist {
+		s.applyPlaylistInfo(ctx, &dto, item)
 	}
 	return dto
 }

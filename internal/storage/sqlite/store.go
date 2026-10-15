@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	_ "modernc.org/sqlite"
 
@@ -61,6 +62,10 @@ type Store struct {
 	// the first commits, so SQLite itself never sees two connections
 	// contend for the write lock.
 	writeMu sync.Mutex
+
+	// namedFilled is set once named_items has been rebuilt from the items
+	// (FindNamed); shared by the transactional views of one store.
+	namedFilled *atomic.Bool
 }
 
 var _ storage.Store = (*Store)(nil)
@@ -84,7 +89,7 @@ func New(path string) (*Store, error) {
 		return nil, err
 	}
 
-	return &Store{db: db, ex: db}, nil
+	return &Store{db: db, ex: db, namedFilled: new(atomic.Bool)}, nil
 }
 
 // withTx runs fn against a single transaction, reusing s.ex's existing
@@ -156,7 +161,7 @@ func (s *Store) Tx(ctx context.Context, fn func(storage.Store) error) error {
 		return fmt.Errorf("sqlite: beginning transaction: %w", err)
 	}
 
-	txStore := &Store{db: s.db, ex: tx}
+	txStore := &Store{db: s.db, ex: tx, namedFilled: s.namedFilled}
 	if err := fn(txStore); err != nil {
 		if rbErr := tx.Rollback(); rbErr != nil {
 			return fmt.Errorf("sqlite: tx failed (%w) and rollback failed: %v", err, rbErr)

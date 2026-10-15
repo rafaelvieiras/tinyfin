@@ -17,27 +17,29 @@ import "time"
 type ItemType string
 
 const (
-	ItemTypeMovie            ItemType = "Movie"
-	ItemTypeSeries           ItemType = "Series"
-	ItemTypeSeason           ItemType = "Season"
-	ItemTypeEpisode          ItemType = "Episode"
-	ItemTypeTrailer          ItemType = "Trailer"
-	ItemTypeMusicArtist      ItemType = "MusicArtist"
-	ItemTypeMusicAlbum       ItemType = "MusicAlbum"
-	ItemTypeAudio            ItemType = "Audio"
-	ItemTypeBoxSet           ItemType = "BoxSet" // collections, 04's "collections" group
-	ItemTypePlaylist         ItemType = "Playlist"
-	ItemTypePerson           ItemType = "Person" // cast/crew, see docs/05's note on Person
-	ItemTypeGenre            ItemType = "Genre"
-	ItemTypeMusicGenre       ItemType = "MusicGenre"
-	ItemTypeStudio           ItemType = "Studio"
-	ItemTypeYear             ItemType = "Year"
-	ItemTypeVideo            ItemType = "Video" // a video file of a home-videos library
-	ItemTypeFolder           ItemType = "Folder"
-	ItemTypePhoto            ItemType = "Photo"            // a picture of a home-videos library
-	ItemTypePhotoAlbum       ItemType = "PhotoAlbum"       // a folder that directly holds pictures
-	ItemTypeCollectionFolder ItemType = "CollectionFolder" // a library root
-	ItemTypeUserView         ItemType = "UserView"         // a user's view of a library root
+	ItemTypeMovie       ItemType = "Movie"
+	ItemTypeSeries      ItemType = "Series"
+	ItemTypeSeason      ItemType = "Season"
+	ItemTypeEpisode     ItemType = "Episode"
+	ItemTypeTrailer     ItemType = "Trailer"
+	ItemTypeMusicArtist ItemType = "MusicArtist"
+	ItemTypeMusicAlbum  ItemType = "MusicAlbum"
+	ItemTypeAudio       ItemType = "Audio"
+	ItemTypeBoxSet      ItemType = "BoxSet" // collections, 04's "collections" group
+	ItemTypePlaylist    ItemType = "Playlist"
+	// ItemTypeManualPlaylistsFolder is the folder every playlist sits in.
+	ItemTypeManualPlaylistsFolder ItemType = "ManualPlaylistsFolder"
+	ItemTypePerson                ItemType = "Person" // cast/crew, see docs/05's note on Person
+	ItemTypeGenre                 ItemType = "Genre"
+	ItemTypeMusicGenre            ItemType = "MusicGenre"
+	ItemTypeStudio                ItemType = "Studio"
+	ItemTypeYear                  ItemType = "Year"
+	ItemTypeVideo                 ItemType = "Video" // a video file of a home-videos library
+	ItemTypeFolder                ItemType = "Folder"
+	ItemTypePhoto                 ItemType = "Photo"            // a picture of a home-videos library
+	ItemTypePhotoAlbum            ItemType = "PhotoAlbum"       // a folder that directly holds pictures
+	ItemTypeCollectionFolder      ItemType = "CollectionFolder" // a library root
+	ItemTypeUserView              ItemType = "UserView"         // a user's view of a library root
 )
 
 // SortBy is a QueryItems sort key. Values equal the reference server's
@@ -338,7 +340,8 @@ func (i Item) HasMediaFile() bool {
 		return false
 	}
 	switch i.Type {
-	case ItemTypeSeries, ItemTypeSeason, ItemTypeFolder, ItemTypeCollectionFolder, ItemTypePhotoAlbum:
+	case ItemTypeSeries, ItemTypeSeason, ItemTypeFolder, ItemTypeCollectionFolder, ItemTypePhotoAlbum,
+		ItemTypePlaylist, ItemTypeManualPlaylistsFolder:
 		return false
 	}
 	return true

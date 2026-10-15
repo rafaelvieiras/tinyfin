@@ -130,10 +130,20 @@ func (s *Store) UpdateUser(ctx context.Context, user storage.User) error {
 }
 
 func (s *Store) DeleteUser(ctx context.Context, id storage.UserID) error {
-	if _, err := s.exec(ctx, `DELETE FROM users WHERE id = ?`, string(id)); err != nil {
-		return fmt.Errorf("sqlite: deleting user %q: %w", id, err)
-	}
-	return nil
+	return s.withTx(ctx, func(ex dbtx) error {
+		// The playlists the user owns go with the account, and the shares
+		// made to them are withdrawn.
+		if _, err := ex.ExecContext(ctx, `DELETE FROM items WHERE id IN (SELECT playlist_id FROM playlist_access WHERE owner_id = ?)`, string(id)); err != nil {
+			return fmt.Errorf("sqlite: deleting playlists of user %q: %w", id, err)
+		}
+		if _, err := ex.ExecContext(ctx, `DELETE FROM playlist_shares WHERE user_id = ?`, string(id)); err != nil {
+			return fmt.Errorf("sqlite: deleting playlist shares of user %q: %w", id, err)
+		}
+		if _, err := ex.ExecContext(ctx, `DELETE FROM users WHERE id = ?`, string(id)); err != nil {
+			return fmt.Errorf("sqlite: deleting user %q: %w", id, err)
+		}
+		return nil
+	})
 }
 
 // IssueToken mints a token bound to (userID, deviceID). A token is bound to

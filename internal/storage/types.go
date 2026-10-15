@@ -72,8 +72,9 @@ type ItemFilter struct {
 	// differently-derived ID (a prior devseed run, a since-changed hashing
 	// scheme, ...) gets updated in place on the next scan rather than
 	// duplicated alongside a second row for the same file.
-	Path       string
-	ItemTypes  []ItemType
+	Path      string
+	ItemTypes []ItemType
+	// Genres keeps items that carry any of the genres (case-insensitive).
 	Genres     []string
 	SearchText string // backs FTS5 search, 09
 	Recursive  bool
@@ -136,9 +137,24 @@ type ItemFilter struct {
 	IsHD                                     *bool
 	Is4K                                     *bool
 
-	Tags               []string
-	OfficialRatings    []string
-	PersonName         string
+	Tags            []string
+	OfficialRatings []string
+	// Studios keeps items that carry any of the studios (case-insensitive),
+	// like Genres.
+	Studios []string
+	// PersonName keeps items that credit that person (exact name);
+	// PersonNames any of several. PersonTypes narrows the credit kinds
+	// (Actor, Director, ...) when a person is named.
+	PersonName  string
+	PersonNames []string
+	PersonTypes []string
+	// Similar keeps the items that share at least one genre, studio, person
+	// or tag with the spec, best match (most shared values) first when no
+	// SortBy is given.
+	Similar *SimilarSpec
+	// PlaylistViewer limits the playlists of the result to the ones the
+	// user may read: owned, shared with them or open to everybody.
+	PlaylistViewer     *UserID
 	HasOverview        *bool
 	HasSubtitles       *bool
 	HasImdbID          *bool
@@ -202,6 +218,11 @@ type ItemFilter struct {
 	// result and each collection holding at least one matching item takes
 	// their place (CollapseBoxSetItems).
 	CollapseBoxSets bool
+}
+
+// SimilarSpec is the set of values an item is compared on.
+type SimilarSpec struct {
+	Genres, Studios, People, Tags []string
 }
 
 // SeasonMembers identifies the episodes that belong to a season by number.
