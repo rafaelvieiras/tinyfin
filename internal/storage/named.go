@@ -48,6 +48,11 @@ type NamedEntry struct {
 	Playlists int
 	Others    int
 	Total     int
+	// Songs, Albums and Artists count the music items that carry the name
+	// (they are part of Others).
+	Songs   int
+	Albums  int
+	Artists int
 	// Created is the earliest creation date among the carrying items.
 	Created time.Time
 }

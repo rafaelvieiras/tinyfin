@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Music, second slice (`docs/contract/specs/music.md`): `GET /MusicGenres`, `/MusicGenres/{name}`
+  (with `ItemCounts`) and `Genres`/`GenreIds` filters for tracks, albums and artists; `GET
+  /Artists/{name}`; artist pictures (`folder.jpg`/`poster.jpg` Primary, `backdrop.jpg`/`fanart.jpg`
+  Backdrop, parent backdrop on tracks and albums); `artist.nfo` and `album.nfo` (overview, genres,
+  year, MusicBrainz ids and their `ExternalUrls`); disc folders (`CD1`, `Disc 2`) as part of the
+  album, albums directly under the library root, loose files at the root and in artist folders;
+  lyrics (`.lrc`/`.txt` beside the track, `HasLyrics`, `Lyric` media stream, `GET
+  /Audio/{id}/Lyrics`). Tag values are no longer split on `;`, as on the reference. `/Genres`
+  leaves music items out. 11 new scenarios (`music2.*`).
 - Content policy: `GET /Items/{itemId}/Download` serves the original file as an attachment
   (ranges, `Content-Disposition`) and enforces `EnableContentDownloading` (403, 400 for an
   administrator without it, 401 for an API key). `DELETE /Items/{itemId}` now follows

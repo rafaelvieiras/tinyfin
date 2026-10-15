@@ -73,8 +73,21 @@ func (s *Server) decorateMusic(ctx context.Context, item storage.Item, dto *base
 			// the zero date when the tags have none.
 			dto.PremiereDate = &wireTime{zero}
 		}
-		f := false
-		dto.HasLyrics = &f
+		hasLyrics := false
+		if lp, _ := lyricsFileFor(item.Path); lp != "" {
+			hasLyrics = true
+			// The lyrics file is a stream of the track, after its own.
+			add := func(streams []mediaStreamDto) []mediaStreamDto {
+				return append(streams, mediaStreamDto{Type: "Lyric", Index: len(streams), Path: lp})
+			}
+			if len(dto.MediaStreams) > 0 {
+				dto.MediaStreams = add(dto.MediaStreams)
+			}
+			for i := range dto.MediaSources {
+				dto.MediaSources[i].MediaStreams = add(dto.MediaSources[i].MediaStreams)
+			}
+		}
+		dto.HasLyrics = &hasLyrics
 		dto.ArtistItems = s.musicNameRefs(ctx, item.LibraryID, item.Artists)
 		if item.AlbumArtist != "" {
 			dto.AlbumArtists = s.musicNameRefs(ctx, item.LibraryID, []string{item.AlbumArtist})
@@ -151,6 +164,10 @@ func (s *Server) decorateMusic(ctx context.Context, item storage.Item, dto *base
 			}
 			dto.CumulativeRunTimeTicks = &ticks
 			dto.RunTimeTicks = &ticks
+			if len(item.Genres) > 0 {
+				// An artist.nfo names the genres; else the tracks' do.
+				genres = item.Genres
+			}
 			dto.Genres = genres
 			dto.GenreItems = genreItemsFor(genres)
 		} else {

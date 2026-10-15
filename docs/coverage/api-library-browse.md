@@ -4,9 +4,9 @@
 
 Item listing, single items, genres/people/studios, search and the other browse endpoints.
 
-[Overview](../COVERAGE.md) · 58 operations · 42 registered (72%) · 37 verified · ✅ 40 · 🟡 1 · 🗓️ 13 · ⛔ 3 · ↔️ 1
+[Overview](../COVERAGE.md) · 58 operations · 44 registered (76%) · 39 verified · ✅ 42 · 🟡 1 · 🗓️ 13 · ⛔ 1 · ↔️ 1
 
-✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔
+✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️
 
 Columns: **Auth** is the reference's authorization policy; **Web** = mentioned in docs/11 (called by the official web client); **Tests** = scenarios that exercise the route (passing / total).
 
@@ -16,7 +16,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 |---|---|---|---|---|---|
 | ✅ supported | `GET /Artists` *(deprecated)* | DefaultAuthorization | yes | 1/1 |  |
 | ✅ supported | `GET /Artists/AlbumArtists` *(deprecated)* | DefaultAuthorization | yes | 1/1 |  |
-| ⛔ not-planned | `GET /Artists/{name}` *(deprecated)* | DefaultAuthorization |  |  | Music libraries are not scanned (video-first scope, docs/01); not on ROADMAP.md. (priority: low) |
+| ✅ supported | `GET /Artists/{name}` *(deprecated)* | DefaultAuthorization |  | 1/1 |  |
 
 ## Filter
 
@@ -29,7 +29,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ✅ supported | `GET /Genres` | DefaultAuthorization | yes | 4/4 |  |
+| ✅ supported | `GET /Genres` | DefaultAuthorization | yes | 5/5 |  |
 | ✅ supported | `GET /Genres/{genreName}` | DefaultAuthorization | yes | 1/1 |  |
 
 ## Library
@@ -39,12 +39,12 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | 🗓️ planned | `GET /Albums/{itemId}/Similar` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | 🗓️ planned | `GET /Artists/{itemId}/Similar` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | 🗓️ planned | `DELETE /Items` | DefaultAuthorization | yes |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
-| ↔️ divergent-by-design | `GET /Items` | DefaultAuthorization | yes | 165/165 | The library-access restriction also applies when items are requested by Ids (the reference skips it). Recorded as a divergence in the contract scenarios. |
+| ↔️ divergent-by-design | `GET /Items` | DefaultAuthorization | yes | 168/168 | The library-access restriction also applies when items are requested by Ids (the reference skips it). Recorded as a divergence in the contract scenarios. |
 | ✅ supported | `GET /Items/Counts` | DefaultAuthorization | yes | 2/2 |  |
 | ✅ supported | `GET /Items/Latest` | DefaultAuthorization | yes | 2/2 |  |
 | ✅ supported *(no scenario)* | `GET /Items/Root` | DefaultAuthorization | yes |  |  |
 | ✅ supported | `DELETE /Items/{itemId}` | DefaultAuthorization | yes | 10/10 |  |
-| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 177/177 |  |
+| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 184/184 |  |
 | ✅ supported | `GET /Items/{itemId}/Ancestors` | DefaultAuthorization | yes | 2/2 |  |
 | ✅ supported | `GET /Items/{itemId}/Collections` | DefaultAuthorization | yes | 1/1 |  |
 | ✅ supported | `GET /Items/{itemId}/Download` | Download |  | 4/4 |  |
@@ -81,7 +81,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ⛔ not-planned | `GET /MusicGenres/{genreName}` *(deprecated)* | DefaultAuthorization |  |  | Music libraries are not scanned (video-first scope, docs/01). (priority: low) |
+| ✅ supported | `GET /MusicGenres/{genreName}` *(deprecated)* | DefaultAuthorization |  | 1/1 |  |
 
 ## Person
 

@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 709
+    "pass": 720
   },
   "scenarios": {
     "admin.backup.create": "pass",
@@ -265,6 +265,17 @@
     "music.track.id3": "pass",
     "music.track.untagged": "pass",
     "music.track.vorbis": "pass",
+    "music2.album.nfo": "pass",
+    "music2.artist.by-name": "pass",
+    "music2.artist.images": "pass",
+    "music2.disc.folders": "pass",
+    "music2.genres.filter": "pass",
+    "music2.genres.list": "pass",
+    "music2.genres.single": "pass",
+    "music2.loose.files": "pass",
+    "music2.lyrics.none": "pass",
+    "music2.lyrics.plain": "pass",
+    "music2.lyrics.timed": "pass",
     "playback.audio.body": "pass",
     "playback.audio.ignored": "pass",
     "playback.audio.selection": "pass",

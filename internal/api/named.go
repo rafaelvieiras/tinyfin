@@ -239,8 +239,9 @@ func (s *Server) namedItemDto(e storage.NamedEntry, o namedDtoOpts) namedDto {
 		dto.ChildCount = &n
 		zero := 0
 		movie, series, episode := e.Movies, e.Series, e.Episodes
-		dto.TrailerCount, dto.ProgramCount, dto.SongCount = &zero, &zero, &zero
-		dto.AlbumCount, dto.ArtistCount, dto.MusicVideoCount = &zero, &zero, &zero
+		songs, albums, artists := e.Songs, e.Albums, e.Artists
+		dto.TrailerCount, dto.ProgramCount, dto.SongCount = &zero, &zero, &songs
+		dto.AlbumCount, dto.ArtistCount, dto.MusicVideoCount = &albums, &artists, &zero
 		dto.MovieCount, dto.SeriesCount, dto.EpisodeCount = &movie, &series, &episode
 	}
 	return dto
@@ -250,12 +251,12 @@ func (s *Server) namedItemDto(e storage.NamedEntry, o namedDtoOpts) namedDto {
 // sort name only when Fields asks for them, the counts only with ItemCounts
 // or ChildCount (genres and studios; also when item types are named), user
 // data and images as the request enables them.
-func shapeNamed(d namedDto, iq itemsQuery, kind storage.NamedKind) namedDto {
+func shapeNamed(d namedDto, iq itemsQuery, kind storage.NamedKind, music bool) namedDto {
 	has := func(n string) bool { return iq.fields[n] }
 	counts := false
 	switch kind {
 	case storage.NamedGenre:
-		counts = has("itemcounts") || has("childcount") || len(iq.filter.ItemTypes) > 0
+		counts = has("itemcounts") || has("childcount") || (len(iq.filter.ItemTypes) > 0 && !music)
 	case storage.NamedStudio:
 		counts = has("itemcounts") || has("childcount") || len(iq.filter.ItemTypes) > 0
 	}
@@ -286,9 +287,31 @@ func shapeNamed(d namedDto, iq itemsQuery, kind storage.NamedKind) namedDto {
 // listNamed serves a named-item listing: the distinct names of kind carried
 // by the caller's items, with paging, name filters and sorting.
 func (s *Server) listNamed(w http.ResponseWriter, r *http.Request, kind storage.NamedKind, withUserData bool) {
+	s.listNamedIn(w, r, kind, withUserData, namedScope{})
+}
+
+// namedScope narrows a genre listing to the music items (music) or leaves
+// them out (noMusic), unless the request names item types itself.
+type namedScope struct{ music, noMusic bool }
+
+var musicItemTypes = []storage.ItemType{storage.ItemTypeAudio, storage.ItemTypeMusicAlbum, storage.ItemTypeMusicArtist}
+
+func (s *Server) listNamedIn(w http.ResponseWriter, r *http.Request, kind storage.NamedKind, withUserData bool, ns namedScope) {
 	nr, ok := s.newNamedReq(w, r)
 	if !ok {
 		return
+	}
+	if ns.noMusic && nr.carriers.LibraryID != nil {
+		// A music library as the parent lists its genres, as music genres.
+		if lib, err := s.store.GetLibrary(r.Context(), *nr.carriers.LibraryID); err == nil && lib.CollectionType == storage.CollectionTypeMusic {
+			ns = namedScope{music: true}
+		}
+	}
+	if ns.music && len(nr.carriers.ItemTypes) == 0 {
+		nr.carriers.ItemTypes = musicItemTypes
+	}
+	if ns.noMusic && len(nr.carriers.ItemTypes) == 0 {
+		nr.carriers.ExcludeItemTypes = append(append([]storage.ItemType{}, nr.carriers.ExcludeItemTypes...), musicItemTypes...)
 	}
 	ctx := r.Context()
 	q := nr.q
@@ -347,7 +370,7 @@ func (s *Server) listNamed(w http.ResponseWriter, r *http.Request, kind storage.
 	// types the listing was narrowed to by IncludeItemTypes (an exclusion
 	// does narrow them).
 	counts := map[string]storage.NamedEntry{}
-	if len(nq.Scope.ItemTypes) > 0 && (kind == storage.NamedGenre || kind == storage.NamedStudio) {
+	if len(nq.Scope.ItemTypes) > 0 && !ns.music && (kind == storage.NamedGenre || kind == storage.NamedStudio) {
 		all := nq
 		all.Scope.ItemTypes = nil
 		all.Limit, all.Offset = 0, 0
@@ -363,7 +386,15 @@ func (s *Server) listNamed(w http.ResponseWriter, r *http.Request, kind storage.
 			e.Movies, e.Series, e.Episodes, e.Playlists, e.Others, e.Total = c.Movies, c.Series, c.Episodes, c.Playlists, c.Others, c.Total
 		}
 		d := s.namedItemDto(e, namedDtoOpts{userData: withUserData && nr.iq.userData, counts: true})
-		items = append(items, shapeNamed(d, nr.iq, kind))
+		d = shapeNamed(d, nr.iq, kind, ns.music)
+		if ns.music {
+			d.Type = "MusicGenre"
+			d.Path = ""
+			if nr.iq.fields["path"] {
+				d.Path = path.Join("/metadata/MusicGenre", e.Name)
+			}
+		}
+		items = append(items, d)
 	}
 	total := page.Total
 	if (kind == storage.NamedGenre || kind == storage.NamedStudio) && strings.EqualFold(nr.iq.totalRecord, "false") {
@@ -377,7 +408,13 @@ func (s *Server) listNamed(w http.ResponseWriter, r *http.Request, kind storage.
 }
 
 func (s *Server) handleGenres(w http.ResponseWriter, r *http.Request) {
-	s.listNamed(w, r, storage.NamedGenre, false)
+	s.listNamedIn(w, r, storage.NamedGenre, false, namedScope{noMusic: true})
+}
+
+// handleMusicGenres is GET /MusicGenres: the genres of audio, albums and
+// artists, with the same shape as /Genres but type MusicGenre.
+func (s *Server) handleMusicGenres(w http.ResponseWriter, r *http.Request) {
+	s.listNamedIn(w, r, storage.NamedGenre, false, namedScope{music: true})
 }
 
 func (s *Server) handleStudios(w http.ResponseWriter, r *http.Request) {
@@ -397,6 +434,10 @@ func (s *Server) handleYears(w http.ResponseWriter, r *http.Request) {
 // can see that carry it. Genres, studios and years answer for a name nothing
 // carries (with zero counts); a person nothing credits is a 404.
 func (s *Server) namedSingle(w http.ResponseWriter, r *http.Request, kind storage.NamedKind, name string) {
+	s.namedSingleIn(w, r, kind, name, namedScope{})
+}
+
+func (s *Server) namedSingleIn(w http.ResponseWriter, r *http.Request, kind storage.NamedKind, name string, ns namedScope) {
 	ctx := r.Context()
 	q := caseInsensitiveQuery(r)
 	user, ok := s.itemsContextUser(w, r, q.Get("userid"))
@@ -410,6 +451,11 @@ func (s *Server) namedSingle(w http.ResponseWriter, r *http.Request, kind storag
 	}
 	var scope storage.ItemFilter
 	sc.apply(&scope)
+	if ns.music {
+		scope.ItemTypes = musicItemTypes
+	} else if ns.noMusic {
+		scope.ExcludeItemTypes = append(append([]storage.ItemType{}, scope.ExcludeItemTypes...), musicItemTypes...)
+	}
 	ref := storage.NamedRef{Kind: kind, Name: name, ID: storage.NamedID(kind, name)}
 	if known, found, _ := s.store.FindNamed(ctx, ref.ID); found {
 		ref.Name = known.Name // the spelling the catalog carries
@@ -423,11 +469,23 @@ func (s *Server) namedSingle(w http.ResponseWriter, r *http.Request, kind storag
 		writeItemsProblem(w, http.StatusNotFound, "Not Found")
 		return
 	}
-	writeJSON(w, http.StatusOK, s.namedItemDto(e, namedDtoOpts{full: true, userData: true, counts: true}))
+	dto := s.namedItemDto(e, namedDtoOpts{full: true, userData: true, counts: true})
+	if ns.music {
+		dto.Type = "MusicGenre"
+		dto.Path = path.Join("/metadata/MusicGenre", e.Name)
+		if dto.UserData != nil {
+			dto.UserData.Key = "MusicGenre-" + e.Name
+		}
+	}
+	writeJSON(w, http.StatusOK, dto)
 }
 
 func (s *Server) handleGenreByName(w http.ResponseWriter, r *http.Request) {
-	s.namedSingle(w, r, storage.NamedGenre, r.PathValue("genreName"))
+	s.namedSingleIn(w, r, storage.NamedGenre, r.PathValue("genreName"), namedScope{noMusic: true})
+}
+
+func (s *Server) handleMusicGenreByName(w http.ResponseWriter, r *http.Request) {
+	s.namedSingleIn(w, r, storage.NamedGenre, r.PathValue("genreName"), namedScope{music: true})
 }
 
 func (s *Server) handleStudioByName(w http.ResponseWriter, r *http.Request) {

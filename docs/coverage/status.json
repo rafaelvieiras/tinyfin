@@ -8,15 +8,15 @@
    "supported": 60
   },
   "operations": 364,
-  "registered": 170,
+  "registered": 173,
   "routes_by_status": {
    "divergent-by-design": 16,
-   "not-planned": 107,
+   "not-planned": 104,
    "partial": 12,
    "planned": 87,
-   "supported": 142
+   "supported": 145
   },
-  "verified": 128
+  "verified": 131
  },
  "routes": [
   {
@@ -50,12 +50,13 @@
    "tag": "Artist",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "not-planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": false,
-   "notes": "Music libraries are not scanned (video-first scope, docs/01); not on ROADMAP.md.",
-   "priority": "low"
+   "scenarios": [
+    "music2.artist.by-name"
+   ]
   },
   {
    "id": "GET /Audio/{itemId}/stream",
@@ -906,6 +907,7 @@
     "browse.genres.list",
     "browse.genres.query",
     "browse.item-filters",
+    "music2.genres.list",
     "playlists.item.metadata-refresh"
    ]
   },
@@ -1072,7 +1074,8 @@
    "web": true,
    "scenarios": [
     "images.api.index-lookup",
-    "music.image.album"
+    "music.image.album",
+    "music2.artist.images"
    ]
   },
   {
@@ -1086,7 +1089,8 @@
    "web": true,
    "scenarios": [
     "images.api.index-lookup",
-    "music.image.album"
+    "music.image.album",
+    "music2.artist.images"
    ]
   },
   {
@@ -1120,7 +1124,8 @@
    "web": false,
    "scenarios": [
     "images.api.index-lookup",
-    "images.local.backdrops"
+    "images.local.backdrops",
+    "music2.artist.images"
    ]
   },
   {
@@ -1134,7 +1139,8 @@
    "web": false,
    "scenarios": [
     "images.api.index-lookup",
-    "images.local.backdrops"
+    "images.local.backdrops",
+    "music2.artist.images"
    ]
   },
   {
@@ -1815,6 +1821,9 @@
     "music.artists.list",
     "music.list.artist-filter",
     "music.scan.library",
+    "music2.disc.folders",
+    "music2.genres.filter",
+    "music2.loose.files",
     "playlists.acl.matrix",
     "playlists.create.basic",
     "playlists.create.errors",
@@ -1982,6 +1991,13 @@
     "music.track.id3",
     "music.track.untagged",
     "music.track.vorbis",
+    "music2.album.nfo",
+    "music2.artist.images",
+    "music2.disc.folders",
+    "music2.loose.files",
+    "music2.lyrics.none",
+    "music2.lyrics.plain",
+    "music2.lyrics.timed",
     "playlists.create.basic",
     "playlists.create.for-user",
     "playlists.create.variants",
@@ -3059,12 +3075,15 @@
    "tag": "Lyric",
    "group": "playback",
    "policy": "DefaultAuthorization",
-   "status": "not-planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Music is not cataloged (video-first scope, docs/01).",
-   "priority": "low"
+   "scenarios": [
+    "music2.lyrics.none",
+    "music2.lyrics.plain",
+    "music2.lyrics.timed"
+   ]
   },
   {
    "id": "POST /Audio/{itemId}/Lyrics",
@@ -3220,12 +3239,13 @@
    "tag": "MusicGenre",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "not-planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": false,
-   "notes": "Music libraries are not scanned (video-first scope, docs/01).",
-   "priority": "low"
+   "scenarios": [
+    "music2.genres.single"
+   ]
   },
   {
    "id": "GET /Persons",
@@ -6295,9 +6315,9 @@
    "id": "library-types.music",
    "title": "Music",
    "status": "partial",
-   "description": "Scanned: folders with audio files become MusicAlbum, root folders MusicArtist, files Audio items with ID3/Vorbis tags (title, artist, album, album artist, track, disc, year, genre) and folder fallbacks; album picture from cover/folder/poster files or a picture embedded in a track; artist listings and direct audio streaming.",
+   "description": "Scanned: folders with audio files become MusicAlbum, root folders MusicArtist, files Audio items with ID3/Vorbis tags (title, artist, album, album artist, track, disc, year, genre) and folder fallbacks; album picture from cover/folder/poster files or a picture embedded in a track; artist listings and lookup by name, music genres, artist pictures, artist.nfo/album.nfo, disc folders, loose files, lyrics files and direct audio streaming.",
    "reference": "Music library with artists, albums, tracks, lyrics and instant mixes.",
-   "notes": "First slice. Left out: Instant Mix, lyrics, MusicGenres, music videos, audio transcoding, People on tracks, artist images, disc subfolders (specs/music.md, Not covered).",
+   "notes": "Second slice. Left out: Instant Mix, music videos, audio transcoding, People on tracks, Folder items for disc folders, lyrics upload/search (specs/music.md, Not covered).",
    "spec_rules": [
     "music.album.R1",
     "music.album.R2",
@@ -6326,7 +6346,29 @@
     "music.stream.R4",
     "music.track.R1",
     "music.track.R2",
-    "music.track.R3"
+    "music.track.R3",
+    "music.genre.R1",
+    "music.genre.R2",
+    "music.genre.R3",
+    "music.genre.R4",
+    "music.genre.R5",
+    "music.artist.R4",
+    "music.artist.R5",
+    "music.image.R4",
+    "music.image.R5",
+    "music.nfo.R1",
+    "music.nfo.R2",
+    "music.disc.R1",
+    "music.disc.R2",
+    "music.disc.R3",
+    "music.loose.R1",
+    "music.loose.R2",
+    "music.loose.R3",
+    "music.lyrics.R1",
+    "music.lyrics.R2",
+    "music.lyrics.R3",
+    "music.lyrics.R4",
+    "music.lyrics.R5"
    ],
    "scenarios": [
     "music.scan.library",
@@ -6342,7 +6384,18 @@
     "music.image.album",
     "music.stream.direct",
     "music.stream.unknown",
-    "music.playback.info"
+    "music.playback.info",
+    "music2.genres.list",
+    "music2.genres.single",
+    "music2.genres.filter",
+    "music2.artist.by-name",
+    "music2.artist.images",
+    "music2.album.nfo",
+    "music2.disc.folders",
+    "music2.loose.files",
+    "music2.lyrics.timed",
+    "music2.lyrics.plain",
+    "music2.lyrics.none"
    ],
    "code": [
     "internal/scan/music.go",
@@ -8137,6 +8190,7 @@
   "DELETE /Users/{userId}/FavoriteItems/{itemId}",
   "DELETE /Users/{userId}/PlayedItems/{itemId}",
   "GET /Audio/{itemId}/{file}",
+  "GET /MusicGenres",
   "GET /Users/{userId}/Items",
   "GET /Users/{userId}/Items/{itemId}",
   "GET /Users/{userId}/Items/{itemId}/Intros",

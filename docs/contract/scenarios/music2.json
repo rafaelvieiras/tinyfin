@@ -1,0 +1,1416 @@
+[
+ {
+  "id": "music2.genres.list",
+  "endpoint": "GET /MusicGenres",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.genre.R1",
+   "music.genre.R2",
+   "music.genre.R3"
+  ],
+  "requires": [
+   "library:music2",
+   "item:m2synced"
+  ],
+  "steps": [
+   {
+    "name": "music genres of the library",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MusicGenres",
+     "query": {
+      "ParentId": "{{library.music2.id}}",
+      "Fields": "ItemCounts"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[?Name=Pop].Type",
+       "op": "eq",
+       "value": "MusicGenre"
+      },
+      {
+       "path": "$.Items[?Name=Pop].SongCount",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.Items[?Name=Pop].AlbumCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[?Name=Pop].ArtistCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[?Name=Dance].ArtistCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[?Name=Dance].SongCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items[?Name=Funk].SongCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[?Name=Pop;Rock].SongCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "a search term narrows the list",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MusicGenres",
+     "query": {
+      "ParentId": "{{library.music2.id}}",
+      "SearchTerm": "Funk"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Funk"
+      }
+     ]
+    }
+   },
+   {
+    "name": "paging",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MusicGenres",
+     "query": {
+      "ParentId": "{{library.music2.id}}",
+      "Limit": "1"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.TotalRecordCount",
+       "op": "gte",
+       "value": 4
+      }
+     ]
+    }
+   },
+   {
+    "name": "the genre list of the whole server leaves music out",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Genres",
+     "query": {
+      "Limit": "500"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[?Name=Funk].Name",
+       "op": "absent"
+      },
+      {
+       "path": "$.Items[?Name=Pop].Name",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a music library as parent lists its genres, as music genres",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Genres",
+     "query": {
+      "ParentId": "{{library.music2.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[?Name=Funk].Type",
+       "op": "eq",
+       "value": "MusicGenre"
+      }
+     ]
+    }
+   },
+   {
+    "name": "anonymous",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/MusicGenres"
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "music2.genres.single",
+  "endpoint": "GET /MusicGenres/{name}",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.genre.R4"
+  ],
+  "requires": [
+   "library:music2",
+   "item:m2synced"
+  ],
+  "steps": [
+   {
+    "name": "a genre by name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MusicGenres/Pop"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Pop"
+      },
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "MusicGenre"
+      }
+     ]
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "name case does not matter",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MusicGenres/pop"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "MusicGenre"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "music2.genres.filter",
+  "endpoint": "GET /Items",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.genre.R5"
+  ],
+  "requires": [
+   "library:music2",
+   "item:m2synced",
+   "item:m2epsilon",
+   "item:m2artist3"
+  ],
+  "steps": [
+   {
+    "name": "tracks of a genre",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Audio",
+      "Genres": "Pop",
+      "ParentId": "{{library.music2.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 4
+      }
+     ]
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "a genre value is not split on a semicolon",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Audio",
+      "Genres": "Rock",
+      "ParentId": "{{library.music2.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "albums of a genre",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicAlbum",
+      "Genres": "Pop",
+      "ParentId": "{{library.music2.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.m2epsilon.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "artists of a genre",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicArtist",
+      "Genres": "Dance"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.m2artist3.id}}"
+      }
+     ]
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "genre id",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MusicGenres",
+     "query": {
+      "ParentId": "{{library.music2.id}}",
+      "SearchTerm": "Funk"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "funk": "$.Items[0].Id"
+    }
+   },
+   {
+    "name": "tracks by genre id",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Audio",
+      "GenreIds": "{{capture.funk}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.m2disc1.id}}"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "music2.artist.by-name",
+  "endpoint": "GET /Artists/{name}",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.artist.R4",
+   "music.artist.R5",
+   "music.nfo.R1"
+  ],
+  "requires": [
+   "library:music2",
+   "item:m2artist3",
+   "item:m2artist4"
+  ],
+  "steps": [
+   {
+    "name": "an artist with an artist.nfo",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists/Artist%20Three"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "MusicArtist"
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Artist Three"
+      },
+      {
+       "path": "$.Id",
+       "op": "eq",
+       "value": "{{item.m2artist3.id}}"
+      },
+      {
+       "path": "$.SongCount",
+       "op": "eq",
+       "value": 5
+      },
+      {
+       "path": "$.AlbumCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 6
+      },
+      {
+       "path": "$.Overview",
+       "op": "eq",
+       "value": "The third artist, from the nfo."
+      },
+      {
+       "path": "$.ProviderIds.MusicBrainzArtist",
+       "op": "eq",
+       "value": "11111111-1111-4111-8111-111111111111"
+      },
+      {
+       "path": "$.ExternalUrls[0].Url",
+       "op": "eq",
+       "value": "https://musicbrainz.org/artist/11111111-1111-4111-8111-111111111111"
+      },
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Genres",
+       "op": "contains",
+       "value": "Pop"
+      },
+      {
+       "path": "$.Genres",
+       "op": "contains",
+       "value": "Dance"
+      }
+     ]
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "the name matches without regard to case",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists/artist%20three"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "eq",
+       "value": "{{item.m2artist3.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an artist with no nfo takes the genres of its tracks",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists/Artist%20Four"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "eq",
+       "value": "{{item.m2artist4.id}}"
+      },
+      {
+       "path": "$.SongCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.AlbumCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Genres[0]",
+       "op": "eq",
+       "value": "Funk"
+      },
+      {
+       "path": "$.Overview",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a name that is a track artist only",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists/Root%20Singer"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "MusicArtist"
+      },
+      {
+       "path": "$.SongCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.AlbumCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "anonymous",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Artists/Artist%20Three"
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "music2.artist.images",
+  "endpoint": "GET /Items/{itemId}/Images/{imageType}",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.image.R4",
+   "music.image.R5"
+  ],
+  "requires": [
+   "library:music2",
+   "item:m2artist3",
+   "item:m2artist4",
+   "item:m2synced"
+  ],
+  "steps": [
+   {
+    "name": "folder.jpg is the artist's Primary",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m2artist3.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ImageTags.Primary",
+       "op": "type",
+       "value": "string"
+      },
+      {
+       "path": "$.BackdropImageTags",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "the picture",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m2artist3.id}}/Images/Primary"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     }
+    }
+   },
+   {
+    "name": "the backdrop",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m2artist3.id}}/Images/Backdrop/0"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     }
+    }
+   },
+   {
+    "name": "artist.jpg is not a picture of the artist, fanart.jpg is a backdrop",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m2artist4.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ImageTags.Primary",
+       "op": "absent"
+      },
+      {
+       "path": "$.BackdropImageTags",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "a track takes the backdrop of its artist",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m2synced.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ParentBackdropItemId",
+       "op": "eq",
+       "value": "{{item.m2artist3.id}}"
+      },
+      {
+       "path": "$.ParentBackdropImageTags",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "music2.album.nfo",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.nfo.R2"
+  ],
+  "requires": [
+   "library:music2",
+   "item:m2epsilon"
+  ],
+  "steps": [
+   {
+    "name": "an album.nfo",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m2epsilon.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "MusicAlbum"
+      },
+      {
+       "path": "$.Overview",
+       "op": "eq",
+       "value": "An album described by its nfo."
+      },
+      {
+       "path": "$.ProductionYear",
+       "op": "eq",
+       "value": 2020
+      },
+      {
+       "path": "$.ProviderIds.MusicBrainzAlbum",
+       "op": "eq",
+       "value": "22222222-2222-4222-8222-222222222222"
+      },
+      {
+       "path": "$.ProviderIds.MusicBrainzReleaseGroup",
+       "op": "eq",
+       "value": "33333333-3333-4333-8333-333333333333"
+      },
+      {
+       "path": "$.ExternalUrls[0].Url",
+       "op": "eq",
+       "value": "https://musicbrainz.org/release/22222222-2222-4222-8222-222222222222"
+      },
+      {
+       "path": "$.ExternalUrls[1].Url",
+       "op": "eq",
+       "value": "https://musicbrainz.org/release-group/33333333-3333-4333-8333-333333333333"
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 5
+      },
+      {
+       "path": "$.Genres",
+       "op": "contains",
+       "value": "Pop"
+      }
+     ]
+    },
+    "retryMs": 30000
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "music2.disc.folders",
+  "endpoint": "GET /Items",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.disc.R1",
+   "music.disc.R2",
+   "music.disc.R3"
+  ],
+  "requires": [
+   "library:music2",
+   "item:m2zeta",
+   "item:m2disc1",
+   "item:m2disc2",
+   "item:m2discsonly",
+   "item:m2only1"
+  ],
+  "steps": [
+   {
+    "name": "an album split in disc folders is one album",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m2zeta.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "MusicAlbum"
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.RecursiveItemCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Album",
+       "op": "absent"
+      }
+     ]
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "its tracks, disc folder by disc folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{item.m2zeta.id}}",
+      "IncludeItemTypes": "Audio",
+      "Recursive": "true",
+      "SortBy": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.m2disc1.id}}"
+      },
+      {
+       "path": "$.Items[1].Id",
+       "op": "eq",
+       "value": "{{item.m2disc2.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a track of a disc folder belongs to the album",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m2disc2.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.AlbumId",
+       "op": "eq",
+       "value": "{{item.m2zeta.id}}"
+      },
+      {
+       "path": "$.Album",
+       "op": "eq",
+       "value": "Album Zeta"
+      },
+      {
+       "path": "$.AlbumArtist",
+       "op": "eq",
+       "value": "Artist Four"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an artist folder holding only disc folders is the album",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m2discsonly.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "MusicAlbum"
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Discs Only"
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 2
+      }
+     ]
+    }
+   },
+   {
+    "name": "and its tracks name it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m2only1.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.AlbumId",
+       "op": "eq",
+       "value": "{{item.m2discsonly.id}}"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "music2.loose.files",
+  "endpoint": "GET /Items",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.loose.R1",
+   "music.loose.R2",
+   "music.loose.R3"
+  ],
+  "requires": [
+   "library:music2",
+   "item:m2looseartist",
+   "item:m2looseroot",
+   "item:m2flatalbum",
+   "item:m2flat",
+   "item:m2artist4"
+  ],
+  "steps": [
+   {
+    "name": "a loose file in an artist folder is a track of the artist",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m2looseartist.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Audio"
+      },
+      {
+       "path": "$.Album",
+       "op": "eq",
+       "value": "Loose Album"
+      },
+      {
+       "path": "$.AlbumId",
+       "op": "absent"
+      },
+      {
+       "path": "$.ParentId",
+       "op": "eq",
+       "value": "{{item.m2artist4.id}}"
+      }
+     ]
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "the artist folder still holds the track and the album",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{item.m2artist4.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      }
+     ]
+    }
+   },
+   {
+    "name": "a loose file at the library root has no album item",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m2looseroot.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Album",
+       "op": "eq",
+       "value": "Root Album"
+      },
+      {
+       "path": "$.AlbumId",
+       "op": "absent"
+      },
+      {
+       "path": "$.AlbumArtist",
+       "op": "eq",
+       "value": "Root Singer"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a folder of tracks at the library root is an album",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m2flatalbum.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "MusicAlbum"
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "its track names it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m2flat.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.AlbumId",
+       "op": "eq",
+       "value": "{{item.m2flatalbum.id}}"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "music2.lyrics.timed",
+  "endpoint": "GET /Audio/{itemId}/Lyrics",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.lyrics.R1",
+   "music.lyrics.R2",
+   "music.lyrics.R4"
+  ],
+  "requires": [
+   "library:music2",
+   "item:m2synced",
+   "item:m2edge"
+  ],
+  "steps": [
+   {
+    "name": "an .lrc beside the track",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.m2synced.id}}/Lyrics"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Lyrics",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Lyrics[0].Text",
+       "op": "eq",
+       "value": "First line"
+      },
+      {
+       "path": "$.Lyrics[0].Start",
+       "op": "eq",
+       "value": 10000000
+      },
+      {
+       "path": "$.Lyrics[1].Text",
+       "op": "eq",
+       "value": "Second line"
+      },
+      {
+       "path": "$.Lyrics[1].Start",
+       "op": "eq",
+       "value": 25000000
+      },
+      {
+       "path": "$.Lyrics[0].Cues",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "lines are in time order, one per stamp, the untimed line is left out",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.m2edge.id}}/Lyrics"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Lyrics",
+       "op": "len",
+       "value": 4
+      },
+      {
+       "path": "$.Lyrics[0].Text",
+       "op": "eq",
+       "value": "Repeated"
+      },
+      {
+       "path": "$.Lyrics[0].Start",
+       "op": "eq",
+       "value": 10000000
+      },
+      {
+       "path": "$.Lyrics[1].Text",
+       "op": "eq",
+       "value": "Twice"
+      },
+      {
+       "path": "$.Lyrics[1].Start",
+       "op": "eq",
+       "value": 30000000
+      },
+      {
+       "path": "$.Lyrics[2].Text",
+       "op": "eq",
+       "value": "Repeated"
+      },
+      {
+       "path": "$.Lyrics[2].Start",
+       "op": "eq",
+       "value": 50000000
+      },
+      {
+       "path": "$.Lyrics[3].Text",
+       "op": "eq",
+       "value": ""
+      }
+     ]
+    }
+   },
+   {
+    "name": "the track says it has lyrics, and lists the file as a stream",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m2synced.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.HasLyrics",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaStreams[?Type=Lyric].Index",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "music2.lyrics.plain",
+  "endpoint": "GET /Audio/{itemId}/Lyrics",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.lyrics.R3"
+  ],
+  "requires": [
+   "library:music2",
+   "item:m2plain"
+  ],
+  "steps": [
+   {
+    "name": "a .txt beside the track",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.m2plain.id}}/Lyrics"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Lyrics[0].Text",
+       "op": "eq",
+       "value": "Plain line one"
+      },
+      {
+       "path": "$.Lyrics[1].Text",
+       "op": "eq",
+       "value": "Plain line two"
+      },
+      {
+       "path": "$.Lyrics[0].Start",
+       "op": "absent"
+      }
+     ]
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "HasLyrics",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m2plain.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.HasLyrics",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "music2.lyrics.none",
+  "endpoint": "GET /Audio/{itemId}/Lyrics",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.lyrics.R5"
+  ],
+  "requires": [
+   "library:music2",
+   "item:m2silent",
+   "item:m2embedded"
+  ],
+  "steps": [
+   {
+    "name": "a track with no lyrics file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.m2silent.id}}/Lyrics"
+    },
+    "expect": {
+     "status": 404
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "HasLyrics is false",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m2silent.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.HasLyrics",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "lyrics embedded in the file are not read",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.m2embedded.id}}/Lyrics"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "an unknown item",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/00000000000000000000000000000001/Lyrics"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "anonymous",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.m2synced.id}}/Lyrics"
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ],
+  "cleanup": []
+ }
+]

@@ -394,6 +394,15 @@ func externalURLsFor(itemType storage.ItemType, providerIDs map[string]string) [
 	if id, ok := providerIDs["Imdb"]; ok && id != "" {
 		urls = append(urls, externalURLDto{Name: "IMDb", URL: "https://www.imdb.com/title/" + id})
 	}
+	for _, mb := range []struct{ key, name, path string }{
+		{"MusicBrainzArtist", "MusicBrainz Artist", "artist/"},
+		{"MusicBrainzAlbum", "MusicBrainz Album", "release/"},
+		{"MusicBrainzReleaseGroup", "MusicBrainz Release Group", "release-group/"},
+	} {
+		if id := providerIDs[mb.key]; id != "" {
+			urls = append(urls, externalURLDto{Name: mb.name, URL: "https://musicbrainz.org/" + mb.path + id})
+		}
+	}
 	return urls
 }
 
@@ -1154,6 +1163,28 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		}
 	}
 
+	if item.Type == storage.ItemTypeAudio || item.Type == storage.ItemTypeMusicAlbum {
+		// A track or an album takes the backdrop (and logo, thumb) of its
+		// artist, through the album when it has one.
+		var ancestors []storage.Item
+		for pid, n := item.ParentID, 0; pid != nil && n < 3; n++ {
+			p, err := s.store.GetItem(ctx, *pid)
+			if err != nil {
+				break
+			}
+			if p.Type == storage.ItemTypeMusicAlbum || p.Type == storage.ItemTypeMusicArtist {
+				ancestors = append(ancestors, p)
+			}
+			pid = p.ParentID
+		}
+		fields := s.parentImageFieldsFor(ctx, imageTags, backdropImageTags, nil, ancestors)
+		dto.ParentLogoItemID = fields.ParentLogoItemID
+		dto.ParentLogoImageTag = fields.ParentLogoImageTag
+		dto.ParentBackdropItemID = fields.ParentBackdropItemID
+		dto.ParentBackdropImageTags = fields.ParentBackdropImageTags
+		dto.ParentThumbItemID = fields.ParentThumbItemID
+		dto.ParentThumbImageTag = fields.ParentThumbImageTag
+	}
 	if parentImageInheritanceItemTypes[item.Type] {
 		var ancestors []storage.Item
 		if seasonItem != nil {

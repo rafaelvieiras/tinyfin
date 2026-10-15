@@ -61,7 +61,8 @@
     {"key": "punct", "name": "Punct", "type": "movies", "path": "Punct", "lazy": true},
     {"key": "trickplay", "name": "Trickplay", "type": "movies", "path": "Trickplay", "lazy": true, "options": {"EnableTrickplayImageExtraction": true, "ExtractTrickplayImagesDuringLibraryScan": true}},
     {"key": "trickplayoff", "name": "TrickplayOff", "type": "movies", "path": "TrickplayOff", "lazy": true},
-    {"key": "music", "name": "Music", "type": "music", "path": "Music", "lazy": true}
+    {"key": "music", "name": "Music", "type": "music", "path": "Music", "lazy": true},
+    {"key": "music2", "name": "Music2", "type": "music", "path": "Music2", "lazy": true}
   ],
   "items": [
     {"key": "alpha", "type": "Movie", "path": "Movies/Alpha Movie (2015)/Alpha Movie (2015).mp4"},
@@ -423,6 +424,24 @@
     {"key": "mmixtape", "type": "MusicAlbum", "library": "music", "path": "Music/Various Artists/Mix Tape"},
     {"key": "martist1", "type": "MusicArtist", "library": "music", "path": "Music/Artist One"},
     {"key": "martist2", "type": "MusicArtist", "library": "music", "path": "Music/Artist Two"},
-    {"key": "mvarious", "type": "MusicArtist", "library": "music", "path": "Music/Various Artists"}
+    {"key": "mvarious", "type": "MusicArtist", "library": "music", "path": "Music/Various Artists"},
+    {"key": "m2synced", "type": "Audio", "library": "music2", "path": "Music2/Artist Three/Album Epsilon/01 - Synced Words.mp3"},
+    {"key": "m2plain", "type": "Audio", "library": "music2", "path": "Music2/Artist Three/Album Epsilon/02 - Plain Words.mp3"},
+    {"key": "m2silent", "type": "Audio", "library": "music2", "path": "Music2/Artist Three/Album Epsilon/03 - Silent.mp3"},
+    {"key": "m2edge", "type": "Audio", "library": "music2", "path": "Music2/Artist Three/Album Epsilon/04 - Edge Lyrics.mp3"},
+    {"key": "m2embedded", "type": "Audio", "library": "music2", "path": "Music2/Artist Three/Album Epsilon/05 - Embedded Lyrics.mp3"},
+    {"key": "m2disc1", "type": "Audio", "library": "music2", "path": "Music2/Artist Four/Album Zeta/CD1/01 - Disc One Track.mp3"},
+    {"key": "m2disc2", "type": "Audio", "library": "music2", "path": "Music2/Artist Four/Album Zeta/CD2/01 - Disc Two Track.mp3"},
+    {"key": "m2looseartist", "type": "Audio", "library": "music2", "path": "Music2/Artist Four/Loose In Artist.mp3"},
+    {"key": "m2looseroot", "type": "Audio", "library": "music2", "path": "Music2/Loose At Root.mp3"},
+    {"key": "m2flat", "type": "Audio", "library": "music2", "path": "Music2/Flat Album/01 - Flat Track.mp3"},
+    {"key": "m2only1", "type": "Audio", "library": "music2", "path": "Music2/Artist Five/CD1/01 - Only Disc One.mp3"},
+    {"key": "m2only2", "type": "Audio", "library": "music2", "path": "Music2/Artist Five/CD2/01 - Only Disc Two.mp3"},
+    {"key": "m2epsilon", "type": "MusicAlbum", "library": "music2", "path": "Music2/Artist Three/Album Epsilon"},
+    {"key": "m2zeta", "type": "MusicAlbum", "library": "music2", "path": "Music2/Artist Four/Album Zeta"},
+    {"key": "m2flatalbum", "type": "MusicAlbum", "library": "music2", "path": "Music2/Flat Album"},
+    {"key": "m2discsonly", "type": "MusicAlbum", "library": "music2", "path": "Music2/Artist Five"},
+    {"key": "m2artist3", "type": "MusicArtist", "library": "music2", "path": "Music2/Artist Three"},
+    {"key": "m2artist4", "type": "MusicArtist", "library": "music2", "path": "Music2/Artist Four"}
   ]
 }

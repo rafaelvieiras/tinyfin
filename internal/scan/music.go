@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -109,15 +110,77 @@ func readMusicTags(tags map[string]string) musicTags {
 	return m
 }
 
-// splitTagList splits a multi-valued tag (several artists, several genres).
-func splitTagList(v string) []string {
-	var out []string
-	for _, p := range strings.Split(v, ";") {
-		if p = strings.TrimSpace(p); p != "" {
-			out = append(out, p)
+// discFolderRe matches the name of a disc folder inside an album ("CD1",
+// "Disc 2", "disk_03"): its tracks belong to the album that holds it.
+var discFolderRe = regexp.MustCompile(`(?i)^(cd|disc|disk)[\s._-]*\d+\b`)
+
+// isDiscFolderName reports whether a folder name is a disc folder.
+func isDiscFolderName(name string) bool { return discFolderRe.MatchString(name) }
+
+// tagList is the list a tag's value stands for: the reference does not split
+// a tag on ";" (it is one name), so a non-empty value is a list of one.
+func tagList(v string) []string {
+	if v = strings.TrimSpace(v); v == "" {
+		return nil
+	}
+	return []string{v}
+}
+
+// musicTreeHasAudio reports whether dir holds an audio file, directly or in a
+// folder below it (down to depth levels).
+func (s *Scanner) musicTreeHasAudio(ctx context.Context, dir string, depth int) bool {
+	entries, err := readScanDir(ctx, dir)
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		if e.IsDir() {
+			if depth > 0 && !IgnoredFolder(e.Name()) && !ExtrasFolder(e.Name()) &&
+				s.musicTreeHasAudio(ctx, filepath.Join(dir, e.Name()), depth-1) {
+				return true
+			}
+			continue
+		}
+		if IsMusicFile(e.Name()) && !strings.HasPrefix(e.Name(), ".") {
+			return true
 		}
 	}
-	return out
+	return false
+}
+
+// musicAlbumLayout decides whether dir is an album and lists the disc
+// folders of it that hold audio. A folder is an album when it holds audio
+// directly, or only through disc folders, and no other folder below it holds
+// audio (that makes it an artist or a plain folder, whatever loose files it
+// has itself).
+func (s *Scanner) musicAlbumLayout(ctx context.Context, dir string) (album bool, discs []string) {
+	entries, err := readScanDir(ctx, dir)
+	if err != nil {
+		return false, nil
+	}
+	direct := false
+	for _, e := range entries {
+		name := e.Name()
+		if !e.IsDir() {
+			if IsMusicFile(name) && !strings.HasPrefix(name, ".") {
+				direct = true
+			}
+			continue
+		}
+		if IgnoredFolder(name) || ExtrasFolder(name) {
+			continue
+		}
+		sub := filepath.Join(dir, name)
+		if !s.musicTreeHasAudio(ctx, sub, 3) {
+			continue
+		}
+		if !isDiscFolderName(name) || !dirHasAudio(ctx, sub) {
+			return false, nil
+		}
+		discs = append(discs, sub)
+	}
+	sort.Strings(discs)
+	return direct || len(discs) > 0, discs
 }
 
 // trackSortName orders the tracks of an album by disc then track number; a
@@ -183,7 +246,7 @@ func (s *Scanner) walkMusicFolder(ctx context.Context, pool *jobPool, lib storag
 	if s.libraryGone(ctx, lib) {
 		return
 	}
-	hasAudio := dirHasAudio(ctx, path)
+	hasAudio, _ := s.musicAlbumLayout(ctx, path)
 	typ := storage.ItemTypeFolder
 	idPrefix := "item-folder-"
 	switch {
@@ -197,11 +260,17 @@ func (s *Scanner) walkMusicFolder(ctx context.Context, pool *jobPool, lib storag
 		ID: id, Type: typ, LibraryID: lib.ID, ParentID: parent,
 		Name: name, SortName: name, Path: path, DateCreated: fileDateAdded(path),
 	}
+	if typ == storage.ItemTypeMusicArtist {
+		s.applyArtistNFO(pool, &folder)
+	}
 	if err := s.upsertItem(ctx, folder); err != nil {
 		log.Printf("scan: upserting music folder %q: %v", path, err)
 		return
 	}
 	if !hasAudio {
+		if typ == storage.ItemTypeMusicArtist {
+			s.seedFolderArtwork(ctx, id, path)
+		}
 		s.walkMusic(ctx, pool, lib, path, &id, depth+1)
 		return
 	}
@@ -234,6 +303,25 @@ func (s *Scanner) processAlbum(ctx context.Context, pool *jobPool, lib storage.L
 		}
 	}
 	sort.Strings(names)
+	// The tracks of the disc folders follow, folder by folder: they belong to
+	// the album like the ones beside the folders.
+	_, discs := s.musicAlbumLayout(ctx, album.Path)
+	for _, d := range discs {
+		sub, err := readScanDir(ctx, d)
+		if err != nil {
+			continue
+		}
+		var in []string
+		for _, e := range sub {
+			if !e.IsDir() && IsMusicFile(e.Name()) && !strings.HasPrefix(e.Name(), ".") {
+				in = append(in, e.Name())
+			}
+		}
+		sort.Strings(in)
+		for _, n := range in {
+			names = append(names, filepath.Join(filepath.Base(d), n))
+		}
+	}
 	acc := albumAcc{}
 	var firstErr error
 	albumID := album.ID
@@ -303,6 +391,7 @@ func (s *Scanner) processAlbum(ctx context.Context, pool *jobPool, lib storage.L
 		t := acc.ticks
 		album.RunTimeTicks = &t
 	}
+	s.applyAlbumNFO(pool, &album)
 	if err := s.upsertItem(ctx, album); err != nil {
 		return fmt.Errorf("upserting album %q: %w", album.Path, err)
 	}
@@ -349,8 +438,8 @@ func (s *Scanner) processTrack(ctx context.Context, pool *jobPool, lib storage.L
 		}
 		item.SortName = trackSortName(item.Name, mt.track, mt.disc)
 		item.Album, item.AlbumArtist = mt.album, mt.albumArtist
-		item.Artists = splitTagList(mt.artist)
-		item.Genres = splitTagList(mt.genre)
+		item.Artists = tagList(mt.artist)
+		item.Genres = tagList(mt.genre)
 		item.IndexNumber, item.ParentIndexNumber = mt.track, mt.disc
 		item.ProductionYear, item.PremiereDate = mt.year, mt.premiere
 	}

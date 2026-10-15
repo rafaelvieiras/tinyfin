@@ -1074,7 +1074,7 @@ func (s *Server) writeSearchItems(ctx context.Context, w http.ResponseWriter, fi
 				continue
 			}
 			e.NamedRef = *h.Named
-			items = append(items, shapeNamed(s.namedItemDto(e, namedDtoOpts{userData: iq.userData, counts: true}), iq, h.Named.Kind))
+			items = append(items, shapeNamed(s.namedItemDto(e, namedDtoOpts{userData: iq.userData, counts: true}), iq, h.Named.Kind, false))
 		}
 	}
 	writeJSON(w, http.StatusOK, namedItemsResult{

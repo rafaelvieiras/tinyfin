@@ -112,7 +112,8 @@ func (s *Store) QueryNamed(ctx context.Context, q storage.NamedQuery) (storage.N
 	}
 	inner := "SELECT k, nm, iid, typ, rid, dc, MAX(own) AS own FROM (" + branch + ") GROUP BY k, iid"
 	grouped := "SELECT MIN(nm) AS nm, MIN(rid) AS first, " +
-		"SUM(typ = 'Movie') AS movies, SUM(typ = 'Series') AS series, SUM(typ = 'Episode') AS episodes, SUM(typ = 'Playlist') AS playlists, COUNT(*) AS total, MIN(dc) AS created " +
+		"SUM(typ = 'Movie') AS movies, SUM(typ = 'Series') AS series, SUM(typ = 'Episode') AS episodes, SUM(typ = 'Playlist') AS playlists, COUNT(*) AS total, MIN(dc) AS created, " +
+		"SUM(typ = 'Audio') AS songs, SUM(typ = 'MusicAlbum') AS albums, SUM(typ = 'MusicArtist') AS artists " +
 		"FROM (" + inner + ") GROUP BY k HAVING MAX(own) = 1"
 
 	var conds []string
@@ -137,7 +138,7 @@ func (s *Store) QueryNamed(ctx context.Context, q storage.NamedQuery) (storage.N
 		conds = append(conds, "lower(nm) < ?")
 		condArgs = append(condArgs, strings.ToLower(q.NameLessThan))
 	}
-	outer := "SELECT nm, first, movies, series, episodes, playlists, total, created FROM (" + grouped + ")"
+	outer := "SELECT nm, first, movies, series, episodes, playlists, total, created, songs, albums, artists FROM (" + grouped + ")"
 	if len(conds) > 0 {
 		outer += " WHERE " + strings.Join(conds, " AND ")
 	}
@@ -185,7 +186,7 @@ func (s *Store) QueryNamed(ctx context.Context, q storage.NamedQuery) (storage.N
 		var e storage.NamedEntry
 		var first int64
 		var created sql.NullString
-		if err := rows.Scan(&e.Name, &first, &e.Movies, &e.Series, &e.Episodes, &e.Playlists, &e.Total, &created); err != nil {
+		if err := rows.Scan(&e.Name, &first, &e.Movies, &e.Series, &e.Episodes, &e.Playlists, &e.Total, &created, &e.Songs, &e.Albums, &e.Artists); err != nil {
 			return storage.NamedPage{}, fmt.Errorf("sqlite: scanning named item: %w", err)
 		}
 		e.Kind = q.Kind
@@ -227,9 +228,9 @@ func (s *Store) CountNamed(ctx context.Context, ref storage.NamedRef, scope stor
 			innerArgs = append(append([]any{}, fargs...), args2...)
 		}
 	}
-	q := "SELECT COALESCE(SUM(typ = 'Movie'),0), COALESCE(SUM(typ = 'Series'),0), COALESCE(SUM(typ = 'Episode'),0), COALESCE(SUM(typ = 'Playlist'),0), COUNT(*), MIN(dc) FROM (" + inner + ")"
+	q := "SELECT COALESCE(SUM(typ = 'Movie'),0), COALESCE(SUM(typ = 'Series'),0), COALESCE(SUM(typ = 'Episode'),0), COALESCE(SUM(typ = 'Playlist'),0), COUNT(*), MIN(dc), COALESCE(SUM(typ = 'Audio'),0), COALESCE(SUM(typ = 'MusicAlbum'),0), COALESCE(SUM(typ = 'MusicArtist'),0) FROM (" + inner + ")"
 	var created sql.NullString
-	if err := s.ex.QueryRowContext(ctx, q, innerArgs...).Scan(&out.Movies, &out.Series, &out.Episodes, &out.Playlists, &out.Total, &created); err != nil {
+	if err := s.ex.QueryRowContext(ctx, q, innerArgs...).Scan(&out.Movies, &out.Series, &out.Episodes, &out.Playlists, &out.Total, &created, &out.Songs, &out.Albums, &out.Artists); err != nil {
 		return out, fmt.Errorf("sqlite: counting a named item: %w", err)
 	}
 	if created.Valid {

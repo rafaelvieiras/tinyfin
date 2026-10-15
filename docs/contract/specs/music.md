@@ -1,10 +1,10 @@
-# Music libraries: scan, model and navigation (slice 1)
+# Music libraries: scan, model and navigation (slices 1 and 2)
 
 A library with `CollectionType` `music`: the tagged audio files of an `Artist/Album/NN - Title.ext` tree, the `Audio`, `MusicAlbum` and `MusicArtist` items they make, the artist listings, the album picture and the direct audio stream. Probed on the 12.2 reference with online metadata off (the container has no network).
 
 Scenarios: [`../scenarios/music.json`](../scenarios/music.json). Fixture state: [`../fixtures.json`](../fixtures.json), media from `scripts/conformance-media.sh` (lazy library `Music`). Rule IDs are stable (`music.<topic>.R<n>`).
 
-This is the first slice. What it leaves out is listed under [Not covered](#not-covered).
+Slice 1 is the scan, the model, the artist listings, pictures and the direct stream. Slice 2 ([genres](#genre), [artist lookup and pictures](#artist2), [nfo](#nfo), [disc folders and loose files](#layout), [lyrics](#lyrics)) was probed the same way, on a second lazy library `Music2` (scenarios: [`../scenarios/music2.json`](../scenarios/music2.json)). What both leave out is listed under [Not covered](#not-covered).
 
 ## Fixture facts this spec relies on
 
@@ -63,12 +63,63 @@ This is the first slice. What it leaves out is listed under [Not covered](#not-c
 - **music.stream.R3** `POST /Items/{itemId}/PlaybackInfo` for a track with no device profile offers the file as it is: one media source with `SupportsDirectPlay` and `SupportsDirectStream` true, `Container` the file's, `Id` the item's.
 - **music.stream.R4** An unknown item is `404`; an item that is not a track (an album) is `400`.
 
-## <a id="not-covered"></a>Not covered by this slice
+## Slice 2 fixture facts
 
-* Instant Mix, `/Items/{id}/Similar` for music, lyrics (`HasLyrics` is always false, no lyric routes), `MusicGenres` and `/MusicGenres`, music videos, `GET /Artists/{name}`.
-* Audio transcoding: without `static=true` the reference answers with an AAC transcode (`audio/aac`); Tinyfin serves the file as it is on every `/Audio/{id}/stream` request, and a profile whose Audio direct play entries do not list the file's container gets `NoCompatibleStream`.
-* `People` on tracks and albums (the reference lists the artists as `Artist`/`AlbumArtist` people), artist images (no `artist.jpg`, no `folder.jpg` in an artist folder), `artist.nfo`/`album.nfo`, MusicBrainz ids, `ReplayGain`, disc subfolders (`CD1`, `Disc 2`) and loose files at the library root or inside an artist folder (they are cataloged as tracks with no album; the reference was not probed on them).
-* Multi-valued tags are split on `;` only.
+* `Music2/Artist Three/` holds `artist.nfo` (biography, genres `Pop` and `Dance`, a MusicBrainz artist id), `folder.jpg` (400x400) and `backdrop.jpg`; its `Album Epsilon/` holds five MP3 tracks (genre `Pop`, one `Pop;Rock`), `album.nfo` (title `Epsilon Deluxe`, review, year, genres `Pop`/`Electronic`, MusicBrainz album and release-group ids), `01 - Synced Words.lrc`, `02 - Plain Words.txt`, `04 - Edge Lyrics.lrc`, and a track with a `lyrics` tag in the file (`05`).
+* `Music2/Artist Four/` holds `artist.jpg`, `fanart.jpg`, a loose track `Loose In Artist.mp3` and `Album Zeta/` with `CD1/` and `CD2/` disc folders (one track each, no disc tag; the CD1 track has genre `Funk`) and a `folder.jpg`.
+* `Music2/Artist Five/` has only `CD1/` and `CD2/` (tracks tagged album `Discs Only`), `Music2/Flat Album/` one track, and `Music2/Loose At Root.mp3` (artist `Root Singer`, album `Root Album`).
+
+## <a id="genre"></a>Music genres
+
+- **music.genre.R1** `GET /MusicGenres` answers `{Items, TotalRecordCount, StartIndex}` of items of `Type` `MusicGenre`: the distinct `Genres` of the audio, albums and artists the caller can see, in name order (`SortOrder` is ignored by the reference; `StartIndex`, `Limit`, `SearchTerm`, `ParentId` and the other item query parameters apply). A genre is one tag value: `Pop;Rock` is a genre of its own, a tag is not split on `;` (same for the artist tag).
+- **music.genre.R2** With `Fields=ItemCounts` each item has `SongCount` (tracks), `AlbumCount`, `ArtistCount` and `ChildCount` (their sum); without it none of them is sent. Artists count through the genres of their `artist.nfo`, or of their tracks when they have none.
+- **music.genre.R3** `GET /Genres` with no `ParentId` leaves the music items out (the fixture's music genres are not in it); with a music library as `ParentId` it lists that library's genres, typed `MusicGenre`.
+- **music.genre.R4** `GET /MusicGenres/{name}` answers the genre item (`Type` `MusicGenre`), the name matching without regard to case.
+- **music.genre.R5** `/Items` takes `Genres` (`|`-separated values, exact tag value, case-insensitive) and `GenreIds` for `Audio`, `MusicAlbum` and `MusicArtist` alike.
+
+## <a id="artist2"></a>Artist lookup and artist pictures
+
+- **music.artist.R4** `GET /Artists/{name}` answers the artist item of that name as `/Items/{id}` does (`SongCount`, `AlbumCount`, `ChildCount`, `Genres`, `Overview`...), the name matching without regard to case; an artist known only from track tags (`Root Singer`) answers too. `Genres` come from `artist.nfo` when it names some, else from the artist's tracks. Anonymous is `401`.
+- **music.artist.R5** `SongCount` counts the loose tracks of an artist folder (and the tracks of the albums it holds); `AlbumCount` counts album items only (a loose track's album tag makes no album).
+- **music.image.R4** The artist folder's `folder.jpg`, `poster.jpg` or `<folder name>.jpg` is the artist's Primary image, and `backdrop.jpg`/`fanart.jpg`/`background.jpg` a Backdrop (`BackdropImageTags`, `GET .../Images/Backdrop/0`). `artist.jpg` is not a picture of the artist.
+- **music.image.R5** A track (and an album) takes the backdrop of its artist: `ParentBackdropItemId` is the artist, `ParentBackdropImageTags` its tags.
+
+## <a id="nfo"></a>nfo files
+
+- **music.nfo.R1** `artist.nfo` in the artist folder: `<biography>` is the `Overview`, `<genre>` entries the `Genres`, `<musicbrainzartistid>` is `ProviderIds.MusicBrainzArtist`; the artist keeps its folder name. `ExternalUrls` lists `MusicBrainz Artist` (`https://musicbrainz.org/artist/{id}`).
+- **music.nfo.R2** `album.nfo` in the album folder: `<review>` is the `Overview`, `<year>` the `ProductionYear`, `<musicbrainzalbumid>` and `<musicbrainzreleasegroupid>` are `ProviderIds.MusicBrainzAlbum` and `.MusicBrainzReleaseGroup` (`ExternalUrls`: `MusicBrainz Album` `release/{id}`, `MusicBrainz Release Group` `release-group/{id}`). `<title>` and `<genre>` also apply, but the reference only takes them on a later pass (a fresh scan names the album after the tags and lists the tracks' genres; a refresh switches to the nfo's): scenarios assert neither. Tinyfin applies them at the first scan.
+
+## <a id="layout"></a>Disc folders and loose files
+
+- **music.disc.R1** A folder of tracks inside an album folder named like a disc (`CD1`, `Disc 2`, `disk_3`) does not make an album of its own: its tracks are tracks of the album that holds the folders (`AlbumId`, `ChildCount` and `RecursiveItemCount` count them, `ParentId=<album>` lists them, in `SortName` order).
+- **music.disc.R2** A folder that holds only disc folders is itself the album (named after the tags: `Discs Only`, not the folder `Artist Five`), as a child of the library root, and the artist from the tags is made from the name.
+- **music.disc.R3** A folder with audio files and no other folder with audio is an album at any depth, also directly under the library root (`Flat Album`).
+- **music.loose.R1** A folder at the library root that holds albums is an artist even when it also holds audio files (`Artist Four`): the loose file is a track whose `ParentId` is the artist and that has `Album` from its tags but no `AlbumId`; the artist's children (`ParentId`) are that track and the albums.
+- **music.loose.R2** A loose file at the library root is a track of the library root, `Album` from the tags, no `AlbumId`; its artist exists as an artist item.
+- **music.loose.R3** An album folder directly under the library root has the library root as `ParentId` and no artist folder; its tracks name it by `AlbumId`.
+
+## <a id="lyrics"></a>Lyrics
+
+- **music.lyrics.R1** A lyrics file beside the track, named like it with the extension `.lrc` or `.txt`, makes `HasLyrics` true, and `GET /Audio/{itemId}/Lyrics` answers `{Metadata: {}, Lyrics: [...]}`. The item's `MediaStreams` gain a stream `Type` `Lyric`, `Index` after the audio stream, with the file as `Path`.
+- **music.lyrics.R2** A timed (`.lrc`) document lists one line per leading `[mm:ss.xx]` stamp (`Text`, `Start` in ticks, `Cues` `[]`), in time order (equal stamps keep file order); an empty text after a stamp is a line with `Text` `""`. Lines with no stamp (`[ti:..]`, `[offset:..]`, untimed text) are dropped; the `offset` tag is not applied; `Metadata` stays `{}`.
+- **music.lyrics.R3** A `.txt` document lists one line per text line (`Text` only, no `Start`, no `Cues`), including the empty one after a final newline.
+- **music.lyrics.R4** `Start` is `(minutes * 60 + seconds) * 10^7` plus the fraction as ticks (`[00:02.50]` is `25000000`).
+- **music.lyrics.R5** A track with no lyrics file is `404` (`HasLyrics` false), also when the audio file carries a lyrics tag: embedded lyrics are not read. An unknown item is `404`, anonymous `401`.
+
+## Slice 2 differences
+
+* **Disc folders.** The reference also makes `Folder` items of `CD1`/`CD2` (children of the album, parents of the tracks, listed by a recursive `ParentId=<album>` listing, and `AlbumIds=<album>` lists them instead of the tracks). Tinyfin has no such items: the tracks' `ParentId` is the album.
+* **Unknown artist name.** `GET /Artists/{name}` for a name nothing carries creates and answers an artist on the reference; Tinyfin answers `404`.
+* **Genre ids.** A `MusicGenre` has the id of the genre of the same name (the reference uses another id space for music genres); `GenreIds` accepts it.
+* **Lyrics files.** Only `.lrc` and `.txt` are read, `.lrc` first. Writing (`POST`/`DELETE /Audio/{id}/Lyrics`, remote search) is not implemented.
+* **Genres of an album after a refresh** follow the nfo only once the reference refreshed twice; see [music.nfo.R2](#nfo).
+
+## <a id="not-covered"></a>Not covered by either slice
+
+* Instant Mix (`/Items/{id}/InstantMix`, `/Artists/InstantMix`, `/MusicGenres/{name}/InstantMix`: the reference answers a random order of the tracks sharing the seed's genre, `TotalRecordCount` the pool size, `Limit` cutting the page), `/Items/{id}/Similar` for music, music videos.
+* Audio transcoding: without `static=true` the reference answers with an AAC transcode (`audio/aac`); Tinyfin serves the file as it is on every `/Audio/{id}/stream` request (`/Audio/{id}/universal` is not routed), and a profile whose Audio direct play entries do not list the file's container gets `NoCompatibleStream`.
+* `People` on tracks and albums (the reference lists the artists as `Artist`/`AlbumArtist` people), MusicBrainz ids read from tags (only the nfo ones are), `ReplayGain`, `Folder` items for disc folders (see [slice 2 differences](#lyrics)), lyrics upload/delete/search, `.elrc`/`.srt` lyrics.
+* Multi-valued tags are not split (`;` is part of a name, as on the reference).
 
 ## Known differences
 
@@ -102,3 +153,14 @@ This is the first slice. What it leaves out is listed under [Not covered](#not-c
 | `music.stream.R1`, `R2` | `music.stream.direct` |
 | `music.stream.R3` | `music.playback.info` |
 | `music.stream.R4` | `music.stream.unknown` |
+| `music.genre.R1`, `R2`, `R3` | `music2.genres.list` |
+| `music.genre.R4` | `music2.genres.single` |
+| `music.genre.R5` | `music2.genres.filter` |
+| `music.artist.R4`, `R5`, `music.nfo.R1` | `music2.artist.by-name` |
+| `music.image.R4`, `R5` | `music2.artist.images` |
+| `music.nfo.R2` | `music2.album.nfo` |
+| `music.disc.R1`, `R2`, `R3` | `music2.disc.folders` |
+| `music.loose.R1`, `R2`, `R3` | `music2.loose.files` |
+| `music.lyrics.R1`, `R2`, `R4` | `music2.lyrics.timed` |
+| `music.lyrics.R3` | `music2.lyrics.plain` |
+| `music.lyrics.R5` | `music2.lyrics.none` |

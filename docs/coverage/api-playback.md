@@ -4,9 +4,9 @@
 
 Playback negotiation, direct/HLS streaming, subtitles, lyrics, trickplay and media segments.
 
-[Overview](../COVERAGE.md) · 38 operations · 21 registered (55%) · 16 verified · ✅ 16 · 🟡 3 · ⛔ 17 · ↔️ 2
+[Overview](../COVERAGE.md) · 38 operations · 22 registered (58%) · 17 verified · ✅ 17 · 🟡 3 · ⛔ 16 · ↔️ 2
 
-✅✅✅✅✅✅✅✅🟡🟡⛔⛔⛔⛔⛔⛔⛔⛔⛔↔️
+✅✅✅✅✅✅✅✅✅🟡🟡⛔⛔⛔⛔⛔⛔⛔⛔↔️
 
 Columns: **Auth** is the reference's authorization policy; **Web** = mentioned in docs/11 (called by the official web client); **Tests** = scenarios that exercise the route (passing / total).
 
@@ -26,7 +26,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
 | ⛔ not-planned | `DELETE /Audio/{itemId}/Lyrics` | LyricManagement | yes |  | Music is not cataloged (video-first scope, docs/01). (priority: low) |
-| ⛔ not-planned | `GET /Audio/{itemId}/Lyrics` | DefaultAuthorization | yes |  | Music is not cataloged (video-first scope, docs/01). (priority: low) |
+| ✅ supported | `GET /Audio/{itemId}/Lyrics` | DefaultAuthorization | yes | 3/3 |  |
 | ⛔ not-planned | `POST /Audio/{itemId}/Lyrics` | LyricManagement | yes |  | Music is not cataloged (video-first scope, docs/01). (priority: low) |
 | ⛔ not-planned | `GET /Audio/{itemId}/RemoteSearch/Lyrics` | LyricManagement |  |  | Music is not cataloged (video-first scope, docs/01). (priority: low) |
 | ⛔ not-planned | `POST /Audio/{itemId}/RemoteSearch/Lyrics/{lyricId}` | LyricManagement |  |  | Music is not cataloged (video-first scope, docs/01). (priority: low) |

@@ -85,7 +85,7 @@ func TestMusicTagParsing(t *testing.T) {
 	if m.year == nil || *m.year != 2019 || m.premiere == nil || !m.premiere.Equal(time.Date(2019, 5, 6, 0, 0, 0, 0, time.UTC)) {
 		t.Fatalf("date: %v %v", m.year, m.premiere)
 	}
-	if got := splitTagList(m.artist); len(got) != 2 || got[1] != "B" {
+	if got := tagList(m.artist); len(got) != 1 || got[0] != "A; B" {
 		t.Fatalf("artists: %v", got)
 	}
 	if y, d := parseTagDate("2021"); y == nil || *y != 2021 || d == nil || d.Month() != time.January || d.Day() != 1 {

@@ -25,12 +25,12 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | 🗓️ planned | `HEAD /Genres/{name}/Images/{imageType}/{imageIndex}` | Anonymous |  |  | Not implemented. (priority: low) |
 | ✅ supported | `GET /Items/{itemId}/Images` | DefaultAuthorization | yes | 9/9 |  |
 | ✅ supported *(no scenario)* | `DELETE /Items/{itemId}/Images/{imageType}` | RequiresElevation | yes |  |  |
-| ✅ supported | `GET /Items/{itemId}/Images/{imageType}` | Anonymous | yes | 2/2 |  |
-| ✅ supported | `HEAD /Items/{itemId}/Images/{imageType}` | Anonymous | yes | 2/2 |  |
+| ✅ supported | `GET /Items/{itemId}/Images/{imageType}` | Anonymous | yes | 3/3 |  |
+| ✅ supported | `HEAD /Items/{itemId}/Images/{imageType}` | Anonymous | yes | 3/3 |  |
 | ✅ supported *(no scenario)* | `POST /Items/{itemId}/Images/{imageType}` | RequiresElevation | yes |  |  |
 | ✅ supported *(no scenario)* | `DELETE /Items/{itemId}/Images/{imageType}/{imageIndex}` | RequiresElevation |  |  |  |
-| ✅ supported | `GET /Items/{itemId}/Images/{imageType}/{imageIndex}` | Anonymous |  | 2/2 |  |
-| ✅ supported | `HEAD /Items/{itemId}/Images/{imageType}/{imageIndex}` | Anonymous |  | 2/2 |  |
+| ✅ supported | `GET /Items/{itemId}/Images/{imageType}/{imageIndex}` | Anonymous |  | 3/3 |  |
+| ✅ supported | `HEAD /Items/{itemId}/Images/{imageType}/{imageIndex}` | Anonymous |  | 3/3 |  |
 | ✅ supported *(no scenario)* | `POST /Items/{itemId}/Images/{imageType}/{imageIndex}` | RequiresElevation |  |  |  |
 | 🗓️ planned | `POST /Items/{itemId}/Images/{imageType}/{imageIndex}/Index` | RequiresElevation |  |  | Not implemented. (priority: low) |
 | 🗓️ planned | `GET /Items/{itemId}/Images/{imageType}/{imageIndex}/{tag}/{format}/{maxWidth}/{maxHeight}/{percentPlayed}/{unplayedCount}` | Anonymous |  |  | The long resize form; Tinyfin serves the originals through the two short forms and ignores resize parameters. (priority: medium) |

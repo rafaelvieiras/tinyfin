@@ -862,4 +862,58 @@ fi
 song "$MU/Various Artists/Mix Tape/01 - Guest Spot.mp3" 2 330 -id3v2_version 3 -metadata title="Guest Spot" \
   -metadata artist="Guest Singer" -metadata album="Mix Tape" -metadata album_artist="Various Artists" -metadata track="1"
 
+# Music 2 (own library "Music2", lazy): the second music slice. Artist Three
+# has artist.nfo, folder.jpg and a backdrop; Album Epsilon has album.nfo
+# (MusicBrainz ids, genres) and lyrics beside two tracks (.lrc synced, .txt
+# plain). Artist Four has an album split into CD1/CD2 disc folders plus a loose
+# file inside the artist folder; a loose file also sits at the library root.
+M2="$ROOT/Music2"
+A3="$M2/Artist Three"
+song "$A3/Album Epsilon/01 - Synced Words.mp3" 3 440 -id3v2_version 3 -metadata title="Synced Words" \
+  -metadata artist="Artist Three" -metadata album="Album Epsilon" -metadata album_artist="Artist Three" \
+  -metadata track="1" -metadata date="2020" -metadata genre="Pop"
+song "$A3/Album Epsilon/02 - Plain Words.mp3" 2 550 -id3v2_version 3 -metadata title="Plain Words" \
+  -metadata artist="Artist Three" -metadata album="Album Epsilon" -metadata album_artist="Artist Three" \
+  -metadata track="2" -metadata date="2020" -metadata genre="Pop;Rock"
+song "$A3/Album Epsilon/03 - Silent.mp3" 2 660 -id3v2_version 3 -metadata title="Silent" \
+  -metadata artist="Artist Three" -metadata album="Album Epsilon" -metadata album_artist="Artist Three" \
+  -metadata track="3" -metadata date="2020" -metadata genre="Pop"
+if [ ! -f "$A3/Album Epsilon/01 - Synced Words.lrc" ]; then
+  printf '[ar:Artist Three]\n[ti:Synced Words]\n[00:01.00]First line\n[00:02.50]Second line\n' >"$A3/Album Epsilon/01 - Synced Words.lrc"
+  printf 'Plain line one\nPlain line two\n' >"$A3/Album Epsilon/02 - Plain Words.txt"
+  cat >"$A3/artist.nfo" <<'NFO'
+<artist><name>Artist Three</name><biography>The third artist, from the nfo.</biography><genre>Pop</genre><genre>Dance</genre><musicbrainzartistid>11111111-1111-4111-8111-111111111111</musicbrainzartistid></artist>
+NFO
+  cat >"$A3/Album Epsilon/album.nfo" <<'NFO'
+<album><title>Epsilon Deluxe</title><review>An album described by its nfo.</review><year>2020</year><genre>Pop</genre><genre>Electronic</genre><musicbrainzalbumid>22222222-2222-4222-8222-222222222222</musicbrainzalbumid><musicbrainzreleasegroupid>33333333-3333-4333-8333-333333333333</musicbrainzreleasegroupid></album>
+NFO
+fi
+song "$A3/Album Epsilon/04 - Edge Lyrics.mp3" 2 330 -id3v2_version 3 -metadata title="Edge Lyrics" \
+  -metadata artist="Artist Three" -metadata album="Album Epsilon" -metadata album_artist="Artist Three" \
+  -metadata track="4" -metadata date="2020" -metadata genre="Pop"
+song "$A3/Album Epsilon/05 - Embedded Lyrics.mp3" 2 220 -id3v2_version 3 -metadata title="Embedded Lyrics" \
+  -metadata artist="Artist Three" -metadata album="Album Epsilon" -metadata album_artist="Artist Three" \
+  -metadata track="5" -metadata date="2020" -metadata genre="Pop" -metadata lyrics="Embedded line one"
+[ -f "$A3/Album Epsilon/04 - Edge Lyrics.lrc" ] || printf '[ti:Edge]\n[offset:+500]\n[length:01:00]\n[00:03.00]Twice\n[00:01.00][00:05.00]Repeated\n[00:07.00]\nuntimed\n' >"$A3/Album Epsilon/04 - Edge Lyrics.lrc"
+cover "$A3/folder.jpg" 400x400
+cover "$A3/backdrop.jpg" 640x360
+A4="$M2/Artist Four/Album Zeta"
+song "$A4/CD1/01 - Disc One Track.mp3" 2 440 -id3v2_version 3 -metadata title="Disc One Track" -metadata artist="Artist Four" \
+  -metadata album="Album Zeta" -metadata album_artist="Artist Four" -metadata track="1" -metadata genre="Funk"
+song "$A4/CD2/01 - Disc Two Track.mp3" 2 550 -id3v2_version 3 -metadata title="Disc Two Track" -metadata artist="Artist Four" \
+  -metadata album="Album Zeta" -metadata album_artist="Artist Four" -metadata track="1"
+song "$M2/Artist Four/Loose In Artist.mp3" 2 660 -id3v2_version 3 -metadata title="Loose In Artist" -metadata artist="Artist Four" \
+  -metadata album="Loose Album" -metadata album_artist="Artist Four" -metadata track="1"
+song "$M2/Loose At Root.mp3" 2 770 -id3v2_version 3 -metadata title="Loose At Root" -metadata artist="Root Singer" \
+  -metadata album="Root Album" -metadata album_artist="Root Singer" -metadata track="1"
+cover "$M2/Artist Four/artist.jpg" 500x500
+cover "$M2/Artist Four/fanart.jpg" 800x450
+cover "$A4/folder.jpg" 250x250
+song "$M2/Flat Album/01 - Flat Track.mp3" 2 440 -id3v2_version 3 -metadata title="Flat Track" -metadata artist="Flat Artist" \
+  -metadata album="Flat Album" -metadata album_artist="Flat Artist" -metadata track="1"
+song "$M2/Artist Five/CD1/01 - Only Disc One.mp3" 2 440 -id3v2_version 3 -metadata title="Only Disc One" -metadata artist="Artist Five" \
+  -metadata album="Discs Only" -metadata album_artist="Artist Five" -metadata track="1"
+song "$M2/Artist Five/CD2/01 - Only Disc Two.mp3" 2 550 -id3v2_version 3 -metadata title="Only Disc Two" -metadata artist="Artist Five" \
+  -metadata album="Discs Only" -metadata album_artist="Artist Five" -metadata track="1"
+
 echo "media tree ready under $ROOT"
