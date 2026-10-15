@@ -72,14 +72,117 @@
   {
    "id": "playback.subtitles",
    "title": "Subtitle delivery and conversion",
-   "status": "planned",
-   "description": "No subtitle routes; embedded subtitle tracks are listed but cannot be fetched or converted.",
-   "reference": "SRT/ASS/VTT delivery, conversion, burn-in.",
-   "notes": "In scope for v1 (docs/01); actively called by the web client.",
-   "routes": [
-    "GET /Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/Stream.{routeFormat}"
+   "status": "partial",
+   "description": "`Stream.{format}` (and with a start position) serves external SubRip/WebVTT/ASS/SSA/SAMI files and embedded text tracks as srt, vtt, ass, ssa, json and ttml with the reference's offsets (`startPositionTicks`, `endPositionTicks`, `copyTimestamps`, `addVttTimeMap`); `subtitles.m3u8` lists the WebVTT windows; PlaybackInfo sets `DeliveryMethod`/`DeliveryUrl` per stream from the device profile's `SubtitleProfiles`.",
+   "reference": "The same, plus burning a subtitle into the transcoded video, subtitle groups in HLS manifests and anonymous access to the stream routes.",
+   "notes": "No burn-in (`Encode`) and no subtitle rendition in HLS: a stream reported as `Encode` or `Hls` is not rendered by Tinyfin's transcoder, and its selection does not force a transcode. Bitmap tracks (PGS, DVD) are never converted. Stream routes need a token (divergence subtitles.stream.R9).",
+   "spec_rules": [
+    "subtitles.stream.R1",
+    "subtitles.stream.R2",
+    "subtitles.stream.R3",
+    "subtitles.stream.R4",
+    "subtitles.stream.R5",
+    "subtitles.stream.R6",
+    "subtitles.stream.R7",
+    "subtitles.stream.R8",
+    "subtitles.stream.R9",
+    "subtitles.playlist.R1",
+    "subtitles.playlist.R2",
+    "subtitles.delivery.R1",
+    "subtitles.delivery.R2",
+    "subtitles.delivery.R3",
+    "subtitles.delivery.R4",
+    "subtitles.delivery.R5"
    ],
-   "priority": "high"
+   "scenarios": [
+    "subtitles.stream.formats",
+    "subtitles.stream.ass-and-sami",
+    "subtitles.stream.text-edge",
+    "subtitles.stream.offsets",
+    "subtitles.stream.embedded",
+    "subtitles.stream.route-forms",
+    "subtitles.stream.errors",
+    "subtitles.stream.auth",
+    "subtitles.playlist.segments",
+    "subtitles.delivery.external",
+    "subtitles.delivery.embedded",
+    "subtitles.delivery.no-profile"
+   ],
+   "code": [
+    "internal/api/subtitles.go",
+    "internal/subtitle/convert.go",
+    "internal/playback/subtitles.go",
+    "internal/api/playback.go"
+   ],
+   "routes": [
+    "GET /Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/Stream.{routeFormat}",
+    "GET /Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/{routeStartPositionTicks}/Stream.{routeFormat}",
+    "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/subtitles.m3u8"
+   ],
+   "priority": "medium"
+  },
+  {
+   "id": "playback.subtitles.default",
+   "title": "Default subtitle and audio stream",
+   "status": "supported",
+   "description": "`DefaultSubtitleStreamIndex` and `DefaultAudioStreamIndex` on every media source follow the caller's `SubtitleMode`, `SubtitleLanguagePreference` and `AudioLanguagePreference`.",
+   "reference": "Same ranking; the selection is also remembered per item and user.",
+   "notes": "Remembered selections (`RememberSubtitleSelections`) are not applied.",
+   "spec_rules": [
+    "subtitles.default.R1",
+    "subtitles.default.R2",
+    "subtitles.default.R3"
+   ],
+   "scenarios": [
+    "subtitles.default.modes",
+    "subtitles.delivery.no-profile"
+   ],
+   "code": [
+    "internal/playback/subtitles.go",
+    "internal/api/playback.go"
+   ],
+   "priority": "low"
+  },
+  {
+   "id": "playback.subtitles.manage",
+   "title": "Subtitle upload and deletion",
+   "status": "supported",
+   "description": "`POST /Videos/{id}/Subtitles` saves a base64 file beside the video (`<name>.<lang>[.forced][.sdh].<ext>`, numbered when taken) and `DELETE /Videos/{id}/Subtitles/{index}` removes an external file; the item's streams are updated at once.",
+   "reference": "Same; the file lands in the media folder or the server's data folder by library option.",
+   "notes": "Always saved beside the video (`SaveSubtitlesWithMedia` is not honored).",
+   "spec_rules": [
+    "subtitles.manage.R1",
+    "subtitles.manage.R2",
+    "subtitles.manage.R3",
+    "subtitles.manage.R4"
+   ],
+   "scenarios": [
+    "subtitles.manage.upload-delete",
+    "subtitles.manage.errors",
+    "subtitles.manage.policy"
+   ],
+   "code": [
+    "internal/api/subtitles.go"
+   ],
+   "priority": "low"
+  },
+  {
+   "id": "playback.subtitles.providers",
+   "title": "Remote subtitle providers",
+   "status": "not-planned",
+   "description": "The search, download and provider routes exist and answer like a server with no provider installed; `GET /FallbackFont/Fonts` lists nothing.",
+   "reference": "Plugins (OpenSubtitles and others) search and download subtitles into the media folder; a fonts folder feeds ASS rendering.",
+   "notes": "Needs provider plugins and network access, outside the single-binary no-dependency scope (AGENTS.md principle 2).",
+   "spec_rules": [
+    "subtitles.providers.R1"
+   ],
+   "scenarios": [
+    "subtitles.providers.empty"
+   ],
+   "code": [
+    "internal/api/subtitles.go"
+   ],
+   "priority": "low"
   },
   {
    "id": "playback.trickplay",

@@ -23,6 +23,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Subtitles. External subtitle files beside a video (`.srt .ass .ssa .vtt .smi
+  .sami .sup`, named `<video>.<lang>[.forced][.default][.sdh].<ext>` or with a
+  free title, any case) are listed as `MediaStreams` ahead of the video's own
+  streams, in the reference's file-name order, with `Language`, `Title`,
+  `IsForced`/`IsDefault`/`IsHearingImpaired`, `IsExternal`, `Path`, `Score`
+  and the `DisplayTitle` the reference builds (language names come from the
+  culture list, now `internal/culture`). The folder listing is read once per
+  directory by the scan, so adding, removing or renaming a file is seen on
+  the next scan without re-probing the video. `HasSubtitles` covers them.
+  `GET /Videos/{id}/{mediaSourceId}/Subtitles/{index}/Stream.{format}` (and
+  `.../{startPositionTicks}/Stream.{format}`) serves them, and embedded text
+  tracks (extracted with ffmpeg), as `srt`, `vtt`, `ass`, `ssa`, `json` and
+  `ttml` with `startPositionTicks`, `endPositionTicks`, `copyTimestamps` and
+  `addVttTimeMap`; `.../subtitles.m3u8` lists the WebVTT windows.
+  PlaybackInfo sets `DefaultSubtitleStreamIndex`/`DefaultAudioStreamIndex`
+  (from `SubtitleMode`, `SubtitleLanguagePreference`) and, when the request
+  carries a device profile, `DeliveryMethod`/`DeliveryUrl` per subtitle
+  stream. `POST /Videos/{id}/Subtitles` and `DELETE
+  /Videos/{id}/Subtitles/{index}` manage external files; the provider search
+  routes answer like a server with no subtitle provider, and
+  `/FallbackFont/Fonts` lists nothing. The stream routes require a token
+  (the reference serves them anonymously). New contract area `subtitles`
+  (`docs/contract/specs/subtitles.md`, 23 scenarios), a text-body assertion
+  (`expect.text`) in the conformance runner, and a lazy `SubFiles` fixture
+  library. Not done: burning a subtitle into the transcoded video and
+  subtitle groups in HLS manifests.
 - Coverage tracker: `docs/COVERAGE.md` (overview, per controller and per
   subsystem) and `docs/coverage/` (every operation of the Jellyfin 12.2
   OpenAPI document with a status computed from the registered routes and the

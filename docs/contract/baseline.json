@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 553
+    "pass": 576
   },
   "scenarios": {
     "collections.add.appends": "pass",
@@ -340,6 +340,29 @@
     "quickconnect.initiate.device-headers-required": "pass",
     "quickconnect.initiate.invalid-token-ignored": "pass",
     "quickconnect.initiate.shape": "pass",
+    "subtitles.default.modes": "pass",
+    "subtitles.delivery.embedded": "pass",
+    "subtitles.delivery.external": "pass",
+    "subtitles.delivery.no-profile": "pass",
+    "subtitles.discover.codecs-and-paths": "pass",
+    "subtitles.discover.display-title": "pass",
+    "subtitles.discover.names": "pass",
+    "subtitles.discover.score": "pass",
+    "subtitles.embedded.mixed": "pass",
+    "subtitles.embedded.streams": "pass",
+    "subtitles.manage.errors": "pass",
+    "subtitles.manage.policy": "pass",
+    "subtitles.manage.upload-delete": "pass",
+    "subtitles.playlist.segments": "pass",
+    "subtitles.providers.empty": "pass",
+    "subtitles.stream.ass-and-sami": "pass",
+    "subtitles.stream.auth": "pass",
+    "subtitles.stream.embedded": "pass",
+    "subtitles.stream.errors": "pass",
+    "subtitles.stream.formats": "pass",
+    "subtitles.stream.offsets": "pass",
+    "subtitles.stream.route-forms": "pass",
+    "subtitles.stream.text-edge": "pass",
     "users.auth.access-schedule": "pass",
     "users.auth.activity-failed-login-entry": "pass",
     "users.auth.activity-lockout-entry": "pass",

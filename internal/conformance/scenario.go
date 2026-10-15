@@ -140,11 +140,23 @@ type Expect struct {
 	Status  Ints              `json:"status,omitempty"`
 	Headers map[string]string `json:"headers,omitempty"` // value: "present" | "absent" | /regex/ | literal
 	JSON    []Assert          `json:"json,omitempty"`
+	// Text asserts on the body as text (for responses that are not JSON:
+	// subtitle documents, playlists).
+	Text []TextAssert `json:"text,omitempty"`
 	// Empty asserts a zero-length body.
 	Empty bool `json:"empty,omitempty"`
 	// Problem asserts the body is an RFC 9110 problem document for this status
 	// (type, title and status members); 0 disables the check.
 	Problem int `json:"problem,omitempty"`
+}
+
+// TextAssert is one assertion on the raw response body. Op is eq (the whole
+// body, exactly), prefix, contains, notcontains, matches (a regular
+// expression, unanchored; (?s) lets "." cross lines) or lines (the number of
+// non-empty lines, Value a number). String values are template-expanded.
+type TextAssert struct {
+	Op    string `json:"op"`
+	Value any    `json:"value"`
 }
 
 // Assert is one JSON-path assertion.

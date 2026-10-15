@@ -2,21 +2,21 @@
  "reference": "jellyfin/jellyfin:12.2 /api-docs/openapi.json 12.2.0",
  "totals": {
   "features_by_status": {
-   "not-planned": 19,
-   "partial": 17,
-   "planned": 19,
-   "supported": 41
+   "not-planned": 20,
+   "partial": 18,
+   "planned": 17,
+   "supported": 44
   },
   "operations": 364,
-  "registered": 113,
+  "registered": 123,
   "routes_by_status": {
-   "divergent-by-design": 9,
+   "divergent-by-design": 11,
    "not-planned": 116,
-   "partial": 9,
-   "planned": 135,
-   "supported": 95
+   "partial": 12,
+   "planned": 125,
+   "supported": 100
   },
-  "verified": 66
+  "verified": 74
  },
  "routes": [
   {
@@ -1963,6 +1963,14 @@
     "playstate.user.isolation",
     "playstate.user.nonadmin-other-user-forbidden",
     "playstate.user.nonadmin-other-user-forbidden-unmark",
+    "subtitles.default.modes",
+    "subtitles.discover.codecs-and-paths",
+    "subtitles.discover.display-title",
+    "subtitles.discover.names",
+    "subtitles.discover.score",
+    "subtitles.embedded.mixed",
+    "subtitles.embedded.streams",
+    "subtitles.manage.upload-delete",
     "wire.date.user-data-precision",
     "wire.id.dashed-input-accepted",
     "wire.id.item-objects",
@@ -2991,7 +2999,8 @@
    "web": true,
    "scenarios": [
     "extras.versions.movie",
-    "items.rating.other-read-paths"
+    "items.rating.other-read-paths",
+    "subtitles.delivery.no-profile"
    ]
   },
   {
@@ -3004,7 +3013,10 @@
    "verified": true,
    "web": true,
    "scenarios": [
-    "items.homevideos.video-media-and-playback"
+    "items.homevideos.video-media-and-playback",
+    "subtitles.delivery.embedded",
+    "subtitles.delivery.external",
+    "subtitles.delivery.no-profile"
    ]
   },
   {
@@ -4036,120 +4048,140 @@
    "tag": "Subtitle",
    "group": "playback",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": false,
-   "notes": "Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged.",
-   "priority": "high"
+   "scenarios": [
+    "subtitles.providers.empty"
+   ]
   },
   {
    "id": "GET /FallbackFont/Fonts/{name}",
    "tag": "Subtitle",
    "group": "playback",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": false,
-   "notes": "Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged.",
-   "priority": "high"
+   "scenarios": [
+    "subtitles.providers.empty"
+   ]
   },
   {
    "id": "GET /Items/{itemId}/RemoteSearch/Subtitles/{language}",
    "tag": "Subtitle",
    "group": "playback",
    "policy": "SubtitleManagement",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "partial",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged.",
-   "priority": "high"
+   "scenarios": [
+    "subtitles.manage.policy",
+    "subtitles.providers.empty"
+   ],
+   "notes": "Answers like a server with no subtitle provider: an empty list. Searching and downloading from remote subtitle providers is not planned (it needs provider plugins and network access).",
+   "priority": "low"
   },
   {
    "id": "POST /Items/{itemId}/RemoteSearch/Subtitles/{subtitleId}",
    "tag": "Subtitle",
    "group": "playback",
    "policy": "SubtitleManagement",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "partial",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged.",
-   "priority": "high"
+   "scenarios": [
+    "subtitles.providers.empty"
+   ],
+   "notes": "Accepted and ignored: there is no provider to download from. Searching and downloading from remote subtitle providers is not planned (it needs provider plugins and network access).",
+   "priority": "low"
   },
   {
    "id": "GET /Providers/Subtitles/Subtitles/{subtitleId}",
    "tag": "Subtitle",
    "group": "playback",
    "policy": "SubtitleManagement",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "partial",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged.",
-   "priority": "high"
+   "scenarios": [
+    "subtitles.manage.policy",
+    "subtitles.providers.empty"
+   ],
+   "notes": "Answers 500 like the reference does for an id no provider issued. Searching and downloading from remote subtitle providers is not planned (it needs provider plugins and network access).",
+   "priority": "low"
   },
   {
    "id": "POST /Videos/{itemId}/Subtitles",
    "tag": "Subtitle",
    "group": "playback",
    "policy": "SubtitleManagement",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged.",
-   "priority": "high"
+   "scenarios": [
+    "subtitles.manage.errors",
+    "subtitles.manage.policy",
+    "subtitles.manage.upload-delete"
+   ]
   },
   {
    "id": "DELETE /Videos/{itemId}/Subtitles/{index}",
    "tag": "Subtitle",
    "group": "playback",
    "policy": "RequiresElevation",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": false,
-   "notes": "Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged.",
-   "priority": "high"
+   "scenarios": [
+    "subtitles.manage.errors",
+    "subtitles.manage.policy",
+    "subtitles.manage.upload-delete"
+   ]
   },
   {
    "id": "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/subtitles.m3u8",
    "tag": "Subtitle",
    "group": "playback",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": false,
-   "notes": "Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged.",
-   "priority": "high"
+   "scenarios": [
+    "subtitles.playlist.segments",
+    "subtitles.stream.auth"
+   ],
+   "notes": "Served by the wildcard subtitle route (subtitles.playlist.R1)."
   },
   {
    "id": "GET /Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/Stream.{routeFormat}",
    "tag": "Subtitle",
    "group": "playback",
    "policy": "Anonymous",
-   "status": "planned",
-   "registered": false,
+   "status": "divergent-by-design",
+   "registered": true,
    "verified": false,
    "web": false,
-   "notes": "Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged.",
-   "priority": "high"
+   "notes": "Served for authenticated callers only: the reference serves it to anonymous ones (subtitles.stream.R9). Formats srt, vtt, ass, ssa, json and ttml from external SubRip/WebVTT/ASS/SSA/SAMI files and embedded text tracks (extracted with ffmpeg); bitmap tracks are not converted."
   },
   {
    "id": "GET /Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/{routeStartPositionTicks}/Stream.{routeFormat}",
    "tag": "Subtitle",
    "group": "playback",
    "policy": "Anonymous",
-   "status": "planned",
-   "registered": false,
+   "status": "divergent-by-design",
+   "registered": true,
    "verified": false,
    "web": false,
-   "notes": "Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged.",
-   "priority": "high"
+   "notes": "As the route without the start position; authenticated callers only (subtitles.stream.R9)."
   },
   {
    "id": "GET /Items/Suggestions",
@@ -4783,6 +4815,7 @@
    "verified": true,
    "web": false,
    "scenarios": [
+    "subtitles.default.modes",
     "users.configuration.body-shapes",
     "users.configuration.empty-language-preference",
     "users.configuration.errors",
@@ -6217,14 +6250,117 @@
   {
    "id": "playback.subtitles",
    "title": "Subtitle delivery and conversion",
-   "status": "planned",
-   "description": "No subtitle routes; embedded subtitle tracks are listed but cannot be fetched or converted.",
-   "reference": "SRT/ASS/VTT delivery, conversion, burn-in.",
-   "notes": "In scope for v1 (docs/01); actively called by the web client.",
-   "routes": [
-    "GET /Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/Stream.{routeFormat}"
+   "status": "partial",
+   "description": "`Stream.{format}` (and with a start position) serves external SubRip/WebVTT/ASS/SSA/SAMI files and embedded text tracks as srt, vtt, ass, ssa, json and ttml with the reference's offsets (`startPositionTicks`, `endPositionTicks`, `copyTimestamps`, `addVttTimeMap`); `subtitles.m3u8` lists the WebVTT windows; PlaybackInfo sets `DeliveryMethod`/`DeliveryUrl` per stream from the device profile's `SubtitleProfiles`.",
+   "reference": "The same, plus burning a subtitle into the transcoded video, subtitle groups in HLS manifests and anonymous access to the stream routes.",
+   "notes": "No burn-in (`Encode`) and no subtitle rendition in HLS: a stream reported as `Encode` or `Hls` is not rendered by Tinyfin's transcoder, and its selection does not force a transcode. Bitmap tracks (PGS, DVD) are never converted. Stream routes need a token (divergence subtitles.stream.R9).",
+   "spec_rules": [
+    "subtitles.stream.R1",
+    "subtitles.stream.R2",
+    "subtitles.stream.R3",
+    "subtitles.stream.R4",
+    "subtitles.stream.R5",
+    "subtitles.stream.R6",
+    "subtitles.stream.R7",
+    "subtitles.stream.R8",
+    "subtitles.stream.R9",
+    "subtitles.playlist.R1",
+    "subtitles.playlist.R2",
+    "subtitles.delivery.R1",
+    "subtitles.delivery.R2",
+    "subtitles.delivery.R3",
+    "subtitles.delivery.R4",
+    "subtitles.delivery.R5"
    ],
-   "priority": "high"
+   "scenarios": [
+    "subtitles.stream.formats",
+    "subtitles.stream.ass-and-sami",
+    "subtitles.stream.text-edge",
+    "subtitles.stream.offsets",
+    "subtitles.stream.embedded",
+    "subtitles.stream.route-forms",
+    "subtitles.stream.errors",
+    "subtitles.stream.auth",
+    "subtitles.playlist.segments",
+    "subtitles.delivery.external",
+    "subtitles.delivery.embedded",
+    "subtitles.delivery.no-profile"
+   ],
+   "code": [
+    "internal/api/subtitles.go",
+    "internal/subtitle/convert.go",
+    "internal/playback/subtitles.go",
+    "internal/api/playback.go"
+   ],
+   "routes": [
+    "GET /Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/Stream.{routeFormat}",
+    "GET /Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/{routeStartPositionTicks}/Stream.{routeFormat}",
+    "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/subtitles.m3u8"
+   ],
+   "priority": "medium"
+  },
+  {
+   "id": "playback.subtitles.default",
+   "title": "Default subtitle and audio stream",
+   "status": "supported",
+   "description": "`DefaultSubtitleStreamIndex` and `DefaultAudioStreamIndex` on every media source follow the caller's `SubtitleMode`, `SubtitleLanguagePreference` and `AudioLanguagePreference`.",
+   "reference": "Same ranking; the selection is also remembered per item and user.",
+   "notes": "Remembered selections (`RememberSubtitleSelections`) are not applied.",
+   "spec_rules": [
+    "subtitles.default.R1",
+    "subtitles.default.R2",
+    "subtitles.default.R3"
+   ],
+   "scenarios": [
+    "subtitles.default.modes",
+    "subtitles.delivery.no-profile"
+   ],
+   "code": [
+    "internal/playback/subtitles.go",
+    "internal/api/playback.go"
+   ],
+   "priority": "low"
+  },
+  {
+   "id": "playback.subtitles.manage",
+   "title": "Subtitle upload and deletion",
+   "status": "supported",
+   "description": "`POST /Videos/{id}/Subtitles` saves a base64 file beside the video (`\u003cname\u003e.\u003clang\u003e[.forced][.sdh].\u003cext\u003e`, numbered when taken) and `DELETE /Videos/{id}/Subtitles/{index}` removes an external file; the item's streams are updated at once.",
+   "reference": "Same; the file lands in the media folder or the server's data folder by library option.",
+   "notes": "Always saved beside the video (`SaveSubtitlesWithMedia` is not honored).",
+   "spec_rules": [
+    "subtitles.manage.R1",
+    "subtitles.manage.R2",
+    "subtitles.manage.R3",
+    "subtitles.manage.R4"
+   ],
+   "scenarios": [
+    "subtitles.manage.upload-delete",
+    "subtitles.manage.errors",
+    "subtitles.manage.policy"
+   ],
+   "code": [
+    "internal/api/subtitles.go"
+   ],
+   "priority": "low"
+  },
+  {
+   "id": "playback.subtitles.providers",
+   "title": "Remote subtitle providers",
+   "status": "not-planned",
+   "description": "The search, download and provider routes exist and answer like a server with no provider installed; `GET /FallbackFont/Fonts` lists nothing.",
+   "reference": "Plugins (OpenSubtitles and others) search and download subtitles into the media folder; a fonts folder feeds ASS rendering.",
+   "notes": "Needs provider plugins and network access, outside the single-binary no-dependency scope (AGENTS.md principle 2).",
+   "spec_rules": [
+    "subtitles.providers.R1"
+   ],
+   "scenarios": [
+    "subtitles.providers.empty"
+   ],
+   "code": [
+    "internal/api/subtitles.go"
+   ],
+   "priority": "low"
   },
   {
    "id": "playback.trickplay",
@@ -6507,13 +6643,38 @@
   {
    "id": "scan.sidecar.subtitles",
    "title": "External subtitle files",
-   "status": "planned",
-   "description": "Not cataloged: `.srt/.ass/.vtt` next to a video are not found; only subtitle tracks inside the container are listed (via ffprobe).",
-   "reference": "Finds external subtitle files by name and language and lists them as MediaStreams.",
-   "notes": "The storage interface has a SubtitleStore, unused by the scanner; the subtitle routes do not exist (see API: playback).",
+   "status": "supported",
+   "description": "`.srt .ass .ssa .vtt .smi .sami .sup` files named after the video (`\u003cvideo\u003e.\u003clang\u003e[.forced][.default][.sdh].\u003cext\u003e`, a free title, any case) are listed as MediaStreams of the video, ahead of its own streams, in the reference's file-name order, from the scan's one folder listing per directory. Added, removed or renamed files are seen on every scan without re-probing the video.",
+   "reference": "The same, with the codec decided by probing the file's content and zero-length files dropped.",
+   "notes": "The codec follows the extension; `.sub`/`.idx` (decided by content on the reference) are not listed; zero-length files are listed.",
+   "spec_rules": [
+    "subtitles.discover.R1",
+    "subtitles.discover.R2",
+    "subtitles.discover.R3",
+    "subtitles.discover.R4",
+    "subtitles.discover.R5",
+    "subtitles.discover.R6",
+    "subtitles.discover.R7",
+    "subtitles.discover.R8",
+    "subtitles.discover.R9",
+    "subtitles.discover.R10",
+    "subtitles.discover.R11",
+    "subtitles.embedded.R1",
+    "subtitles.embedded.R2"
+   ],
+   "scenarios": [
+    "subtitles.discover.names",
+    "subtitles.discover.codecs-and-paths",
+    "subtitles.discover.display-title",
+    "subtitles.discover.score",
+    "subtitles.embedded.streams",
+    "subtitles.embedded.mixed"
+   ],
    "code": [
-    "internal/scan/probe.go",
-    "internal/storage/subtitle.go"
+    "internal/scan/subtitles.go",
+    "internal/scan/incremental.go",
+    "internal/subtitle/names.go",
+    "internal/culture/culture.go"
    ],
    "priority": "high"
   },

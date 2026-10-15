@@ -44,7 +44,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `GET /Items/Latest` | DefaultAuthorization | yes | 2/2 |  |
 | 🗓️ planned | `GET /Items/Root` | DefaultAuthorization | yes |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | ✅ supported | `DELETE /Items/{itemId}` | DefaultAuthorization | yes | 6/6 |  |
-| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 119/119 |  |
+| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 127/127 |  |
 | ✅ supported | `GET /Items/{itemId}/Ancestors` | DefaultAuthorization | yes | 2/2 |  |
 | 🗓️ planned | `GET /Items/{itemId}/Collections` | DefaultAuthorization | yes |  | Called on every item detail page ('part of a collection'); 404 today (docs/11). (priority: medium) |
 | 🗓️ planned | `GET /Items/{itemId}/Download` | Download |  |  | Download permission exists in the user policy but no download route is served. (priority: medium) |

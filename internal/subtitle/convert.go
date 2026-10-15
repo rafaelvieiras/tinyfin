@@ -272,12 +272,12 @@ func parseSAMI(text string) []Cue {
 // Window returns the cues that remain after the offsets of one stream
 // request: when copyTimestamps is false every time is moved back by
 // startTicks (a negative value moves them forward) and a cue that then ends at or before zero is dropped (a start
-// before zero is clamped to zero); a cue that starts at or after endTicks
+// before zero is clamped to zero); a cue that starts after endTicks
 // (the original timeline, endTicks > 0) is dropped.
 func (t Track) Window(startTicks, endTicks int64, copyTimestamps bool) Track {
 	out := Track{Kind: t.Kind, Style: t.Style}
 	for _, c := range t.Cues {
-		if endTicks > 0 && c.Start >= endTicks {
+		if endTicks > 0 && c.Start > endTicks {
 			continue
 		}
 		if !copyTimestamps && startTicks != 0 {
@@ -307,12 +307,26 @@ const (
 	FormatTTML Format = "ttml"
 )
 
-// ParseFormat maps a route extension (any case) to an output Format.
-func ParseFormat(ext string) (Format, bool) {
+// ParseFormat maps a route extension (any case) to an output Format. The
+// long names "subrip" and "webvtt" name the same writers; alias is true for
+// them (the reference serves those as application/octet-stream and never
+// passes a file through).
+func ParseFormat(ext string) (f Format, alias, ok bool) {
 	switch strings.ToLower(ext) {
-	case "srt", "subrip":
+	case "subrip":
+		return FormatSRT, true, true
+	case "webvtt":
+		return FormatVTT, true, true
+	}
+	f, ok = parseFormat(ext)
+	return f, false, ok
+}
+
+func parseFormat(ext string) (Format, bool) {
+	switch strings.ToLower(ext) {
+	case "srt":
 		return FormatSRT, true
-	case "vtt", "webvtt":
+	case "vtt":
 		return FormatVTT, true
 	case "ass":
 		return FormatASS, true

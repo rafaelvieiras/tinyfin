@@ -559,4 +559,71 @@ setmovie Sets "Saga Case Lower" 2011 "<set><name>case saga</name></set>"
 setmovie SetsOff "Saga Gamma One" 2008 "<set><name>Gamma Saga</name></set>"
 setmovie SetsOff "Saga Gamma Two" 2009 "<set><name>Gamma Saga</name></set>"
 
+# Subtitles (own library "SubFiles", lazy): movies with external subtitle files
+# named in the ways the reference understands, embedded text tracks, and files
+# in every text format the conversion route reads. The folder is not called
+# "Subs": the reference ignores folders of that name.
+SF="$ROOT/SubFiles"
+subfile() { # <path> [content]
+  mkdir -p "$(dirname "$1")"
+  printf '%b' "${2:-1\n00:00:01,000 --> 00:00:02,500\nHello <i>world</i>\n\n2\n00:00:03,000 --> 00:00:04,000\nSecond line\n}" >"$1"
+}
+# an MKV with three embedded subtitle tracks: SubRip "eng" (default, titled
+# "English Full"), ASS "por" and SubRip "spa" (forced)
+mkvsubs() { # <out>
+  [ -f "$1" ] && return 0
+  mkdir -p "$(dirname "$1")"
+  local t; t="$(mktemp -d)"
+  printf '1\n00:00:01,000 --> 00:00:02,500\nHello <i>world</i>\n\n2\n00:00:03,000 --> 00:00:04,000\nSecond line\n' >"$t/a.srt"
+  printf '[Script Info]\nScriptType: v4.00+\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:01.00,0:00:02.50,Default,,0,0,0,,Hello {\\i1}world{\\i0}\\Nline two\n' >"$t/b.ass"
+  "$FFMPEG" -v error -y -f lavfi -i "testsrc=duration=4:size=320x240:rate=6" -f lavfi -i "sine=frequency=500:duration=4" \
+    -i "$t/a.srt" -i "$t/b.ass" -i "$t/a.srt" -map 0 -map 1 -map 2 -map 3 -map 4 \
+    -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -c:s:0 srt -c:s:1 ass -c:s:2 srt \
+    -metadata:s:s:0 language=eng -metadata:s:s:0 title="English Full" -metadata:s:s:1 language=por -metadata:s:s:2 language=spa \
+    -disposition:s:0 default -disposition:s:1 0 -disposition:s:2 forced -shortest "$1"
+  rm -rf "$t"
+}
+# file names: plain, language codes (2 and 3 letters, region form, a name),
+# flags in any order, a free title; none of the last four belongs to the video
+N="$SF/Sub Names (2300)"
+clip "$N/Sub Names (2300).mp4" 6 440
+for part in "" .en .pt-BR .zh-CN .fr.forced .es.default .de.sdh .SDH.it .Commentary ".en.Signs and Songs" .English .xx; do
+  subfile "$N/Sub Names (2300)$part.srt"
+done
+subfile "$N/Sub Names (2300).it.vtt" 'WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nCiao\n'
+subfile "$N/Sub Names (2300).ja.ass" '[Script Info]\nScriptType: v4.00+\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Konnichiwa\n'
+subfile "$N/Sub Names (2300).ko.smi" '<SAMI><BODY>\n<SYNC Start=1000><P Class=ENCC>Hello\n<SYNC Start=2000><P Class=ENCC>&nbsp;\n</BODY></SAMI>\n'
+subfile "$N/Sub Names (2300).ru.sup" 'PGS'
+subfile "$N/Other.srt"
+subfile "$N/Sub Names (2300) 2.srt"
+subfile "$N/Sub Names (2300)-en.srt"
+subfile "$N/Sub Names (2300).en.txt" 'not a subtitle'
+subfile "$N/Sub Names (2300).en.ttml" '<tt/>'
+mkvsubs "$SF/Sub Embedded (2301)/Sub Embedded (2301).mkv"
+M="$SF/Sub Mov (2302)"
+if [ ! -f "$M/Sub Mov (2302).mp4" ]; then
+  mkdir -p "$M"
+  printf '1\n00:00:01,000 --> 00:00:02,500\nHello <i>world</i>\n' >"$M/.t.srt"
+  "$FFMPEG" -v error -y -f lavfi -i "testsrc=duration=4:size=320x240:rate=6" -f lavfi -i "sine=frequency=500:duration=4" -i "$M/.t.srt" \
+    -map 0 -map 1 -map 2 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -c:s mov_text -metadata:s:s:0 language=fra -shortest "$M/Sub Mov (2302).mp4"
+  rm -f "$M/.t.srt"
+fi
+X="$SF/Sub Mixed (2303)"
+mkvsubs "$X/Sub Mixed (2303).mkv"
+subfile "$X/Sub Mixed (2303).en.srt"
+subfile "$X/Sub Mixed (2303).de.forced.srt"
+clip "$SF/Sub None (2304)/Sub None (2304).mp4" 6 330
+C="$SF/Sub Convert (2305)"
+clip "$C/Sub Convert (2305).mp4" 6 660
+subfile "$C/Sub Convert (2305).en.srt"
+subfile "$C/Sub Convert (2305).it.vtt" 'WEBVTT\n\n00:00:01.000 --> 00:00:02.500\nCiao <i>mondo</i>\n\n00:00:03.000 --> 00:00:04.000\nSeconda riga\n'
+subfile "$C/Sub Convert (2305).pt.ass" '[Script Info]\nScriptType: v4.00+\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:01.00,0:00:02.50,Default,,0,0,0,,Ola {\\i1}mundo{\\i0}\\Nsegunda linha\nDialogue: 0,0:00:03.00,0:00:04.00,Default,,0,0,0,,Fim\n'
+subfile "$C/Sub Convert (2305).ja.ssa" '[Script Info]\nScriptType: v4.00+\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:01.00,0:00:02.50,Default,,0,0,0,,Kon {\\i1}nichi{\\i0}\\Nwa\n'
+subfile "$C/Sub Convert (2305).ko.smi" '<SAMI><BODY>\n<SYNC Start=1000><P Class=ENCC>Hello<br>there\n<SYNC Start=2000><P Class=ENCC>&nbsp;\n<SYNC Start=3000><P Class=ENCC>Last\n<SYNC Start=4500><P Class=ENCC>&nbsp;\n</BODY></SAMI>\n'
+# non-ASCII text (UTF-8 bytes) and markup characters
+subfile "$C/Sub Convert (2305).fr.srt" '1\n00:00:01,000 --> 00:00:02,500\nCaf\xc3\xa9 \xe6\x97\xa5\xe6\x9c\xac & "q" <b>x</b>\n'
+subfile "$C/Sub Convert (2305).es.srt" '1\r\n00:00:01,000 --> 00:00:02,000\r\nCRLF line\r\n\r\n2\r\n00:00:05,000 --> 00:00:06,000\r\nAfter five\r\n\r\n3\r\n00:00:09,000 --> 00:00:10,000\r\nAfter nine\r\n'
+# an upload target the scenarios write to and clean up
+clip "$SF/Sub Upload (2306)/Sub Upload (2306).mp4" 6 770
+
 echo "media tree ready under $ROOT"

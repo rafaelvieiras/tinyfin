@@ -600,6 +600,11 @@ func (c *Client) checkExpect(st Step, resp *Response, scratch map[string]string)
 			return fmt.Errorf("%s %s: %w%s", a.Path, a.Op, err, snippet(resp))
 		}
 	}
+	for _, a := range st.Expect.Text {
+		if err := c.checkText(resp, a, scratch); err != nil {
+			return fmt.Errorf("text %s: %w%s", a.Op, err, snippet(resp))
+		}
+	}
 	for name, src := range st.Capture {
 		src, err := c.expand(src, scratch)
 		if err != nil {
@@ -611,6 +616,64 @@ func (c *Client) checkExpect(st Step, resp *Response, scratch map[string]string)
 		}
 		scratch[name] = v
 		c.Vars["capture."+name] = v
+	}
+	return nil
+}
+
+// checkText evaluates one TextAssert against the raw body.
+func (c *Client) checkText(r *Response, a TextAssert, scratch map[string]string) error {
+	body := string(r.Body)
+	if a.Op == "lines" {
+		want, ok := toFloat(a.Value)
+		if !ok {
+			return fmt.Errorf("lines needs a number")
+		}
+		n := 0
+		for _, l := range strings.Split(body, "\n") {
+			if strings.TrimSpace(l) != "" {
+				n++
+			}
+		}
+		if n != int(want) {
+			return fmt.Errorf("%d non-empty lines, want %d", n, int(want))
+		}
+		return nil
+	}
+	raw, ok := a.Value.(string)
+	if !ok {
+		return fmt.Errorf("value must be a string")
+	}
+	want, err := c.expand(raw, scratch)
+	if err != nil {
+		return err
+	}
+	switch a.Op {
+	case "eq":
+		if body != want {
+			return fmt.Errorf("body differs from %q", want)
+		}
+	case "prefix":
+		if !strings.HasPrefix(body, want) {
+			return fmt.Errorf("body does not start with %q", want)
+		}
+	case "contains":
+		if !strings.Contains(body, want) {
+			return fmt.Errorf("body does not contain %q", want)
+		}
+	case "notcontains":
+		if strings.Contains(body, want) {
+			return fmt.Errorf("body contains %q", want)
+		}
+	case "matches":
+		re, err := regexp.Compile(want)
+		if err != nil {
+			return err
+		}
+		if !re.MatchString(body) {
+			return fmt.Errorf("body does not match %s", want)
+		}
+	default:
+		return fmt.Errorf("unknown text op %q", a.Op)
 	}
 	return nil
 }

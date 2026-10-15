@@ -32,7 +32,8 @@ what starting Phase 1 actually requires next.
 
 - [x] Embedded SQLite storage driver implementing the interface from O3 (`internal/storage/sqlite`)
 - [~] API/metadata role: users, devices, library browsing, and images landed
-      (`internal/api`); sessions (beyond auth) and subtitles are not built yet.
+      (`internal/api`); subtitles (external files, conversion routes, delivery) landed without
+      burn-in; sessions (beyond auth) are not built yet.
 - [~] Direct Play negotiation against the device-profile set from O2 (`internal/deviceprofile`,
       `internal/playback`) — confirmed working against the `jellyfin-web` device profile via a
       real client (below). The `"Jellyfin Android"`/`"Jellyfin iOS"` `Client` strings are still

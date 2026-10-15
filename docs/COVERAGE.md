@@ -19,35 +19,35 @@ How to read and edit this: [`docs/coverage/README.md`](coverage/README.md). Mach
 | Measure | Value |
 |---|---|
 | Reference operations (OpenAPI 12.2.0) | 364 |
-| Registered by Tinyfin | **113** (31%) |
-| Registered **and** a passing contract scenario | **66** (18%) |
-| Called by the official web client (docs/11) and registered | 82 of 161 (51%) |
+| Registered by Tinyfin | **123** (34%) |
+| Registered **and** a passing contract scenario | **74** (20%) |
+| Called by the official web client (docs/11) and registered | 86 of 161 (53%) |
 | Routes Tinyfin serves that the OpenAPI document lacks | 14 (legacy aliases the web client needs, `/socket`, HLS) |
-| Non-route features tracked | 96 (✅ 41 · 🟡 17 · 🗓️ 19 · ⛔ 19) |
+| Non-route features tracked | 99 (✅ 44 · 🟡 18 · 🗓️ 17 · ⛔ 20) |
 
 ### Routes by status
 
-✅✅✅✅✅🟡🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔↔️ ✅ 95 · 🟡 9 · 🗓️ 135 · ⛔ 116 · ↔️ 9
+✅✅✅✅✅🟡🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔↔️ ✅ 100 · 🟡 12 · 🗓️ 125 · ⛔ 116 · ↔️ 11
 
 ```mermaid
 pie showData title Reference operations by status
-    "supported" : 95
-    "partial" : 9
-    "planned" : 135
+    "supported" : 100
+    "partial" : 12
+    "planned" : 125
     "not-planned" : 116
-    "divergent-by-design" : 9
+    "divergent-by-design" : 11
 ```
 
 ### Non-route features by status
 
-✅✅✅✅✅✅✅✅🟡🟡🟡🟡🗓️🗓️🗓️🗓️⛔⛔⛔⛔ ✅ 41 · 🟡 17 · 🗓️ 19 · ⛔ 19
+✅✅✅✅✅✅✅✅✅🟡🟡🟡🟡🗓️🗓️🗓️⛔⛔⛔⛔ ✅ 44 · 🟡 18 · 🗓️ 17 · ⛔ 20
 
 ```mermaid
 pie showData title Features by status
-    "supported" : 41
-    "partial" : 17
-    "planned" : 19
-    "not-planned" : 19
+    "supported" : 44
+    "partial" : 18
+    "planned" : 17
+    "not-planned" : 20
 ```
 
 ## HTTP API by controller group
@@ -61,7 +61,7 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | [Library administration](coverage/api-library-admin.md) | 32 | 12 (38%) | 2 (6%) | ✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔ | ✅ 12 · 🗓️ 17 · ⛔ 3 |
 | [Library browsing and metadata queries](coverage/api-library-browse.md) | 58 | 23 (40%) | 18 (31%) | ✅✅✅✅✅✅🟡🟡🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔ | ✅ 18 · 🟡 4 · 🗓️ 30 · ⛔ 5 · ↔️ 1 |
 | [Live TV and channels](coverage/api-live-tv.md) | 43 | 1 (2%) | 0 (0%) | ⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔ | 🟡 1 · ⛔ 42 |
-| [Playback, streaming and subtitles](coverage/api-playback.md) | 38 | 9 (24%) | 3 (8%) | ✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 9 · 🗓️ 12 · ⛔ 17 |
+| [Playback, streaming and subtitles](coverage/api-playback.md) | 38 | 19 (50%) | 11 (29%) | ✅✅✅✅✅✅✅🟡🟡🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔↔️ | ✅ 14 · 🟡 3 · 🗓️ 2 · ⛔ 17 · ↔️ 2 |
 | [Sessions, play state and realtime](coverage/api-sessions-realtime.md) | 50 | 15 (30%) | 11 (22%) | ✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 14 · 🟡 1 · 🗓️ 13 · ⛔ 22 |
 | [System, branding, localization and plugins](coverage/api-system.md) | 47 | 13 (28%) | 3 (6%) | ✅✅✅✅🟡🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 10 · 🟡 3 · 🗓️ 14 · ⛔ 20 |
 | [Users, authentication and first-run setup](coverage/api-users-auth.md) | 35 | 28 (80%) | 21 (60%) | ✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️↔️↔️↔️↔️ | ✅ 21 · 🗓️ 7 · ↔️ 7 |
@@ -105,7 +105,7 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | Show | 4 | 3 | 2 | ✅ 3 · 🗓️ 1 |
 | Startup | 7 | 7 | 0 | ✅ 6 · ↔️ 1 |
 | Studio | 2 | 1 | 0 | 🟡 1 · 🗓️ 1 |
-| Subtitle | 10 | 0 | 0 | 🗓️ 10 |
+| Subtitle | 10 | 10 | 8 | ✅ 5 · 🟡 3 · ↔️ 2 |
 | Suggestion | 1 | 0 | 0 | 🗓️ 1 |
 | SyncPlay | 22 | 0 | 0 | ⛔ 22 |
 | System | 19 | 9 | 3 | ✅ 7 · 🟡 2 · 🗓️ 10 |
@@ -125,9 +125,9 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | [Library types](coverage/library-types.md) | 11 | ✅✅✅✅✅✅✅🟡🟡🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 4 · 🟡 1 · 🗓️ 1 · ⛔ 5 |
 | [Item metadata and DTO fields](coverage/metadata.md) | 8 | ✅✅✅✅✅✅✅✅✅✅✅✅✅🟡🟡🟡🟡🟡🗓️🗓️ | ✅ 5 · 🟡 2 · 🗓️ 1 |
 | [Platform features and out-of-scope subsystems](coverage/platform.md) | 9 | ✅✅🟡🟡🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 1 · 🟡 1 · 🗓️ 2 · ⛔ 5 |
-| [Playback, streaming and transcoding](coverage/playback.md) | 12 | ✅✅✅✅✅🟡🟡🟡🟡🟡🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔⛔ | ✅ 3 · 🟡 3 · 🗓️ 4 · ⛔ 2 |
+| [Playback, streaming and transcoding](coverage/playback.md) | 15 | ✅✅✅✅✅✅✅🟡🟡🟡🟡🟡🗓️🗓️🗓️🗓️⛔⛔⛔⛔ | ✅ 5 · 🟡 4 · 🗓️ 3 · ⛔ 3 |
 | [Sessions, WebSocket and play reporting](coverage/realtime.md) | 6 | ✅✅✅🟡🟡🟡🟡🟡🟡🟡🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔⛔ | ✅ 1 · 🟡 2 · 🗓️ 2 · ⛔ 1 |
-| [Library scanning](coverage/scan.md) | 24 | ✅✅✅✅✅✅✅✅✅✅🟡🟡🟡🗓️🗓️🗓️🗓️⛔⛔⛔ | ✅ 12 · 🟡 3 · 🗓️ 5 · ⛔ 4 |
+| [Library scanning](coverage/scan.md) | 24 | ✅✅✅✅✅✅✅✅✅✅✅🟡🟡🟡🗓️🗓️🗓️⛔⛔⛔ | ✅ 13 · 🟡 3 · 🗓️ 4 · ⛔ 4 |
 | [System, configuration and operations](coverage/system.md) | 11 | ✅✅✅✅✅🟡🟡🟡🟡🟡🟡🟡🟡🟡🗓️🗓️🗓️🗓️⛔⛔ | ✅ 3 · 🟡 5 · 🗓️ 2 · ⛔ 1 |
 | [Users, authentication and parental controls](coverage/users.md) | 10 | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️⛔⛔ | ✅ 8 · 🗓️ 1 · ⛔ 1 |
 
@@ -144,9 +144,10 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [playstate](contract/specs/playstate.md) | 91 | 89 | 107 | 107 |
 | [quickconnect](contract/specs/quickconnect.md) | 26 | 26 | 23 | 23 |
 | [startup](contract/specs/startup.md) | 25 | 23 | 3 | 0 |
+| [subtitles](contract/specs/subtitles.md) | 37 | 37 | 23 | 23 |
 | [users](contract/specs/users.md) | 188 | 188 | 195 | 195 |
 | [wire](contract/specs/wire.md) | 15 | 14 | 14 | 14 |
-| **total** | 602 | 597 | 556 | 553 |
+| **total** | 639 | 634 | 579 | 576 |
 
 ## Biggest gaps (planned or not planned, web-client facing)
 
@@ -212,10 +213,6 @@ Operations the official web client mentions (docs/11) that Tinyfin does not regi
 | `POST /Sessions/{sessionId}/Command` | 🗓️ planned | Sessions, play state and realtime | Remote control of other sessions is not implemented (the /socket transport exists). |
 | `GET /Shows/Upcoming` | 🗓️ planned | Library browsing and metadata queries | Not implemented. |
 | `GET /Studios/{name}` | 🗓️ planned | Library browsing and metadata queries | Studios are stored from TMDB; the per-studio detail route is not implemented. |
-| `GET /Items/{itemId}/RemoteSearch/Subtitles/{language}` | 🗓️ planned | Playback, streaming and subtitles | Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged. |
-| `POST /Items/{itemId}/RemoteSearch/Subtitles/{subtitleId}` | 🗓️ planned | Playback, streaming and subtitles | Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged. |
-| `GET /Providers/Subtitles/Subtitles/{subtitleId}` | 🗓️ planned | Playback, streaming and subtitles | Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged. |
-| `POST /Videos/{itemId}/Subtitles` | 🗓️ planned | Playback, streaming and subtitles | Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged. |
 | `GET /SyncPlay/List` | ⛔ not-planned | Sessions, play state and realtime | Not in scope for v1; the web client treats 404 on /SyncPlay/List as 'unavailable'. |
 | `POST /ClientLog/Document` | 🗓️ planned | System, branding, localization and plugins | Not implemented. |
 | `GET /GetUtcTime` | 🗓️ planned | System, branding, localization and plugins | Used by clients for clock sync; not implemented. |

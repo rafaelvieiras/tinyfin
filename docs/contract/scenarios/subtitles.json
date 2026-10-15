@@ -1,0 +1,6012 @@
+[
+ {
+  "id": "subtitles.discover.names",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "subtitles.md#discover",
+  "scope": "modern",
+  "tags": [
+   "subtitles"
+  ],
+  "covers": [
+   "subtitles.discover.R1",
+   "subtitles.discover.R2",
+   "subtitles.discover.R4",
+   "subtitles.discover.R5"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-names"
+  ],
+  "steps": [
+   {
+    "name": "language codes, region forms, names, flags and titles",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-names.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams",
+       "op": "len",
+       "value": 18
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Index",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Language",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Title",
+       "op": "eq",
+       "value": "Commentary"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].Index",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].Language",
+       "op": "eq",
+       "value": "deu"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].Title",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Index",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Language",
+       "op": "eq",
+       "value": "eng"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Title",
+       "op": "eq",
+       "value": "Signs and Songs"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Index",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Language",
+       "op": "eq",
+       "value": "eng"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Title",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Index",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Language",
+       "op": "eq",
+       "value": "eng"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Title",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].Index",
+       "op": "eq",
+       "value": 5
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].Language",
+       "op": "eq",
+       "value": "spa"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].Title",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].Index",
+       "op": "eq",
+       "value": 6
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].Language",
+       "op": "eq",
+       "value": "fra"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].Title",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].Index",
+       "op": "eq",
+       "value": 7
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].Language",
+       "op": "eq",
+       "value": "ita"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].Title",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].Index",
+       "op": "eq",
+       "value": 8
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].Language",
+       "op": "eq",
+       "value": "jpn"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].Title",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[9].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[9].Index",
+       "op": "eq",
+       "value": 9
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[9].Language",
+       "op": "eq",
+       "value": "kor"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[9].Title",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[10].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[10].Index",
+       "op": "eq",
+       "value": 10
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[10].Language",
+       "op": "eq",
+       "value": "pt-br"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[10].Title",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].Index",
+       "op": "eq",
+       "value": 11
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].Language",
+       "op": "eq",
+       "value": "rus"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].Title",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[12].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[12].Index",
+       "op": "eq",
+       "value": 12
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[12].Language",
+       "op": "eq",
+       "value": "ita"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[12].Title",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[13].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[13].Index",
+       "op": "eq",
+       "value": 13
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[13].Language",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[13].Title",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[14].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[14].Index",
+       "op": "eq",
+       "value": 14
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[14].Language",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[14].Title",
+       "op": "eq",
+       "value": "xx"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[15].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[15].Index",
+       "op": "eq",
+       "value": 15
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[15].Language",
+       "op": "eq",
+       "value": "zh-cn"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[15].Title",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].IsDefault",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].IsDefault",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsDefault",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].IsDefault",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].IsDefault",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].IsDefault",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].IsDefault",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].IsDefault",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].IsDefault",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[9].IsDefault",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[10].IsDefault",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].IsDefault",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[12].IsDefault",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[13].IsDefault",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[14].IsDefault",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[15].IsDefault",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].IsForced",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[9].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[10].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[12].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[13].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[14].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[15].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].IsHearingImpaired",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].IsHearingImpaired",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsHearingImpaired",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].IsHearingImpaired",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].IsHearingImpaired",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].IsHearingImpaired",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].IsHearingImpaired",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].IsHearingImpaired",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].IsHearingImpaired",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[9].IsHearingImpaired",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[10].IsHearingImpaired",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].IsHearingImpaired",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[12].IsHearingImpaired",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[13].IsHearingImpaired",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[14].IsHearingImpaired",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[15].IsHearingImpaired",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles.discover.codecs-and-paths",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "subtitles.md#discover",
+  "scope": "modern",
+  "tags": [
+   "subtitles"
+  ],
+  "covers": [
+   "subtitles.discover.R3",
+   "subtitles.discover.R6",
+   "subtitles.discover.R7",
+   "subtitles.discover.R8"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-names"
+  ],
+  "steps": [
+   {
+    "name": "codec by extension, files in name order, video and audio after the subtitles",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-names.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Codec",
+       "op": "eq",
+       "value": "subrip"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].Codec",
+       "op": "eq",
+       "value": "subrip"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Codec",
+       "op": "eq",
+       "value": "subrip"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Codec",
+       "op": "eq",
+       "value": "subrip"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Codec",
+       "op": "eq",
+       "value": "subrip"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].Codec",
+       "op": "eq",
+       "value": "subrip"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].Codec",
+       "op": "eq",
+       "value": "subrip"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].Codec",
+       "op": "eq",
+       "value": "webvtt"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].Codec",
+       "op": "eq",
+       "value": "ass"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[9].Codec",
+       "op": "eq",
+       "value": "sami"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[10].Codec",
+       "op": "eq",
+       "value": "subrip"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].Codec",
+       "op": "eq",
+       "value": "PGSSUB"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[12].Codec",
+       "op": "eq",
+       "value": "subrip"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[13].Codec",
+       "op": "eq",
+       "value": "subrip"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[14].Codec",
+       "op": "eq",
+       "value": "subrip"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[15].Codec",
+       "op": "eq",
+       "value": "subrip"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Names (2300)/Sub Names (2300).Commentary.srt"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Names (2300)/Sub Names (2300).de.sdh.srt"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Names (2300)/Sub Names (2300).en.Signs and Songs.srt"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Names (2300)/Sub Names (2300).en.srt"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Names (2300)/Sub Names (2300).English.srt"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Names (2300)/Sub Names (2300).es.default.srt"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Names (2300)/Sub Names (2300).fr.forced.srt"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Names (2300)/Sub Names (2300).it.vtt"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Names (2300)/Sub Names (2300).ja.ass"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[9].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Names (2300)/Sub Names (2300).ko.smi"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[10].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Names (2300)/Sub Names (2300).pt-BR.srt"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Names (2300)/Sub Names (2300).ru.sup"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[12].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Names (2300)/Sub Names (2300).SDH.it.srt"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[13].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Names (2300)/Sub Names (2300).srt"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[14].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Names (2300)/Sub Names (2300).xx.srt"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[15].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Names (2300)/Sub Names (2300).zh-CN.srt"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].IsExternal",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].IsExternal",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsExternal",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].IsExternal",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].IsExternal",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].IsExternal",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].IsExternal",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].IsExternal",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].IsExternal",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[9].IsExternal",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[10].IsExternal",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].IsExternal",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[12].IsExternal",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[13].IsExternal",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[14].IsExternal",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[15].IsExternal",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].IsTextSubtitleStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].IsTextSubtitleStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsTextSubtitleStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].IsTextSubtitleStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].IsTextSubtitleStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].IsTextSubtitleStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].IsTextSubtitleStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].IsTextSubtitleStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].IsTextSubtitleStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[9].IsTextSubtitleStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[10].IsTextSubtitleStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].IsTextSubtitleStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[12].IsTextSubtitleStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[13].IsTextSubtitleStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[14].IsTextSubtitleStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[15].IsTextSubtitleStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[9].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[10].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[12].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[13].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[14].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[15].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[16].Type",
+       "op": "eq",
+       "value": "Video"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[16].Index",
+       "op": "eq",
+       "value": 16
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[16].IsExternal",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[16].SupportsExternalStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[17].Type",
+       "op": "eq",
+       "value": "Audio"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[17].Index",
+       "op": "eq",
+       "value": 17
+      },
+      {
+       "path": "$.MediaSources[0].DefaultAudioStreamIndex",
+       "op": "eq",
+       "value": 17
+      },
+      {
+       "path": "$.MediaStreams[0].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Names (2300)/Sub Names (2300).Commentary.srt"
+      },
+      {
+       "path": "$.MediaStreams",
+       "op": "len",
+       "value": 18
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles.discover.display-title",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "subtitles.md#discover",
+  "scope": "modern",
+  "tags": [
+   "subtitles"
+  ],
+  "covers": [
+   "subtitles.discover.R9"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-names"
+  ],
+  "steps": [
+   {
+    "name": "the label of each external subtitle",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-names.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DisplayTitle",
+       "op": "eq",
+       "value": "Commentary - Undefined - SUBRIP - External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].DisplayTitle",
+       "op": "eq",
+       "value": "German - Hearing Impaired - SUBRIP - External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DisplayTitle",
+       "op": "eq",
+       "value": "Signs and Songs - English - SUBRIP - External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DisplayTitle",
+       "op": "eq",
+       "value": "English - SUBRIP - External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DisplayTitle",
+       "op": "eq",
+       "value": "English - SUBRIP - External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].DisplayTitle",
+       "op": "eq",
+       "value": "Spanish - Default - SUBRIP - External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].DisplayTitle",
+       "op": "eq",
+       "value": "French - Forced - SUBRIP - External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].DisplayTitle",
+       "op": "eq",
+       "value": "Italian - WEBVTT - External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].DisplayTitle",
+       "op": "eq",
+       "value": "Japanese - ASS - External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[9].DisplayTitle",
+       "op": "eq",
+       "value": "Korean - SAMI - External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[10].DisplayTitle",
+       "op": "eq",
+       "value": "Portuguese (Brazil) - SUBRIP - External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].DisplayTitle",
+       "op": "eq",
+       "value": "Russian - PGSSUB - External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[12].DisplayTitle",
+       "op": "eq",
+       "value": "Italian - Hearing Impaired - SUBRIP - External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[13].DisplayTitle",
+       "op": "eq",
+       "value": "Undefined - SUBRIP - External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[14].DisplayTitle",
+       "op": "eq",
+       "value": "xx - Undefined - SUBRIP - External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[15].DisplayTitle",
+       "op": "eq",
+       "value": "Chinese (Simplified) - SUBRIP - External"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles.discover.score",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "subtitles.md#discover",
+  "scope": "modern",
+  "tags": [
+   "subtitles"
+  ],
+  "covers": [
+   "subtitles.discover.R10"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-names",
+   "item:sub-embedded"
+  ],
+  "steps": [
+   {
+    "name": "external files score by flags and kind",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-names.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Score",
+       "op": "eq",
+       "value": 111222
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].Score",
+       "op": "eq",
+       "value": 112222
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].Score",
+       "op": "eq",
+       "value": 121222
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].Score",
+       "op": "eq",
+       "value": 111212
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].Score",
+       "op": "eq",
+       "value": 111222
+      }
+     ]
+    }
+   },
+   {
+    "name": "an embedded text track scores one less than an external one",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-embedded.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Score",
+       "op": "eq",
+       "value": 112221
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Score",
+       "op": "eq",
+       "value": 121221
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Score",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles.embedded.streams",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "subtitles.md#embedded",
+  "scope": "modern",
+  "tags": [
+   "subtitles"
+  ],
+  "covers": [
+   "subtitles.embedded.R1"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-embedded",
+   "item:sub-mov"
+  ],
+  "steps": [
+   {
+    "name": "embedded text tracks of a Matroska file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-embedded.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams",
+       "op": "len",
+       "value": 5
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Index",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Codec",
+       "op": "eq",
+       "value": "subrip"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Language",
+       "op": "eq",
+       "value": "eng"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Title",
+       "op": "eq",
+       "value": "English Full"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsDefault",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsHearingImpaired",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsExternal",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsTextSubtitleStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DisplayTitle",
+       "op": "eq",
+       "value": "English Full - Default - SUBRIP"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Index",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Codec",
+       "op": "eq",
+       "value": "ass"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Language",
+       "op": "eq",
+       "value": "por"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Title",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].IsDefault",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].IsExternal",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].IsTextSubtitleStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DisplayTitle",
+       "op": "eq",
+       "value": "Portuguese - ASS"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Index",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Codec",
+       "op": "eq",
+       "value": "subrip"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Language",
+       "op": "eq",
+       "value": "spa"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].IsDefault",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].IsForced",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].IsExternal",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].IsTextSubtitleStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DisplayTitle",
+       "op": "eq",
+       "value": "Spanish - Forced - SUBRIP"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Path",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.MediaSources[0].DefaultAudioStreamIndex",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "a mov_text track of an MP4 file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-mov.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Codec",
+       "op": "eq",
+       "value": "mov_text"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Language",
+       "op": "eq",
+       "value": "fra"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsDefault",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsExternal",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsTextSubtitleStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DisplayTitle",
+       "op": "eq",
+       "value": "French - Default - MOV_TEXT"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles.embedded.mixed",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "subtitles.md#embedded",
+  "scope": "modern",
+  "tags": [
+   "subtitles"
+  ],
+  "covers": [
+   "subtitles.discover.R7",
+   "subtitles.embedded.R2"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-mixed"
+  ],
+  "steps": [
+   {
+    "name": "external subtitles first, then the file's own streams, renumbered",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-mixed.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams",
+       "op": "len",
+       "value": 7
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Index",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Codec",
+       "op": "eq",
+       "value": "subrip"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Language",
+       "op": "eq",
+       "value": "deu"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].IsForced",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].IsExternal",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DisplayTitle",
+       "op": "eq",
+       "value": "German - Forced - SUBRIP - External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].Index",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].Codec",
+       "op": "eq",
+       "value": "subrip"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].Language",
+       "op": "eq",
+       "value": "eng"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].IsExternal",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].DisplayTitle",
+       "op": "eq",
+       "value": "English - SUBRIP - External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Type",
+       "op": "eq",
+       "value": "Video"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Index",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Type",
+       "op": "eq",
+       "value": "Audio"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Index",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Index",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Language",
+       "op": "eq",
+       "value": "eng"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Title",
+       "op": "eq",
+       "value": "English Full"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].IsDefault",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].IsExternal",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].Index",
+       "op": "eq",
+       "value": 5
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].Codec",
+       "op": "eq",
+       "value": "ass"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].Language",
+       "op": "eq",
+       "value": "por"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].IsExternal",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].Index",
+       "op": "eq",
+       "value": 6
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].Language",
+       "op": "eq",
+       "value": "spa"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].IsForced",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].IsExternal",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].DefaultAudioStreamIndex",
+       "op": "eq",
+       "value": 3
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles.default.modes",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "subtitles.md#default",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "user-config"
+  ],
+  "covers": [
+   "subtitles.default.R1",
+   "subtitles.default.R2"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-mixed",
+   "item:sub-names",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "Default mode: a file's non-forced external subtitle",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-mixed.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "Default mode: the default-flagged external file",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-names.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "eq",
+       "value": 5
+      }
+     ]
+    }
+   },
+   {
+    "name": "mode None",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/Configuration",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     },
+     "body": {
+      "PlayDefaultAudioTrack": true,
+      "SubtitleLanguagePreference": "",
+      "DisplayMissingEpisodes": false,
+      "GroupedFolders": [],
+      "SubtitleMode": "None",
+      "DisplayCollectionsView": false,
+      "EnableLocalPassword": false,
+      "OrderedViews": [],
+      "LatestItemsExcludes": [],
+      "MyMediaExcludes": [],
+      "HidePlayedInLatest": true,
+      "RememberAudioSelections": true,
+      "RememberSubtitleSelections": true,
+      "EnableNextEpisodeAutoPlay": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "None: no selection",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-mixed.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "None: no selection",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-names.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "mode Always",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/Configuration",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     },
+     "body": {
+      "PlayDefaultAudioTrack": true,
+      "SubtitleLanguagePreference": "",
+      "DisplayMissingEpisodes": false,
+      "GroupedFolders": [],
+      "SubtitleMode": "Always",
+      "DisplayCollectionsView": false,
+      "EnableLocalPassword": false,
+      "OrderedViews": [],
+      "LatestItemsExcludes": [],
+      "MyMediaExcludes": [],
+      "HidePlayedInLatest": true,
+      "RememberAudioSelections": true,
+      "RememberSubtitleSelections": true,
+      "EnableNextEpisodeAutoPlay": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "Always: first non-forced",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-mixed.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "Always: default-flagged first",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-names.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "eq",
+       "value": 5
+      }
+     ]
+    }
+   },
+   {
+    "name": "mode OnlyForced",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/Configuration",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     },
+     "body": {
+      "PlayDefaultAudioTrack": true,
+      "SubtitleLanguagePreference": "",
+      "DisplayMissingEpisodes": false,
+      "GroupedFolders": [],
+      "SubtitleMode": "OnlyForced",
+      "DisplayCollectionsView": false,
+      "EnableLocalPassword": false,
+      "OrderedViews": [],
+      "LatestItemsExcludes": [],
+      "MyMediaExcludes": [],
+      "HidePlayedInLatest": true,
+      "RememberAudioSelections": true,
+      "RememberSubtitleSelections": true,
+      "EnableNextEpisodeAutoPlay": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "OnlyForced: the forced external file",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-mixed.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "OnlyForced",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-names.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "eq",
+       "value": 6
+      }
+     ]
+    }
+   },
+   {
+    "name": "mode Smart",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/Configuration",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     },
+     "body": {
+      "PlayDefaultAudioTrack": true,
+      "SubtitleLanguagePreference": "",
+      "DisplayMissingEpisodes": false,
+      "GroupedFolders": [],
+      "SubtitleMode": "Smart",
+      "DisplayCollectionsView": false,
+      "EnableLocalPassword": false,
+      "OrderedViews": [],
+      "LatestItemsExcludes": [],
+      "MyMediaExcludes": [],
+      "HidePlayedInLatest": true,
+      "RememberAudioSelections": true,
+      "RememberSubtitleSelections": true,
+      "EnableNextEpisodeAutoPlay": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "Smart without a preference",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-mixed.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "Always with a language",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/Configuration",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     },
+     "body": {
+      "PlayDefaultAudioTrack": true,
+      "SubtitleLanguagePreference": "spa",
+      "DisplayMissingEpisodes": false,
+      "GroupedFolders": [],
+      "SubtitleMode": "Always",
+      "DisplayCollectionsView": false,
+      "EnableLocalPassword": false,
+      "OrderedViews": [],
+      "LatestItemsExcludes": [],
+      "MyMediaExcludes": [],
+      "HidePlayedInLatest": true,
+      "RememberAudioSelections": true,
+      "RememberSubtitleSelections": true,
+      "EnableNextEpisodeAutoPlay": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "Always spa: the Spanish track",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-mixed.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "eq",
+       "value": 6
+      }
+     ]
+    }
+   },
+   {
+    "name": "Always spa",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-names.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "eq",
+       "value": 5
+      }
+     ]
+    }
+   },
+   {
+    "name": "OnlyForced with a language",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/Configuration",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     },
+     "body": {
+      "PlayDefaultAudioTrack": true,
+      "SubtitleLanguagePreference": "spa",
+      "DisplayMissingEpisodes": false,
+      "GroupedFolders": [],
+      "SubtitleMode": "OnlyForced",
+      "DisplayCollectionsView": false,
+      "EnableLocalPassword": false,
+      "OrderedViews": [],
+      "LatestItemsExcludes": [],
+      "MyMediaExcludes": [],
+      "HidePlayedInLatest": true,
+      "RememberAudioSelections": true,
+      "RememberSubtitleSelections": true,
+      "EnableNextEpisodeAutoPlay": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "OnlyForced spa",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-mixed.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "eq",
+       "value": 6
+      }
+     ]
+    }
+   },
+   {
+    "name": "OnlyForced spa: none forced in Spanish",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-names.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Smart with a language",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/Configuration",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     },
+     "body": {
+      "PlayDefaultAudioTrack": true,
+      "SubtitleLanguagePreference": "eng",
+      "DisplayMissingEpisodes": false,
+      "GroupedFolders": [],
+      "SubtitleMode": "Smart",
+      "DisplayCollectionsView": false,
+      "EnableLocalPassword": false,
+      "OrderedViews": [],
+      "LatestItemsExcludes": [],
+      "MyMediaExcludes": [],
+      "HidePlayedInLatest": true,
+      "RememberAudioSelections": true,
+      "RememberSubtitleSelections": true,
+      "EnableNextEpisodeAutoPlay": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "Smart eng: first English",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-mixed.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "restore",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/Configuration",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     },
+     "body": {
+      "PlayDefaultAudioTrack": true,
+      "SubtitleLanguagePreference": "",
+      "DisplayMissingEpisodes": false,
+      "GroupedFolders": [],
+      "SubtitleMode": "Default",
+      "DisplayCollectionsView": false,
+      "EnableLocalPassword": false,
+      "OrderedViews": [],
+      "LatestItemsExcludes": [],
+      "MyMediaExcludes": [],
+      "HidePlayedInLatest": true,
+      "RememberAudioSelections": true,
+      "RememberSubtitleSelections": true,
+      "EnableNextEpisodeAutoPlay": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles.stream.formats",
+  "endpoint": "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/Stream.{format}",
+  "spec": "subtitles.md#stream",
+  "scope": "modern",
+  "tags": [
+   "subtitles"
+  ],
+  "covers": [
+   "subtitles.stream.R1",
+   "subtitles.stream.R2",
+   "subtitles.stream.R3",
+   "subtitles.stream.R5"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-convert"
+  ],
+  "steps": [
+   {
+    "name": "SubRip file as WebVTT",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/0/Stream.vtt"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "text/vtt"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "WEBVTT\n\n00:00:01.000 --> 00:00:02.500\nHello <i>world</i>\n\n00:00:03.000 --> 00:00:04.000\nSecond line"
+      }
+     ]
+    }
+   },
+   {
+    "name": "SubRip file as itself: the file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/0/Stream.srt"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "application/x-subrip"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "1\n00:00:01,000 --> 00:00:02,500\nHello <i>world</i>\n\n2\n00:00:03,000 --> 00:00:04,000\nSecond line\n"
+      }
+     ]
+    }
+   },
+   {
+    "name": "SubRip file as ASS",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/0/Stream.ass"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "text/x-ssa"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "[Script Info]"
+      },
+      {
+       "op": "contains",
+       "value": "[V4+ Styles]"
+      },
+      {
+       "op": "contains",
+       "value": "Dialogue: 0,0:00:01.00,0:00:02.50,Default,,0,0,0,,Hello {\\i1}world{\\i0}\n"
+      },
+      {
+       "op": "contains",
+       "value": "Dialogue: 0,0:00:03.00,0:00:04.00,Default,,0,0,0,,Second line\n"
+      }
+     ]
+    }
+   },
+   {
+    "name": "SubRip file as SSA",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/0/Stream.ssa"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "text/x-ssa"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "[Script Info]"
+      },
+      {
+       "op": "contains",
+       "value": "[V4 Styles]"
+      },
+      {
+       "op": "contains",
+       "value": "Dialogue: Marked=0,0:00:01.00,0:00:02.50,*Default,NTP,0000,0000,0000,,Hello {\\i1}world{\\i0}\n"
+      }
+     ]
+    }
+   },
+   {
+    "name": "SubRip file as the JSON event list",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/0/Stream.json"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "application/json"
+     },
+     "json": [
+      {
+       "path": "$.TrackEvents",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.TrackEvents[0].Id",
+       "op": "eq",
+       "value": "1"
+      },
+      {
+       "path": "$.TrackEvents[0].Text",
+       "op": "eq",
+       "value": "Hello <i>world</i>"
+      },
+      {
+       "path": "$.TrackEvents[0].StartPositionTicks",
+       "op": "eq",
+       "value": 10000000
+      },
+      {
+       "path": "$.TrackEvents[0].EndPositionTicks",
+       "op": "eq",
+       "value": 25000000
+      },
+      {
+       "path": "$.TrackEvents[1].Text",
+       "op": "eq",
+       "value": "Second line"
+      },
+      {
+       "path": "$.TrackEvents[1].StartPositionTicks",
+       "op": "eq",
+       "value": 30000000
+      },
+      {
+       "path": "$.TrackEvents[1].EndPositionTicks",
+       "op": "eq",
+       "value": 40000000
+      }
+     ],
+     "text": [
+      {
+       "op": "contains",
+       "value": "\\u003Ci\\u003Eworld\\u003C/i\\u003E"
+      }
+     ]
+    }
+   },
+   {
+    "name": "SubRip file as TTML",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/0/Stream.ttml"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "application/ttml+xml"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<tt xmlns=\"http://www.w3.org/ns/ttml\""
+      },
+      {
+       "op": "contains",
+       "value": "<p begin=\"1.0s\" xml:id=\"p0\" end=\"2.5s\">Hello <span tts:fontStyle=\"italic\">world</span></p>"
+      },
+      {
+       "op": "contains",
+       "value": "<p begin=\"3.0s\" xml:id=\"p1\" end=\"4.0s\">Second line</p>"
+      }
+     ]
+    }
+   },
+   {
+    "name": "WebVTT file as SubRip",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/3/Stream.srt"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "application/x-subrip"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "1\n00:00:01,000 --> 00:00:02,500\nCiao <i>mondo</i>\n\n2\n00:00:03,000 --> 00:00:04,000\nSeconda riga\n\n"
+      }
+     ]
+    }
+   },
+   {
+    "name": "WebVTT file as JSON",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/3/Stream.json"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TrackEvents[0].Text",
+       "op": "eq",
+       "value": "Ciao <i>mondo</i>"
+      },
+      {
+       "path": "$.TrackEvents[1].Text",
+       "op": "eq",
+       "value": "Seconda riga"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles.stream.ass-and-sami",
+  "endpoint": "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/Stream.{format}",
+  "spec": "subtitles.md#stream",
+  "scope": "modern",
+  "tags": [
+   "subtitles"
+  ],
+  "covers": [
+   "subtitles.stream.R3",
+   "subtitles.stream.R2"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-convert"
+  ],
+  "steps": [
+   {
+    "name": "an .ass file as WebVTT: override tags dropped",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/6/Stream.vtt"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "eq",
+       "value": "WEBVTT\n\n00:00:01.000 --> 00:00:02.500\nOla mundo\nsegunda linha\n\n00:00:03.000 --> 00:00:04.000\nFim"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an .ass file as SubRip: tags kept, breaks resolved",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/6/Stream.srt"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "eq",
+       "value": "1\n00:00:01,000 --> 00:00:02,500\nOla {\\i1}mundo{\\i0}\nsegunda linha\n\n2\n00:00:03,000 --> 00:00:04,000\nFim\n\n"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an .ass file as itself: the file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/6/Stream.ass"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "text/x-ssa"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Dialogue: 0,0:00:01.00,0:00:02.50,Default,,0,0,0,,Ola {\\i1}mundo{\\i0}\\Nsegunda linha"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an .ass file as TTML",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/6/Stream.ttml"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "Ola mundo<br />segunda linha</p>"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an .ssa file as WebVTT: override tags become markup",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/4/Stream.vtt"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "eq",
+       "value": "WEBVTT\n\n00:00:01.000 --> 00:00:02.500\nKon <i>nichi</i>\nwa"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a SAMI file as WebVTT",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/5/Stream.vtt"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "00:00:01.000 --> 00:00:02.000\nHello"
+      },
+      {
+       "op": "contains",
+       "value": "00:00:03.000 --> 00:00:04.500\nLast"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a SAMI file as JSON",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/5/Stream.json"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TrackEvents",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.TrackEvents[1].StartPositionTicks",
+       "op": "eq",
+       "value": 30000000
+      },
+      {
+       "path": "$.TrackEvents[1].EndPositionTicks",
+       "op": "eq",
+       "value": 45000000
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles.stream.text-edge",
+  "endpoint": "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/Stream.{format}",
+  "spec": "subtitles.md#stream",
+  "scope": "modern",
+  "tags": [
+   "subtitles"
+  ],
+  "covers": [
+   "subtitles.stream.R5",
+   "subtitles.stream.R3"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-convert"
+  ],
+  "steps": [
+   {
+    "name": "JSON: non-ASCII and markup characters are \\u escapes",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/2/Stream.json"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TrackEvents[0].Text",
+       "op": "eq",
+       "value": "Caf\u00e9 \u65e5\u672c & \"q\" <b>x</b>"
+      }
+     ],
+     "text": [
+      {
+       "op": "contains",
+       "value": "\"Text\":\"Caf\\u00E9 \\u65E5\\u672C \\u0026 \\u0022q\\u0022 \\u003Cb\\u003Ex\\u003C/b\\u003E\""
+      }
+     ]
+    }
+   },
+   {
+    "name": "WebVTT: ampersands are entities",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/2/Stream.vtt"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "&amp; \"q\" <b>x</b>"
+      }
+     ]
+    }
+   },
+   {
+    "name": "CRLF line ends in the file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/1/Stream.vtt"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "eq",
+       "value": "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nCRLF line\n\n00:00:05.000 --> 00:00:06.000\nAfter five\n\n00:00:09.000 --> 00:00:10.000\nAfter nine"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles.stream.offsets",
+  "endpoint": "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/{startPositionTicks}/Stream.{format}",
+  "spec": "subtitles.md#stream",
+  "scope": "modern",
+  "tags": [
+   "subtitles"
+  ],
+  "covers": [
+   "subtitles.stream.R4"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-convert"
+  ],
+  "steps": [
+   {
+    "name": "a start position in the route moves the cues back",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/1/30000000/Stream.vtt"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "eq",
+       "value": "WEBVTT\n\n00:00:02.000 --> 00:00:03.000\nAfter five\n\n00:00:06.000 --> 00:00:07.000\nAfter nine"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a cue that is cut keeps its end and starts at zero",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/1/15000000/Stream.vtt"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "eq",
+       "value": "WEBVTT\n\n00:00:00.000 --> 00:00:00.500\nCRLF line\n\n00:00:03.500 --> 00:00:04.500\nAfter five\n\n00:00:07.500 --> 00:00:08.500\nAfter nine"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the query parameter works too and wins over the route",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/1/70000000/Stream.vtt",
+     "query": {
+      "startPositionTicks": "40000000"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "eq",
+       "value": "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nAfter five\n\n00:00:05.000 --> 00:00:06.000\nAfter nine"
+      }
+     ]
+    }
+   },
+   {
+    "name": "endPositionTicks drops the cues that start after it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/1/Stream.vtt",
+     "query": {
+      "endPositionTicks": "49999999"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "eq",
+       "value": "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nCRLF line"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a cue that starts at it stays",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/1/Stream.vtt",
+     "query": {
+      "endPositionTicks": "50000000"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "eq",
+       "value": "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nCRLF line\n\n00:00:05.000 --> 00:00:06.000\nAfter five"
+      }
+     ]
+    }
+   },
+   {
+    "name": "start and end together; the end applies to the original timeline",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/1/Stream.json",
+     "query": {
+      "startPositionTicks": "30000000",
+      "endPositionTicks": "90000000"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TrackEvents",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.TrackEvents[0].StartPositionTicks",
+       "op": "eq",
+       "value": 20000000
+      },
+      {
+       "path": "$.TrackEvents[0].EndPositionTicks",
+       "op": "eq",
+       "value": 30000000
+      },
+      {
+       "path": "$.TrackEvents[1].StartPositionTicks",
+       "op": "eq",
+       "value": 60000000
+      }
+     ]
+    }
+   },
+   {
+    "name": "a negative start moves the cues forward",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/1/Stream.json",
+     "query": {
+      "startPositionTicks": "-5"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TrackEvents[0].StartPositionTicks",
+       "op": "eq",
+       "value": 10000005
+      },
+      {
+       "path": "$.TrackEvents[0].EndPositionTicks",
+       "op": "eq",
+       "value": 20000005
+      }
+     ]
+    }
+   },
+   {
+    "name": "copyTimestamps keeps the times",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/0/Stream.vtt",
+     "query": {
+      "startPositionTicks": "20000000",
+      "copyTimestamps": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "eq",
+       "value": "WEBVTT\n\n00:00:01.000 --> 00:00:02.500\nHello <i>world</i>\n\n00:00:03.000 --> 00:00:04.000\nSecond line"
+      }
+     ]
+    }
+   },
+   {
+    "name": "addVttTimeMap adds the header",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/0/Stream.vtt",
+     "query": {
+      "addVttTimeMap": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "prefix",
+       "value": "WEBVTT\nX-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000\n\n00:00:01.000 --> 00:00:02.500\n"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a file in the format asked for is served as it is, offsets and all",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/0/20000000/Stream.srt"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "eq",
+       "value": "1\n00:00:01,000 --> 00:00:02,500\nHello <i>world</i>\n\n2\n00:00:03,000 --> 00:00:04,000\nSecond line\n"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the same for WebVTT, which still takes the time map header",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/3/Stream.vtt",
+     "query": {
+      "startPositionTicks": "10000000",
+      "addVttTimeMap": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "eq",
+       "value": "WEBVTT\nX-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000\n\n00:00:01.000 --> 00:00:02.500\nCiao <i>mondo</i>\n\n00:00:03.000 --> 00:00:04.000\nSeconda riga\n"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles.stream.embedded",
+  "endpoint": "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/Stream.{format}",
+  "spec": "subtitles.md#stream",
+  "scope": "modern",
+  "tags": [
+   "subtitles"
+  ],
+  "covers": [
+   "subtitles.stream.R6"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-embedded",
+   "item:sub-mixed",
+   "item:sub-mov"
+  ],
+  "steps": [
+   {
+    "name": "embedded SubRip as WebVTT",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-embedded.id}}/{{item.sub-embedded.id}}/Subtitles/2/Stream.vtt"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "text/vtt"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "WEBVTT\n\n"
+      },
+      {
+       "op": "contains",
+       "value": "\nHello <i>world</i>\n"
+      },
+      {
+       "op": "contains",
+       "value": "\nSecond line"
+      }
+     ]
+    }
+   },
+   {
+    "name": "embedded SubRip as JSON",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-embedded.id}}/{{item.sub-embedded.id}}/Subtitles/2/Stream.json"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TrackEvents",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.TrackEvents[0].Text",
+       "op": "eq",
+       "value": "Hello <i>world</i>"
+      },
+      {
+       "path": "$.TrackEvents[1].Text",
+       "op": "eq",
+       "value": "Second line"
+      }
+     ]
+    }
+   },
+   {
+    "name": "embedded ASS as WebVTT: override tags dropped",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-embedded.id}}/{{item.sub-embedded.id}}/Subtitles/3/Stream.vtt"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "\nHello world\nline two"
+      }
+     ]
+    }
+   },
+   {
+    "name": "embedded ASS as SubRip: override tags kept",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-embedded.id}}/{{item.sub-embedded.id}}/Subtitles/3/Stream.srt"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "\nHello {\\i1}world{\\i0}\nline two\n"
+      }
+     ]
+    }
+   },
+   {
+    "name": "embedded ASS as ASS",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-embedded.id}}/{{item.sub-embedded.id}}/Subtitles/3/Stream.ass"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "text/x-ssa"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Hello {\\i1}world{\\i0}\\Nline two"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the forced Spanish track",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-embedded.id}}/{{item.sub-embedded.id}}/Subtitles/4/Stream.srt"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "Hello <i>world</i>"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an embedded track after external ones keeps its stream index",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-mixed.id}}/{{item.sub-mixed.id}}/Subtitles/4/Stream.vtt"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "Hello <i>world</i>"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an external track of a file with embedded ones",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-mixed.id}}/{{item.sub-mixed.id}}/Subtitles/1/Stream.vtt"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "eq",
+       "value": "WEBVTT\n\n00:00:01.000 --> 00:00:02.500\nHello <i>world</i>\n\n00:00:03.000 --> 00:00:04.000\nSecond line"
+      }
+     ]
+    }
+   },
+   {
+    "name": "mov_text as WebVTT",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-mov.id}}/{{item.sub-mov.id}}/Subtitles/2/Stream.vtt"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "Hello <i>world</i>"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles.stream.route-forms",
+  "endpoint": "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/Stream.{format}",
+  "spec": "subtitles.md#stream",
+  "scope": "modern",
+  "tags": [
+   "subtitles"
+  ],
+  "covers": [
+   "subtitles.stream.R7"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-convert"
+  ],
+  "steps": [
+   {
+    "name": "the file name in upper case",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/0/STREAM.VTT"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "text/vtt"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "WEBVTT\n\n00:00:01.000 --> 00:00:02.500\nHello <i>world</i>\n\n00:00:03.000 --> 00:00:04.000\nSecond line"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the format in upper case",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/0/Stream.VTT"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "text/vtt"
+     }
+    }
+   },
+   {
+    "name": "the item id dashed",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id|dashed}}/{{item.sub-convert.id}}/Subtitles/0/Stream.vtt"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "text/vtt"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "WEBVTT\n\n00:00:01.000 --> 00:00:02.500\nHello <i>world</i>\n\n00:00:03.000 --> 00:00:04.000\nSecond line"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the item id in upper case",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id|upper}}/{{item.sub-convert.id|upper}}/Subtitles/0/Stream.vtt"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "text/vtt"
+     }
+    }
+   },
+   {
+    "name": "the 'Subtitles' segment in lower case",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/subtitles/0/Stream.vtt"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "text/vtt"
+     }
+    }
+   },
+   {
+    "name": "the long name of the SubRip format: converted, as a download",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/0/Stream.subrip"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "application/octet-stream"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "1\n00:00:01,000 --> 00:00:02,500\nHello <i>world</i>\n\n2\n00:00:03,000 --> 00:00:04,000\nSecond line\n\n"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the long name of the WebVTT format",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/3/Stream.webvtt"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "application/octet-stream"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "WEBVTT\n\n00:00:01.000 --> 00:00:02.500\nCiao <i>mondo</i>"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles.stream.errors",
+  "endpoint": "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/Stream.{format}",
+  "spec": "subtitles.md#stream",
+  "scope": "modern",
+  "tags": [
+   "subtitles"
+  ],
+  "covers": [
+   "subtitles.stream.R8"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-names"
+  ],
+  "steps": [
+   {
+    "name": "a format that is not served",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-names.id}}/{{item.sub-names.id}}/Subtitles/3/Stream.xyz"
+    },
+    "expect": {
+     "status": 400,
+     "headers": {
+      "Content-Type": "text/plain"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "Error processing request."
+      }
+     ]
+    }
+   },
+   {
+    "name": "a text file extension is not a format",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-names.id}}/{{item.sub-names.id}}/Subtitles/3/Stream.txt"
+    },
+    "expect": {
+     "status": 400,
+     "headers": {
+      "Content-Type": "text/plain"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "Error processing request."
+      }
+     ]
+    }
+   },
+   {
+    "name": "no format at all is no route",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-names.id}}/{{item.sub-names.id}}/Subtitles/3/Stream"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "an item that does not exist",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/00000000000000000000000000000000/00000000000000000000000000000000/Subtitles/0/Stream.vtt"
+    },
+    "expect": {
+     "status": 400,
+     "headers": {
+      "Content-Type": "text/plain"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "Error processing request."
+      }
+     ]
+    }
+   },
+   {
+    "name": "a media source that is not one of the item's",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-names.id}}/00000000000000000000000000000000/Subtitles/3/Stream.vtt"
+    },
+    "expect": {
+     "status": 500,
+     "headers": {
+      "Content-Type": "text/plain"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "Error processing request."
+      }
+     ]
+    }
+   },
+   {
+    "name": "a media source id that is not a GUID",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-names.id}}/notaguid/Subtitles/3/Stream.vtt"
+    },
+    "expect": {
+     "status": 500,
+     "headers": {
+      "Content-Type": "text/plain"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "Error processing request."
+      }
+     ]
+    }
+   },
+   {
+    "name": "an index past the streams",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-names.id}}/{{item.sub-names.id}}/Subtitles/99/Stream.vtt"
+    },
+    "expect": {
+     "status": 500,
+     "headers": {
+      "Content-Type": "text/plain"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "Error processing request."
+      }
+     ]
+    }
+   },
+   {
+    "name": "a negative index",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-names.id}}/{{item.sub-names.id}}/Subtitles/-1/Stream.vtt"
+    },
+    "expect": {
+     "status": 500,
+     "headers": {
+      "Content-Type": "text/plain"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "Error processing request."
+      }
+     ]
+    }
+   },
+   {
+    "name": "the index of a video stream",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-names.id}}/{{item.sub-names.id}}/Subtitles/16/Stream.vtt"
+    },
+    "expect": {
+     "status": 500,
+     "headers": {
+      "Content-Type": "text/plain"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "Error processing request."
+      }
+     ]
+    }
+   },
+   {
+    "name": "a bitmap subtitle has no text form",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-names.id}}/{{item.sub-names.id}}/Subtitles/11/Stream.vtt"
+    },
+    "expect": {
+     "status": 400,
+     "headers": {
+      "Content-Type": "text/plain"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "Error processing request."
+      }
+     ]
+    }
+   },
+   {
+    "name": "an item id that is not a GUID",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/zzz/x/Subtitles/3/Stream.vtt"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.routeItemId[0]",
+       "op": "contains",
+       "value": "zzz"
+      }
+     ],
+     "problem": 400
+    }
+   },
+   {
+    "name": "an index that is not a number",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-names.id}}/{{item.sub-names.id}}/Subtitles/abc/Stream.vtt"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.routeIndex[0]",
+       "op": "contains",
+       "value": "abc"
+      }
+     ],
+     "problem": 400
+    }
+   },
+   {
+    "name": "a start position that is not a number",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-names.id}}/{{item.sub-names.id}}/Subtitles/3/abc/Stream.vtt"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.routeStartPositionTicks[0]",
+       "op": "contains",
+       "value": "abc"
+      }
+     ],
+     "problem": 400
+    }
+   },
+   {
+    "name": "a query value that is not a number",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-names.id}}/{{item.sub-names.id}}/Subtitles/3/Stream.vtt",
+     "query": {
+      "endPositionTicks": "xyz"
+     }
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.endPositionTicks[0]",
+       "op": "contains",
+       "value": "xyz"
+      }
+     ],
+     "problem": 400
+    }
+   },
+   {
+    "name": "a flag that is not a boolean",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-names.id}}/{{item.sub-names.id}}/Subtitles/3/Stream.vtt",
+     "query": {
+      "copyTimestamps": "maybe"
+     }
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.copyTimestamps[0]",
+       "op": "contains",
+       "value": "maybe"
+      }
+     ],
+     "problem": 400
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles.stream.auth",
+  "endpoint": "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/Stream.{format}",
+  "spec": "subtitles.md#stream",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "divergence"
+  ],
+  "covers": [
+   "subtitles.stream.R9"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-names"
+  ],
+  "steps": [
+   {
+    "name": "a request without a token is refused",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-names.id}}/{{item.sub-names.id}}/Subtitles/3/Stream.vtt"
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "the same with the user's token",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-names.id}}/{{item.sub-names.id}}/Subtitles/3/Stream.vtt"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "text/vtt"
+     }
+    }
+   },
+   {
+    "name": "the playlist needs a token too",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-names.id}}/{{item.sub-names.id}}/Subtitles/3/subtitles.m3u8",
+     "query": {
+      "segmentLength": "10"
+     }
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ],
+  "divergence": {
+   "reason": "The reference serves the stream routes to anonymous callers (subtitles.stream.R9); Tinyfin requires an authenticated caller, the delivery URL carries the ApiKey."
+  }
+ },
+ {
+  "id": "subtitles.playlist.segments",
+  "endpoint": "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/subtitles.m3u8",
+  "spec": "subtitles.md#playlist",
+  "scope": "modern",
+  "tags": [
+   "subtitles"
+  ],
+  "covers": [
+   "subtitles.playlist.R1",
+   "subtitles.playlist.R2"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-none"
+  ],
+  "steps": [
+   {
+    "name": "a six second source in four second segments",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-none.id}}/{{item.sub-none.id}}/Subtitles/0/subtitles.m3u8",
+     "query": {
+      "segmentLength": "4"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "application/vnd.apple.mpegurl"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "#EXTM3U\n#EXT-X-TARGETDURATION:4\n#EXT-X-VERSION:3\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-PLAYLIST-TYPE:VOD\n"
+      },
+      {
+       "op": "matches",
+       "value": "(?s)#EXTINF:4,\nstream\\.vtt\\?CopyTimestamps=true&AddVttTimeMap=true&StartPositionTicks=0&EndPositionTicks=40000000&ApiKey=[^\\s&]+\n#EXTINF:2,\nstream\\.vtt\\?CopyTimestamps=true&AddVttTimeMap=true&StartPositionTicks=40000000&EndPositionTicks=60000000&ApiKey=[^\\s&]+\n#EXT-X-ENDLIST\n$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "one segment when it is longer than the source",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-none.id}}/{{item.sub-none.id}}/Subtitles/0/subtitles.m3u8",
+     "query": {
+      "segmentLength": "10"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "prefix",
+       "value": "#EXTM3U\n#EXT-X-TARGETDURATION:10\n#EXT-X-VERSION:3\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-PLAYLIST-TYPE:VOD\n"
+      },
+      {
+       "op": "matches",
+       "value": "(?s)#EXTINF:6,\nstream\\.vtt\\?CopyTimestamps=true&AddVttTimeMap=true&StartPositionTicks=0&EndPositionTicks=60000000&ApiKey=[^\\s&]+\n#EXT-X-ENDLIST\n$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the index is not looked up",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-none.id}}/{{item.sub-none.id}}/Subtitles/99/subtitles.m3u8",
+     "query": {
+      "segmentLength": "10"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "segmentLength is required",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-none.id}}/{{item.sub-none.id}}/Subtitles/0/subtitles.m3u8"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.segmentLength[0]",
+       "op": "contains",
+       "value": "required"
+      }
+     ],
+     "problem": 400
+    }
+   },
+   {
+    "name": "zero is not a length",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-none.id}}/{{item.sub-none.id}}/Subtitles/0/subtitles.m3u8",
+     "query": {
+      "segmentLength": "0"
+     }
+    },
+    "expect": {
+     "status": 400,
+     "headers": {
+      "Content-Type": "text/plain"
+     }
+    }
+   },
+   {
+    "name": "a length that is not a number",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-none.id}}/{{item.sub-none.id}}/Subtitles/0/subtitles.m3u8",
+     "query": {
+      "segmentLength": "abc"
+     }
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles.delivery.external",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "subtitles.md#delivery",
+  "scope": "modern",
+  "tags": [
+   "subtitles"
+  ],
+  "covers": [
+   "subtitles.delivery.R1",
+   "subtitles.delivery.R2",
+   "subtitles.delivery.R3"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-names"
+  ],
+  "steps": [
+   {
+    "name": "a profile that takes WebVTT, SubRip, ASS and SSA as files",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-names.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4,mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        },
+        {
+         "Format": "srt",
+         "Method": "External"
+        },
+        {
+         "Format": "ass",
+         "Method": "External"
+        },
+        {
+         "Format": "ssa",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryUrl",
+       "op": "matches",
+       "value": "^/Videos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{32}/Subtitles/3/0/Stream\\.vtt\\?ApiKey="
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].DeliveryMethod",
+       "op": "eq",
+       "value": "External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].DeliveryUrl",
+       "op": "matches",
+       "value": "^/Videos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{32}/Subtitles/7/0/Stream\\.vtt\\?ApiKey="
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].DeliveryMethod",
+       "op": "eq",
+       "value": "External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].DeliveryUrl",
+       "op": "matches",
+       "value": "^/Videos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{32}/Subtitles/8/0/Stream\\.ass\\?ApiKey="
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[9].DeliveryMethod",
+       "op": "eq",
+       "value": "External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[9].DeliveryUrl",
+       "op": "matches",
+       "value": "^/Videos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{32}/Subtitles/9/0/Stream\\.vtt\\?ApiKey="
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].IsExternalUrl",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].IsExternalUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "eq",
+       "value": 5
+      }
+     ]
+    }
+   },
+   {
+    "name": "SubRip only: WebVTT converts, ASS does not",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-names.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4,mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "srt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryUrl",
+       "op": "matches",
+       "value": "^/Videos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{32}/Subtitles/3/0/Stream\\.srt\\?ApiKey="
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].DeliveryMethod",
+       "op": "eq",
+       "value": "External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].DeliveryUrl",
+       "op": "matches",
+       "value": "^/Videos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{32}/Subtitles/7/0/Stream\\.srt\\?ApiKey="
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[9].DeliveryMethod",
+       "op": "eq",
+       "value": "External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[9].DeliveryUrl",
+       "op": "matches",
+       "value": "^/Videos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{32}/Subtitles/9/0/Stream\\.srt\\?ApiKey="
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].DeliveryUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "ASS only: nothing converts to it",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-names.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4,mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "ass",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].DeliveryMethod",
+       "op": "eq",
+       "value": "External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].DeliveryUrl",
+       "op": "matches",
+       "value": "^/Videos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{32}/Subtitles/8/0/Stream\\.ass\\?ApiKey="
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].DeliveryUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "SSA only: an ASS file is not SSA",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-names.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4,mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "ssa",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the language filter of a profile entry",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-names.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4,mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "srt",
+         "Method": "External",
+         "Language": "eng"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryUrl",
+       "op": "matches",
+       "value": "^/Videos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{32}/Subtitles/3/0/Stream\\.srt\\?ApiKey="
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryMethod",
+       "op": "eq",
+       "value": "External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryUrl",
+       "op": "matches",
+       "value": "^/Videos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{32}/Subtitles/2/0/Stream\\.srt\\?ApiKey="
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[10].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[10].DeliveryUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no subtitle profile: every subtitle is burned in",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-names.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4,mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": []
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].DeliveryUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an HLS entry",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-names.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4,mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "Hls"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "Hls"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].DeliveryMethod",
+       "op": "eq",
+       "value": "Hls"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[11].DeliveryUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles.delivery.embedded",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "subtitles.md#delivery",
+  "scope": "modern",
+  "tags": [
+   "subtitles"
+  ],
+  "covers": [
+   "subtitles.delivery.R4",
+   "subtitles.delivery.R5",
+   "subtitles.delivery.R2"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-embedded",
+   "item:sub-mixed",
+   "item:sub-mov"
+  ],
+  "steps": [
+   {
+    "name": "embedded tracks of a format the profile embeds",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-embedded.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4,mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "srt",
+         "Method": "Embed"
+        },
+        {
+         "Format": "ass",
+         "Method": "Embed"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryMethod",
+       "op": "eq",
+       "value": "Embed"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "Embed"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DeliveryMethod",
+       "op": "eq",
+       "value": "Embed"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DeliveryUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "only SubRip embeds: the ASS track is burned in",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-embedded.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4,mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "srt",
+         "Method": "Embed"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryMethod",
+       "op": "eq",
+       "value": "Embed"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DeliveryMethod",
+       "op": "eq",
+       "value": "Embed"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DeliveryUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an embedded track as a file",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-embedded.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4,mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryMethod",
+       "op": "eq",
+       "value": "External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryUrl",
+       "op": "matches",
+       "value": "^/Videos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{32}/Subtitles/2/0/Stream\\.vtt\\?ApiKey="
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DeliveryMethod",
+       "op": "eq",
+       "value": "External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DeliveryUrl",
+       "op": "matches",
+       "value": "^/Videos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{32}/Subtitles/4/0/Stream\\.vtt\\?ApiKey="
+      }
+     ]
+    }
+   },
+   {
+    "name": "a mov_text track counts as SubRip",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-mov.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4,mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "srt",
+         "Method": "Embed"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryMethod",
+       "op": "eq",
+       "value": "Embed"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an external file is never embedded",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-mixed.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4,mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "srt",
+         "Method": "Embed"
+        },
+        {
+         "Format": "srt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DeliveryMethod",
+       "op": "eq",
+       "value": "External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DeliveryUrl",
+       "op": "matches",
+       "value": "^/Videos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{32}/Subtitles/0/0/Stream\\.srt\\?ApiKey="
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].DeliveryMethod",
+       "op": "eq",
+       "value": "External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].DeliveryUrl",
+       "op": "matches",
+       "value": "^/Videos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{32}/Subtitles/1/0/Stream\\.srt\\?ApiKey="
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DeliveryMethod",
+       "op": "eq",
+       "value": "Embed"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].DeliveryMethod",
+       "op": "eq",
+       "value": "Embed"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].DeliveryUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "when the selected subtitle is burned in the source is transcoded and nothing is embedded",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-mixed.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4,mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "srt",
+         "Method": "Embed"
+        },
+        {
+         "Format": "ass",
+         "Method": "Embed"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].DeliveryUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles.delivery.no-profile",
+  "endpoint": "GET /Items/{itemId}/PlaybackInfo",
+  "spec": "subtitles.md#delivery",
+  "scope": "modern",
+  "tags": [
+   "subtitles"
+  ],
+  "covers": [
+   "subtitles.delivery.R1",
+   "subtitles.default.R3"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-names"
+  ],
+  "steps": [
+   {
+    "name": "a request with no device profile sets no delivery",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-names.id}}/PlaybackInfo"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].IsExternal",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "eq",
+       "value": 5
+      },
+      {
+       "path": "$.MediaSources[0].DefaultAudioStreamIndex",
+       "op": "eq",
+       "value": 17
+      }
+     ]
+    }
+   },
+   {
+    "name": "a profile without subtitle entries sets Encode for every one",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-names.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "c",
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles.manage.upload-delete",
+  "endpoint": "POST /Videos/{itemId}/Subtitles",
+  "spec": "subtitles.md#manage",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "media-write"
+  ],
+  "covers": [
+   "subtitles.manage.R1",
+   "subtitles.manage.R3",
+   "subtitles.discover.R11"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-upload"
+  ],
+  "steps": [
+   {
+    "name": "an English SubRip file",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles",
+     "body": {
+      "Language": "eng",
+      "Format": "srt",
+      "IsForced": false,
+      "IsHearingImpaired": false,
+      "Data": "MQowMDowMDowMSwwMDAgLS0+IDAwOjAwOjAyLDAwMApVcGxvYWRlZCBsaW5lCg=="
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "is cataloged at once",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-upload.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Language",
+       "op": "eq",
+       "value": "eng"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].IsExternal",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Upload (2306)/Sub Upload (2306).eng.srt"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].Type",
+       "op": "eq",
+       "value": "Video"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].Index",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    },
+    "sleepMs": 1500
+   },
+   {
+    "name": "and served",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-upload.id}}/{{item.sub-upload.id}}/Subtitles/0/Stream.vtt"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "Uploaded line"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the same language again",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles",
+     "body": {
+      "Language": "eng",
+      "Format": "srt",
+      "IsForced": false,
+      "IsHearingImpaired": false,
+      "Data": "MQowMDowMDowMSwwMDAgLS0+IDAwOjAwOjAyLDAwMApVcGxvYWRlZCBsaW5lCg=="
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "a forced WebVTT file",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles",
+     "body": {
+      "Language": "por",
+      "Format": "vtt",
+      "IsForced": true,
+      "IsHearingImpaired": false,
+      "Data": "V0VCVlRUCgowMDowMDowMS4wMDAgLS0+IDAwOjAwOjAyLjAwMApVcGxvYWRlZCBsaW5lCg=="
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "a hearing impaired ASS file",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles",
+     "body": {
+      "Language": "fre",
+      "Format": "ass",
+      "IsForced": false,
+      "IsHearingImpaired": true,
+      "Data": "W1NjcmlwdCBJbmZvXQpTY3JpcHRUeXBlOiB2NC4wMCsKCltFdmVudHNdCkZvcm1hdDogTGF5ZXIsIFN0YXJ0LCBFbmQsIFN0eWxlLCBOYW1lLCBNYXJnaW5MLCBNYXJnaW5SLCBNYXJnaW5WLCBFZmZlY3QsIFRleHQKRGlhbG9ndWU6IDAsMDowMDowMS4wMCwwOjAwOjAyLjAwLERlZmF1bHQsLDAsMCwwLCxVcGxvYWRlZCBsaW5lCg=="
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "numbered names for a taken name, flags in the name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-upload.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams",
+       "op": "len",
+       "value": 6
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Upload (2306)/Sub Upload (2306).eng.0.srt"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Title",
+       "op": "eq",
+       "value": "0"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Upload (2306)/Sub Upload (2306).eng.srt"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Upload (2306)/Sub Upload (2306).fre.sdh.ass"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Language",
+       "op": "eq",
+       "value": "fra"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsHearingImpaired",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Upload (2306)/Sub Upload (2306).por.forced.vtt"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].IsForced",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Codec",
+       "op": "eq",
+       "value": "webvtt"
+      }
+     ]
+    },
+    "sleepMs": 1500
+   },
+   {
+    "name": "delete the first file",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles/1"
+    },
+    "expect": {
+     "status": 204,
+     "empty": true
+    }
+   },
+   {
+    "name": "the next one moves up",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-upload.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams",
+       "op": "len",
+       "value": 5
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Upload (2306)/Sub Upload (2306).eng.0.srt"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].Path",
+       "op": "eq",
+       "value": "{{server.mediaroot}}/SubFiles/Sub Upload (2306)/Sub Upload (2306).fre.sdh.ass"
+      },
+      {
+       "path": "$.HasSubtitles",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    },
+    "sleepMs": 1500
+   },
+   {
+    "name": "delete the rest",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles/0"
+    },
+    "expect": {
+     "status": 204
+    },
+    "sleepMs": 1000
+   },
+   {
+    "name": "one more",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles/0"
+    },
+    "expect": {
+     "status": 204
+    },
+    "sleepMs": 1000
+   },
+   {
+    "name": "the last",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles/0"
+    },
+    "expect": {
+     "status": 204
+    },
+    "sleepMs": 1000
+   },
+   {
+    "name": "no subtitles left",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-upload.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "absent"
+      }
+     ]
+    },
+    "sleepMs": 1500
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "remove what is left",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles/0"
+    },
+    "expect": {}
+   },
+   {
+    "name": "remove what is left",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles/0"
+    },
+    "expect": {}
+   },
+   {
+    "name": "remove what is left",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles/0"
+    },
+    "expect": {}
+   },
+   {
+    "name": "remove what is left",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles/0"
+    },
+    "expect": {}
+   },
+   {
+    "name": "remove what is left",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles/0"
+    },
+    "expect": {}
+   },
+   {
+    "name": "remove what is left",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles/0"
+    },
+    "expect": {}
+   }
+  ]
+ },
+ {
+  "id": "subtitles.manage.errors",
+  "endpoint": "POST /Videos/{itemId}/Subtitles",
+  "spec": "subtitles.md#manage",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "media-write"
+  ],
+  "covers": [
+   "subtitles.manage.R2",
+   "subtitles.manage.R3"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-upload",
+   "item:sub-embedded"
+  ],
+  "steps": [
+   {
+    "name": "an empty body names every missing member",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles",
+     "body": {}
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.Language[0]",
+       "op": "contains",
+       "value": "required"
+      },
+      {
+       "path": "$.errors.Format[0]",
+       "op": "contains",
+       "value": "required"
+      },
+      {
+       "path": "$.errors.Data[0]",
+       "op": "contains",
+       "value": "required"
+      }
+     ],
+     "problem": 400
+    }
+   },
+   {
+    "name": "a format that is not one",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles",
+     "body": {
+      "Language": "eng",
+      "Format": "xyz",
+      "Data": "MQowMDowMDowMSwwMDAgLS0+IDAwOjAwOjAyLDAwMApVcGxvYWRlZCBsaW5lCg=="
+     }
+    },
+    "expect": {
+     "status": 400,
+     "headers": {
+      "Content-Type": "text/plain"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "Error processing request."
+      }
+     ]
+    }
+   },
+   {
+    "name": "an item that is not a GUID",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Videos/zzz/Subtitles",
+     "body": {
+      "Language": "eng",
+      "Format": "srt",
+      "Data": "MQowMDowMDowMSwwMDAgLS0+IDAwOjAwOjAyLDAwMApVcGxvYWRlZCBsaW5lCg=="
+     }
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.itemId[0]",
+       "op": "contains",
+       "value": "zzz"
+      }
+     ],
+     "problem": 400
+    }
+   },
+   {
+    "name": "an item that does not exist",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Videos/00000000000000000000000000000000/Subtitles",
+     "body": {
+      "Language": "eng",
+      "Format": "srt",
+      "Data": "MQowMDowMDowMSwwMDAgLS0+IDAwOjAwOjAyLDAwMApVcGxvYWRlZCBsaW5lCg=="
+     }
+    },
+    "expect": {
+     "status": 400,
+     "headers": {
+      "Content-Type": "text/plain"
+     }
+    }
+   },
+   {
+    "name": "delete: an index past the streams",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles/9"
+    },
+    "expect": {
+     "status": 400,
+     "headers": {
+      "Content-Type": "text/plain"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "Error processing request."
+      }
+     ]
+    }
+   },
+   {
+    "name": "delete: a negative index",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles/-1"
+    },
+    "expect": {
+     "status": 400,
+     "headers": {
+      "Content-Type": "text/plain"
+     }
+    }
+   },
+   {
+    "name": "delete: an embedded track",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/{{item.sub-embedded.id}}/Subtitles/2"
+    },
+    "expect": {
+     "status": 400,
+     "headers": {
+      "Content-Type": "text/plain"
+     }
+    }
+   },
+   {
+    "name": "delete: an index that is not a number",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles/abc"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.index[0]",
+       "op": "contains",
+       "value": "abc"
+      }
+     ],
+     "problem": 400
+    }
+   },
+   {
+    "name": "delete: an item that is not a GUID",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/zzz/Subtitles/0"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.itemId[0]",
+       "op": "contains",
+       "value": "zzz"
+      }
+     ],
+     "problem": 400
+    }
+   },
+   {
+    "name": "delete: an item that does not exist",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/00000000000000000000000000000000/Subtitles/0"
+    },
+    "expect": {
+     "status": 400,
+     "headers": {
+      "Content-Type": "text/plain"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles.manage.policy",
+  "endpoint": "POST /Videos/{itemId}/Subtitles",
+  "spec": "subtitles.md#manage",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "media-write"
+  ],
+  "covers": [
+   "subtitles.manage.R4"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-upload",
+   "item:sub-names",
+   "user:alice",
+   "user:submgr"
+  ],
+  "steps": [
+   {
+    "name": "an ordinary user may not upload",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles",
+     "body": {
+      "Language": "eng",
+      "Format": "srt",
+      "IsForced": false,
+      "IsHearingImpaired": false,
+      "Data": "MQowMDowMDowMSwwMDAgLS0+IDAwOjAwOjAyLDAwMApVcGxvYWRlZCBsaW5lCg=="
+     }
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "nor delete",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles/0"
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "nor search providers",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-upload.id}}/RemoteSearch/Subtitles/eng"
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "nor read a provider's subtitle",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Providers/Subtitles/Subtitles/abc"
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "but may read subtitles and the font list",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sub-names.id}}/{{item.sub-names.id}}/Subtitles/3/Stream.vtt"
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "anonymous callers get 401",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles",
+     "body": {
+      "Language": "eng",
+      "Format": "srt",
+      "Data": "MQowMDowMDowMSwwMDAgLS0+IDAwOjAwOjAyLDAwMApVcGxvYWRlZCBsaW5lCg=="
+     }
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "subtitle management allows upload",
+    "as": "submgr",
+    "request": {
+     "method": "POST",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles",
+     "body": {
+      "Language": "eng",
+      "Format": "srt",
+      "IsForced": false,
+      "IsHearingImpaired": false,
+      "Data": "MQowMDowMDowMSwwMDAgLS0+IDAwOjAwOjAyLDAwMApVcGxvYWRlZCBsaW5lCg=="
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "and search",
+    "as": "submgr",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-upload.id}}/RemoteSearch/Subtitles/eng"
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "but deleting needs an administrator",
+    "as": "submgr",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles/0"
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "an administrator may",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles/0"
+    },
+    "expect": {
+     "status": 204
+    },
+    "sleepMs": 1500
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "remove what is left",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles/0"
+    },
+    "expect": {}
+   },
+   {
+    "name": "remove what is left",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/{{item.sub-upload.id}}/Subtitles/0"
+    },
+    "expect": {}
+   }
+  ]
+ },
+ {
+  "id": "subtitles.providers.empty",
+  "endpoint": "GET /Items/{itemId}/RemoteSearch/Subtitles/{language}",
+  "spec": "subtitles.md#providers",
+  "scope": "modern",
+  "tags": [
+   "subtitles"
+  ],
+  "covers": [
+   "subtitles.providers.R1"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-names"
+  ],
+  "steps": [
+   {
+    "name": "a search finds nothing",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-names.id}}/RemoteSearch/Subtitles/eng"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/application\\/json/"
+     },
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "the perfect match flag changes nothing",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-names.id}}/RemoteSearch/Subtitles/eng",
+     "query": {
+      "isPerfectMatch": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "an unknown item",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/00000000000000000000000000000001/RemoteSearch/Subtitles/eng"
+    },
+    "expect": {
+     "status": 404,
+     "problem": 404
+    }
+   },
+   {
+    "name": "an item that is not a GUID",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/zzz/RemoteSearch/Subtitles/eng"
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   },
+   {
+    "name": "downloading a subtitle no provider issued is accepted",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-names.id}}/RemoteSearch/Subtitles/abc"
+    },
+    "expect": {
+     "status": 204,
+     "empty": true
+    }
+   },
+   {
+    "name": "downloading for an unknown item",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/00000000000000000000000000000001/RemoteSearch/Subtitles/abc"
+    },
+    "expect": {
+     "status": 404,
+     "problem": 404
+    }
+   },
+   {
+    "name": "reading a provider's subtitle is an unhandled error in the reference",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Providers/Subtitles/Subtitles/abc"
+    },
+    "expect": {
+     "status": 500,
+     "headers": {
+      "Content-Type": "text/plain"
+     }
+    }
+   },
+   {
+    "name": "the list of fallback fonts is empty",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/FallbackFont/Fonts"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "a font that is not there answers an empty 200",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/FallbackFont/Fonts/Arial.ttf"
+    },
+    "expect": {
+     "status": 200,
+     "empty": true
+    }
+   },
+   {
+    "name": "fonts need a token",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/FallbackFont/Fonts"
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "remote search needs a token",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.sub-names.id}}/RemoteSearch/Subtitles/eng"
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ]
+ }
+]

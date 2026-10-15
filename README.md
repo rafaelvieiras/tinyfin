@@ -126,15 +126,15 @@ implementations are in today.
 <!-- coverage:start -->
 ![API routes](docs/coverage/badge-routes.svg) ![contract-verified](docs/coverage/badge-verified.svg)
 
-Measured against the Jellyfin 12.2.0 OpenAPI document (364 operations): **113 registered (31%)**, **66 with a passing contract scenario (18%)**.
+Measured against the Jellyfin 12.2.0 OpenAPI document (364 operations): **123 registered (34%)**, **74 with a passing contract scenario (20%)**.
 
 | Route status | Count | Non-route features | Count |
 |---|---|---|---|
-| ✅ supported | 95 | ✅ supported | 41 |
-| 🟡 partial | 9 | 🟡 partial | 17 |
-| 🗓️ planned | 135 | 🗓️ planned | 19 |
-| ⛔ not-planned | 116 | ⛔ not-planned | 19 |
-| ↔️ divergent-by-design | 9 | ↔️ divergent-by-design | 0 |
+| ✅ supported | 100 | ✅ supported | 44 |
+| 🟡 partial | 12 | 🟡 partial | 18 |
+| 🗓️ planned | 125 | 🗓️ planned | 17 |
+| ⛔ not-planned | 116 | ⛔ not-planned | 20 |
+| ↔️ divergent-by-design | 11 | ↔️ divergent-by-design | 0 |
 
 Per controller and per subsystem, with what the reference does and what Tinyfin does: **[docs/COVERAGE.md](docs/COVERAGE.md)**.
 <!-- coverage:end -->

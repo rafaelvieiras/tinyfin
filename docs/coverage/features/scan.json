@@ -96,13 +96,38 @@
   {
    "id": "scan.sidecar.subtitles",
    "title": "External subtitle files",
-   "status": "planned",
-   "description": "Not cataloged: `.srt/.ass/.vtt` next to a video are not found; only subtitle tracks inside the container are listed (via ffprobe).",
-   "reference": "Finds external subtitle files by name and language and lists them as MediaStreams.",
-   "notes": "The storage interface has a SubtitleStore, unused by the scanner; the subtitle routes do not exist (see API: playback).",
+   "status": "supported",
+   "description": "`.srt .ass .ssa .vtt .smi .sami .sup` files named after the video (`<video>.<lang>[.forced][.default][.sdh].<ext>`, a free title, any case) are listed as MediaStreams of the video, ahead of its own streams, in the reference's file-name order, from the scan's one folder listing per directory. Added, removed or renamed files are seen on every scan without re-probing the video.",
+   "reference": "The same, with the codec decided by probing the file's content and zero-length files dropped.",
+   "notes": "The codec follows the extension; `.sub`/`.idx` (decided by content on the reference) are not listed; zero-length files are listed.",
+   "spec_rules": [
+    "subtitles.discover.R1",
+    "subtitles.discover.R2",
+    "subtitles.discover.R3",
+    "subtitles.discover.R4",
+    "subtitles.discover.R5",
+    "subtitles.discover.R6",
+    "subtitles.discover.R7",
+    "subtitles.discover.R8",
+    "subtitles.discover.R9",
+    "subtitles.discover.R10",
+    "subtitles.discover.R11",
+    "subtitles.embedded.R1",
+    "subtitles.embedded.R2"
+   ],
+   "scenarios": [
+    "subtitles.discover.names",
+    "subtitles.discover.codecs-and-paths",
+    "subtitles.discover.display-title",
+    "subtitles.discover.score",
+    "subtitles.embedded.streams",
+    "subtitles.embedded.mixed"
+   ],
    "code": [
-    "internal/scan/probe.go",
-    "internal/storage/subtitle.go"
+    "internal/scan/subtitles.go",
+    "internal/scan/incremental.go",
+    "internal/subtitle/names.go",
+    "internal/culture/culture.go"
    ],
    "priority": "high"
   },

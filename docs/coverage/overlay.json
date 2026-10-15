@@ -238,9 +238,9 @@
    "priority": "low"
   },
   "Subtitle": {
-   "status": "planned",
-   "notes": "Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged.",
-   "priority": "high"
+   "status": "supported",
+   "notes": "External subtitle files are cataloged and served; see the per-route overlay for the parts that are not (subtitle providers).",
+   "priority": "medium"
   },
   "Lyric": {
    "status": "not-planned",
@@ -469,6 +469,37 @@
   "GET /Items": {
    "status": "divergent-by-design",
    "notes": "The library-access restriction also applies when items are requested by Ids (the reference skips it). Recorded as a divergence in the contract scenarios."
+  },
+  "GET /Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/Stream.{routeFormat}": {
+   "status": "divergent-by-design",
+   "via": "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/{file}",
+   "notes": "Served for authenticated callers only: the reference serves it to anonymous ones (subtitles.stream.R9). Formats srt, vtt, ass, ssa, json and ttml from external SubRip/WebVTT/ASS/SSA/SAMI files and embedded text tracks (extracted with ffmpeg); bitmap tracks are not converted.",
+   "reference": "Anonymous access; the same formats."
+  },
+  "GET /Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/{routeStartPositionTicks}/Stream.{routeFormat}": {
+   "status": "divergent-by-design",
+   "via": "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/{startTicks}/{file}",
+   "notes": "As the route without the start position; authenticated callers only (subtitles.stream.R9)."
+  },
+  "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/subtitles.m3u8": {
+   "status": "supported",
+   "via": "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/{file}",
+   "notes": "Served by the wildcard subtitle route (subtitles.playlist.R1)."
+  },
+  "GET /Items/{itemId}/RemoteSearch/Subtitles/{language}": {
+   "status": "partial",
+   "notes": "Answers like a server with no subtitle provider: an empty list. Searching and downloading from remote subtitle providers is not planned (it needs provider plugins and network access).",
+   "priority": "low"
+  },
+  "POST /Items/{itemId}/RemoteSearch/Subtitles/{subtitleId}": {
+   "status": "partial",
+   "notes": "Accepted and ignored: there is no provider to download from. Searching and downloading from remote subtitle providers is not planned (it needs provider plugins and network access).",
+   "priority": "low"
+  },
+  "GET /Providers/Subtitles/Subtitles/{subtitleId}": {
+   "status": "partial",
+   "notes": "Answers 500 like the reference does for an id no provider issued. Searching and downloading from remote subtitle providers is not planned (it needs provider plugins and network access).",
+   "priority": "low"
   }
  }
 }

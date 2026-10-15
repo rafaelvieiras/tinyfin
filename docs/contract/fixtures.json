@@ -8,7 +8,8 @@
     {"key": "rating17", "name": "rating17", "password": "Rating-Pass-17", "policy": {"MaxParentalRating": 17}},
     {"key": "rating17s1", "name": "rating17s1", "password": "Rating-Pass-17s", "policy": {"MaxParentalRating": 17, "MaxParentalSubRating": 1}},
     {"key": "blockunrated", "name": "blockunrated", "password": "Block-Pass-1", "policy": {"BlockUnratedItems": ["Movie"]}},
-    {"key": "collmgr", "name": "collmgr", "password": "CollMgr-Pass-1", "policy": {"EnableCollectionManagement": true}}
+    {"key": "collmgr", "name": "collmgr", "password": "CollMgr-Pass-1", "policy": {"EnableCollectionManagement": true}},
+    {"key": "submgr", "name": "submgr", "password": "SubMgr-Pass-1", "policy": {"EnableSubtitleManagement": true}}
   ],
   "libraries": [
     {"key": "movies", "name": "Movies", "type": "movies", "path": "Movies"},
@@ -38,7 +39,8 @@
     {"key": "resid", "name": "Resid", "type": "tvshows", "path": "Resid", "lazy": true},
     {"key": "phototypes", "name": "PhotoTypes", "type": "homevideos", "path": "PhotoTypes", "lazy": true},
     {"key": "sets", "name": "Sets", "type": "movies", "path": "Sets", "lazy": true, "options": {"AutomaticallyAddToCollection": true}},
-    {"key": "setsoff", "name": "SetsOff", "type": "movies", "path": "SetsOff", "lazy": true}
+    {"key": "setsoff", "name": "SetsOff", "type": "movies", "path": "SetsOff", "lazy": true},
+    {"key": "subfiles", "name": "SubFiles", "type": "movies", "path": "SubFiles", "lazy": true}
   ],
   "items": [
     {"key": "alpha", "type": "Movie", "path": "Movies/Alpha Movie (2015)/Alpha Movie (2015).mp4"},
@@ -310,6 +312,13 @@
     {"key": "scu", "type": "Movie", "library": "sets", "path": "Sets/Saga Case Upper (2010)/Saga Case Upper (2010).mp4"},
     {"key": "scl", "type": "Movie", "library": "sets", "path": "Sets/Saga Case Lower (2011)/Saga Case Lower (2011).mp4"},
     {"key": "sg1", "type": "Movie", "library": "setsoff", "path": "SetsOff/Saga Gamma One (2008)/Saga Gamma One (2008).mp4"},
-    {"key": "sg2", "type": "Movie", "library": "setsoff", "path": "SetsOff/Saga Gamma Two (2009)/Saga Gamma Two (2009).mp4"}
+    {"key": "sg2", "type": "Movie", "library": "setsoff", "path": "SetsOff/Saga Gamma Two (2009)/Saga Gamma Two (2009).mp4"},
+    {"key": "sub-names", "type": "Movie", "library": "subfiles", "path": "SubFiles/Sub Names (2300)/Sub Names (2300).mp4"},
+    {"key": "sub-embedded", "type": "Movie", "library": "subfiles", "path": "SubFiles/Sub Embedded (2301)/Sub Embedded (2301).mkv"},
+    {"key": "sub-mov", "type": "Movie", "library": "subfiles", "path": "SubFiles/Sub Mov (2302)/Sub Mov (2302).mp4"},
+    {"key": "sub-mixed", "type": "Movie", "library": "subfiles", "path": "SubFiles/Sub Mixed (2303)/Sub Mixed (2303).mkv"},
+    {"key": "sub-none", "type": "Movie", "library": "subfiles", "path": "SubFiles/Sub None (2304)/Sub None (2304).mp4"},
+    {"key": "sub-convert", "type": "Movie", "library": "subfiles", "path": "SubFiles/Sub Convert (2305)/Sub Convert (2305).mp4"},
+    {"key": "sub-upload", "type": "Movie", "library": "subfiles", "path": "SubFiles/Sub Upload (2306)/Sub Upload (2306).mp4"}
   ]
 }

@@ -217,10 +217,14 @@ type TrickplayStore interface {
 
 // SubtitleStore covers externally-added subtitle files only — uploaded or
 // pulled from a provider (04's UploadSubtitleDto/RemoteSubtitleInfo) — same
-// refs-not-blobs shape as ImageStore. Embedded subtitle tracks are not
-// here: the reference server reports those as MediaStream entries
-// (Type=Subtitle) alongside audio/video tracks, i.e. scan-derived metadata
-// that belongs on Item itself, not a separate store.
+// refs-not-blobs shape as ImageStore. It is not what the scanner and the
+// subtitle routes use today: external subtitle files are found by name in
+// the video's folder and kept as MediaStreamRef entries (IsExternal, Path)
+// on the item itself, so the folder stays the single source of truth
+// (internal/scan/subtitles.go). The interface remains for a provider-backed
+// store. Embedded tracks are not here either: the reference server reports
+// those as MediaStream entries (Type=Subtitle) alongside audio/video
+// tracks, i.e. scan-derived metadata that belongs on Item itself.
 type SubtitleStore interface {
 	QuerySubtitles(ctx context.Context, itemID ItemID) ([]SubtitleRef, error)
 	UpsertSubtitle(ctx context.Context, ref SubtitleRef) error

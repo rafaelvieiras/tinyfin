@@ -4,9 +4,9 @@
 
 Playback negotiation, direct/HLS streaming, subtitles, lyrics, trickplay and media segments.
 
-[Overview](../COVERAGE.md) · 38 operations · 9 registered (24%) · 3 verified · ✅ 9 · 🗓️ 12 · ⛔ 17
+[Overview](../COVERAGE.md) · 38 operations · 19 registered (50%) · 11 verified · ✅ 14 · 🟡 3 · 🗓️ 2 · ⛔ 17 · ↔️ 2
 
-✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔
+✅✅✅✅✅✅✅🟡🟡🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔↔️
 
 Columns: **Auth** is the reference's authorization policy; **Web** = mentioned in docs/11 (called by the official web client); **Tests** = scenarios that exercise the route (passing / total).
 
@@ -36,8 +36,8 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ✅ supported | `GET /Items/{itemId}/PlaybackInfo` | DefaultAuthorization | yes | 2/2 |  |
-| ✅ supported | `POST /Items/{itemId}/PlaybackInfo` | DefaultAuthorization | yes | 1/1 |  |
+| ✅ supported | `GET /Items/{itemId}/PlaybackInfo` | DefaultAuthorization | yes | 3/3 |  |
+| ✅ supported | `POST /Items/{itemId}/PlaybackInfo` | DefaultAuthorization | yes | 4/4 |  |
 | ⛔ not-planned | `POST /LiveStreams/Close` | DefaultAuthorization | yes |  | Out of scope for v1 (docs/01, decision D8). Live streams belong to tuners. (priority: low) |
 | ⛔ not-planned | `POST /LiveStreams/Open` | DefaultAuthorization | yes |  | Out of scope for v1 (docs/01, decision D8). Live streams belong to tuners. (priority: low) |
 | ✅ supported *(no scenario)* | `GET /Playback/BitrateTest` | DefaultAuthorization | yes |  |  |
@@ -52,16 +52,16 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| 🗓️ planned | `GET /FallbackFont/Fonts` | DefaultAuthorization |  |  | Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged. (priority: high) |
-| 🗓️ planned | `GET /FallbackFont/Fonts/{name}` | DefaultAuthorization |  |  | Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged. (priority: high) |
-| 🗓️ planned | `GET /Items/{itemId}/RemoteSearch/Subtitles/{language}` | SubtitleManagement | yes |  | Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged. (priority: high) |
-| 🗓️ planned | `POST /Items/{itemId}/RemoteSearch/Subtitles/{subtitleId}` | SubtitleManagement | yes |  | Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged. (priority: high) |
-| 🗓️ planned | `GET /Providers/Subtitles/Subtitles/{subtitleId}` | SubtitleManagement | yes |  | Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged. (priority: high) |
-| 🗓️ planned | `POST /Videos/{itemId}/Subtitles` | SubtitleManagement | yes |  | Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged. (priority: high) |
-| 🗓️ planned | `DELETE /Videos/{itemId}/Subtitles/{index}` | RequiresElevation |  |  | Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged. (priority: high) |
-| 🗓️ planned | `GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/subtitles.m3u8` | DefaultAuthorization |  |  | Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged. (priority: high) |
-| 🗓️ planned | `GET /Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/Stream.{routeFormat}` | Anonymous |  |  | Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged. (priority: high) |
-| 🗓️ planned | `GET /Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/{routeStartPositionTicks}/Stream.{routeFormat}` | Anonymous |  |  | Subtitles are in scope for v1 (docs/01) and actively called by the web client, but no subtitle route exists and external subtitle files are not cataloged. (priority: high) |
+| ✅ supported | `GET /FallbackFont/Fonts` | DefaultAuthorization |  | 1/1 |  |
+| ✅ supported | `GET /FallbackFont/Fonts/{name}` | DefaultAuthorization |  | 1/1 |  |
+| 🟡 partial | `GET /Items/{itemId}/RemoteSearch/Subtitles/{language}` | SubtitleManagement | yes | 2/2 | Answers like a server with no subtitle provider: an empty list. Searching and downloading from remote subtitle providers is not planned (it needs provider plugins and network access). (priority: low) |
+| 🟡 partial | `POST /Items/{itemId}/RemoteSearch/Subtitles/{subtitleId}` | SubtitleManagement | yes | 1/1 | Accepted and ignored: there is no provider to download from. Searching and downloading from remote subtitle providers is not planned (it needs provider plugins and network access). (priority: low) |
+| 🟡 partial | `GET /Providers/Subtitles/Subtitles/{subtitleId}` | SubtitleManagement | yes | 2/2 | Answers 500 like the reference does for an id no provider issued. Searching and downloading from remote subtitle providers is not planned (it needs provider plugins and network access). (priority: low) |
+| ✅ supported | `POST /Videos/{itemId}/Subtitles` | SubtitleManagement | yes | 3/3 |  |
+| ✅ supported | `DELETE /Videos/{itemId}/Subtitles/{index}` | RequiresElevation |  | 3/3 |  |
+| ✅ supported | `GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/subtitles.m3u8` | DefaultAuthorization |  | 2/2 | Served by `GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/{file}`. Served by the wildcard subtitle route (subtitles.playlist.R1). |
+| ↔️ divergent-by-design | `GET /Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/Stream.{routeFormat}` | Anonymous |  |  | Served by `GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/{file}`. Served for authenticated callers only: the reference serves it to anonymous ones (subtitles.stream.R9). Formats srt, vtt, ass, ssa, json and ttml from external SubRip/WebVTT/ASS/SSA/SAMI files and embedded text tracks (extracted with ffmpeg); bitmap tracks are not converted. Reference: Anonymous access; the same formats. |
+| ↔️ divergent-by-design | `GET /Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/{routeStartPositionTicks}/Stream.{routeFormat}` | Anonymous |  |  | Served by `GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/{startTicks}/{file}`. As the route without the start position; authenticated callers only (subtitles.stream.R9). |
 
 ## TrickPlay
 

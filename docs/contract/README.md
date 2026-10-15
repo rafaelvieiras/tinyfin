@@ -60,6 +60,7 @@ reference source open in the same session.
 | `../../cmd/conformance` | CLI |
 | `../../scripts/conformance-media.sh` | Generates the synthetic media tree |
 | `specs/collections.md`, `scenarios/collections.json` | Collections (`BoxSet`): routes, listing, visibility and the automatic collections; lazy libraries `Sets`/`SetsOff` |
+| `specs/subtitles.md`, `scenarios/subtitles.json` | Subtitles: external files, embedded tracks, conversion routes, delivery in PlaybackInfo, upload and delete; lazy library `SubFiles` (the scenarios tagged `media-write` have the server write beside the media, so its media mount must be writable) |
 | `specs/startup.md`, `scenarios/startup.json` | First-run wizard (`/Startup/*`); the scenarios are `fresh-server` ones, see *Fresh-server scenarios* |
 
 ## Scenario format
@@ -109,7 +110,11 @@ reference source open in the same session.
   wildcard, is a string matching the regular expression; an empty wildcard
   result fails).
   `expect.problem: <status>` asserts an RFC 9110 problem document (`type`,
-  `title`, `status` equal to the number).
+  `title`, `status` equal to the number). `expect.text` asserts on the raw body
+  (subtitle documents, playlists): a list of `{"op", "value"}` with ops `eq`
+  (the whole body), `prefix`, `contains`, `notcontains`, `matches` (an
+  unanchored regular expression, `(?s)` lets `.` cross lines) and `lines` (the
+  number of non-empty lines); string values are template-expanded.
 * Server-clock templates build time-of-day dependent state without depending
   on when the suite runs: `{{clock.hour}}` is the server's *local* time of day
   in fractional hours, `{{clock.hour+1}}` / `{{clock.hour-0.5}}` shift it
@@ -317,6 +322,7 @@ scenario that is not pending or divergent; `risky` ones run only with
 | items | 156 | 156 | 0 | 0 | 0 |
 | playstate | 107 | 107 | 0 | 0 | 0 |
 | quickconnect | 16 | 16 | 0 | 0 | 0 |
+| subtitles | 23 | 23 | 0 | 0 | 0 |
 | users | 202 | 202 | 0 | 0 | 0 |
 | wire | 14 | 14 | 0 | 0 | 0 |
-| **Total** | 553 | 553 | 0 | 0 | 0 |
+| **Total** | 576 | 576 | 0 | 0 | 0 |

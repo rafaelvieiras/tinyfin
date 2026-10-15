@@ -56,7 +56,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 |---|---|---|---|---|---|
 | ✅ supported | `GET /Users` | DefaultAuthorization | yes | 17/18 |  |
 | ↔️ divergent-by-design | `POST /Users` | DefaultAuthorization | yes | 15/15 | An explicit null Configuration resets preferences (the reference answers 500). Recorded as a divergence in the contract scenarios. |
-| ✅ supported | `POST /Users/Configuration` | DefaultAuthorization |  | 15/15 |  |
+| ✅ supported | `POST /Users/Configuration` | DefaultAuthorization |  | 16/16 |  |
 | ✅ supported | `GET /Users/Me` | DefaultAuthorization | yes | 35/36 |  |
 | ✅ supported | `POST /Users/New` | RequiresElevation | yes | 164/166 |  |
 | ✅ supported | `POST /Users/Password` | DefaultAuthorization |  | 20/20 |  |

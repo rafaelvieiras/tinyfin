@@ -233,13 +233,14 @@ func (s *Server) handleSubtitleStream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var format subtitle.Format
+	var alias bool
 	if !isPlaylist {
-		f, ok := subtitle.ParseFormat(file[len("stream."):])
+		f, isAlias, ok := subtitle.ParseFormat(file[len("stream."):])
 		if !ok {
 			writeSubtitleError(w, http.StatusBadRequest)
 			return
 		}
-		format = f
+		format, alias = f, isAlias
 	}
 
 	item, err := s.store.GetItem(r.Context(), storage.ItemID(itemID))
@@ -290,7 +291,7 @@ func (s *Server) handleSubtitleStream(w http.ResponseWriter, r *http.Request) {
 
 	var out []byte
 	switch {
-	case string(format) == ext || (ext == "ssa" && format == subtitle.FormatASS):
+	case !alias && (string(format) == ext || (ext == "ssa" && format == subtitle.FormatASS)):
 		out = data
 		if format == subtitle.FormatVTT && timeMap {
 			out = subtitle.InsertVTTTimeMap(out)
@@ -299,7 +300,11 @@ func (s *Server) handleSubtitleStream(w http.ResponseWriter, r *http.Request) {
 		tr := subtitle.Parse(kind, data).Window(startTicks, endTicks, copyTS)
 		out = tr.Write(format, subtitle.Options{VTTTimeMap: timeMap})
 	}
-	w.Header().Set("Content-Type", format.ContentType())
+	contentType := format.ContentType()
+	if alias {
+		contentType = "application/octet-stream"
+	}
+	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Content-Length", strconv.Itoa(len(out)))
 	w.WriteHeader(http.StatusOK)
 	if r.Method != http.MethodHead {
