@@ -209,5 +209,5 @@ The observable behavior is specified in `docs/contract/specs/items.md` (rules `i
   that authority lives wherever the configured metadata provider says it lives.
 - Does not implement its own scraper integrations beyond the direct-provider fallback above —
   provider-specific scraping logic belongs in the provider, not duplicated in Tinyfin.
-- Does not generate trickplay thumbnails as a separate subsystem from the rest of scan-time work
-  — see `07` for where trickplay generation sits.
+- Trickplay thumbnails are a separate background job that follows a scan (`internal/trickplay`,
+  see `07`), not part of the scan pass itself.

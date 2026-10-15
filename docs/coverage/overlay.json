@@ -199,7 +199,7 @@
   },
   "TrickPlay": {
    "status": "planned",
-   "notes": "The storage interface has a trickplay store, but nothing generates or serves tiles.",
+   "notes": "Tinyfin generates and serves trickplay sheets (playback.trickplay); only operations that are not registered are classified by this default.",
    "priority": "low"
   },
   "Subtitle": {

@@ -7,9 +7,10 @@
 // POST /Items/{itemId}/Refresh?Recursive=true&ImageRefreshMode=Default&
 // MetadataRefreshMode=Default&ReplaceAllImages=false&
 // RegenerateTrickplay=false&ReplaceAllMetadata=false. Of these,
-// ReplaceAllImages is honored (handleItemRefresh below); Recursive,
-// ImageRefreshMode, MetadataRefreshMode and RegenerateTrickplay are
-// accepted and ignored — this project has no per-mode scan behavior to
+// ReplaceAllImages and RegenerateTrickplay are honored
+// (handleItemRefresh below; the latter rebuilds the item's trickplay
+// sheets, trickplay.go); Recursive, ImageRefreshMode and
+// MetadataRefreshMode are accepted and ignored — this project has no per-mode scan behavior to
 // select between (docs/11).
 package api
 
@@ -54,7 +55,11 @@ func (s *Server) handleItemRefresh(w http.ResponseWriter, r *http.Request) {
 		if string(lib.ID) == id {
 			// Refreshing one library does not run the automatic
 			// collections (a full refresh does).
-			go s.runScanCtx(scan.WithoutCollections(context.Background()), lib)
+			sctx := scan.WithoutCollections(context.Background())
+			if r.URL.Query().Get("RegenerateTrickplay") == "true" {
+				sctx = withForceTrickplay(sctx)
+			}
+			go s.runScanCtx(sctx, lib)
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
@@ -75,7 +80,13 @@ func (s *Server) handleItemRefresh(w http.ResponseWriter, r *http.Request) {
 		// a Provider-returned image is allowed to overwrite one the item
 		// already has — RefreshItem's own doc comment.
 		replaceImages := r.URL.Query().Get("ReplaceAllImages") == "true"
-		go s.runItemRefresh(storage.ItemID(id), replaceImages)
+		regen := r.URL.Query().Get("RegenerateTrickplay") == "true"
+		go func() {
+			s.runItemRefresh(storage.ItemID(id), replaceImages)
+			if regen {
+				s.regenerateTrickplay(item.ID)
+			}
+		}()
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}

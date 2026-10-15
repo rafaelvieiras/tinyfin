@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with `Fields=Chapters` (title, or `Chapter N` when the file gives none). No chapter pictures.
   `GET /MediaSegments/{itemId}` now validates the id (400/404) and `includeSegmentTypes` like the
   reference; the list is still always empty.
+- Trickplay: libraries with `EnableTrickplayImageExtraction` get seek-thumbnail sprite sheets
+  (320 px or the video's width, 10 s interval, 10x10 JPEG grids) made by ffmpeg in a background
+  job after each scan (`ExtractTrickplayImagesDuringLibraryScan`), incremental and bounded
+  (`-trickplay-concurrency` / `TINYFIN_TRICKPLAY_CONCURRENCY`, default 1), stored under the data
+  directory or beside the media (`SaveTrickplayWithMedia`). Served by
+  `GET /Videos/{itemId}/Trickplay/{width}/tiles.m3u8` and `/{index}.jpg` and listed in the
+  `Trickplay` member of the item; `RegenerateTrickplay=true` on a refresh regenerates. Contract:
+  `specs/trickplay.md`, 10 scenarios.
 - HLS honors the chosen audio track (`AudioStreamIndex`) and burns the selected subtitle in
   (`SubtitleMethod=Encode`): text tracks, embedded or sidecar, through libass, bitmap tracks through
   `overlay`. PlaybackInfo accepts `AudioStreamIndex`/`SubtitleStreamIndex` with a `MediaSourceId`

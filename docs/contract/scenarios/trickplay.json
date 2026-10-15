@@ -1,0 +1,752 @@
+[
+ {
+  "id": "trickplay.item.short",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "trickplay.md",
+  "scope": "modern",
+  "tags": [
+   "trickplay"
+  ],
+  "covers": [
+   "trickplay.generate.R2",
+   "trickplay.generate.R3",
+   "trickplay.item.R1",
+   "trickplay.item.R2"
+  ],
+  "requires": [
+   "library:trickplay",
+   "item:tpshort"
+  ],
+  "steps": [
+   {
+    "name": "sheets listed on the item",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.tpshort.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Trickplay.{{item.tpshort.id}}.320.Width",
+       "op": "eq",
+       "value": 320
+      },
+      {
+       "path": "$.Trickplay.{{item.tpshort.id}}.320.Height",
+       "op": "eq",
+       "value": 240
+      },
+      {
+       "path": "$.Trickplay.{{item.tpshort.id}}.320.TileWidth",
+       "op": "eq",
+       "value": 10
+      },
+      {
+       "path": "$.Trickplay.{{item.tpshort.id}}.320.TileHeight",
+       "op": "eq",
+       "value": 10
+      },
+      {
+       "path": "$.Trickplay.{{item.tpshort.id}}.320.ThumbnailCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Trickplay.{{item.tpshort.id}}.320.Interval",
+       "op": "eq",
+       "value": 10000
+      },
+      {
+       "path": "$.Trickplay.{{item.tpshort.id}}.320.Bandwidth",
+       "op": "type",
+       "value": "number"
+      },
+      {
+       "path": "$.Trickplay.{{item.tpshort.id}}.320.Bandwidth",
+       "op": "gte",
+       "value": 1
+      }
+     ]
+    },
+    "retryMs": 30000
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "trickplay.item.big",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "trickplay.md",
+  "scope": "modern",
+  "tags": [
+   "trickplay"
+  ],
+  "covers": [
+   "trickplay.generate.R3",
+   "trickplay.item.R1"
+  ],
+  "requires": [
+   "library:trickplay",
+   "item:tpbig"
+  ],
+  "steps": [
+   {
+    "name": "a 1500 s video has 150 thumbnails",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.tpbig.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Trickplay.{{item.tpbig.id}}.320.Width",
+       "op": "eq",
+       "value": 320
+      },
+      {
+       "path": "$.Trickplay.{{item.tpbig.id}}.320.Height",
+       "op": "eq",
+       "value": 180
+      },
+      {
+       "path": "$.Trickplay.{{item.tpbig.id}}.320.TileWidth",
+       "op": "eq",
+       "value": 10
+      },
+      {
+       "path": "$.Trickplay.{{item.tpbig.id}}.320.TileHeight",
+       "op": "eq",
+       "value": 10
+      },
+      {
+       "path": "$.Trickplay.{{item.tpbig.id}}.320.ThumbnailCount",
+       "op": "eq",
+       "value": 150
+      },
+      {
+       "path": "$.Trickplay.{{item.tpbig.id}}.320.Interval",
+       "op": "eq",
+       "value": 10000
+      },
+      {
+       "path": "$.Trickplay.{{item.tpbig.id}}.320.Bandwidth",
+       "op": "type",
+       "value": "number"
+      },
+      {
+       "path": "$.Trickplay.{{item.tpbig.id}}.320.Bandwidth",
+       "op": "gte",
+       "value": 1
+      }
+     ]
+    },
+    "retryMs": 30000
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "trickplay.item.narrow",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "trickplay.md",
+  "scope": "modern",
+  "tags": [
+   "trickplay"
+  ],
+  "covers": [
+   "trickplay.item.R3",
+   "trickplay.generate.R3"
+  ],
+  "requires": [
+   "library:trickplay",
+   "item:tpnarrow"
+  ],
+  "steps": [
+   {
+    "name": "keyed by the video's own width",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.tpnarrow.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Trickplay.{{item.tpnarrow.id}}.160.Width",
+       "op": "eq",
+       "value": 160
+      },
+      {
+       "path": "$.Trickplay.{{item.tpnarrow.id}}.160.Height",
+       "op": "eq",
+       "value": 90
+      },
+      {
+       "path": "$.Trickplay.{{item.tpnarrow.id}}.160.TileWidth",
+       "op": "eq",
+       "value": 10
+      },
+      {
+       "path": "$.Trickplay.{{item.tpnarrow.id}}.160.TileHeight",
+       "op": "eq",
+       "value": 10
+      },
+      {
+       "path": "$.Trickplay.{{item.tpnarrow.id}}.160.ThumbnailCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Trickplay.{{item.tpnarrow.id}}.160.Interval",
+       "op": "eq",
+       "value": 10000
+      },
+      {
+       "path": "$.Trickplay.{{item.tpnarrow.id}}.160.Bandwidth",
+       "op": "type",
+       "value": "number"
+      },
+      {
+       "path": "$.Trickplay.{{item.tpnarrow.id}}.160.Bandwidth",
+       "op": "gte",
+       "value": 1
+      },
+      {
+       "path": "$.Trickplay.{{item.tpnarrow.id}}.320",
+       "op": "absent"
+      }
+     ]
+    },
+    "retryMs": 30000
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "trickplay.item.list",
+  "endpoint": "GET /Items",
+  "spec": "trickplay.md",
+  "scope": "modern",
+  "tags": [
+   "trickplay"
+  ],
+  "covers": [
+   "trickplay.item.R2"
+  ],
+  "requires": [
+   "library:trickplay",
+   "item:tpshort"
+  ],
+  "steps": [
+   {
+    "name": "named in Fields",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.tpshort.id}}&Fields=Trickplay"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Trickplay.{{item.tpshort.id}}.320.Width",
+       "op": "eq",
+       "value": 320
+      }
+     ]
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "not named",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.tpshort.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Trickplay",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "trickplay.item.off",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "trickplay.md",
+  "scope": "modern",
+  "tags": [
+   "trickplay"
+  ],
+  "covers": [
+   "trickplay.generate.R1"
+  ],
+  "requires": [
+   "library:trickplayoff",
+   "item:tpoff"
+  ],
+  "steps": [
+   {
+    "name": "no sheets without the option",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.tpoff.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      },
+      {
+       "path": "$.Trickplay",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "no playlist either",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tpoff.id}}/Trickplay/320/tiles.m3u8"
+    },
+    "expect": {
+     "status": 404,
+     "problem": 404
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "trickplay.playlist.short",
+  "endpoint": "GET /Videos/{itemId}/Trickplay/{width}/tiles.m3u8",
+  "spec": "trickplay.md",
+  "scope": "modern",
+  "tags": [
+   "trickplay"
+  ],
+  "covers": [
+   "trickplay.playlist.R1",
+   "trickplay.playlist.R2"
+  ],
+  "requires": [
+   "library:trickplay",
+   "item:tpshort"
+  ],
+  "steps": [
+   {
+    "name": "one sheet",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tpshort.id}}/Trickplay/320/tiles.m3u8?MediaSourceId={{item.tpshort.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/application\\/vnd\\.apple\\.mpegurl/"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "#EXTM3U"
+      },
+      {
+       "op": "contains",
+       "value": "#EXT-X-VERSION:7"
+      },
+      {
+       "op": "contains",
+       "value": "#EXT-X-MEDIA-SEQUENCE:1"
+      },
+      {
+       "op": "contains",
+       "value": "#EXT-X-PLAYLIST-TYPE:VOD"
+      },
+      {
+       "op": "contains",
+       "value": "#EXT-X-IMAGES-ONLY"
+      },
+      {
+       "op": "contains",
+       "value": "#EXT-X-ENDLIST"
+      },
+      {
+       "op": "matches",
+       "value": "#EXT-X-TARGETDURATION:1\\n"
+      },
+      {
+       "op": "contains",
+       "value": "#EXTINF:30,\n#EXT-X-TILES:RESOLUTION=320x240,LAYOUT=10x10,DURATION=10\n0.jpg?MediaSourceId={{item.tpshort.id}}&ApiKey="
+      },
+      {
+       "op": "notcontains",
+       "value": "1.jpg"
+      }
+     ]
+    },
+    "retryMs": 30000
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "trickplay.playlist.big",
+  "endpoint": "GET /Videos/{itemId}/Trickplay/{width}/tiles.m3u8",
+  "spec": "trickplay.md",
+  "scope": "modern",
+  "tags": [
+   "trickplay"
+  ],
+  "covers": [
+   "trickplay.playlist.R1",
+   "trickplay.playlist.R2"
+  ],
+  "requires": [
+   "library:trickplay",
+   "item:tpbig"
+  ],
+  "steps": [
+   {
+    "name": "two sheets, the last one shorter",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tpbig.id}}/Trickplay/320/tiles.m3u8"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/application\\/vnd\\.apple\\.mpegurl/"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "#EXTM3U"
+      },
+      {
+       "op": "contains",
+       "value": "#EXT-X-VERSION:7"
+      },
+      {
+       "op": "contains",
+       "value": "#EXT-X-MEDIA-SEQUENCE:1"
+      },
+      {
+       "op": "contains",
+       "value": "#EXT-X-PLAYLIST-TYPE:VOD"
+      },
+      {
+       "op": "contains",
+       "value": "#EXT-X-IMAGES-ONLY"
+      },
+      {
+       "op": "contains",
+       "value": "#EXT-X-ENDLIST"
+      },
+      {
+       "op": "matches",
+       "value": "#EXT-X-TARGETDURATION:2\\n"
+      },
+      {
+       "op": "contains",
+       "value": "#EXTINF:1000,\n#EXT-X-TILES:RESOLUTION=320x180,LAYOUT=10x10,DURATION=10\n0.jpg?MediaSourceId={{item.tpbig.id}}&ApiKey="
+      },
+      {
+       "op": "contains",
+       "value": "#EXTINF:500,\n#EXT-X-TILES:RESOLUTION=320x180,LAYOUT=10x10,DURATION=10\n1.jpg?"
+      },
+      {
+       "op": "notcontains",
+       "value": "2.jpg"
+      }
+     ]
+    },
+    "retryMs": 30000
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "trickplay.playlist.errors",
+  "endpoint": "GET /Videos/{itemId}/Trickplay/{width}/tiles.m3u8",
+  "spec": "trickplay.md",
+  "scope": "modern",
+  "tags": [
+   "trickplay"
+  ],
+  "covers": [
+   "trickplay.playlist.R3",
+   "trickplay.sheet.R2"
+  ],
+  "requires": [
+   "library:trickplay",
+   "item:tpshort"
+  ],
+  "steps": [
+   {
+    "name": "MediaSourceId is not a GUID",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tpshort.id}}/Trickplay/320/tiles.m3u8?MediaSourceId=deadbeef"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.mediaSourceId",
+       "op": "exists"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a width it has none at",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tpshort.id}}/Trickplay/999/tiles.m3u8"
+    },
+    "expect": {
+     "status": 404,
+     "problem": 404
+    }
+   },
+   {
+    "name": "a width that is not a number",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tpshort.id}}/Trickplay/abc/tiles.m3u8"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.width",
+       "op": "exists"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an unknown item",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/00000000000000000000000000000001/Trickplay/320/tiles.m3u8"
+    },
+    "expect": {
+     "status": 404,
+     "problem": 404
+    }
+   },
+   {
+    "name": "no credentials",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tpshort.id}}/Trickplay/320/tiles.m3u8",
+     "noAuth": true
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "trickplay.sheet.serve",
+  "endpoint": "GET /Videos/{itemId}/Trickplay/{width}/{index}.jpg",
+  "spec": "trickplay.md",
+  "scope": "modern",
+  "tags": [
+   "trickplay"
+  ],
+  "covers": [
+   "trickplay.sheet.R1",
+   "trickplay.sheet.R2"
+  ],
+  "requires": [
+   "library:trickplay",
+   "item:tpshort",
+   "item:tpbig"
+  ],
+  "steps": [
+   {
+    "name": "the only sheet of a short video",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tpshort.id}}/Trickplay/320/0.jpg"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^image\\/jpeg/"
+     }
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "past the last sheet",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tpshort.id}}/Trickplay/320/1.jpg"
+    },
+    "expect": {
+     "status": 404,
+     "problem": 404
+    }
+   },
+   {
+    "name": "the second sheet of a long video",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tpbig.id}}/Trickplay/320/1.jpg"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^image\\/jpeg/"
+     }
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "past the last one",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tpbig.id}}/Trickplay/320/2.jpg"
+    },
+    "expect": {
+     "status": 404,
+     "problem": 404
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "trickplay.sheet.errors",
+  "endpoint": "GET /Videos/{itemId}/Trickplay/{width}/{index}.jpg",
+  "spec": "trickplay.md",
+  "scope": "modern",
+  "tags": [
+   "trickplay"
+  ],
+  "covers": [
+   "trickplay.sheet.R2"
+  ],
+  "requires": [
+   "library:trickplay",
+   "item:tpshort"
+  ],
+  "steps": [
+   {
+    "name": "an index that is not a number",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tpshort.id}}/Trickplay/320/abc.jpg"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.index",
+       "op": "exists"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a width it has none at",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tpshort.id}}/Trickplay/999/0.jpg"
+    },
+    "expect": {
+     "status": 404,
+     "problem": 404
+    }
+   },
+   {
+    "name": "a negative index",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tpshort.id}}/Trickplay/320/-1.jpg"
+    },
+    "expect": {
+     "status": 404,
+     "problem": 404
+    }
+   },
+   {
+    "name": "MediaSourceId is not a GUID",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tpshort.id}}/Trickplay/320/0.jpg?MediaSourceId=zzz"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.mediaSourceId",
+       "op": "exists"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no credentials",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tpshort.id}}/Trickplay/320/0.jpg",
+     "noAuth": true
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ],
+  "cleanup": []
+ }
+]

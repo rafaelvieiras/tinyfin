@@ -805,3 +805,19 @@ chaptered "$CH/Chaptered Movie (2500)/Chaptered Movie (2500).mkv"
 clip "$CH/Plain Chapterless (2501)/Plain Chapterless (2501).mp4" 4 520 6
 
 echo "media tree ready under $ROOT"
+
+# Trickplay (own libraries "Trickplay", with the sheets switched on, and
+# "TrickplayOff", lazy): a 25.5 s clip (3 thumbnails, one sheet), a 1500 s
+# one at 1 fps (150 thumbnails, two sheets) and a 160x90 one that is narrower
+# than the 320 px sheet width. The Off library holds one short clip.
+TP="$ROOT/Trickplay"
+tpclip() { # <out> <seconds> <WxH> <fps>
+  mkdir -p "$(dirname "$1")"
+  [ -f "$1" ] && return 0
+  "$FFMPEG" -v error -y -f lavfi -i "testsrc=duration=$2:size=$3:rate=$4" \
+    -c:v libx264 -preset ultrafast -pix_fmt yuv420p "$1"
+}
+tpclip "$TP/Tp Short (2501)/Tp Short (2501).mp4" 25.5 320x240 4
+tpclip "$TP/Tp Big (2502)/Tp Big (2502).mp4" 1500 320x180 1
+tpclip "$TP/Tp Narrow (2503)/Tp Narrow (2503).mp4" 12 160x90 4
+tpclip "$ROOT/TrickplayOff/Tp Off (2504)/Tp Off (2504).mp4" 5 320x240 4

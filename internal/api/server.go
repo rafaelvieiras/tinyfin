@@ -27,6 +27,7 @@ import (
 	"github.com/rafaelvieiras/tinyfin/internal/scan"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 	"github.com/rafaelvieiras/tinyfin/internal/transcode"
+	"github.com/rafaelvieiras/tinyfin/internal/trickplay"
 )
 
 // Version is the wire-visible server version reported in PublicSystemInfo
@@ -119,6 +120,10 @@ type Config struct {
 	// ScanForceProbe disables the incremental skip (re-probes every file).
 	ScanForceProbe bool
 
+	// TrickplayConcurrency bounds the ffmpeg processes generating trickplay
+	// sheets at once (0 = 1; each runs single-threaded).
+	TrickplayConcurrency int
+
 	// DataDir is the real directory holding the SQLite database file and
 	// its sidecar files (server-id, scan image cache) — cmd/tinyfin/main.go
 	// passes filepath.Dir of its -data flag. Tinyfin has no separate
@@ -158,6 +163,7 @@ type Server struct {
 	hlsMu       sync.Mutex
 	hlsSessions map[string]string
 	scanner     *scan.Scanner
+	trickplay   *trickplay.Generator
 	scanState   *scanTracker
 	// scanLibSem bounds libraries scanning concurrently (runScan).
 	scanLibSem chan struct{}
@@ -222,6 +228,7 @@ func NewServer(store storage.Store, cfg Config) *Server {
 		quick:      newQuickConnectState(),
 		pinLimit:   newPinThrottle(),
 	}
+	s.trickplay = trickplay.New(store, cfg.TranscodeFFmpegPath, cfg.DataDir, cfg.TrickplayConcurrency)
 	s.loadRuntimeSettings()
 	s.monitorKick = make(chan struct{}, 1)
 	s.loadLocalNetwork()
@@ -309,6 +316,13 @@ func (s *Server) runScanCtx(ctx context.Context, lib storage.Library) {
 		log.Printf("api: scanning library %q: %v", lib.Name, err)
 		return
 	}
+	// Seek thumbnails follow the scan (and, when the library switched them
+	// off, are removed). The options are read again: they may have been
+	// saved while the scan was queued.
+	if fresh, err := s.store.GetLibrary(ctx, lib.ID); err == nil {
+		lib = fresh
+	}
+	s.trickplay.EnqueueLibrary(lib, forceTrickplay(ctx))
 	log.Printf("api: scanned library %q: %d items cataloged (%d probed, %d unchanged) in %s, %d enriched, %d warnings",
 		lib.Name, stats.ItemsScanned, stats.ItemsProbed, stats.ItemsSkipped, stats.Duration.Round(time.Millisecond), stats.ItemsEnriched, len(stats.Errors))
 }
@@ -631,6 +645,8 @@ func (s *Server) routes() {
 	// regardless of order. Remux/Direct Stream/Transcode (hls.go, docs/07's
 	// ladder past Direct Play) — the transcode worker role, wired
 	// in-process via internal/transcode.
+	s.mux.HandleFunc("GET /Videos/{itemId}/Trickplay/{width}/tiles.m3u8", requireAuth(s.handleTrickplayTiles))
+	s.mux.HandleFunc("GET /Videos/{itemId}/Trickplay/{width}/{file}", requireAuth(s.handleTrickplaySheet))
 	s.mux.HandleFunc("GET /Videos/{itemId}/master.m3u8", requireAuth(s.handleHLSMaster))
 	s.mux.HandleFunc("GET /Videos/{itemId}/main.m3u8", requireAuth(s.handleHLSPlaylist))
 	// http.ServeMux wildcards must occupy a whole path segment — "stream.

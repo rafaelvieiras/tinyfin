@@ -58,7 +58,9 @@
     {"key": "monitor", "name": "Monitor", "type": "movies", "path": "Monitor", "lazy": true, "options": {"EnableRealtimeMonitor": true}},
     {"key": "search", "name": "Search", "type": "movies", "path": "Search", "lazy": true},
     {"key": "searchshows", "name": "SearchShows", "type": "tvshows", "path": "SearchShows", "lazy": true},
-    {"key": "punct", "name": "Punct", "type": "movies", "path": "Punct", "lazy": true}
+    {"key": "punct", "name": "Punct", "type": "movies", "path": "Punct", "lazy": true},
+    {"key": "trickplay", "name": "Trickplay", "type": "movies", "path": "Trickplay", "lazy": true, "options": {"EnableTrickplayImageExtraction": true, "ExtractTrickplayImagesDuringLibraryScan": true}},
+    {"key": "trickplayoff", "name": "TrickplayOff", "type": "movies", "path": "TrickplayOff", "lazy": true}
   ],
   "items": [
     {"key": "alpha", "type": "Movie", "path": "Movies/Alpha Movie (2015)/Alpha Movie (2015).mp4"},
@@ -402,6 +404,10 @@
     {"key": "pcafe", "type": "Movie", "library": "punct", "path": "Punct/Café Über Straße (2018)/Café Über Straße (2018).mp4"},
     {"key": "pdot", "type": "Movie", "library": "punct", "path": "Punct/Dot.Dash (2017)/Dot.Dash (2017).mp4"},
     {"key": "pcomma", "type": "Movie", "library": "punct", "path": "Punct/Comma,Join (2016)/Comma,Join (2016).mp4"},
-    {"key": "spilot", "type": "Episode", "library": "searchshows", "path": "SearchShows/Search Show (2016)/Season 01/Search Show (2016) S01E01.mp4"}
+    {"key": "spilot", "type": "Episode", "library": "searchshows", "path": "SearchShows/Search Show (2016)/Season 01/Search Show (2016) S01E01.mp4"},
+    {"key": "tpshort", "type": "Movie", "library": "trickplay", "path": "Trickplay/Tp Short (2501)/Tp Short (2501).mp4"},
+    {"key": "tpbig", "type": "Movie", "library": "trickplay", "path": "Trickplay/Tp Big (2502)/Tp Big (2502).mp4"},
+    {"key": "tpnarrow", "type": "Movie", "library": "trickplay", "path": "Trickplay/Tp Narrow (2503)/Tp Narrow (2503).mp4"},
+    {"key": "tpoff", "type": "Movie", "library": "trickplayoff", "path": "TrickplayOff/Tp Off (2504)/Tp Off (2504).mp4"}
   ]
 }

@@ -80,6 +80,8 @@ func main() {
 		"libraries scanned at the same time during a refresh (default 3). Overridable via TINYFIN_SCAN_LIBRARY_PARALLELISM.")
 	scanForceProbe := flag.Bool("scan-force-probe", envOrDefault("TINYFIN_SCAN_FORCE_PROBE", "") != "",
 		"re-run ffprobe on every file even when size and mtime are unchanged. Overridable via TINYFIN_SCAN_FORCE_PROBE.")
+	trickplayConc := flag.Int("trickplay-concurrency", envInt("TINYFIN_TRICKPLAY_CONCURRENCY", 0),
+		"max simultaneous ffmpeg processes generating trickplay sheets (default 1, each single-threaded). Overridable via TINYFIN_TRICKPLAY_CONCURRENCY.")
 	flag.Parse()
 
 	store, err := sqlite.New(*dataPath)
@@ -132,6 +134,7 @@ func main() {
 		ScanProbeConcurrency:   *scanProbeConc,
 		ScanLibraryParallelism: *scanLibPar,
 		ScanForceProbe:         *scanForceProbe,
+		TrickplayConcurrency:   *trickplayConc,
 		TMDBAPIKey:             *tmdbAPIKey,
 		DataDir:                filepath.Dir(*dataPath),
 		WebDir:                 resolvedWebDir,

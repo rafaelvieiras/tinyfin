@@ -406,7 +406,7 @@
    "id": "scan.options",
    "title": "LibraryOptions",
    "status": "partial",
-   "description": "Persisted and returned as sent. Applied by a scan: `PathInfos`, `AutomaticallyAddToCollection`, `EnableRealtimeMonitor`, `EnablePhotos`, `SeasonZeroDisplayName`, `EnableEmbeddedTitles`. Stored and inert: `Enabled`, `EnableAutomaticSeriesGrouping`, `SaveLocalMetadata`/`MetadataSavers`, language and country, embedded episode info, trickplay and chapter images, fetcher members.",
+   "description": "Persisted and returned as sent. Applied by a scan: `PathInfos`, `AutomaticallyAddToCollection`, `EnableRealtimeMonitor`, `EnablePhotos`, `SeasonZeroDisplayName`, `EnableEmbeddedTitles`, and the trickplay members `EnableTrickplayImageExtraction`, `ExtractTrickplayImagesDuringLibraryScan`, `SaveTrickplayWithMedia` (playback.trickplay). Stored and inert: `Enabled`, `EnableAutomaticSeriesGrouping`, `SaveLocalMetadata`/`MetadataSavers`, language and country, embedded episode info, chapter images, fetcher members.",
    "reference": "Most options change scanner or provider behavior; `DisabledLocalMetadataReaders` has no effect on `.nfo` reading.",
    "notes": "`Enabled` false hides the library on the reference and is not reproduced.",
    "code": [
