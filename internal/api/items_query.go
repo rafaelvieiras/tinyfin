@@ -1164,6 +1164,9 @@ func shapeListItem(d baseItemDto, iq itemsQuery) baseItemDto {
 	if !has("mediastreams") {
 		d.MediaStreams = nil
 	}
+	if !has("chapters") {
+		d.Chapters = nil
+	}
 	if !has("providerids") {
 		d.ProviderIDs = nil
 	}

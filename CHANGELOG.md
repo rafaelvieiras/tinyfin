@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Chapters: the scan reads the chapter marks of a file (`ffprobe -show_chapters`, stored per item,
+  migration 0026 re-probes existing items once) and `Chapters` is returned on a single read and
+  with `Fields=Chapters` (title, or `Chapter N` when the file gives none). No chapter pictures.
+  `GET /MediaSegments/{itemId}` now validates the id (400/404) and `includeSegmentTypes` like the
+  reference; the list is still always empty.
 - HLS honors the chosen audio track (`AudioStreamIndex`) and burns the selected subtitle in
   (`SubtitleMethod=Encode`): text tracks, embedded or sidecar, through libass, bitmap tracks through
   `overlay`. PlaybackInfo accepts `AudioStreamIndex`/`SubtitleStreamIndex` with a `MediaSourceId`

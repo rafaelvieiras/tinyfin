@@ -4,7 +4,7 @@
 
 Playback negotiation, direct/HLS streaming, subtitles, lyrics, trickplay and media segments.
 
-[Overview](../COVERAGE.md) · 38 operations · 19 registered (50%) · 13 verified · ✅ 14 · 🟡 3 · 🗓️ 2 · ⛔ 17 · ↔️ 2
+[Overview](../COVERAGE.md) · 38 operations · 19 registered (50%) · 14 verified · ✅ 14 · 🟡 3 · 🗓️ 2 · ⛔ 17 · ↔️ 2
 
 ✅✅✅✅✅✅✅🟡🟡🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔↔️
 
@@ -46,7 +46,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ✅ supported *(no scenario)* | `GET /MediaSegments/{itemId}` | DefaultAuthorization | yes |  |  |
+| ✅ supported | `GET /MediaSegments/{itemId}` | DefaultAuthorization | yes | 2/2 |  |
 
 ## Subtitle
 

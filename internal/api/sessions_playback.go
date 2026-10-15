@@ -15,6 +15,10 @@ package api
 
 import (
 	"net/http"
+	"strconv"
+	"strings"
+
+	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
 
 // handleSessionsPlaying is POST /Sessions/Playing — the client announces
@@ -93,15 +97,57 @@ type mediaSegmentDtoQueryResult struct {
 	StartIndex       int        `json:"StartIndex"`
 }
 
-// handleMediaSegments is GET /MediaSegments/{itemId} — intro/outro/
-// commercial-skip markers. Tinyfin has no segment-detection pipeline
-// (that's a scanner/analysis feature, out of scope for this slice the
-// same way trickplay generation is), so this always answers "no
-// segments" rather than 404ing: jellyfin-android's
-// MediaSegmentRepository wraps this whole call in runCatching{} anyway
-// (found by reading its source), so a 404 wouldn't have broken anything
-// either, but an honest empty result is cheap to give and avoids relying
-// on that catch-all.
+// handleMediaSegments is GET /MediaSegments/{itemId}: the intro/outro/
+// commercial markers of an item. Tinyfin has no segment provider, so the
+// answer is always an empty list (chapters are not turned into segments, as
+// the reference does not either). The id and the includeSegmentTypes filter
+// are validated like the reference does: a malformed id or type is a 400
+// (checked before the lookup), an unknown item a 404.
 func (s *Server) handleMediaSegments(w http.ResponseWriter, r *http.Request) {
+	rawID := r.PathValue("itemId")
+	norm, ok := normalizeGUID(rawID)
+	if !ok || norm == zeroGUID {
+		writeInvalidID(w, "itemId", rawID)
+		return
+	}
+	for _, v := range r.URL.Query()["includeSegmentTypes"] {
+		if msg := segmentTypesProblem(v); msg != "" {
+			writeValidationProblem(w, "includeSegmentTypes", "The value '"+v+"' is "+msg+".")
+			return
+		}
+	}
+	ctx := r.Context()
+	if _, err := s.store.GetItem(ctx, storage.ItemID(norm)); err != nil {
+		if _, libErr := s.store.GetLibrary(ctx, storage.LibraryID(norm)); libErr != nil {
+			writeItemsProblem(w, http.StatusNotFound, "Not Found")
+			return
+		}
+	}
 	writeJSON(w, http.StatusOK, mediaSegmentDtoQueryResult{Items: []struct{}{}})
+}
+
+// segmentTypesProblem validates one includeSegmentTypes value: a comma list
+// of segment type names (any case) or numbers 0-5. It returns "" when valid,
+// "invalid" for an empty value or a number out of range and "not valid" for
+// anything else.
+func segmentTypesProblem(v string) string {
+	if v == "" {
+		return "invalid"
+	}
+	problem := ""
+	for _, tok := range strings.Split(v, ",") {
+		tok = strings.TrimSpace(tok)
+		switch strings.ToLower(tok) {
+		case "unknown", "commercial", "preview", "recap", "outro", "intro":
+			continue
+		}
+		if n, err := strconv.Atoi(tok); err == nil {
+			if n < 0 || n > 5 {
+				return "invalid"
+			}
+			continue
+		}
+		problem = "not valid"
+	}
+	return problem
 }

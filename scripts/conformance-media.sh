@@ -788,4 +788,20 @@ vid "$PU/Café Über Straße (2018)/Café Über Straße (2018).mp4"
 vid "$PU/Dot.Dash (2017)/Dot.Dash (2017).mp4"
 vid "$PU/Comma,Join (2016)/Comma,Join (2016).mp4"
 
+# Chapters (own library "Chapters", lazy): an MKV with three chapters (two
+# titled, one without a title) and an MP4 without any. 320x240, 6 s.
+CH="$ROOT/Chapters"
+chaptered() { # <out>
+  [ -f "$1" ] && return 0
+  mkdir -p "$(dirname "$1")"
+  local t; t="$(mktemp -d)"
+  printf ';FFMETADATA1\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=0\nEND=2000\ntitle=Opening\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=2000\nEND=4000\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=4000\nEND=6000\ntitle=Finale\n' >"$t/m.txt"
+  "$FFMPEG" -v error -y -f lavfi -i "testsrc=duration=6:size=320x240:rate=6" \
+    -f lavfi -i "sine=frequency=500:duration=6" -i "$t/m.txt" -map 0 -map 1 -map_metadata 2 \
+    -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "$1"
+  rm -rf "$t"
+}
+chaptered "$CH/Chaptered Movie (2500)/Chaptered Movie (2500).mkv"
+clip "$CH/Plain Chapterless (2501)/Plain Chapterless (2501).mp4" 4 520 6
+
 echo "media tree ready under $ROOT"

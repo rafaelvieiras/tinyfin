@@ -20,10 +20,10 @@ How to read and edit this: [`docs/coverage/README.md`](coverage/README.md). Mach
 |---|---|
 | Reference operations (OpenAPI 12.2.0) | 364 |
 | Registered by Tinyfin | **155** (43%) |
-| Registered **and** a passing contract scenario | **110** (30%) |
+| Registered **and** a passing contract scenario | **111** (30%) |
 | Called by the official web client (docs/11) and registered | 109 of 164 (66%) |
 | Routes Tinyfin serves that the OpenAPI document lacks | 15 (legacy aliases the web client needs, `/socket`, HLS) |
-| Non-route features tracked | 109 (✅ 59 · 🟡 16 · 🗓️ 15 · ⛔ 19) |
+| Non-route features tracked | 109 (✅ 59 · 🟡 17 · 🗓️ 14 · ⛔ 19) |
 
 ### Routes by status
 
@@ -40,13 +40,13 @@ pie showData title Reference operations by status
 
 ### Non-route features by status
 
-✅✅✅✅✅✅✅✅✅✅✅🟡🟡🟡🗓️🗓️🗓️⛔⛔⛔ ✅ 59 · 🟡 16 · 🗓️ 15 · ⛔ 19
+✅✅✅✅✅✅✅✅✅✅✅🟡🟡🟡🗓️🗓️🗓️⛔⛔⛔ ✅ 59 · 🟡 17 · 🗓️ 14 · ⛔ 19
 
 ```mermaid
 pie showData title Features by status
     "supported" : 59
-    "partial" : 16
-    "planned" : 15
+    "partial" : 17
+    "planned" : 14
     "not-planned" : 19
 ```
 
@@ -61,7 +61,7 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | [Library administration](coverage/api-library-admin.md) | 32 | 12 (38%) | 2 (6%) | ✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔ | ✅ 12 · 🗓️ 17 · ⛔ 3 |
 | [Library browsing and metadata queries](coverage/api-library-browse.md) | 58 | 39 (67%) | 34 (59%) | ✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔ | ✅ 37 · 🟡 1 · 🗓️ 14 · ⛔ 5 · ↔️ 1 |
 | [Live TV and channels](coverage/api-live-tv.md) | 43 | 1 (2%) | 0 (0%) | ⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔ | 🟡 1 · ⛔ 42 |
-| [Playback, streaming and subtitles](coverage/api-playback.md) | 38 | 19 (50%) | 13 (34%) | ✅✅✅✅✅✅✅🟡🟡🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔↔️ | ✅ 14 · 🟡 3 · 🗓️ 2 · ⛔ 17 · ↔️ 2 |
+| [Playback, streaming and subtitles](coverage/api-playback.md) | 38 | 19 (50%) | 14 (37%) | ✅✅✅✅✅✅✅🟡🟡🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔↔️ | ✅ 14 · 🟡 3 · 🗓️ 2 · ⛔ 17 · ↔️ 2 |
 | [Sessions, play state and realtime](coverage/api-sessions-realtime.md) | 50 | 15 (30%) | 11 (22%) | ✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 14 · 🟡 1 · 🗓️ 13 · ⛔ 22 |
 | [System, branding, localization and plugins](coverage/api-system.md) | 47 | 18 (38%) | 10 (21%) | ✅✅✅✅✅✅🟡🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 15 · 🟡 3 · 🗓️ 9 · ⛔ 20 |
 | [Users, authentication and first-run setup](coverage/api-users-auth.md) | 35 | 28 (80%) | 21 (60%) | ✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️↔️↔️↔️↔️ | ✅ 21 · 🗓️ 7 · ↔️ 7 |
@@ -92,7 +92,7 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | Localization | 4 | 4 | 4 | ✅ 4 |
 | Lyric | 6 | 0 | 0 | ⛔ 6 |
 | MediaInfo | 5 | 3 | 2 | ✅ 3 · ⛔ 2 |
-| MediaSegment | 1 | 1 | 0 | ✅ 1 |
+| MediaSegment | 1 | 1 | 1 | ✅ 1 |
 | Movie | 1 | 1 | 1 | ✅ 1 |
 | MusicGenre | 1 | 0 | 0 | ⛔ 1 |
 | Person | 2 | 2 | 2 | ✅ 2 |
@@ -124,7 +124,7 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | [Browse by name and discovery](coverage/browse.md) | 6 | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅🟡🟡🟡🗓️🗓️🗓️ | ✅ 4 · 🟡 1 · 🗓️ 1 |
 | [Collections](coverage/collections.md) | 5 | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️ | ✅ 4 · 🗓️ 1 |
 | [Library types](coverage/library-types.md) | 11 | ✅✅✅✅✅✅✅🟡🟡🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 4 · 🟡 1 · 🗓️ 1 · ⛔ 5 |
-| [Item metadata and DTO fields](coverage/metadata.md) | 8 | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️ | ✅ 7 · 🗓️ 1 |
+| [Item metadata and DTO fields](coverage/metadata.md) | 8 | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🟡🟡 | ✅ 7 · 🟡 1 |
 | [Platform features and out-of-scope subsystems](coverage/platform.md) | 9 | ✅✅🟡🟡🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 1 · 🟡 1 · 🗓️ 2 · ⛔ 5 |
 | [Playback, streaming and transcoding](coverage/playback.md) | 15 | ✅✅✅✅✅✅✅🟡🟡🟡🟡🟡🗓️🗓️🗓️🗓️⛔⛔⛔⛔ | ✅ 5 · 🟡 4 · 🗓️ 3 · ⛔ 3 |
 | [Playlists](coverage/playlists.md) | 3 | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅ | ✅ 3 |
@@ -140,6 +140,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | Spec | Rules | Rules with a scenario | Scenarios | Passing |
 |---|---|---|---|---|
 | [browse](contract/specs/browse.md) | 29 | 29 | 15 | 15 |
+| [chapters](contract/specs/chapters.md) | 10 | 10 | 5 | 5 |
 | [collections](contract/specs/collections.md) | 51 | 51 | 30 | 30 |
 | [extras](contract/specs/extras.md) | 21 | 21 | 15 | 15 |
 | [images](contract/specs/images.md) | 15 | 15 | 13 | 13 |
@@ -155,7 +156,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [subtitles](contract/specs/subtitles.md) | 37 | 37 | 23 | 23 |
 | [users](contract/specs/users.md) | 188 | 188 | 195 | 195 |
 | [wire](contract/specs/wire.md) | 15 | 14 | 14 | 14 |
-| **total** | 760 | 755 | 664 | 661 |
+| **total** | 770 | 765 | 669 | 666 |
 
 ## Biggest gaps (planned or not planned, web-client facing)
 

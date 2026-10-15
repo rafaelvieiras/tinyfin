@@ -21,8 +21,10 @@ type signatureStore interface {
 // probeResult is what the process* functions need from the probe step.
 type probeResult struct {
 	streams []storage.MediaStreamRef
-	ticks   *int64
-	err     error
+	// chapters are the file's chapter marks.
+	chapters []storage.ChapterRef
+	ticks    *int64
+	err      error
 	// record is true when the signature must be (re)written after the item
 	// is upserted: the file was freshly and successfully probed.
 	record  bool
@@ -70,6 +72,7 @@ func (s *Scanner) probeOrReuse(ctx context.Context, pool *jobPool, itemID storag
 			if old, err := s.store.GetItem(ctx, itemID); err == nil && len(old.MediaStreams) > 0 && old.RunTimeTicks != nil {
 				res.streams = withExternalSubtitles(stripExternalSubtitles(old.MediaStreams), external)
 				res.ticks = old.RunTimeTicks
+				res.chapters = old.Chapters
 				pool.countSkipped()
 				return res
 			}
@@ -81,6 +84,7 @@ func (s *Scanner) probeOrReuse(ctx context.Context, pool *jobPool, itemID storag
 	res.err = err
 	res.streams = withExternalSubtitles(mediaStreamsFromProbe(info), external)
 	res.ticks = runtimeTicksFromProbe(info)
+	res.chapters = chaptersFromProbe(info)
 	res.title = info.Format.title()
 	res.record = hasSigs && err == nil && statErr == nil
 	return res

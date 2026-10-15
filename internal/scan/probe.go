@@ -3,7 +3,9 @@ package scan
 import (
 	"context"
 	"encoding/json"
+	"math"
 	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -67,8 +69,37 @@ type ffprobeStream struct {
 }
 
 type ffprobeOutput struct {
-	Streams []ffprobeStream `json:"streams"`
-	Format  ffprobeFormat   `json:"format"`
+	Streams  []ffprobeStream  `json:"streams"`
+	Format   ffprobeFormat    `json:"format"`
+	Chapters []ffprobeChapter `json:"chapters"`
+}
+
+// ffprobeChapter is one entry of ffprobe -show_chapters' JSON output.
+type ffprobeChapter struct {
+	StartTime string            `json:"start_time"`
+	Tags      map[string]string `json:"tags"`
+}
+
+// chaptersFromProbe converts ffprobe's chapter list into storage chapters in
+// start order. An entry whose start time does not parse is dropped; the title
+// is the "title" tag whatever the case of its key.
+func chaptersFromProbe(info ffprobeOutput) []storage.ChapterRef {
+	var out []storage.ChapterRef
+	for _, c := range info.Chapters {
+		secs, err := strconv.ParseFloat(strings.TrimSpace(c.StartTime), 64)
+		if err != nil || secs < 0 {
+			continue
+		}
+		var name string
+		for k, v := range c.Tags {
+			if strings.EqualFold(k, "title") {
+				name = strings.TrimSpace(v)
+			}
+		}
+		out = append(out, storage.ChapterRef{StartTicks: int64(math.Round(secs * 1e7)), Name: name})
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].StartTicks < out[j].StartTicks })
+	return out
 }
 
 type ffprobeFormat struct {
@@ -109,7 +140,7 @@ func (s *Scanner) probe(ctx context.Context, path string) (ffprobeOutput, error)
 	// 5 s) so a remote file is never read further than that by a build with
 	// different defaults; output fields are unchanged.
 	cmd := exec.CommandContext(ctx, s.ffprobePath, "-v", "error", "-probesize", "5000000", "-analyzeduration", "5000000",
-		"-print_format", "json", "-show_format", "-show_streams", path)
+		"-print_format", "json", "-show_format", "-show_streams", "-show_chapters", path)
 	data, err := cmd.Output()
 	if err != nil {
 		return out, err

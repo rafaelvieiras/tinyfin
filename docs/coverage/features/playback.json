@@ -222,17 +222,26 @@
    "id": "playback.segments",
    "title": "Media segments",
    "status": "partial",
-   "description": "Route registered; no segment data is produced (no intro/credits detection).",
+   "description": "`GET /MediaSegments/{itemId}` validates the id and `includeSegmentTypes` and answers an empty list; no segment data is produced (no intro/credits detection).",
    "reference": "Segments from providers or plugins.",
    "notes": "Always an honest empty list.",
    "code": [
-    "internal/api/playback.go"
+    "internal/api/sessions_playback.go"
+   ],
+   "spec_rules": [
+    "chapters.segments.R1",
+    "chapters.segments.R2",
+    "chapters.segments.R3",
+    "chapters.segments.R4"
+   ],
+   "scenarios": [
+    "chapters.segments.empty",
+    "chapters.segments.errors"
    ],
    "routes": [
     "GET /MediaSegments/{itemId}"
    ],
-   "unverified": true,
-   "unverified_reason": "Registered; no scenario."
+   "priority": "low"
   },
   {
    "id": "playback.bitrate-test",

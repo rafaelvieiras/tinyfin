@@ -294,6 +294,11 @@ type Item struct {
 
 	MediaStreams []MediaStreamRef
 
+	// Chapters are the chapter marks of the file, in start order, as the
+	// last probe found them. Name is the title the file gives the chapter
+	// (empty when it has none: the API layer names it by position).
+	Chapters []ChapterRef
+
 	// People is an item's cast/crew — BaseItemDto.People on the reference
 	// server. Populated only by a Provider that returns credits
 	// (internal/metadata's TMDBProvider today); nil for a filename-derived
@@ -391,4 +396,12 @@ func (i Item) HasMediaFile() bool {
 type SeriesActivity struct {
 	SeriesID ItemID
 	Latest   time.Time
+}
+
+// ChapterRef is one chapter mark of a media file.
+type ChapterRef struct {
+	// StartTicks is the chapter's start in 100 ns ticks.
+	StartTicks int64
+	// Name is the chapter's title tag; empty when the file has none.
+	Name string
 }

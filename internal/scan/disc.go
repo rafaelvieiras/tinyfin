@@ -316,6 +316,7 @@ func (s *Scanner) probeDisc(ctx context.Context, pool *jobPool, itemID storage.I
 		if sSize, sMtime, ok, err := sigs.GetScanSignature(ctx, itemID); err == nil && ok && sSize == sigSize && sMtime == mtime {
 			if old, err := s.store.GetItem(ctx, itemID); err == nil && len(old.MediaStreams) > 0 && old.RunTimeTicks != nil {
 				out.streams, out.ticks, out.container = old.MediaStreams, old.RunTimeTicks, old.Container
+				out.chapters = old.Chapters
 				if videoType != storage.VideoTypeBluRay {
 					out.size = old.Size
 				}
@@ -358,6 +359,7 @@ func (s *Scanner) probeDisc(ctx context.Context, pool *jobPool, itemID storage.I
 	pool.countProbed()
 	out.err = err
 	out.streams = mediaStreamsFromProbe(info)
+	out.chapters = chaptersFromProbe(info)
 	out.ticks = runtimeTicksFromProbe(info)
 	if sumTicks != nil {
 		out.ticks = sumTicks

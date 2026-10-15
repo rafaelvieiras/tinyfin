@@ -1,0 +1,479 @@
+[
+ {
+  "id": "chapters.item.detail",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "chapters.md",
+  "scope": "modern",
+  "tags": [
+   "chapters"
+  ],
+  "covers": [
+   "chapters.dto.R1",
+   "chapters.dto.R2",
+   "chapters.dto.R3"
+  ],
+  "requires": [
+   "item:chaptered",
+   "item:chapterless",
+   "library:chapters"
+  ],
+  "steps": [
+   {
+    "name": "a single read always carries the chapters",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chaptered.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Chapters",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.Chapters[0].Name",
+       "op": "eq",
+       "value": "Opening"
+      },
+      {
+       "path": "$.Chapters[0].StartPositionTicks",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Chapters[1].Name",
+       "op": "eq",
+       "value": "Chapter 2"
+      },
+      {
+       "path": "$.Chapters[1].StartPositionTicks",
+       "op": "eq",
+       "value": 20000000
+      },
+      {
+       "path": "$.Chapters[2].Name",
+       "op": "eq",
+       "value": "Finale"
+      },
+      {
+       "path": "$.Chapters[2].StartPositionTicks",
+       "op": "eq",
+       "value": 40000000
+      },
+      {
+       "path": "$.Chapters[0].ImageTag",
+       "op": "absent"
+      },
+      {
+       "path": "$.Chapters[0].ImageDateModified",
+       "op": "eq",
+       "value": "0001-01-01T00:00:00.0000000Z"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the user-scoped read too",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Users/{{user.admin.id}}/Items/{{item.chaptered.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Chapters",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.Chapters[0].Name",
+       "op": "eq",
+       "value": "Opening"
+      },
+      {
+       "path": "$.Chapters[0].StartPositionTicks",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Chapters[1].Name",
+       "op": "eq",
+       "value": "Chapter 2"
+      },
+      {
+       "path": "$.Chapters[1].StartPositionTicks",
+       "op": "eq",
+       "value": 20000000
+      },
+      {
+       "path": "$.Chapters[2].Name",
+       "op": "eq",
+       "value": "Finale"
+      },
+      {
+       "path": "$.Chapters[2].StartPositionTicks",
+       "op": "eq",
+       "value": 40000000
+      },
+      {
+       "path": "$.Chapters[0].ImageTag",
+       "op": "absent"
+      },
+      {
+       "path": "$.Chapters[0].ImageDateModified",
+       "op": "eq",
+       "value": "0001-01-01T00:00:00.0000000Z"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "chapters.item.listing",
+  "endpoint": "GET /Items",
+  "spec": "chapters.md",
+  "scope": "modern",
+  "tags": [
+   "chapters"
+  ],
+  "covers": [
+   "chapters.fields.R1",
+   "chapters.fields.R2"
+  ],
+  "requires": [
+   "item:chaptered",
+   "item:chapterless",
+   "library:chapters"
+  ],
+  "steps": [
+   {
+    "name": "a listing without Fields has no Chapters",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.chaptered.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Chapters",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Fields=Chapters adds them",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.chaptered.id}}&Fields=Chapters"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Chapters",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.Items[0].Chapters[1].Name",
+       "op": "eq",
+       "value": "Chapter 2"
+      },
+      {
+       "path": "$.Items[0].Chapters[2].StartPositionTicks",
+       "op": "eq",
+       "value": 40000000
+      }
+     ]
+    }
+   },
+   {
+    "name": "the field name is case-insensitive",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.chaptered.id}}&fields=chapters"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Chapters",
+       "op": "len",
+       "value": 3
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "chapters.item.none",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "chapters.md",
+  "scope": "modern",
+  "tags": [
+   "chapters"
+  ],
+  "covers": [
+   "chapters.dto.R4",
+   "chapters.fields.R1"
+  ],
+  "requires": [
+   "item:chaptered",
+   "item:chapterless",
+   "library:chapters"
+  ],
+  "steps": [
+   {
+    "name": "an item without chapters has an empty list on a read",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapterless.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Chapters",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "and in a listing that asks for them",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.chapterless.id}}&Fields=Chapters"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Chapters",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "and none in a listing that does not",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.chapterless.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Chapters",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "chapters.segments.empty",
+  "endpoint": "GET /MediaSegments/{itemId}",
+  "spec": "chapters.md",
+  "scope": "modern",
+  "tags": [
+   "chapters",
+   "media-segments"
+  ],
+  "covers": [
+   "chapters.segments.R1",
+   "chapters.segments.R2"
+  ],
+  "requires": [
+   "item:chaptered",
+   "item:chapterless",
+   "library:chapters"
+  ],
+  "steps": [
+   {
+    "name": "no provider: an empty list",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MediaSegments/{{item.chaptered.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.StartIndex",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "type names, any case, and numbers 0-5",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MediaSegments/{{item.chaptered.id}}?includeSegmentTypes=Intro&includeSegmentTypes=outro,5"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "the chaptered item is not turned into segments",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MediaSegments/{{item.chapterless.id}}?includeSegmentTypes=Commercial"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "chapters.segments.errors",
+  "endpoint": "GET /MediaSegments/{itemId}",
+  "spec": "chapters.md",
+  "scope": "modern",
+  "tags": [
+   "chapters",
+   "media-segments"
+  ],
+  "covers": [
+   "chapters.segments.R3",
+   "chapters.segments.R4"
+  ],
+  "requires": [
+   "item:chaptered",
+   "item:chapterless",
+   "library:chapters"
+  ],
+  "steps": [
+   {
+    "name": "an unknown type is a validation problem",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MediaSegments/{{item.chaptered.id}}?includeSegmentTypes=Bogus"
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   },
+   {
+    "name": "so is one bad entry of a list",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MediaSegments/{{item.chaptered.id}}?includeSegmentTypes=Intro,Bogus"
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   },
+   {
+    "name": "and a number out of range",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MediaSegments/{{item.chaptered.id}}?includeSegmentTypes=9"
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   },
+   {
+    "name": "a well-formed id of no item is 404",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MediaSegments/00000000000000000000000000000001"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "a malformed id is 400",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MediaSegments/notanid"
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   },
+   {
+    "name": "anonymous callers are refused",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/MediaSegments/{{item.chaptered.id}}"
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ],
+  "cleanup": []
+ }
+]

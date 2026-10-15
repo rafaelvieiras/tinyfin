@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"strconv"
 	"strings"
 	"time"
 
@@ -88,6 +89,10 @@ type baseItemDto struct {
 	MediaType string `json:"MediaType,omitempty"`
 
 	MediaStreams []mediaStreamDto `json:"MediaStreams,omitempty"`
+
+	// Chapters is the file's chapter list: always present on a single
+	// read (empty without chapters), on a listing only with Fields=Chapters.
+	Chapters []chapterInfoDto `json:"Chapters,omitzero"`
 
 	// ImageTags: an N+1 GetImageRefs call per item per list response (the
 	// tradeoff this field's absence used to avoid — see git history)
@@ -1068,6 +1073,7 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		CollectionType:          string(item.CollectionType),
 		MediaType:               mediaTypeFor(item.Type),
 		MediaStreams:            mediaStreamDtos(item.MediaStreams),
+		Chapters:                chapterDtos(item.Chapters),
 		ImageTags:               orEmptyMap(imageTags),
 		BackdropImageTags:       orEmptySlice(backdropImageTags),
 		ImageBlurHashes:         orEmptyNested(imageBlurHashes),
@@ -1175,4 +1181,28 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		s.applyPlaylistInfo(ctx, &dto, item)
 	}
 	return dto
+}
+
+// chapterInfoDto is one entry of BaseItemDto.Chapters. ImageTag is never
+// set: chapter pictures are not extracted, so the member is omitted.
+type chapterInfoDto struct {
+	StartPositionTicks int64    `json:"StartPositionTicks"`
+	Name               string   `json:"Name"`
+	ImageTag           string   `json:"ImageTag,omitempty"`
+	ImageDateModified  wireTime `json:"ImageDateModified"`
+}
+
+// chapterDtos lists an item's chapters; a chapter without a title is named
+// "Chapter N" after its 1-based position. The result is never nil: a read of
+// an item without chapters carries an empty list.
+func chapterDtos(refs []storage.ChapterRef) []chapterInfoDto {
+	out := make([]chapterInfoDto, 0, len(refs))
+	for i, c := range refs {
+		name := c.Name
+		if name == "" {
+			name = "Chapter " + strconv.Itoa(i+1)
+		}
+		out = append(out, chapterInfoDto{StartPositionTicks: c.StartTicks, Name: name})
+	}
+	return out
 }

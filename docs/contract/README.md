@@ -62,6 +62,7 @@ reference source open in the same session.
 | `specs/collections.md`, `scenarios/collections.json` | Collections (`BoxSet`): routes, listing, visibility and the automatic collections; lazy libraries `Sets`/`SetsOff` |
 | `specs/subtitles.md`, `scenarios/subtitles.json` | Subtitles: external files, embedded tracks, conversion routes, delivery in PlaybackInfo, upload and delete; lazy library `SubFiles` (the scenarios tagged `media-write` have the server write beside the media, so its media mount must be writable) |
 | `specs/playback.md`, `scenarios/playback.json` | Track selection and burned-in subtitles: `AudioStreamIndex`/`SubtitleStreamIndex` in PlaybackInfo, the `TranscodingUrl` and its HLS master playlist; lazy library `AvTrack` |
+| `specs/chapters.md`, `scenarios/chapters.json` | Chapter marks (`Chapters` on the item, `Fields=Chapters`) and `GET /MediaSegments/{itemId}`; lazy library `Chapters` |
 | `specs/startup.md`, `scenarios/startup.json` | First-run wizard (`/Startup/*`); the scenarios are `fresh-server` ones, see *Fresh-server scenarios* |
 
 ## Scenario format

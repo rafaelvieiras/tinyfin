@@ -476,6 +476,7 @@ func (s *Scanner) processHomeVideo(ctx context.Context, pool *jobPool, lib stora
 		Name: name, SortName: name,
 		Path: path, Container: videoExt(path), Size: size,
 		MediaStreams: pr.streams,
+		Chapters:     pr.chapters,
 		RunTimeTicks: pr.ticks,
 		DateCreated:  pr.added,
 	}
@@ -867,6 +868,7 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 		Container:    videoExt(videoFile),
 		Size:         size,
 		MediaStreams: pr.streams,
+		Chapters:     pr.chapters,
 		RunTimeTicks: pr.ticks,
 		// .UTC(), not bare time.Now(): the sqlite driver stores a time.Time
 		// as its own t.String() text (modernc.org/sqlite's formatTime), so
@@ -1468,6 +1470,7 @@ func (s *Scanner) processEpisode(ctx context.Context, pool *jobPool, lib storage
 		PremiereDate: ef.Date,
 		Path:         episodePath, Container: videoExt(episodePath), Size: job.size,
 		MediaStreams: pr.streams,
+		Chapters:     pr.chapters,
 		RunTimeTicks: pr.ticks,
 		DateCreated:  pr.added,
 	}

@@ -22,6 +22,7 @@ const itemColumns = `items.id, items.type, items.library_id, items.parent_id, it
 	items.path, items.container, items.size,
 	items.collection_type,
 	items.media_streams,
+	items.chapters,
 	items.people,
 	items.set_name,
 	items.date_created, items.extra_type, items.owner_id,
@@ -55,6 +56,7 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 		size                                    int64
 		collectionType                          string
 		mediaStreamsJSON                        string
+		chaptersJSON                            string
 		peopleJSON                              string
 		setName                                 string
 		dateCreated                             time.Time
@@ -74,6 +76,7 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 		&path, &container, &size,
 		&collectionType,
 		&mediaStreamsJSON,
+		&chaptersJSON,
 		&peopleJSON,
 		&setName,
 		&dateCreated,
@@ -180,6 +183,9 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 	if err := unmarshalJSONInto(mediaStreamsJSON, &item.MediaStreams); err != nil {
 		return storage.Item{}, err
 	}
+	if err := unmarshalJSONInto(chaptersJSON, &item.Chapters); err != nil {
+		return storage.Item{}, err
+	}
 	if err := unmarshalJSONInto(peopleJSON, &item.People); err != nil {
 		return storage.Item{}, err
 	}
@@ -272,6 +278,10 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 	if err != nil {
 		return err
 	}
+	chaptersJSON, err := marshalJSON(item.Chapters)
+	if err != nil {
+		return err
+	}
 	peopleJSON, err := marshalJSON(item.People)
 	if err != nil {
 		return err
@@ -288,13 +298,14 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 		path, container, size,
 		collection_type,
 		media_streams,
+		chapters,
 		people,
 		set_name,
 		search_text,
 		date_created,
 		extra_type, owner_id,
 		video_type, iso_type, remote_url
-	) VALUES (?,?,?,?,?,?,?,?, ?,?,?,?, ?,?,?,?,?,?,?, ?,?,?, ?,?, ?,?,?, ?, ?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	) VALUES (?,?,?,?,?,?,?,?, ?,?,?,?, ?,?,?,?,?,?,?, ?,?,?, ?,?, ?,?,?, ?, ?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(id) DO UPDATE SET
 		type=excluded.type, library_id=excluded.library_id, parent_id=excluded.parent_id, name=excluded.name,
 		original_title=excluded.original_title, sort_name=excluded.sort_name, overview=excluded.overview,
@@ -308,6 +319,7 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 		path=excluded.path, container=excluded.container, size=excluded.size,
 		collection_type=excluded.collection_type,
 		media_streams=excluded.media_streams,
+		chapters=excluded.chapters,
 		people=excluded.people,
 		set_name=excluded.set_name,
 		search_text=excluded.search_text,
@@ -331,6 +343,7 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 			item.Path, item.Container, item.Size,
 			string(item.CollectionType),
 			mediaStreamsJSON,
+			chaptersJSON,
 			peopleJSON,
 			item.SetName,
 			searchText,

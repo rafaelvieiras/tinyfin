@@ -98,9 +98,9 @@
    "id": "metadata.media-streams",
    "title": "Media streams from ffprobe",
    "status": "supported",
-   "description": "Video, audio and embedded subtitle streams, container, bitrate, dimensions and chapters-free media info are probed and returned in MediaSources.",
+   "description": "Video, audio and embedded subtitle streams, container, bitrate, dimensions and basic media info are probed and returned in MediaSources.",
    "reference": "Same, plus chapters and attachments.",
-   "notes": "Chapters, chapter images and attachments are not extracted.",
+   "notes": "Attachments are not extracted; chapters are covered by `metadata.chapters`.",
    "code": [
     "internal/scan/probe.go"
    ],
@@ -109,11 +109,28 @@
   },
   {
    "id": "metadata.chapters",
-   "title": "Chapters and chapter images",
-   "status": "planned",
-   "description": "Chapter markers are not stored or returned.",
+   "title": "Chapters",
+   "status": "partial",
+   "description": "Chapter marks are read by the scan (ffprobe) and returned as `Chapters` on a single read and with `Fields=Chapters`; an untitled chapter is named `Chapter N`.",
    "reference": "Chapters from the container or from sidecar files, with generated thumbnails.",
-   "notes": "Not on ROADMAP.md; the web chapter menu stays empty.",
+   "notes": "No chapter pictures: `ImageTag` is never set and the chapter image route answers 404. No sidecar chapter files.",
+   "code": [
+    "internal/scan/probe.go",
+    "internal/api/dto.go"
+   ],
+   "spec_rules": [
+    "chapters.dto.R1",
+    "chapters.dto.R2",
+    "chapters.dto.R3",
+    "chapters.dto.R4",
+    "chapters.fields.R1",
+    "chapters.fields.R2"
+   ],
+   "scenarios": [
+    "chapters.item.detail",
+    "chapters.item.listing",
+    "chapters.item.none"
+   ],
    "priority": "low"
   },
   {

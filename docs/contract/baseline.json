@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 661
+    "pass": 666
   },
   "scenarios": {
     "browse.facets": "pass",
@@ -18,6 +18,11 @@
     "browse.suggestions": "pass",
     "browse.years": "pass",
     "browse.years.total": "pass",
+    "chapters.item.detail": "pass",
+    "chapters.item.listing": "pass",
+    "chapters.item.none": "pass",
+    "chapters.segments.empty": "pass",
+    "chapters.segments.errors": "pass",
     "collections.add.appends": "pass",
     "collections.add.errors": "pass",
     "collections.auth.anonymous": "pass",

@@ -148,7 +148,7 @@ type namedDto struct {
 	ImageTags                map[string]string            `json:"ImageTags"`
 	BackdropImageTags        []string                     `json:"BackdropImageTags"`
 	ImageBlurHashes          map[string]map[string]string `json:"ImageBlurHashes"`
-	Chapters                 []string                     `json:"Chapters,omitzero"`
+	Chapters                 []chapterInfoDto             `json:"Chapters,omitzero"`
 	LocationType             string                       `json:"LocationType"`
 	MediaType                string                       `json:"MediaType"`
 	LockedFields             []string                     `json:"LockedFields,omitzero"`
@@ -231,7 +231,7 @@ func (s *Server) namedItemDto(e storage.NamedEntry, o namedDtoOpts) namedDto {
 		dto.LocalTrailerCount, dto.SpecialFeatureCount = &zero, &zero
 		dto.ExternalURLs, dto.Taglines, dto.Genres, dto.RemoteTrailers = []externalURLDto{}, []string{}, []string{}, []mediaURLDto{}
 		dto.ProviderIDs, dto.People, dto.Studios, dto.GenreItems = map[string]string{}, []baseItemPersonDto{}, []nameIDPairDto{}, []nameIDPairDto{}
-		dto.Tags, dto.Chapters, dto.LockedFields = []string{}, []string{}, []string{}
+		dto.Tags, dto.Chapters, dto.LockedFields = []string{}, []chapterInfoDto{}, []string{}
 		dto.ParentID = json.RawMessage("null")
 	}
 	if o.counts {

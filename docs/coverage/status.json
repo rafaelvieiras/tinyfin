@@ -3,8 +3,8 @@
  "totals": {
   "features_by_status": {
    "not-planned": 19,
-   "partial": 16,
-   "planned": 15,
+   "partial": 17,
+   "planned": 14,
    "supported": 59
   },
   "operations": 364,
@@ -16,7 +16,7 @@
    "planned": 93,
    "supported": 135
   },
-  "verified": 110
+  "verified": 111
  },
  "routes": [
   {
@@ -1652,6 +1652,8 @@
    "web": true,
    "scenarios": [
     "browse.item-filters",
+    "chapters.item.listing",
+    "chapters.item.none",
     "collections.add.appends",
     "collections.auto.build",
     "collections.auto.option-off",
@@ -1882,6 +1884,8 @@
     "browse.persons",
     "browse.persons.credits",
     "browse.years",
+    "chapters.item.detail",
+    "chapters.item.none",
     "collections.add.appends",
     "collections.add.errors",
     "collections.auth.manager",
@@ -3141,8 +3145,12 @@
    "policy": "DefaultAuthorization",
    "status": "supported",
    "registered": true,
-   "verified": false,
-   "web": true
+   "verified": true,
+   "web": true,
+   "scenarios": [
+    "chapters.segments.empty",
+    "chapters.segments.errors"
+   ]
   },
   {
    "id": "GET /Movies/Recommendations",
@@ -6360,9 +6368,9 @@
    "id": "metadata.media-streams",
    "title": "Media streams from ffprobe",
    "status": "supported",
-   "description": "Video, audio and embedded subtitle streams, container, bitrate, dimensions and chapters-free media info are probed and returned in MediaSources.",
+   "description": "Video, audio and embedded subtitle streams, container, bitrate, dimensions and basic media info are probed and returned in MediaSources.",
    "reference": "Same, plus chapters and attachments.",
-   "notes": "Chapters, chapter images and attachments are not extracted.",
+   "notes": "Attachments are not extracted; chapters are covered by `metadata.chapters`.",
    "code": [
     "internal/scan/probe.go"
    ],
@@ -6371,11 +6379,28 @@
   },
   {
    "id": "metadata.chapters",
-   "title": "Chapters and chapter images",
-   "status": "planned",
-   "description": "Chapter markers are not stored or returned.",
+   "title": "Chapters",
+   "status": "partial",
+   "description": "Chapter marks are read by the scan (ffprobe) and returned as `Chapters` on a single read and with `Fields=Chapters`; an untitled chapter is named `Chapter N`.",
    "reference": "Chapters from the container or from sidecar files, with generated thumbnails.",
-   "notes": "Not on ROADMAP.md; the web chapter menu stays empty.",
+   "notes": "No chapter pictures: `ImageTag` is never set and the chapter image route answers 404. No sidecar chapter files.",
+   "spec_rules": [
+    "chapters.dto.R1",
+    "chapters.dto.R2",
+    "chapters.dto.R3",
+    "chapters.dto.R4",
+    "chapters.fields.R1",
+    "chapters.fields.R2"
+   ],
+   "scenarios": [
+    "chapters.item.detail",
+    "chapters.item.listing",
+    "chapters.item.none"
+   ],
+   "code": [
+    "internal/scan/probe.go",
+    "internal/api/dto.go"
+   ],
    "priority": "low"
   },
   {
@@ -6751,17 +6776,26 @@
    "id": "playback.segments",
    "title": "Media segments",
    "status": "partial",
-   "description": "Route registered; no segment data is produced (no intro/credits detection).",
+   "description": "`GET /MediaSegments/{itemId}` validates the id and `includeSegmentTypes` and answers an empty list; no segment data is produced (no intro/credits detection).",
    "reference": "Segments from providers or plugins.",
    "notes": "Always an honest empty list.",
+   "spec_rules": [
+    "chapters.segments.R1",
+    "chapters.segments.R2",
+    "chapters.segments.R3",
+    "chapters.segments.R4"
+   ],
+   "scenarios": [
+    "chapters.segments.empty",
+    "chapters.segments.errors"
+   ],
    "code": [
-    "internal/api/playback.go"
+    "internal/api/sessions_playback.go"
    ],
    "routes": [
     "GET /MediaSegments/{itemId}"
    ],
-   "unverified": true,
-   "unverified_reason": "Registered; no scenario."
+   "priority": "low"
   },
   {
    "id": "playback.bitrate-test",
