@@ -241,7 +241,10 @@ func (s *Store) CountNamed(ctx context.Context, ref storage.NamedRef, scope stor
 	return out, nil
 }
 
-// registerNamed records the names item carries in named_items.
+// registerNamed records the names item carries in named_items. When one
+// name is carried in several spellings the byte-wise smallest is kept, so the
+// spelling does not depend on the order a (concurrent) scan wrote items in;
+// it is the one the listings pick too (MIN(name)).
 func registerNamed(ctx context.Context, ex dbtx, item storage.Item) error {
 	type row struct{ id, kind, name string }
 	var rows []row
@@ -281,7 +284,7 @@ func registerNamed(ctx context.Context, ex dbtx, item storage.Item) error {
 			ph[i] = "(?,?,?)"
 			args = append(args, r.id, r.kind, r.name)
 		}
-		if _, err := ex.ExecContext(ctx, "INSERT OR IGNORE INTO named_items (id, kind, name) VALUES "+strings.Join(ph, ","), args...); err != nil {
+		if _, err := ex.ExecContext(ctx, "INSERT INTO named_items (id, kind, name) VALUES "+strings.Join(ph, ",")+" ON CONFLICT(id) DO UPDATE SET name = excluded.name WHERE excluded.name < named_items.name", args...); err != nil {
 			return err
 		}
 		rows = rows[n:]
