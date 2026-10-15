@@ -294,7 +294,7 @@
    "status": "not-planned",
    "description": "No lyric files cataloged or served.",
    "reference": "LRC/TXT lyrics for audio.",
-   "notes": "Music is not cataloged.",
+   "notes": "Tracks are cataloged (music.md), but no lyric files are read: HasLyrics is always false.",
    "code": [
     "internal/storage/lyric.go"
    ]
@@ -302,12 +302,27 @@
   {
    "id": "playback.audio",
    "title": "Audio streaming and universal endpoint",
-   "status": "not-planned",
-   "description": "No audio items.",
+   "status": "partial",
+   "description": "`GET /Audio/{id}/stream` serves a track as it is (range support) and PlaybackInfo offers it for direct play; no audio transcoding.",
    "reference": "`/Audio/{id}/stream`, `/universal`.",
-   "notes": "Music is not cataloged.",
+   "notes": "Without static=true the reference transcodes to AAC; Tinyfin serves the file as it is. `/universal` is not implemented.",
    "routes": [
     "GET /Audio/{itemId}/universal"
+   ],
+   "spec_rules": [
+    "music.stream.R1",
+    "music.stream.R2",
+    "music.stream.R3",
+    "music.stream.R4"
+   ],
+   "scenarios": [
+    "music.stream.direct",
+    "music.stream.unknown",
+    "music.playback.info"
+   ],
+   "code": [
+    "internal/api/music.go",
+    "internal/playback/decision.go"
    ]
   },
   {

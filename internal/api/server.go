@@ -567,6 +567,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /Shows/NextUp", requireAuth(s.handleShowsNextUp))
 	s.mux.HandleFunc("GET /Studios", requireAuth(s.handleStudios))
 	s.mux.HandleFunc("GET /Studios/{name}", requireAuth(s.handleStudioByName))
+	s.mux.HandleFunc("GET /Artists", requireAuth(s.handleArtists("Artist")))
+	s.mux.HandleFunc("GET /Artists/AlbumArtists", requireAuth(s.handleArtists("AlbumArtist")))
 	s.mux.HandleFunc("GET /Genres", requireAuth(s.handleGenres))
 	s.mux.HandleFunc("GET /Genres/{genreName}", requireAuth(s.handleGenreByName))
 	s.mux.HandleFunc("GET /Persons", requireAuth(s.handlePersons))
@@ -656,6 +658,7 @@ func (s *Server) routes() {
 	// hls.go — HLS segment files (seg_00000.ts) too; handleVideoStream
 	// itself dispatches on the segment shape (see playback.go).
 	s.mux.HandleFunc("GET /Videos/{itemId}/{file}", requireAuth(s.handleVideoStream))
+	s.mux.HandleFunc("GET /Audio/{itemId}/{file}", requireAuth(s.handleAudioStream))
 	// Subtitles (subtitles.go). The file segment is "Stream.{format}" or
 	// "subtitles.m3u8": ServeMux wildcards cover whole segments, so the
 	// handler splits it itself. The reference serves the stream routes

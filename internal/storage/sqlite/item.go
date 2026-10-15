@@ -764,6 +764,39 @@ func buildItemParts(filter storage.ItemFilter) (itemParts, bool) {
 		}
 		addWhere("EXISTS (SELECT 1 FROM json_each(items.people) WHERE "+cond+")", args...)
 	}
+	if len(filter.ArtistNames) > 0 {
+		args := make([]any, 0, 2*len(filter.ArtistNames))
+		for _, n := range filter.ArtistNames {
+			args = append(args, strings.ToLower(n))
+		}
+		for _, n := range filter.ArtistNames {
+			args = append(args, strings.ToLower(n))
+		}
+		ph := sqlPlaceholders(len(filter.ArtistNames))
+		addWhere("(EXISTS (SELECT 1 FROM json_each(items.artists) WHERE lower(value) IN ("+ph+")) OR lower(items.album_artist) IN ("+ph+"))", args...)
+	}
+	if len(filter.AlbumArtistNames) > 0 {
+		args := make([]any, len(filter.AlbumArtistNames))
+		for i, n := range filter.AlbumArtistNames {
+			args[i] = strings.ToLower(n)
+		}
+		addWhere("lower(items.album_artist) IN ("+sqlPlaceholders(len(args))+")", args...)
+	}
+	switch filter.ArtistRole {
+	case "Artist":
+		addWhere(`EXISTS (SELECT 1 FROM items t WHERE t.library_id = items.library_id AND t.type = 'Audio'
+			AND EXISTS (SELECT 1 FROM json_each(t.artists) WHERE lower(value) = lower(items.name)))`)
+	case "AlbumArtist":
+		addWhere(`EXISTS (SELECT 1 FROM items t WHERE t.library_id = items.library_id AND t.type IN ('Audio', 'MusicAlbum')
+			AND lower(t.album_artist) = lower(items.name))`)
+	}
+	if len(filter.AlbumIDs) > 0 {
+		args := make([]any, len(filter.AlbumIDs))
+		for i, id := range filter.AlbumIDs {
+			args[i] = string(id)
+		}
+		addWhere("items.parent_id IN ("+sqlPlaceholders(len(args))+")", args...)
+	}
 	var rankSQL string
 	var rankArgs []any
 	if sp := filter.Similar; sp != nil {

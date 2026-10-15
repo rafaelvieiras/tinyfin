@@ -68,7 +68,7 @@ type baseItemDto struct {
 	SeasonName string `json:"SeasonName,omitempty"`
 
 	Tags        []string `json:"Tags,omitempty"`
-	Artists     []string `json:"Artists,omitempty"`
+	Artists     []string `json:"Artists,omitzero"`
 	Album       string   `json:"Album,omitempty"`
 	AlbumArtist string   `json:"AlbumArtist,omitempty"`
 
@@ -221,8 +221,26 @@ type baseItemDto struct {
 	// (videoFileItemTypes below) that actually has a Path; nil/""/false
 	// (omitempty) otherwise, matching that section's "absent, not a
 	// guessed zero" convention.
-	// AlbumID is the album a Photo sits in.
+	// AlbumID is the album a Photo or a track sits in.
 	AlbumID string `json:"AlbumId,omitempty"`
+
+	// Music members (music.go): the artists of a track or album, the album's
+	// cover tag on a track, the lyrics flag of a track, and the counts of an
+	// artist.
+	ArtistItems          []nameIDPairDto `json:"ArtistItems,omitzero"`
+	AlbumArtists         []nameIDPairDto `json:"AlbumArtists,omitzero"`
+	AlbumPrimaryImageTag string          `json:"AlbumPrimaryImageTag,omitempty"`
+	HasLyrics            *bool           `json:"HasLyrics,omitempty"`
+	DateLastMediaAdded   *wireTime       `json:"DateLastMediaAdded,omitempty"`
+	SongCount            *int            `json:"SongCount,omitempty"`
+	AlbumCount           *int            `json:"AlbumCount,omitempty"`
+	ArtistCount          *int            `json:"ArtistCount,omitempty"`
+	MovieCount           *int            `json:"MovieCount,omitempty"`
+	SeriesCount          *int            `json:"SeriesCount,omitempty"`
+	EpisodeCount         *int            `json:"EpisodeCount,omitempty"`
+	TrailerCount         *int            `json:"TrailerCount,omitempty"`
+	ProgramCount         *int            `json:"ProgramCount,omitempty"`
+	MusicVideoCount      *int            `json:"MusicVideoCount,omitempty"`
 
 	Width        *int   `json:"Width,omitempty"`
 	Height       *int   `json:"Height,omitempty"`
@@ -721,7 +739,7 @@ func mediaTypeFor(t storage.ItemType) string {
 		return "Video"
 	case storage.ItemTypePhoto:
 		return "Photo"
-	case storage.ItemTypeMusicArtist, storage.ItemTypeMusicAlbum, storage.ItemTypeAudio:
+	case storage.ItemTypeAudio:
 		return "Audio"
 	default:
 		// Folders, series, seasons, libraries and every other grouping item
@@ -1109,6 +1127,7 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 			dto.AlbumID = string(*item.ParentID)
 		}
 	}
+	s.decorateMusic(ctx, item, &dto)
 	if item.Type == storage.ItemTypePhoto {
 		if refs, err := s.store.GetImageRefs(ctx, item.ID, storage.ImageKind("Primary")); err == nil && len(refs) > 0 && refs[0].Width > 0 {
 			w, h := refs[0].Width, refs[0].Height

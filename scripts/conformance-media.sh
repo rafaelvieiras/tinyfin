@@ -804,7 +804,6 @@ chaptered() { # <out>
 chaptered "$CH/Chaptered Movie (2500)/Chaptered Movie (2500).mkv"
 clip "$CH/Plain Chapterless (2501)/Plain Chapterless (2501).mp4" 4 520 6
 
-echo "media tree ready under $ROOT"
 
 # Trickplay (own libraries "Trickplay", with the sheets switched on, and
 # "TrickplayOff", lazy): a 25.5 s clip (3 thumbnails, one sheet), a 1500 s
@@ -821,3 +820,46 @@ tpclip "$TP/Tp Short (2501)/Tp Short (2501).mp4" 25.5 320x240 4
 tpclip "$TP/Tp Big (2502)/Tp Big (2502).mp4" 1500 320x180 1
 tpclip "$TP/Tp Narrow (2503)/Tp Narrow (2503).mp4" 12 160x90 4
 tpclip "$ROOT/TrickplayOff/Tp Off (2504)/Tp Off (2504).mp4" 5 320x240 4
+
+# Music (own library "Music", lazy): small tagged audio files laid out as
+# Artist/Album/NN - Title.ext. Alpha has ID3 tags and a cover.jpg beside the
+# tracks, Beta Vorbis comments in FLAC, Gamma no tags at all (names come from
+# the folders and file names), Delta an embedded picture, Mix Tape a track
+# artist that differs from the album artist.
+MU="$ROOT/Music"
+song() { # <out> <seconds> <hz> [ffmpeg metadata args...]
+  local out="$1" secs="$2" hz="$3"; shift 3
+  mkdir -p "$(dirname "$out")"
+  [ -f "$out" ] && return 0
+  "$FFMPEG" -v error -y -f lavfi -i "sine=frequency=$hz:duration=$secs" "$@" "$out"
+}
+cover() { # <out> <WxH>
+  mkdir -p "$(dirname "$1")"
+  [ -f "$1" ] && return 0
+  "$FFMPEG" -v error -y -f lavfi -i "testsrc=duration=1:size=$2:rate=1" -frames:v 1 "$1"
+}
+A1="$MU/Artist One/Album Alpha (2019)"
+song "$A1/01 - First Song.mp3" 3 440 -id3v2_version 3 -metadata title="First Song" -metadata artist="Artist One" \
+  -metadata album="Album Alpha" -metadata album_artist="Artist One" -metadata track="1/2" -metadata disc="1/1" \
+  -metadata date="2019" -metadata genre="Rock"
+song "$A1/02 - Second Song.mp3" 2 550 -id3v2_version 3 -metadata title="Second Song" -metadata artist="Artist One" \
+  -metadata album="Album Alpha" -metadata album_artist="Artist One" -metadata track="2/2" -metadata disc="1/1" \
+  -metadata date="2019" -metadata genre="Rock"
+cover "$A1/cover.jpg" 300x300
+song "$MU/Artist One/Album Beta/01 - Opening.flac" 2 660 -metadata TITLE="Opening" -metadata ARTIST="Artist One" \
+  -metadata ALBUM="Album Beta" -metadata ALBUMARTIST="Artist One" -metadata TRACKNUMBER="1" -metadata DISCNUMBER="2" \
+  -metadata DATE="2021" -metadata GENRE="Jazz"
+song "$MU/Artist Two/Album Gamma/01 - Untagged Track.mp3" 2 770
+if [ ! -f "$MU/Artist Two/Album Delta/01 - Embedded Cover.mp3" ]; then
+  mkdir -p "$MU/Artist Two/Album Delta"
+  cover "$MU/.cover-src.jpg" 200x200
+  "$FFMPEG" -v error -y -f lavfi -i "sine=frequency=880:duration=2" -i "$MU/.cover-src.jpg" -map 0 -map 1 -c:a libmp3lame \
+    -c:v copy -id3v2_version 3 -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (front)" \
+    -metadata title="Embedded Cover" -metadata artist="Artist Two" -metadata album="Album Delta" \
+    -metadata album_artist="Artist Two" -metadata track="1" "$MU/Artist Two/Album Delta/01 - Embedded Cover.mp3"
+  rm -f "$MU/.cover-src.jpg"
+fi
+song "$MU/Various Artists/Mix Tape/01 - Guest Spot.mp3" 2 330 -id3v2_version 3 -metadata title="Guest Spot" \
+  -metadata artist="Guest Singer" -metadata album="Mix Tape" -metadata album_artist="Various Artists" -metadata track="1"
+
+echo "media tree ready under $ROOT"

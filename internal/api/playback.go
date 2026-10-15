@@ -347,6 +347,10 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 	switch decision.Mode {
 	case playback.ModeDirectPlay:
 		source.SupportsDirectPlay = true
+		if item.Type == storage.ItemTypeAudio {
+			// A track is also served as it is by /Audio/{id}/stream.
+			source.SupportsDirectStream = true
+		}
 		source.TranscodingSubProtocol = "http"
 		resp.MediaSources = append([]mediaSourceInfoDto{source}, s.versionSources(r.Context(), item)...)
 

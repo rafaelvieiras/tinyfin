@@ -4,9 +4,9 @@
 
 Item listing, single items, genres/people/studios, search and the other browse endpoints.
 
-[Overview](../COVERAGE.md) · 58 operations · 39 registered (67%) · 34 verified · ✅ 37 · 🟡 1 · 🗓️ 14 · ⛔ 5 · ↔️ 1
+[Overview](../COVERAGE.md) · 58 operations · 41 registered (71%) · 36 verified · ✅ 39 · 🟡 1 · 🗓️ 14 · ⛔ 3 · ↔️ 1
 
-✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔
+✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔
 
 Columns: **Auth** is the reference's authorization policy; **Web** = mentioned in docs/11 (called by the official web client); **Tests** = scenarios that exercise the route (passing / total).
 
@@ -14,8 +14,8 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ⛔ not-planned | `GET /Artists` *(deprecated)* | DefaultAuthorization | yes |  | Music libraries are not scanned (video-first scope, docs/01); not on ROADMAP.md. (priority: low) |
-| ⛔ not-planned | `GET /Artists/AlbumArtists` *(deprecated)* | DefaultAuthorization | yes |  | Music libraries are not scanned (video-first scope, docs/01); not on ROADMAP.md. (priority: low) |
+| ✅ supported | `GET /Artists` *(deprecated)* | DefaultAuthorization | yes | 1/1 |  |
+| ✅ supported | `GET /Artists/AlbumArtists` *(deprecated)* | DefaultAuthorization | yes | 1/1 |  |
 | ⛔ not-planned | `GET /Artists/{name}` *(deprecated)* | DefaultAuthorization |  |  | Music libraries are not scanned (video-first scope, docs/01); not on ROADMAP.md. (priority: low) |
 
 ## Filter
@@ -39,12 +39,12 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | 🗓️ planned | `GET /Albums/{itemId}/Similar` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | 🗓️ planned | `GET /Artists/{itemId}/Similar` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | 🗓️ planned | `DELETE /Items` | DefaultAuthorization | yes |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
-| ↔️ divergent-by-design | `GET /Items` | DefaultAuthorization | yes | 160/160 | The library-access restriction also applies when items are requested by Ids (the reference skips it). Recorded as a divergence in the contract scenarios. |
+| ↔️ divergent-by-design | `GET /Items` | DefaultAuthorization | yes | 165/165 | The library-access restriction also applies when items are requested by Ids (the reference skips it). Recorded as a divergence in the contract scenarios. |
 | ✅ supported | `GET /Items/Counts` | DefaultAuthorization | yes | 2/2 |  |
 | ✅ supported | `GET /Items/Latest` | DefaultAuthorization | yes | 2/2 |  |
 | ✅ supported *(no scenario)* | `GET /Items/Root` | DefaultAuthorization | yes |  |  |
 | ✅ supported | `DELETE /Items/{itemId}` | DefaultAuthorization | yes | 7/7 |  |
-| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 166/166 |  |
+| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 174/174 |  |
 | ✅ supported | `GET /Items/{itemId}/Ancestors` | DefaultAuthorization | yes | 2/2 |  |
 | ✅ supported | `GET /Items/{itemId}/Collections` | DefaultAuthorization | yes | 1/1 |  |
 | 🗓️ planned | `GET /Items/{itemId}/Download` | Download |  |  | Download permission exists in the user policy but no download route is served. (priority: medium) |

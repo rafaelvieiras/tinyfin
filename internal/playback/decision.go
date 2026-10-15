@@ -180,6 +180,9 @@ func reasons(item storage.Item, profile deviceprofile.DeviceProfile, opts Option
 
 func decide(item storage.Item, profile deviceprofile.DeviceProfile, opts Options) Decision {
 	container := normalizeToken(item.Container)
+	if item.Type == storage.ItemTypeAudio {
+		return decideAudio(item, container, profile, opts)
+	}
 	video, hasVideo := selectStream(item.MediaStreams, storage.StreamTypeVideo)
 	audio, hasAudio := pickAudio(item.MediaStreams, opts.AudioStreamIndex)
 	videoCodec := normalizeToken(video.Codec)
@@ -355,4 +358,35 @@ func firstToken(csv string) string {
 	}
 	parts := strings.SplitN(csv, ",", 2)
 	return normalizeToken(parts[0])
+}
+
+// decideAudio is the decision for a track: the file is served as it is
+// (there is no audio transcoding). It is direct play when the profile names
+// no Audio direct play entry at all (nothing to negotiate against) or when
+// one covers the container and the codec; otherwise the client is told it
+// cannot play it.
+func decideAudio(item storage.Item, container string, profile deviceprofile.DeviceProfile, opts Options) Decision {
+	if opts.NoDirectPlay || container == "" {
+		return Decision{Mode: ModeNone}
+	}
+	audio, hasAudio := pickAudio(item.MediaStreams, opts.AudioStreamIndex)
+	codec := normalizeToken(audio.Codec)
+	listed := false
+	for _, dp := range profile.DirectPlayProfiles {
+		if dp.Type != "Audio" {
+			continue
+		}
+		listed = true
+		if !containsToken(dp.Container, container) {
+			continue
+		}
+		if hasAudio && dp.AudioCodec != "" && !containsToken(dp.AudioCodec, codec) {
+			continue
+		}
+		return Decision{Mode: ModeDirectPlay, Container: container}
+	}
+	if !listed {
+		return Decision{Mode: ModeDirectPlay, Container: container}
+	}
+	return Decision{Mode: ModeNone}
 }

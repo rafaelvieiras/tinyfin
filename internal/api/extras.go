@@ -44,7 +44,7 @@ func (s *Server) extrasOf(ctx context.Context, owner storage.ItemID, types ...st
 // internalExtraType reports whether an ExtraType is one the wire does not
 // show: an additional part, a version or a merged season folder.
 func internalExtraType(t string) bool {
-	return t == storage.ExtraTypePart || t == storage.ExtraTypeVersion || t == storage.ExtraTypeMergedSeason
+	return t == storage.ExtraTypePart || t == storage.ExtraTypeVersion || t == storage.ExtraTypeMergedSeason || t == storage.ExtraTypeVirtualArtist
 }
 
 // specialFeatureTypes are the ExtraType values counted as special features.

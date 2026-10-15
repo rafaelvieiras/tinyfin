@@ -19,35 +19,35 @@ How to read and edit this: [`docs/coverage/README.md`](coverage/README.md). Mach
 | Measure | Value |
 |---|---|
 | Reference operations (OpenAPI 12.2.0) | 364 |
-| Registered by Tinyfin | **157** (43%) |
-| Registered **and** a passing contract scenario | **113** (31%) |
-| Called by the official web client (docs/11) and registered | 109 of 164 (66%) |
-| Routes Tinyfin serves that the OpenAPI document lacks | 15 (legacy aliases the web client needs, `/socket`, HLS) |
-| Non-route features tracked | 109 (✅ 60 · 🟡 17 · 🗓️ 13 · ⛔ 19) |
+| Registered by Tinyfin | **159** (44%) |
+| Registered **and** a passing contract scenario | **115** (32%) |
+| Called by the official web client (docs/11) and registered | 111 of 164 (68%) |
+| Routes Tinyfin serves that the OpenAPI document lacks | 16 (legacy aliases the web client needs, `/socket`, HLS) |
+| Non-route features tracked | 109 (✅ 60 · 🟡 19 · 🗓️ 13 · ⛔ 17) |
 
 ### Routes by status
 
-✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔↔️ ✅ 137 · 🟡 9 · 🗓️ 91 · ⛔ 116 · ↔️ 11
+✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔↔️ ✅ 139 · 🟡 9 · 🗓️ 91 · ⛔ 114 · ↔️ 11
 
 ```mermaid
 pie showData title Reference operations by status
-    "supported" : 137
+    "supported" : 139
     "partial" : 9
     "planned" : 91
-    "not-planned" : 116
+    "not-planned" : 114
     "divergent-by-design" : 11
 ```
 
 ### Non-route features by status
 
-✅✅✅✅✅✅✅✅✅✅✅🟡🟡🟡🗓️🗓️⛔⛔⛔⛔ ✅ 60 · 🟡 17 · 🗓️ 13 · ⛔ 19
+✅✅✅✅✅✅✅✅✅✅✅🟡🟡🟡🟡🗓️🗓️⛔⛔⛔ ✅ 60 · 🟡 19 · 🗓️ 13 · ⛔ 17
 
 ```mermaid
 pie showData title Features by status
     "supported" : 60
-    "partial" : 17
+    "partial" : 19
     "planned" : 13
-    "not-planned" : 19
+    "not-planned" : 17
 ```
 
 ## HTTP API by controller group
@@ -59,7 +59,7 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | [Collections, playlists and mixes](coverage/api-collections-playlists.md) | 21 | 14 (67%) | 14 (67%) | ✅✅✅✅✅✅✅✅✅✅✅✅⛔⛔⛔⛔⛔⛔⛔↔️ | ✅ 13 · ⛔ 7 · ↔️ 1 |
 | [Images](coverage/api-images.md) | 40 | 9 (22%) | 5 (12%) | ✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️ | ✅ 9 · 🗓️ 31 |
 | [Library administration](coverage/api-library-admin.md) | 32 | 12 (38%) | 2 (6%) | ✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔ | ✅ 12 · 🗓️ 17 · ⛔ 3 |
-| [Library browsing and metadata queries](coverage/api-library-browse.md) | 58 | 39 (67%) | 34 (59%) | ✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔ | ✅ 37 · 🟡 1 · 🗓️ 14 · ⛔ 5 · ↔️ 1 |
+| [Library browsing and metadata queries](coverage/api-library-browse.md) | 58 | 41 (71%) | 36 (62%) | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔ | ✅ 39 · 🟡 1 · 🗓️ 14 · ⛔ 3 · ↔️ 1 |
 | [Live TV and channels](coverage/api-live-tv.md) | 43 | 1 (2%) | 0 (0%) | ⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔ | 🟡 1 · ⛔ 42 |
 | [Playback, streaming and subtitles](coverage/api-playback.md) | 38 | 21 (55%) | 16 (42%) | ✅✅✅✅✅✅✅✅🟡🟡⛔⛔⛔⛔⛔⛔⛔⛔⛔↔️ | ✅ 16 · 🟡 3 · ⛔ 17 · ↔️ 2 |
 | [Sessions, play state and realtime](coverage/api-sessions-realtime.md) | 50 | 15 (30%) | 11 (22%) | ✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 14 · 🟡 1 · 🗓️ 13 · ⛔ 22 |
@@ -70,7 +70,7 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 
 | Tag | Ops | Registered | Verified | Status |
 |---|---|---|---|---|
-| Artist | 3 | 0 | 0 | ⛔ 3 |
+| Artist | 3 | 2 | 2 | ✅ 2 · ⛔ 1 |
 | Audio | 6 | 0 | 0 | ⛔ 6 |
 | Authentication | 13 | 11 | 11 | ✅ 8 · 🗓️ 2 · ↔️ 3 |
 | Backup | 4 | 0 | 0 | ⛔ 4 |
@@ -123,10 +123,10 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 |---|---|---|---|
 | [Browse by name and discovery](coverage/browse.md) | 6 | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅🟡🟡🟡🗓️🗓️🗓️ | ✅ 4 · 🟡 1 · 🗓️ 1 |
 | [Collections](coverage/collections.md) | 5 | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️ | ✅ 4 · 🗓️ 1 |
-| [Library types](coverage/library-types.md) | 11 | ✅✅✅✅✅✅✅🟡🟡🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 4 · 🟡 1 · 🗓️ 1 · ⛔ 5 |
+| [Library types](coverage/library-types.md) | 11 | ✅✅✅✅✅✅✅🟡🟡🟡🟡🗓️🗓️⛔⛔⛔⛔⛔⛔⛔ | ✅ 4 · 🟡 2 · 🗓️ 1 · ⛔ 4 |
 | [Item metadata and DTO fields](coverage/metadata.md) | 8 | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🟡🟡 | ✅ 7 · 🟡 1 |
 | [Platform features and out-of-scope subsystems](coverage/platform.md) | 9 | ✅✅🟡🟡🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 1 · 🟡 1 · 🗓️ 2 · ⛔ 5 |
-| [Playback, streaming and transcoding](coverage/playback.md) | 15 | ✅✅✅✅✅✅✅✅🟡🟡🟡🟡🟡🗓️🗓️🗓️⛔⛔⛔⛔ | ✅ 6 · 🟡 4 · 🗓️ 2 · ⛔ 3 |
+| [Playback, streaming and transcoding](coverage/playback.md) | 15 | ✅✅✅✅✅✅✅✅🟡🟡🟡🟡🟡🟡🟡🗓️🗓️🗓️⛔⛔ | ✅ 6 · 🟡 5 · 🗓️ 2 · ⛔ 2 |
 | [Playlists](coverage/playlists.md) | 3 | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅ | ✅ 3 |
 | [Sessions, WebSocket and play reporting](coverage/realtime.md) | 6 | ✅✅✅🟡🟡🟡🟡🟡🟡🟡🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔⛔ | ✅ 1 · 🟡 2 · 🗓️ 2 · ⛔ 1 |
 | [Library scanning](coverage/scan.md) | 24 | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🟡🟡🗓️⛔⛔ | ✅ 18 · 🟡 2 · 🗓️ 1 · ⛔ 3 |
@@ -146,6 +146,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [images](contract/specs/images.md) | 15 | 15 | 13 | 13 |
 | [items](contract/specs/items.md) | 170 | 170 | 156 | 156 |
 | [misc](contract/specs/misc.md) | 5 | 5 | 3 | 3 |
+| [music](contract/specs/music.md) | 28 | 28 | 14 | 14 |
 | [playback](contract/specs/playback.md) | 10 | 10 | 7 | 7 |
 | [playlists](contract/specs/playlists.md) | 33 | 33 | 23 | 23 |
 | [playstate](contract/specs/playstate.md) | 91 | 89 | 107 | 107 |
@@ -157,7 +158,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [trickplay](contract/specs/trickplay.md) | 11 | 11 | 10 | 10 |
 | [users](contract/specs/users.md) | 188 | 188 | 195 | 195 |
 | [wire](contract/specs/wire.md) | 15 | 14 | 14 | 14 |
-| **total** | 781 | 776 | 679 | 676 |
+| **total** | 809 | 804 | 693 | 690 |
 
 ## Biggest gaps (planned or not planned, web-client facing)
 
@@ -165,8 +166,6 @@ Operations the official web client mentions (docs/11) that Tinyfin does not regi
 
 | Route | Status | Group | Notes |
 |---|---|---|---|
-| `GET /Artists` | ⛔ not-planned | Library browsing and metadata queries | Music libraries are not scanned (video-first scope, docs/01); not on ROADMAP.md. |
-| `GET /Artists/AlbumArtists` | ⛔ not-planned | Library browsing and metadata queries | Music libraries are not scanned (video-first scope, docs/01); not on ROADMAP.md. |
 | `GET /Auth/PasswordResetProviders` | 🗓️ planned | Users, authentication and first-run setup | Only the built-in password provider exists; the admin dashboard lists providers, so these two answer 404. |
 | `GET /Auth/Providers` | 🗓️ planned | Users, authentication and first-run setup | Only the built-in password provider exists; the admin dashboard lists providers, so these two answer 404. |
 | `GET /Backup` | ⛔ not-planned | System, branding, localization and plugins | State is one SQLite file (docs/05), so a backup is a file copy; the reference's archive format is specific to it. |

@@ -25,8 +25,8 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | 🗓️ planned | `HEAD /Genres/{name}/Images/{imageType}/{imageIndex}` | Anonymous |  |  | Not implemented. (priority: low) |
 | ✅ supported | `GET /Items/{itemId}/Images` | DefaultAuthorization | yes | 9/9 |  |
 | ✅ supported *(no scenario)* | `DELETE /Items/{itemId}/Images/{imageType}` | RequiresElevation | yes |  |  |
-| ✅ supported | `GET /Items/{itemId}/Images/{imageType}` | Anonymous | yes | 1/1 |  |
-| ✅ supported | `HEAD /Items/{itemId}/Images/{imageType}` | Anonymous | yes | 1/1 |  |
+| ✅ supported | `GET /Items/{itemId}/Images/{imageType}` | Anonymous | yes | 2/2 |  |
+| ✅ supported | `HEAD /Items/{itemId}/Images/{imageType}` | Anonymous | yes | 2/2 |  |
 | ✅ supported *(no scenario)* | `POST /Items/{itemId}/Images/{imageType}` | RequiresElevation | yes |  |  |
 | ✅ supported *(no scenario)* | `DELETE /Items/{itemId}/Images/{imageType}/{imageIndex}` | RequiresElevation |  |  |  |
 | ✅ supported | `GET /Items/{itemId}/Images/{imageType}/{imageIndex}` | Anonymous |  | 2/2 |  |
