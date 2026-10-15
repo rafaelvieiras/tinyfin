@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 654
+    "pass": 661
   },
   "scenarios": {
     "browse.facets": "pass",
@@ -235,6 +235,13 @@
     "misc.localization": "pass",
     "misc.ping": "pass",
     "misc.utc-time": "pass",
+    "playback.audio.body": "pass",
+    "playback.audio.ignored": "pass",
+    "playback.audio.selection": "pass",
+    "playback.hls.master": "pass",
+    "playback.subtitle.encode": "pass",
+    "playback.subtitle.hls": "pass",
+    "playback.subtitle.no-transcode": "pass",
     "playlists.acl.matrix": "pass",
     "playlists.auth.anonymous": "pass",
     "playlists.create.basic": "pass",

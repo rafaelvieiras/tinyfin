@@ -331,6 +331,7 @@ scenario that is not pending or divergent; `risky` ones run only with
 | images | 13 | 13 | 0 | 0 | 0 |
 | items | 156 | 156 | 0 | 0 | 0 |
 | misc | 3 | 3 | 0 | 0 | 0 |
+| playback | 7 | 7 | 0 | 0 | 0 |
 | playlists | 23 | 23 | 0 | 0 | 0 |
 | playstate | 107 | 107 | 0 | 0 | 0 |
 | quickconnect | 16 | 16 | 0 | 0 | 0 |
@@ -339,4 +340,4 @@ scenario that is not pending or divergent; `risky` ones run only with
 | subtitles | 23 | 23 | 0 | 0 | 0 |
 | users | 202 | 202 | 0 | 0 | 0 |
 | wire | 14 | 14 | 0 | 0 | 0 |
-| **Total** | 654 | 654 | 0 | 0 | 0 |
+| **Total** | 661 | 661 | 0 | 0 | 0 |
