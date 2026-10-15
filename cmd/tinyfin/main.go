@@ -63,6 +63,9 @@ func main() {
 	ffprobePath := flag.String("ffprobe-path", envOrDefault("TINYFIN_FFPROBE_PATH", "/usr/lib/jellyfin-ffmpeg/ffprobe"),
 		"path to the ffprobe binary internal/scan uses to catalog media info (docs/08's scanner); "+
 			"falls back to \"ffprobe\" on $PATH if this path doesn't exist. Overridable via TINYFIN_FFPROBE_PATH.")
+	fontsDir := flag.String("fonts-dir", envOrDefault("TINYFIN_FONTS_DIR", ""),
+		"directory of fonts for burned-in text subtitles (libass fontsdir); empty uses the system fonts "+
+			"through fontconfig, so the image/host needs a font package. Overridable via TINYFIN_FONTS_DIR.")
 	tmdbAPIKey := flag.String("tmdb-api-key", envOrDefault("TINYFIN_TMDB_API_KEY", ""),
 		"TMDB API key for the direct metadata provider (docs/08's D3 reference provider); "+
 			"empty disables remote enrichment — the scanner still catalogs every item from "+
@@ -122,6 +125,7 @@ func main() {
 	server := api.NewServer(store, api.Config{
 		ServerID:               serverID,
 		TranscodeFFmpegPath:    resolvedFFmpegPath,
+		TranscodeFontsDir:      *fontsDir,
 		ScanFFprobePath:        resolvedFFprobePath,
 		ScanImageDir:           scanImageDir,
 		ScanConcurrency:        *scanConc,

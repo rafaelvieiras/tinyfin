@@ -56,6 +56,32 @@ type Decision struct {
 	// (docs/07), so there is nothing for these fields to describe.
 	VideoCodec string
 	AudioCodec string
+
+	// AudioStream is the Index of the audio stream the decision was made
+	// for (the requested one when it names an audio stream, else the
+	// default pick); nil when the item has no audio.
+	AudioStream *int
+
+	// Reasons are the TranscodeReasons the reference reports for a
+	// non-Direct-Play decision, in its order: ContainerNotSupported,
+	// VideoCodecNotSupported, AudioCodecNotSupported,
+	// SubtitleCodecNotSupported. Empty for Direct Play.
+	Reasons []string
+}
+
+// Options narrows a decision beyond the device profile.
+type Options struct {
+	// AudioStreamIndex asks for a particular audio stream (an Index of
+	// item.MediaStreams). An index that is not an audio stream of the item
+	// is ignored, like the reference does.
+	AudioStreamIndex *int
+	// BurnSubtitle: a subtitle is delivered by Encode, so the picture has
+	// to be re-encoded and neither Direct Play, Remux nor Direct Stream can
+	// serve it.
+	BurnSubtitle bool
+	// NoDirectPlay: the file cannot be served as is (a subtitle delivered
+	// inside the HLS playlist), but the picture may still be copied.
+	NoDirectPlay bool
 }
 
 // Decide reports how item should be played back against profile, per
@@ -82,14 +108,85 @@ type Decision struct {
 // no video stream at all skips the Remux/Direct Stream steps entirely and
 // goes straight to Transcode-or-None.
 func Decide(item storage.Item, profile deviceprofile.DeviceProfile) Decision {
+	return DecideWith(item, profile, Options{})
+}
+
+// DecideWith is Decide for a request that names an audio track and/or needs
+// a subtitle burned in (see Options).
+func DecideWith(item storage.Item, profile deviceprofile.DeviceProfile, opts Options) Decision {
+	d := decide(item, profile, opts)
+	if a, ok := pickAudio(item.MediaStreams, opts.AudioStreamIndex); ok {
+		idx := a.Index
+		d.AudioStream = &idx
+	}
+	if d.Mode != ModeDirectPlay && d.Mode != ModeNone {
+		d.Reasons = reasons(item, profile, opts, d)
+	}
+	return d
+}
+
+// pickAudio is selectStream for audio, honoring a requested stream Index.
+func pickAudio(streams []storage.MediaStreamRef, idx *int) (storage.MediaStreamRef, bool) {
+	if idx != nil {
+		for _, s := range streams {
+			if s.Type == storage.StreamTypeAudio && s.Index == *idx {
+				return s, true
+			}
+		}
+	}
+	return selectStream(streams, storage.StreamTypeAudio)
+}
+
+// reasons explains why d is not Direct Play, by what the profile's
+// direct-play entries cannot take.
+func reasons(item storage.Item, profile deviceprofile.DeviceProfile, opts Options, d Decision) []string {
+	var out []string
+	video, hasVideo := selectStream(item.MediaStreams, storage.StreamTypeVideo)
+	audio, hasAudio := pickAudio(item.MediaStreams, opts.AudioStreamIndex)
+	vc, ac := normalizeToken(video.Codec), normalizeToken(audio.Codec)
+	anyEntry := func(ok func(dp deviceprofile.DirectPlayProfile) bool) bool {
+		for _, dp := range profile.DirectPlayProfiles {
+			if (dp.Type == "" || dp.Type == "Video") && ok(dp) {
+				return true
+			}
+		}
+		return false
+	}
+	if !anyEntry(func(dp deviceprofile.DirectPlayProfile) bool {
+		return containsToken(dp.Container, normalizeToken(item.Container))
+	}) {
+		out = append(out, "ContainerNotSupported")
+	}
+	if hasVideo && !anyEntry(func(dp deviceprofile.DirectPlayProfile) bool {
+		return dp.VideoCodec == "" || containsToken(dp.VideoCodec, vc)
+	}) {
+		out = append(out, "VideoCodecNotSupported")
+	}
+	if hasAudio && !anyEntry(func(dp deviceprofile.DirectPlayProfile) bool {
+		return dp.AudioCodec == "" || containsToken(dp.AudioCodec, ac)
+	}) || d.Mode == ModeDirectStream && len(out) == 0 {
+		out = append(out, "AudioCodecNotSupported")
+	}
+	if opts.BurnSubtitle {
+		out = append(out, "SubtitleCodecNotSupported")
+	}
+	if len(out) == 0 {
+		// the entries accept each part but no single entry accepts the
+		// combination: the reference names the container
+		out = append(out, "ContainerNotSupported")
+	}
+	return out
+}
+
+func decide(item storage.Item, profile deviceprofile.DeviceProfile, opts Options) Decision {
 	container := normalizeToken(item.Container)
 	video, hasVideo := selectStream(item.MediaStreams, storage.StreamTypeVideo)
-	audio, hasAudio := selectStream(item.MediaStreams, storage.StreamTypeAudio)
+	audio, hasAudio := pickAudio(item.MediaStreams, opts.AudioStreamIndex)
 	videoCodec := normalizeToken(video.Codec)
 	audioCodec := normalizeToken(audio.Codec)
 
-	if container != "" {
-		if matchDirectPlay(profile.DirectPlayProfiles, container, videoCodec, audioCodec, hasVideo, hasAudio) {
+	if container != "" && !opts.BurnSubtitle {
+		if !opts.NoDirectPlay && matchDirectPlay(profile.DirectPlayProfiles, container, videoCodec, audioCodec, hasVideo, hasAudio) {
 			return Decision{Mode: ModeDirectPlay, Container: container}
 		}
 		if hasVideo && hasAudio {

@@ -38,50 +38,91 @@ const hlsPlaylistWaitTimeout = 15 * time.Second
 // boundary) this value comes directly off the wire.
 var segmentFilePattern = regexp.MustCompile(`^seg_\d{5}\.[a-zA-Z0-9]+$`)
 
-// ensureTranscodeJob returns the running (or already-finished-but-healthy)
-// transcode job for item, starting a new one from decision if none exists
-// yet or the previous one crashed. Jobs are keyed by item ID, not
-// PlaySessionId: this project does not pool concurrent transcode sessions
-// per item (a scoped MVP simplification, matching this project's other
-// documented Phase 2 scoping choices — see ROADMAP.md) — a second client
-// (or a renegotiation) requesting the same item stops-and-replaces the
-// first job, matching internal/transcode.Manager.Start's own semantics.
-//
-// The job's context is deliberately context.Background(), not the
-// triggering HTTP request's: docs/03 says a transcode job outlives any
-// single request (a client fetches master.m3u8, then polls main.m3u8 and
-// segments over many separate requests) — tying its lifetime to whichever
-// request happened to start it would kill the subprocess the instant that
-// first response was written. The job is torn down explicitly instead, by
-// handleSessionsPlayingStopped (sessions_playback.go) calling
-// s.transcode.Stop.
-func (s *Server) ensureTranscodeJob(item storage.Item, decision playback.Decision) (*transcode.Job, error) {
-	sessionID := string(item.ID)
-	if job, ok := s.transcode.Get(sessionID); ok && (!job.Done() || job.Err() == nil) {
-		return job, nil
-	}
-
-	req := transcode.Request{
-		InputPath:  item.Path,
-		VideoCodec: decision.VideoCodec,
-		AudioCodec: decision.AudioCodec,
-		Container:  decision.Container,
-	}
-	return s.transcode.Start(context.Background(), sessionID, req)
+// hlsRequest is everything a master/main/segment request resolves to: the
+// media source, the playback decision and the key of its transcode job.
+type hlsRequest struct {
+	item     storage.Item
+	decision playback.Decision
+	key      string
+	req      transcode.Request
 }
 
-// resolveTranscodeDecision re-derives the same decision handlePlaybackInfo
-// made for item, since master.m3u8/main.m3u8 are reached via their own
-// request rather than carrying that decision over as a parameter. Deciding
-// twice per playback (once in PlaybackInfo, once here) is deliberate, not
-// an inefficiency to fix: playback.Decide is a pure, cheap function of
-// (item, profile), and re-deriving keeps this file self-sufficient — a
-// client that jumps straight to master.m3u8 without ever having called
-// PlaybackInfo still gets a correct result instead of a 404 for "missing a
-// decision made somewhere else."
-func (s *Server) resolveTranscodeDecision(r *http.Request, item storage.Item) playback.Decision {
+// resolveHLS works out what an HLS request asks for. The codecs, track
+// selection and subtitle method in the query (what PlaybackInfo's
+// TranscodingUrl carries) are authoritative; a bare URL falls back to the
+// decision the device profile gives.
+func (s *Server) resolveHLS(r *http.Request, item storage.Item) hlsRequest {
+	q := caseInsensitiveQuery(r)
+	if v, ok := s.versionFor(r.Context(), r, item); ok {
+		item = v
+	}
 	profile := s.resolveDeviceProfile(r)
-	return playback.Decide(item, profile)
+	audioIdx := atoiPtr(q.Get("audiostreamindex"))
+	subIdx := atoiPtr(q.Get("subtitlestreamindex"))
+	burn := strings.EqualFold(q.Get("subtitlemethod"), "Encode") && subIdx != nil
+	var track *transcode.Subtitle
+	if burn {
+		track = burnRequest(item, *subIdx)
+		burn = track != nil
+	}
+
+	dec := playback.DecideWith(item, profile, playback.Options{AudioStreamIndex: audioIdx, BurnSubtitle: burn})
+	if vc, ac := q.Get("videocodec"), q.Get("audiocodec"); vc != "" || ac != "" {
+		dec = playback.Decision{Mode: playback.ModeTranscode, Container: hlsContainer(profile, q.Get("segmentcontainer")), VideoCodec: strings.ToLower(vc), AudioCodec: strings.ToLower(ac)}
+		if vc == "" || strings.EqualFold(vc, "copy") && !burn {
+			dec.Mode = playback.ModeDirectStream
+		}
+		if burn && (dec.VideoCodec == "" || dec.VideoCodec == "copy") {
+			// a copied picture cannot be filtered
+			dec.VideoCodec = "h264"
+		}
+	} else if c := q.Get("segmentcontainer"); c != "" && dec.Mode != playback.ModeNone && dec.Mode != playback.ModeDirectPlay {
+		dec.Container = c
+	}
+	if dec.Mode != playback.ModeNone && dec.Mode != playback.ModeDirectPlay {
+		dec.Container = hlsContainer(profile, dec.Container)
+	}
+
+	out := hlsRequest{item: item, decision: dec, key: hlsJobKey(item.ID, q)}
+	out.req = transcode.Request{
+		InputPath:  item.Path,
+		VideoCodec: dec.VideoCodec,
+		AudioCodec: dec.AudioCodec,
+		Container:  dec.Container,
+	}
+	if audioIdx != nil && streamOfType(item.MediaStreams, *audioIdx, storage.StreamTypeAudio) {
+		f := fileStreamIndex(item, *audioIdx)
+		out.req.AudioStreamIndex = &f
+	}
+	if burn {
+		out.req.Subtitle = track
+	}
+	return out
+}
+
+// ensureTranscodeJob returns the running job for h, starting it when there
+// is none (or the previous one failed). A request that belongs to a play
+// session (PlaySessionId) replaces the job that session was served from
+// before: choosing another audio or subtitle track within a session starts a
+// new transcode and stops the old one.
+func (s *Server) ensureTranscodeJob(r *http.Request, h hlsRequest) (*transcode.Job, error) {
+	if ps := caseInsensitiveQuery(r).Get("playsessionid"); ps != "" {
+		sk := string(h.item.ID) + "|" + ps
+		s.hlsMu.Lock()
+		if s.hlsSessions == nil {
+			s.hlsSessions = map[string]string{}
+		}
+		prev := s.hlsSessions[sk]
+		s.hlsSessions[sk] = h.key
+		s.hlsMu.Unlock()
+		if prev != "" && prev != h.key {
+			s.transcode.Stop(prev)
+		}
+	}
+	if job, ok := s.transcode.Get(h.key); ok && (!job.Done() || job.Err() == nil) {
+		return job, nil
+	}
+	return s.transcode.Start(context.Background(), h.key, h.req)
 }
 
 // handleHLSMaster is GET /Videos/{itemId}/master.m3u8 — the entry point a
@@ -104,15 +145,15 @@ func (s *Server) handleHLSMaster(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	decision := s.resolveTranscodeDecision(r, item)
-	if decision.Mode == playback.ModeNone || decision.Mode == playback.ModeDirectPlay {
+	h := s.resolveHLS(r, item)
+	if h.decision.Mode == playback.ModeNone || h.decision.Mode == playback.ModeDirectPlay {
 		// Direct Play never reaches HLS at all (handleVideoStream serves
 		// it instead); ModeNone has no compatible source to transcode
 		// either.
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	if _, err := s.ensureTranscodeJob(item, decision); err != nil {
+	if _, err := s.ensureTranscodeJob(r, h); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -140,12 +181,12 @@ func (s *Server) handleHLSPlaylist(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	decision := s.resolveTranscodeDecision(r, item)
-	if decision.Mode == playback.ModeNone || decision.Mode == playback.ModeDirectPlay {
+	h := s.resolveHLS(r, item)
+	if h.decision.Mode == playback.ModeNone || h.decision.Mode == playback.ModeDirectPlay {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	job, err := s.ensureTranscodeJob(item, decision)
+	job, err := s.ensureTranscodeJob(r, h)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -222,7 +263,7 @@ func waitForPlaylist(job *transcode.Job, timeout time.Duration) bool {
 // main.m3u8's own URL and land here without this project needing its own
 // URL-rewriting layer.
 func (s *Server) handleHLSSegment(w http.ResponseWriter, r *http.Request, itemID storage.ItemID, file string) {
-	job, ok := s.transcode.Get(string(itemID))
+	job, ok := s.transcode.Get(hlsJobKey(itemID, caseInsensitiveQuery(r)))
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		return

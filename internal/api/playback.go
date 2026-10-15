@@ -109,6 +109,11 @@ type playbackInfoResponse struct {
 // knob outside this slice's scope (no transcode worker exists yet).
 type playbackInfoRequestBody struct {
 	DeviceProfile *deviceprofile.DeviceProfile `json:"DeviceProfile"`
+	// The selection fields may also come as query parameters; the body
+	// is read first, the query fills what it left unset.
+	MediaSourceID       string `json:"MediaSourceId,omitempty"`
+	AudioStreamIndex    *int   `json:"AudioStreamIndex,omitempty"`
+	SubtitleStreamIndex *int   `json:"SubtitleStreamIndex,omitempty"`
 }
 
 // resolveDeviceProfile implements docs/07 O2's negotiation order: a
@@ -126,19 +131,33 @@ func (s *Server) resolveDeviceProfile(r *http.Request) deviceprofile.DeviceProfi
 // members of PlaybackInfo are filled only then (the reference sets none
 // for a request without a device profile).
 func (s *Server) resolveDeviceProfileInline(r *http.Request) (deviceprofile.DeviceProfile, bool) {
-	if r.Method == http.MethodPost {
-		var body playbackInfoRequestBody
-		if err := json.NewDecoder(r.Body).Decode(&body); err == nil && body.DeviceProfile != nil {
-			return *body.DeviceProfile, true
+	return s.profileFor(r, readPlaybackBody(r))
+}
+
+// readPlaybackBody decodes a POSTed PlaybackInfo body; anything else, or a
+// body that is not JSON, is the zero value.
+func readPlaybackBody(r *http.Request) playbackInfoRequestBody {
+	var body playbackInfoRequestBody
+	if r.Method == http.MethodPost && r.Body != nil {
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			return playbackInfoRequestBody{}
 		}
 	}
+	return body
+}
 
+// profileFor picks the device profile of a request given its decoded body:
+// the inline one (inline true), else the client's built-in one, else the
+// default.
+func (s *Server) profileFor(r *http.Request, body playbackInfoRequestBody) (deviceprofile.DeviceProfile, bool) {
+	if body.DeviceProfile != nil {
+		return *body.DeviceProfile, true
+	}
 	if ac, ok := AuthFromContext(r.Context()); ok && ac != nil {
 		if p, found := deviceprofile.Lookup(ac.Client); found {
 			return p, false
 		}
 	}
-
 	return deviceprofile.Default(), false
 }
 
@@ -267,14 +286,62 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	profile, inline := s.resolveDeviceProfileInline(r)
-	decision := playback.Decide(item, profile)
+	body := readPlaybackBody(r)
+	profile, inline := s.profileFor(r, body)
+	sel := selectionFor(r, body)
+
+	// A selection only applies to the media source it names (the reference
+	// ignores AudioStreamIndex/SubtitleStreamIndex sent without a
+	// MediaSourceId, or with another source's).
+	if v, ok := s.versionFor(r.Context(), r, item); ok && sel.MediaSourceID == string(v.ID) {
+		item = v
+	}
+	applies := sel.MediaSourceID != "" && sel.MediaSourceID == string(item.ID)
+
+	var defaults mediaSourceInfoDto
+	s.applyStreamDefaults(r.Context(), &defaults, item.MediaStreams)
+	audioIdx := defaults.DefaultAudioStreamIndex
+	subIdx := defaults.DefaultSubtitleStreamIndex
+	if applies {
+		if sel.Audio != nil && streamOfType(item.MediaStreams, *sel.Audio, storage.StreamTypeAudio) {
+			audioIdx = sel.Audio
+		}
+		if sel.Subtitle != nil {
+			// reported as sent, whether it names a stream or not
+			subIdx = sel.Subtitle
+		}
+	}
+
+	opts := playback.Options{AudioStreamIndex: audioIdx}
+	subMethod := ""
+	subTrack, hasSub := subtitleStream(item.MediaStreams, subIdx)
+	if inline && hasSub {
+		m := playback.DeliverSubtitle(subTrack, profile.SubtitleProfiles, true).Method
+		switch m {
+		case "Encode":
+			opts.BurnSubtitle = true
+		case "Hls":
+			opts.NoDirectPlay = true
+		}
+	}
+	decision := playback.DecideWith(item, profile, opts)
+	if inline && hasSub && !opts.BurnSubtitle && decision.Mode != playback.ModeDirectPlay && decision.Mode != playback.ModeNone &&
+		playback.DeliverSubtitle(subTrack, profile.SubtitleProfiles, false).Method == "Encode" {
+		// the file is not served as is any more, so an embedded track
+		// cannot stay in it: it has to be rendered into the picture
+		opts.BurnSubtitle = true
+		decision = playback.DecideWith(item, profile, opts)
+	}
+	if hasSub && inline {
+		subMethod = playback.DeliverSubtitle(subTrack, profile.SubtitleProfiles, decision.Mode == playback.ModeDirectPlay).Method
+	}
 	resp := playbackInfoResponse{PlaySessionID: randomID()}
 
 	source := baseMediaSourceInfo(item, decision.Container)
-	s.applyStreamDefaults(r.Context(), &source, item.MediaStreams)
+	source.DefaultAudioStreamIndex = audioIdx
+	source.DefaultSubtitleStreamIndex = subIdx
 	if inline {
-		s.applySubtitleDelivery(r, &source, item, profile.SubtitleProfiles)
+		s.applySubtitleDelivery(r, &source, item, profile.SubtitleProfiles, decision.Mode == playback.ModeDirectPlay)
 	}
 
 	switch decision.Mode {
@@ -284,19 +351,35 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 		resp.MediaSources = append([]mediaSourceInfoDto{source}, s.versionSources(r.Context(), item)...)
 
 	case playback.ModeRemux, playback.ModeDirectStream, playback.ModeTranscode:
-		// All three hand off to the transcode worker over HLS (docs/07's
-		// "Execution" section, hls.go) — Tinyfin has no separate
-		// progressive-remux byte-stream path, only the HLS one
-		// internal/transcode already produces, so Remux/Direct Stream
-		// reuse it too instead of needing their own serving mechanism.
-		source.SupportsDirectStream = decision.Mode != playback.ModeTranscode
+		source.SupportsDirectStream = decision.Mode != playback.ModeTranscode && !opts.BurnSubtitle && !opts.NoDirectPlay
 		source.SupportsTranscoding = true
 		var token string
 		if ac, ok := AuthFromContext(r.Context()); ok && ac != nil {
 			token = ac.Token
 		}
-		source.TranscodingUrl = hlsMasterURL(item.ID, resp.PlaySessionID, token)
-		source.TranscodingContainer = decision.Container
+		container := hlsContainer(profile, decision.Container)
+		q := url.Values{
+			"MediaSourceId":    {source.ID},
+			"VideoCodec":       {decision.VideoCodec},
+			"AudioCodec":       {decision.AudioCodec},
+			"SegmentContainer": {container},
+			"PlaySessionId":    {resp.PlaySessionID},
+		}
+		if audioIdx != nil {
+			q.Set("AudioStreamIndex", strconv.Itoa(*audioIdx))
+		}
+		if hasSub && (subMethod == "Encode" || subMethod == "Hls") {
+			q.Set("SubtitleStreamIndex", strconv.Itoa(*subIdx))
+			q.Set("SubtitleMethod", subMethod)
+		}
+		if token != "" {
+			q.Set("ApiKey", token)
+		}
+		if len(decision.Reasons) > 0 {
+			q.Set("TranscodeReasons", strings.Join(decision.Reasons, ","))
+		}
+		source.TranscodingUrl = hlsMasterURL(item.ID, q)
+		source.TranscodingContainer = container
 		source.TranscodingSubProtocol = "hls"
 		resp.MediaSources = []mediaSourceInfoDto{source}
 
@@ -331,12 +414,8 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 // own RawQuery into the main.m3u8 link it emits, and handleHLSPlaylist
 // rewrites each segment line with that same query — so one token embedded
 // here propagates through the whole chain.
-func hlsMasterURL(itemID storage.ItemID, playSessionID, apiKey string) string {
-	v := url.Values{"PlaySessionId": {playSessionID}}
-	if apiKey != "" {
-		v.Set("ApiKey", apiKey)
-	}
-	return fmt.Sprintf("/Videos/%s/master.m3u8?%s", url.PathEscape(string(itemID)), v.Encode())
+func hlsMasterURL(itemID storage.ItemID, q url.Values) string {
+	return fmt.Sprintf("/Videos/%s/master.m3u8?%s", url.PathEscape(string(itemID)), q.Encode())
 }
 
 // handleVideoStream serves GET /Videos/{itemId}/stream and
@@ -622,7 +701,7 @@ func subtitleDeliveryURL(itemID, sourceID string, index int, format, apiKey stri
 
 // applySubtitleDelivery sets DeliveryMethod/DeliveryUrl on the subtitle
 // streams of src for the subtitle profiles of the caller's device profile.
-func (s *Server) applySubtitleDelivery(r *http.Request, src *mediaSourceInfoDto, item storage.Item, profiles []deviceprofile.SubtitleProfile) {
+func (s *Server) applySubtitleDelivery(r *http.Request, src *mediaSourceInfoDto, item storage.Item, profiles []deviceprofile.SubtitleProfile, served bool) {
 	var token string
 	if ac, ok := AuthFromContext(r.Context()); ok && ac != nil {
 		token = ac.Token
@@ -634,11 +713,13 @@ func (s *Server) applySubtitleDelivery(r *http.Request, src *mediaSourceInfoDto,
 	// When the stream the caller's preferences select cannot be delivered
 	// without transcoding (burned in or through the HLS manifest), the source
 	// is transcoded and no embedded track can stay in the container.
-	allowEmbed := true
+	// An embedded track can stay in the container only when the file is
+	// served as is (subtitles.delivery.R4).
+	allowEmbed := served
 	if src.DefaultSubtitleStreamIndex != nil {
 		if def, ok := byIndex[*src.DefaultSubtitleStreamIndex]; ok {
 			m := playback.DeliverSubtitle(def, profiles, true).Method
-			allowEmbed = m != "Encode" && m != "Hls"
+			allowEmbed = allowEmbed && m != "Encode" && m != "Hls"
 		}
 	}
 	for i := range src.MediaStreams {

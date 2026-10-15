@@ -84,6 +84,11 @@ type Config struct {
 	// on $PATH.
 	TranscodeFFmpegPath string
 
+	// TranscodeFontsDir is a directory of fonts libass uses to burn text
+	// subtitles in (internal/transcode.Config.FontsDir). Empty means the
+	// system fonts through fontconfig.
+	TranscodeFontsDir string
+
 	// TMDBAPIKey configures internal/scan's metadata.Provider (Phase 3,
 	// docs/08 and docs/00-decision-log.md's D3) as a metadata.TMDBProvider.
 	// Empty means metadata.NoopProvider{}: the scanner still catalogs
@@ -147,8 +152,13 @@ type Server struct {
 	cfg       Config
 	mux       *http.ServeMux
 	transcode *transcode.Manager
-	scanner   *scan.Scanner
-	scanState *scanTracker
+	// hlsSessions maps "<item>|<PlaySessionId>" to the transcode job key it
+	// is currently served from, so that a change of audio or subtitle
+	// track in a session stops the job of the track it replaces.
+	hlsMu       sync.Mutex
+	hlsSessions map[string]string
+	scanner     *scan.Scanner
+	scanState   *scanTracker
 	// scanLibSem bounds libraries scanning concurrently (runScan).
 	scanLibSem chan struct{}
 	sessions   *sessionRegistry
@@ -196,7 +206,7 @@ func NewServer(store storage.Store, cfg Config) *Server {
 		store:     store,
 		cfg:       cfg,
 		mux:       http.NewServeMux(),
-		transcode: transcode.New(transcode.Config{FFmpegPath: cfg.TranscodeFFmpegPath}),
+		transcode: transcode.New(transcode.Config{FFmpegPath: cfg.TranscodeFFmpegPath, FontsDir: cfg.TranscodeFontsDir}),
 		scanner: scan.New(store, provider, scan.Config{
 			FFprobePath:      cfg.ScanFFprobePath,
 			ImageDir:         cfg.ScanImageDir,
