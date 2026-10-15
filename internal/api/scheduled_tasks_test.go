@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
@@ -38,9 +39,11 @@ func newTestServerWithScheduledTasks(t *testing.T) (*httptest.Server, *sqlite.St
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /ScheduledTasks", requireAdmin(srv.handleScheduledTasks))
-	mux.HandleFunc("POST /ScheduledTasks/Running/{taskId}", requireAdmin(srv.handleScheduledTaskStart))
+	mux.HandleFunc("POST /ScheduledTasks/{first}/{second}", requireAdmin(srv.handleScheduledTaskPost))
 	// Auth needs its own route too since the reference AuthenticateByName
 	// flow (loginToken) goes through srv, not this local mux.
+	mux.HandleFunc("GET /ScheduledTasks/{taskId}", requireAdmin(srv.handleScheduledTaskGet))
+	mux.HandleFunc("DELETE /ScheduledTasks/Running/{taskId}", requireAdmin(srv.handleScheduledTaskStop))
 	mux.HandleFunc("POST /Users/AuthenticateByName", srv.handleAuthenticateByName)
 
 	handler := withCORS(srv.withAuthContext(withCaseInsensitivePaths(mux)))
@@ -61,7 +64,14 @@ func decodeScheduledTasks(t *testing.T, resp *http.Response) []scheduledTaskInfo
 	if err := json.NewDecoder(resp.Body).Decode(&tasks); err != nil {
 		t.Fatalf("decoding response: %v", err)
 	}
-	return tasks
+	// The list carries every real task; these tests are about the library scan.
+	for _, task := range tasks {
+		if task.Key == "RefreshLibrary" {
+			return []scheduledTaskInfo{task}
+		}
+	}
+	t.Fatalf("no RefreshLibrary task in %+v", tasks)
+	return nil
 }
 
 // TestScheduledTasksNoScanEverRun covers a fresh process where no library
@@ -85,8 +95,8 @@ func TestScheduledTasksNoScanEverRun(t *testing.T) {
 	if task.LastExecutionResult != nil {
 		t.Errorf("LastExecutionResult = %+v, want nil (no scan has run yet)", task.LastExecutionResult)
 	}
-	if task.Id != scheduledTaskLibraryScanID || task.Key != scheduledTaskLibraryScanID {
-		t.Errorf("Id/Key = %q/%q, want both %q", task.Id, task.Key, scheduledTaskLibraryScanID)
+	if task.Id != scheduledTaskLibraryScanID || task.Key != "RefreshLibrary" {
+		t.Errorf("Id/Key = %q/%q, want %q/RefreshLibrary", task.Id, task.Key, scheduledTaskLibraryScanID)
 	}
 	if task.Category != "Library" {
 		t.Errorf("Category = %q, want %q", task.Category, "Library")
@@ -94,8 +104,8 @@ func TestScheduledTasksNoScanEverRun(t *testing.T) {
 	if task.IsHidden {
 		t.Error("IsHidden = true, want false")
 	}
-	if task.Triggers == nil || len(task.Triggers) != 0 {
-		t.Errorf("Triggers = %+v, want a non-nil empty slice", task.Triggers)
+	if len(task.Triggers) != 1 || task.Triggers[0].Type != "IntervalTrigger" {
+		t.Errorf("Triggers = %+v, want the default 12h IntervalTrigger", task.Triggers)
 	}
 	if task.Name == "" || task.Description == "" {
 		t.Error("Name/Description should not be empty")
@@ -152,8 +162,8 @@ func TestScheduledTasksScanFinishedSuccess(t *testing.T) {
 	if task.LastExecutionResult.StartTimeUtc == "" || task.LastExecutionResult.EndTimeUtc == "" {
 		t.Error("LastExecutionResult.StartTimeUtc/EndTimeUtc should not be empty")
 	}
-	if task.LastExecutionResult.Id != scheduledTaskLibraryScanID || task.LastExecutionResult.Key != scheduledTaskLibraryScanID {
-		t.Errorf("LastExecutionResult.Id/Key = %q/%q, want both %q",
+	if task.LastExecutionResult.Id != scheduledTaskLibraryScanID || task.LastExecutionResult.Key != "RefreshLibrary" {
+		t.Errorf("LastExecutionResult.Id/Key = %q/%q, want %q/RefreshLibrary",
 			task.LastExecutionResult.Id, task.LastExecutionResult.Key, scheduledTaskLibraryScanID)
 	}
 }
@@ -316,5 +326,54 @@ func TestItemRefreshDoesNotAffectScheduledTasks(t *testing.T) {
 	tasks := decodeScheduledTasks(t, get(http.MethodGet, "/ScheduledTasks"))
 	if len(tasks) != 1 || tasks[0].State != "Idle" || tasks[0].LastExecutionResult != nil {
 		t.Errorf("ScheduledTasks after item refresh = %+v, want the one task still Idle with no LastExecutionResult", tasks)
+	}
+}
+
+// TestScheduledTaskGetTriggersAndStop covers the per-task routes: GET by Id
+// (404 on the Key), replacing triggers, rejecting an unknown trigger type and
+// DELETE on a task that is not running.
+func TestScheduledTaskGetTriggersAndStop(t *testing.T) {
+	ts, st, _ := newTestServerWithScheduledTasks(t)
+	admin := createTestAdminUser(t, st, "admin", "adminpass")
+	token := loginToken(t, ts.URL, admin.Name, "adminpass")
+	req := func(method, path, body string) *http.Response {
+		r, _ := http.NewRequest(method, ts.URL+path, strings.NewReader(body))
+		r.Header.Set("Authorization", `MediaBrowser Client="t", Device="t", DeviceId="t", Version="1", Token="`+token+`"`)
+		r.Header.Set("Content-Type", "application/json")
+		resp, err := http.DefaultClient.Do(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return resp
+	}
+	id := scheduledTaskLibraryScanID
+	if got := req(http.MethodGet, "/ScheduledTasks/"+id, "").StatusCode; got != 200 {
+		t.Fatalf("GET by Id = %d, want 200", got)
+	}
+	if got := req(http.MethodGet, "/ScheduledTasks/RefreshLibrary", "").StatusCode; got != 404 {
+		t.Fatalf("GET by Key = %d, want 404", got)
+	}
+	if got := req(http.MethodPost, "/ScheduledTasks/"+id+"/Triggers", `[{"Type":"Bogus"}]`).StatusCode; got != 400 {
+		t.Fatalf("bad trigger = %d, want 400", got)
+	}
+	if got := req(http.MethodPost, "/ScheduledTasks/"+id+"/Triggers", `[{"Type":"StartupTrigger"}]`).StatusCode; got != 204 {
+		t.Fatalf("set triggers = %d, want 204", got)
+	}
+	resp := req(http.MethodGet, "/ScheduledTasks/"+id, "")
+	var info scheduledTaskInfo
+	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
+		t.Fatal(err)
+	}
+	if len(info.Triggers) != 1 || info.Triggers[0].Type != "StartupTrigger" {
+		t.Fatalf("Triggers = %+v, want one StartupTrigger", info.Triggers)
+	}
+	if got := req(http.MethodPost, "/ScheduledTasks/"+id+"/Triggers", `[]`).StatusCode; got != 204 {
+		t.Fatalf("clear triggers = %d, want 204", got)
+	}
+	if got := req(http.MethodDelete, "/ScheduledTasks/Running/"+id, "").StatusCode; got != 204 {
+		t.Fatalf("DELETE idle = %d, want 204", got)
+	}
+	if got := req(http.MethodDelete, "/ScheduledTasks/Running/00000000000000000000000000000000", "").StatusCode; got != 404 {
+		t.Fatalf("DELETE unknown = %d, want 404", got)
 	}
 }

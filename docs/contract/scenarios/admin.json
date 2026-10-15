@@ -1,0 +1,798 @@
+[
+ {
+  "id": "admin.tasks.list",
+  "endpoint": "GET /ScheduledTasks",
+  "spec": "admin.md#tasks",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.tasks.R1",
+   "admin.tasks.R2"
+  ],
+  "steps": [
+   {
+    "name": "list",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/ScheduledTasks"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Id",
+       "op": "allmatch",
+       "value": "^[0-9a-f]{32}$"
+      },
+      {
+       "path": "$[*].State",
+       "op": "allmatch",
+       "value": "^(Idle|Running|Cancelling)$"
+      },
+      {
+       "path": "$[*].Key",
+       "op": "contains",
+       "value": "RefreshLibrary"
+      },
+      {
+       "path": "$[*].Key",
+       "op": "contains",
+       "value": "RefreshTrickplayImages"
+      },
+      {
+       "path": "$[*].Key",
+       "op": "contains",
+       "value": "CleanActivityLog"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Scan Media Library"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.tasks.get",
+  "endpoint": "GET /ScheduledTasks/{taskId}",
+  "spec": "admin.md#tasks",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.tasks.R2",
+   "admin.tasks.R3"
+  ],
+  "steps": [
+   {
+    "name": "by id",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/ScheduledTasks/7738148ffcd07979c7ceb148e06b3aed"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Key",
+       "op": "eq",
+       "value": "RefreshLibrary"
+      },
+      {
+       "path": "$.Id",
+       "op": "eq",
+       "value": "7738148ffcd07979c7ceb148e06b3aed"
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Scan Media Library"
+      },
+      {
+       "path": "$.Category",
+       "op": "eq",
+       "value": "Library"
+      },
+      {
+       "path": "$.IsHidden",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.Triggers",
+       "op": "type",
+       "value": "array"
+      },
+      {
+       "path": "$.State",
+       "op": "matches",
+       "value": "^(Idle|Running|Cancelling)$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "by key is unknown",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/ScheduledTasks/RefreshLibrary"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "unknown id",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/ScheduledTasks/00000000000000000000000000000000"
+    },
+    "expect": {
+     "status": 404
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.tasks.triggers",
+  "endpoint": "POST /ScheduledTasks/{taskId}/Triggers",
+  "spec": "admin.md#triggers",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.tasks.R4",
+   "admin.tasks.R5"
+  ],
+  "steps": [
+   {
+    "name": "replace",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/ScheduledTasks/64f5f44cd30dc273cb9890205473bbcc/Triggers",
+     "body": [
+      {
+       "Type": "IntervalTrigger",
+       "IntervalTicks": 36000000000
+      },
+      {
+       "Type": "StartupTrigger"
+      }
+     ]
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "read back",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/ScheduledTasks/64f5f44cd30dc273cb9890205473bbcc"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Triggers",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Triggers[0].Type",
+       "op": "eq",
+       "value": "IntervalTrigger"
+      },
+      {
+       "path": "$.Triggers[0].IntervalTicks",
+       "op": "eq",
+       "value": 36000000000
+      },
+      {
+       "path": "$.Triggers[1].Type",
+       "op": "eq",
+       "value": "StartupTrigger"
+      }
+     ]
+    }
+   },
+   {
+    "name": "unknown type",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/ScheduledTasks/64f5f44cd30dc273cb9890205473bbcc/Triggers",
+     "body": [
+      {
+       "Type": "Bogus"
+      }
+     ]
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "unknown task",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/ScheduledTasks/00000000000000000000000000000000/Triggers",
+     "body": []
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "restore default",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/ScheduledTasks/64f5f44cd30dc273cb9890205473bbcc/Triggers",
+     "body": [
+      {
+       "Type": "DailyTrigger",
+       "TimeOfDayTicks": 108000000000
+      }
+     ]
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "restored",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/ScheduledTasks/64f5f44cd30dc273cb9890205473bbcc"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Triggers[0].Type",
+       "op": "eq",
+       "value": "DailyTrigger"
+      },
+      {
+       "path": "$.Triggers[0].TimeOfDayTicks",
+       "op": "eq",
+       "value": 108000000000
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.tasks.run",
+  "endpoint": "POST /ScheduledTasks/Running/{taskId}",
+  "spec": "admin.md#run",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.tasks.R6",
+   "admin.tasks.R7"
+  ],
+  "steps": [
+   {
+    "name": "start",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/ScheduledTasks/Running/64f5f44cd30dc273cb9890205473bbcc"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "still listed",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/ScheduledTasks/64f5f44cd30dc273cb9890205473bbcc"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.State",
+       "op": "matches",
+       "value": "^(Idle|Running)$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "start unknown",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/ScheduledTasks/Running/00000000000000000000000000000000"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "stop unknown",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/ScheduledTasks/Running/00000000000000000000000000000000"
+    },
+    "expect": {
+     "status": 404
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.tasks.stop-idle",
+  "endpoint": "DELETE /ScheduledTasks/Running/{taskId}",
+  "spec": "admin.md#run",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.tasks.R8"
+  ],
+  "steps": [
+   {
+    "name": "stop a task that is not running",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/ScheduledTasks/Running/b461ef918ab28520928183e794350e3c"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ],
+  "cleanup": [],
+  "divergence": {
+   "reason": "The reference answers 500 with a plain-text body when the task is not running, an unhandled error. Stopping a task that is not running is a no-op: 204."
+  }
+ },
+ {
+  "id": "admin.tasks.auth",
+  "endpoint": "GET /ScheduledTasks",
+  "spec": "admin.md#auth",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.tasks.R9"
+  ],
+  "requires": [
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "anonymous",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/ScheduledTasks"
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "non-admin list",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/ScheduledTasks"
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "non-admin start",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/ScheduledTasks/Running/7738148ffcd07979c7ceb148e06b3aed"
+    },
+    "expect": {
+     "status": 403
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.logs.list",
+  "endpoint": "GET /System/Logs",
+  "spec": "admin.md#logs",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.logs.R1"
+  ],
+  "steps": [
+   {
+    "name": "list",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Logs"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Name",
+       "op": "allmatch",
+       "value": "\\.log$"
+      },
+      {
+       "path": "$[*].Size",
+       "op": "gte",
+       "value": 0
+      },
+      {
+       "path": "$[*].DateModified",
+       "op": "exists"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.logs.file",
+  "endpoint": "GET /System/Logs/Log",
+  "spec": "admin.md#logs",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.logs.R2",
+   "admin.logs.R3"
+  ],
+  "requires": [
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "names",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Logs"
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "log": "$[0].Name"
+    }
+   },
+   {
+    "name": "read",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Logs/Log?name={{capture.log}}"
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "unknown name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Logs/Log?name=nope.log"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "path traversal",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Logs/Log?name=..%2Fx.log"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "non-admin",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/System/Logs"
+    },
+    "expect": {
+     "status": 403
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.backup.create",
+  "endpoint": "POST /Backup/Create",
+  "spec": "admin.md#backup",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.backup.R1",
+   "admin.backup.R2",
+   "admin.backup.R3"
+  ],
+  "requires": [
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "sleepMs": 6000
+   },
+   {
+    "name": "create",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Backup/Create",
+     "body": {
+      "Database": true,
+      "Metadata": false
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Path",
+       "op": "matches",
+       "value": "\\.zip$"
+      },
+      {
+       "path": "$.Options.Database",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.ServerVersion",
+       "op": "exists"
+      },
+      {
+       "path": "$.DateCreated",
+       "op": "exists"
+      }
+     ]
+    },
+    "capture": {
+     "p": "$.Path"
+    }
+   },
+   {
+    "name": "listed",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Backup"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Path",
+       "op": "contains",
+       "value": "{{capture.p}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "manifest",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Backup/Manifest?path={{capture.p}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Path",
+       "op": "eq",
+       "value": "{{capture.p}}"
+      },
+      {
+       "path": "$.Options.Database",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "unknown manifest",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Backup/Manifest?path=nope.zip"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "non-admin",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Backup"
+    },
+    "expect": {
+     "status": 403
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.backup.restore-validation",
+  "endpoint": "POST /Backup/Restore",
+  "spec": "admin.md#backup",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.backup.R4"
+  ],
+  "steps": [
+   {
+    "name": "missing archive name",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Backup/Restore",
+     "body": {}
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "unknown archive",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Backup/Restore",
+     "body": {
+      "ArchiveFileName": "nope.zip"
+     }
+    },
+    "expect": {
+     "status": 404
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.plugins.list",
+  "endpoint": "GET /Plugins",
+  "spec": "admin.md#plugins",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.plugins.R1"
+  ],
+  "requires": [
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "plugins",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Plugins"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "type",
+       "value": "array"
+      }
+     ]
+    }
+   },
+   {
+    "name": "packages",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Packages"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "type",
+       "value": "array"
+      }
+     ]
+    }
+   },
+   {
+    "name": "repositories",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Repositories"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "type",
+       "value": "array"
+      }
+     ]
+    }
+   },
+   {
+    "name": "non-admin",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Plugins"
+    },
+    "expect": {
+     "status": 403
+    }
+   }
+  ],
+  "cleanup": []
+ }
+]

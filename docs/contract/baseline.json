@@ -1,8 +1,19 @@
 {
   "counts": {
-    "pass": 676
+    "pass": 687
   },
   "scenarios": {
+    "admin.backup.create": "pass",
+    "admin.backup.restore-validation": "pass",
+    "admin.logs.file": "pass",
+    "admin.logs.list": "pass",
+    "admin.plugins.list": "pass",
+    "admin.tasks.auth": "pass",
+    "admin.tasks.get": "pass",
+    "admin.tasks.list": "pass",
+    "admin.tasks.run": "pass",
+    "admin.tasks.stop-idle": "pass",
+    "admin.tasks.triggers": "pass",
     "browse.facets": "pass",
     "browse.genres.list": "pass",
     "browse.genres.query": "pass",

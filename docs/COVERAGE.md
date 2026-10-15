@@ -19,23 +19,23 @@ How to read and edit this: [`docs/coverage/README.md`](coverage/README.md). Mach
 | Measure | Value |
 |---|---|
 | Reference operations (OpenAPI 12.2.0) | 364 |
-| Registered by Tinyfin | **157** (43%) |
-| Registered **and** a passing contract scenario | **113** (31%) |
-| Called by the official web client (docs/11) and registered | 109 of 164 (66%) |
-| Routes Tinyfin serves that the OpenAPI document lacks | 15 (legacy aliases the web client needs, `/socket`, HLS) |
+| Registered by Tinyfin | **167** (46%) |
+| Registered **and** a passing contract scenario | **125** (34%) |
+| Called by the official web client (docs/11) and registered | 118 of 164 (72%) |
+| Routes Tinyfin serves that the OpenAPI document lacks | 16 (legacy aliases the web client needs, `/socket`, HLS) |
 | Non-route features tracked | 109 (✅ 60 · 🟡 17 · 🗓️ 13 · ⛔ 19) |
 
 ### Routes by status
 
-✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔↔️ ✅ 137 · 🟡 9 · 🗓️ 91 · ⛔ 116 · ↔️ 11
+✅✅✅✅✅✅✅🟡🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔↔️ ✅ 139 · 🟡 12 · 🗓️ 88 · ⛔ 109 · ↔️ 16
 
 ```mermaid
 pie showData title Reference operations by status
-    "supported" : 137
-    "partial" : 9
-    "planned" : 91
-    "not-planned" : 116
-    "divergent-by-design" : 11
+    "supported" : 139
+    "partial" : 12
+    "planned" : 88
+    "not-planned" : 109
+    "divergent-by-design" : 16
 ```
 
 ### Non-route features by status
@@ -58,12 +58,12 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 |---|---|---|---|---|---|
 | [Collections, playlists and mixes](coverage/api-collections-playlists.md) | 21 | 14 (67%) | 14 (67%) | ✅✅✅✅✅✅✅✅✅✅✅✅⛔⛔⛔⛔⛔⛔⛔↔️ | ✅ 13 · ⛔ 7 · ↔️ 1 |
 | [Images](coverage/api-images.md) | 40 | 9 (22%) | 5 (12%) | ✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️ | ✅ 9 · 🗓️ 31 |
-| [Library administration](coverage/api-library-admin.md) | 32 | 12 (38%) | 2 (6%) | ✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔ | ✅ 12 · 🗓️ 17 · ⛔ 3 |
+| [Library administration](coverage/api-library-admin.md) | 32 | 13 (41%) | 5 (16%) | ✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔↔️ | ✅ 11 · 🗓️ 16 · ⛔ 3 · ↔️ 2 |
 | [Library browsing and metadata queries](coverage/api-library-browse.md) | 58 | 39 (67%) | 34 (59%) | ✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔ | ✅ 37 · 🟡 1 · 🗓️ 14 · ⛔ 5 · ↔️ 1 |
 | [Live TV and channels](coverage/api-live-tv.md) | 43 | 1 (2%) | 0 (0%) | ⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔ | 🟡 1 · ⛔ 42 |
 | [Playback, streaming and subtitles](coverage/api-playback.md) | 38 | 21 (55%) | 16 (42%) | ✅✅✅✅✅✅✅✅🟡🟡⛔⛔⛔⛔⛔⛔⛔⛔⛔↔️ | ✅ 16 · 🟡 3 · ⛔ 17 · ↔️ 2 |
 | [Sessions, play state and realtime](coverage/api-sessions-realtime.md) | 50 | 15 (30%) | 11 (22%) | ✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 14 · 🟡 1 · 🗓️ 13 · ⛔ 22 |
-| [System, branding, localization and plugins](coverage/api-system.md) | 47 | 18 (38%) | 10 (21%) | ✅✅✅✅✅✅🟡🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 15 · 🟡 3 · 🗓️ 9 · ⛔ 20 |
+| [System, branding, localization and plugins](coverage/api-system.md) | 47 | 27 (57%) | 19 (40%) | ✅✅✅✅✅✅✅✅🟡🟡🟡🗓️🗓️🗓️⛔⛔⛔⛔⛔↔️ | ✅ 18 · 🟡 6 · 🗓️ 7 · ⛔ 13 · ↔️ 3 |
 | [Users, authentication and first-run setup](coverage/api-users-auth.md) | 35 | 28 (80%) | 21 (60%) | ✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️↔️↔️↔️↔️ | ✅ 21 · 🗓️ 7 · ↔️ 7 |
 
 ### By OpenAPI tag (controller)
@@ -73,7 +73,7 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | Artist | 3 | 0 | 0 | ⛔ 3 |
 | Audio | 6 | 0 | 0 | ⛔ 6 |
 | Authentication | 13 | 11 | 11 | ✅ 8 · 🗓️ 2 · ↔️ 3 |
-| Backup | 4 | 0 | 0 | ⛔ 4 |
+| Backup | 4 | 4 | 4 | ✅ 2 · 🟡 2 |
 | Branding | 3 | 1 | 0 | ✅ 1 · 🗓️ 2 |
 | Channel | 5 | 0 | 0 | ⛔ 5 |
 | Collection | 3 | 3 | 3 | ✅ 2 · ↔️ 1 |
@@ -97,9 +97,9 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | MusicGenre | 1 | 0 | 0 | ⛔ 1 |
 | Person | 2 | 2 | 2 | ✅ 2 |
 | Playlist | 11 | 11 | 11 | ✅ 11 |
-| Plugin | 17 | 1 | 0 | 🟡 1 · ⛔ 16 |
+| Plugin | 17 | 4 | 3 | 🟡 1 · ⛔ 13 · ↔️ 3 |
 | RemoteImage | 3 | 0 | 0 | 🗓️ 3 |
-| ScheduledTask | 5 | 2 | 0 | ✅ 2 · 🗓️ 3 |
+| ScheduledTask | 5 | 3 | 3 | ✅ 1 · 🗓️ 2 · ↔️ 2 |
 | Search | 1 | 1 | 1 | ✅ 1 |
 | Session | 18 | 7 | 6 | ✅ 6 · 🟡 1 · 🗓️ 11 |
 | Show | 4 | 3 | 2 | ✅ 3 · 🗓️ 1 |
@@ -108,7 +108,7 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | Subtitle | 10 | 10 | 8 | ✅ 5 · 🟡 3 · ↔️ 2 |
 | Suggestion | 1 | 1 | 1 | ✅ 1 |
 | SyncPlay | 22 | 0 | 0 | ⛔ 22 |
-| System | 19 | 12 | 6 | ✅ 10 · 🟡 2 · 🗓️ 7 |
+| System | 19 | 14 | 8 | ✅ 11 · 🟡 3 · 🗓️ 5 |
 | Trailer | 1 | 0 | 0 | ⛔ 1 |
 | TrickPlay | 2 | 2 | 2 | ✅ 2 |
 | User | 10 | 10 | 10 | ✅ 7 · ↔️ 3 |
@@ -139,6 +139,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 
 | Spec | Rules | Rules with a scenario | Scenarios | Passing |
 |---|---|---|---|---|
+| [admin](contract/specs/admin.md) | 17 | 17 | 11 | 11 |
 | [browse](contract/specs/browse.md) | 29 | 29 | 15 | 15 |
 | [chapters](contract/specs/chapters.md) | 10 | 10 | 5 | 5 |
 | [collections](contract/specs/collections.md) | 51 | 51 | 30 | 30 |
@@ -157,7 +158,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [trickplay](contract/specs/trickplay.md) | 11 | 11 | 10 | 10 |
 | [users](contract/specs/users.md) | 188 | 188 | 195 | 195 |
 | [wire](contract/specs/wire.md) | 15 | 14 | 14 | 14 |
-| **total** | 781 | 776 | 679 | 676 |
+| **total** | 798 | 793 | 690 | 687 |
 
 ## Biggest gaps (planned or not planned, web-client facing)
 
@@ -169,10 +170,6 @@ Operations the official web client mentions (docs/11) that Tinyfin does not regi
 | `GET /Artists/AlbumArtists` | ⛔ not-planned | Library browsing and metadata queries | Music libraries are not scanned (video-first scope, docs/01); not on ROADMAP.md. |
 | `GET /Auth/PasswordResetProviders` | 🗓️ planned | Users, authentication and first-run setup | Only the built-in password provider exists; the admin dashboard lists providers, so these two answer 404. |
 | `GET /Auth/Providers` | 🗓️ planned | Users, authentication and first-run setup | Only the built-in password provider exists; the admin dashboard lists providers, so these two answer 404. |
-| `GET /Backup` | ⛔ not-planned | System, branding, localization and plugins | State is one SQLite file (docs/05), so a backup is a file copy; the reference's archive format is specific to it. |
-| `POST /Backup/Create` | ⛔ not-planned | System, branding, localization and plugins | State is one SQLite file (docs/05), so a backup is a file copy; the reference's archive format is specific to it. |
-| `GET /Backup/Manifest` | ⛔ not-planned | System, branding, localization and plugins | State is one SQLite file (docs/05), so a backup is a file copy; the reference's archive format is specific to it. |
-| `POST /Backup/Restore` | ⛔ not-planned | System, branding, localization and plugins | State is one SQLite file (docs/05), so a backup is a file copy; the reference's archive format is specific to it. |
 | `GET /Branding/Css` | 🗓️ planned | System, branding, localization and plugins | Not implemented; /Branding/Configuration returns the defaults. |
 | `GET /Branding/Css.css` | 🗓️ planned | System, branding, localization and plugins | Not implemented; /Branding/Configuration returns the defaults. |
 | `DELETE /Devices` | 🗓️ planned | Users, authentication and first-run setup | Devices are stored (internal/storage/device.go) and appear in sessions, but there are no device-management routes, so the dashboard's Devices page 404s. |
@@ -198,20 +195,15 @@ Operations the official web client mentions (docs/11) that Tinyfin does not regi
 | `POST /Audio/{itemId}/Lyrics` | ⛔ not-planned | Playback, streaming and subtitles | Music is not cataloged (video-first scope, docs/01). |
 | `POST /LiveStreams/Close` | ⛔ not-planned | Playback, streaming and subtitles | Out of scope for v1 (docs/01, decision D8). Live streams belong to tuners. |
 | `POST /LiveStreams/Open` | ⛔ not-planned | Playback, streaming and subtitles | Out of scope for v1 (docs/01, decision D8). Live streams belong to tuners. |
-| `GET /Packages` | ⛔ not-planned | System, branding, localization and plugins | No plugin system (decisions D8, D11). |
 | `GET /Packages/{name}` | ⛔ not-planned | System, branding, localization and plugins | No plugin system (decisions D8, D11). |
-| `GET /Plugins` | ⛔ not-planned | System, branding, localization and plugins | No plugin system (decisions D8, D11). |
 | `DELETE /Plugins/{pluginId}` | ⛔ not-planned | System, branding, localization and plugins | No plugin system (decisions D8, D11). |
 | `GET /Items/{itemId}/RemoteImages` | 🗓️ planned | Images | Not implemented; the dashboard's image editor 404s on /RemoteImages/Providers (docs/11). |
-| `DELETE /ScheduledTasks/Running/{taskId}` | 🗓️ planned | Library administration | Only the library-scan task and its start route exist. |
-| `GET /ScheduledTasks/{taskId}` | 🗓️ planned | Library administration | Only the library-scan task and its start route exist. |
+| `POST /ScheduledTasks/Running/{taskId}` | 🗓️ planned | Library administration | Only the library-scan task and its start route exist. |
 | `POST /Sessions/{sessionId}/Command` | 🗓️ planned | Sessions, play state and realtime | Remote control of other sessions is not implemented (the /socket transport exists). |
 | `GET /Shows/Upcoming` | 🗓️ planned | Library browsing and metadata queries | Not implemented. |
 | `GET /SyncPlay/List` | ⛔ not-planned | Sessions, play state and realtime | Not in scope for v1; the web client treats 404 on /SyncPlay/List as 'unavailable'. |
 | `POST /ClientLog/Document` | 🗓️ planned | System, branding, localization and plugins | Not implemented. |
 | `POST /System/Configuration/Branding` | 🗓️ planned | System, branding, localization and plugins | Not implemented. |
-| `GET /System/Logs` | 🗓️ planned | System, branding, localization and plugins | Not implemented. |
-| `GET /System/Logs/Log` | 🗓️ planned | System, branding, localization and plugins | Not implemented. |
 | `POST /System/Restart` | 🗓️ planned | System, branding, localization and plugins | Not implemented; a supervisor restarts the process. |
 | `POST /System/Shutdown` | 🗓️ planned | System, branding, localization and plugins | Not implemented. |
 | `DELETE /UserItems/{itemId}/Rating` | 🗓️ planned | Sessions, play state and realtime | Star ratings are not implemented (likes are, through UserData). |

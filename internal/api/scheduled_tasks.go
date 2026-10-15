@@ -1,37 +1,29 @@
-// scheduled_tasks.go implements GET /ScheduledTasks — the admin Dashboard
-// overview page's task list. The reference server ships a real
-// task-scheduling engine (cron-like triggers, plugin-registered tasks) with
-// ~18 entries out of the box (plugin updates, subtitle/lyric downloads,
-// trickplay generation, audio normalization, database optimization,
-// activity-log cleanup, ...). Tinyfin has none of that machinery — no
-// plugins (docs/01), no trickplay subsystem, no subtitle/lyric fetching, no
-// scheduling engine at all — so none of those are fabricated here.
+// scheduled_tasks.go implements the admin Dashboard's task list and its
+// control routes: GET /ScheduledTasks, GET /ScheduledTasks/{taskId},
+// POST|DELETE /ScheduledTasks/Running/{taskId} and
+// POST /ScheduledTasks/{taskId}/Triggers.
 //
-// This reports exactly one entry: a library scan (POST /Library/Refresh,
-// library_admin.go; POST /Items/{itemId}/Refresh when itemId is a library's
-// own ID, item_refresh.go), backed by Server.scanState (server.go's
-// scanTracker). The dashboard overview page this list serves only reads
-// Name/State off each entry, so State is the one field that must be live;
-// everything else is a fixed description of a capability that exists, not
-// a schedule that runs it.
+// Tinyfin exposes only tasks that exist for real (scheduled_tasks_engine.go
+// holds the registry, the trigger persistence and the small scheduler):
+// "Scan Media Library" (RefreshLibrary), "Generate Trickplay Images"
+// (RefreshTrickplayImages) and "Clean Activity Log" (CleanActivityLog). The
+// reference's other entries (plugin updates, subtitle/lyric downloads,
+// audio normalization, ...) belong to subsystems this project does not have
+// and are not fabricated. Ids are the reference's: a 32-hex id distinct
+// from the Key; jellyfin-web finds the library scan by Key === 'RefreshLibrary'
+// and then uses the Id it reads back.
 //
-// Deliberately excluded: POST /Items/{itemId}/Refresh's *other* branch, an
-// ordinary catalog item's per-item metadata refresh (Server.runItemRefresh).
-// An early version of this project routed that through this same
-// scanState, on the reasoning that something should show as "running" for
-// it — found live to be its own bug: it made this task's State report
-// Running (so jellyfin-web's Dashboard "Scan All Libraries" button spins/
-// disables) for a single-item refresh with no library scan running at all.
-// The reference server never conflates the two: a per-item refresh is
-// tracked entirely separately (BaseItemDto.RefreshProgress/RefreshStatus on
-// the item itself, plus a per-item RefreshProgress WebSocket message) and
-// never touches GET /ScheduledTasks or its ScheduledTasksInfo WebSocket
-// push at all. Tinyfin doesn't implement that per-item mechanism yet — a
-// documented gap (docs/11), not a reason to borrow this one.
+// Deliberately excluded: POST /Items/{itemId}/Refresh's per-item branch
+// (Server.runItemRefresh). The reference tracks it on the item itself, never
+// on the task list, so it must not make the library scan task report Running.
 package api
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 )
 
 // scheduledTaskLibraryScanID doubles as this task's Id and Key. It MUST be
@@ -47,19 +39,20 @@ import (
 // undefined, so the widget's "isScanning" check (librariesTask?.State !==
 // Idle) evaluates true forever — the Scan All Libraries button spins from
 // page load, click or no click, and never stops.
-const scheduledTaskLibraryScanID = "RefreshLibrary"
+const scheduledTaskLibraryScanID = "7738148ffcd07979c7ceb148e06b3aed"
 
-// taskTriggerInfo mirrors the reference server's TaskTriggerInfo. Nothing
-// in this project ever populates one — see scheduledTaskInfo.Triggers.
+// taskTriggerInfo mirrors the reference's TaskTriggerInfo. Only the fields
+// relevant to a trigger Type are sent.
 type taskTriggerInfo struct {
-	Type string `json:"Type"`
+	Type            string `json:"Type"`
+	TimeOfDayTicks  *int64 `json:"TimeOfDayTicks,omitempty"`
+	IntervalTicks   *int64 `json:"IntervalTicks,omitempty"`
+	DayOfWeek       string `json:"DayOfWeek,omitempty"`
+	MaxRuntimeTicks *int64 `json:"MaxRuntimeTicks,omitempty"`
 }
 
-// taskExecutionResultInfo mirrors the reference server's
-// TaskExecutionResultInfo. Name/Key/Id here just echo the parent task's own
-// fields — this project tracks the outcome of only the single
-// most-recently-finished scan (scanTracker), not a per-run history with its
-// own identity, so there is no separate per-execution ID to report.
+// taskExecutionResultInfo mirrors TaskExecutionResultInfo; Name/Key/Id echo
+// the parent task.
 type taskExecutionResultInfo struct {
 	StartTimeUtc string `json:"StartTimeUtc"`
 	EndTimeUtc   string `json:"EndTimeUtc"`
@@ -69,104 +62,156 @@ type taskExecutionResultInfo struct {
 	Id           string `json:"Id"`
 }
 
-// scheduledTaskInfo mirrors the reference server's TaskInfo, trimmed to the
-// fields it actually sends (see the package doc comment for the ones this
-// project can't honestly answer without a scheduling engine).
+// scheduledTaskInfo mirrors the reference's TaskInfo.
 type scheduledTaskInfo struct {
-	Name                string                   `json:"Name"`
-	State               string                   `json:"State"`
-	Id                  string                   `json:"Id"`
-	LastExecutionResult *taskExecutionResultInfo `json:"LastExecutionResult,omitempty"`
-	Triggers            []taskTriggerInfo        `json:"Triggers"`
-	Description         string                   `json:"Description"`
-	Category            string                   `json:"Category"`
-	IsHidden            bool                     `json:"IsHidden"`
-	Key                 string                   `json:"Key"`
+	Name                      string                   `json:"Name"`
+	State                     string                   `json:"State"`
+	CurrentProgressPercentage *float64                 `json:"CurrentProgressPercentage,omitempty"`
+	Id                        string                   `json:"Id"`
+	LastExecutionResult       *taskExecutionResultInfo `json:"LastExecutionResult,omitempty"`
+	Triggers                  []taskTriggerInfo        `json:"Triggers"`
+	Description               string                   `json:"Description"`
+	Category                  string                   `json:"Category"`
+	IsHidden                  bool                     `json:"IsHidden"`
+	Key                       string                   `json:"Key"`
 }
 
-// handleScheduledTasks is GET /ScheduledTasks (admin-only, matching the
-// reference server's own scoping for the Dashboard's task list — nothing
-// here should be visible to a non-admin user).
-//
-// State is derived live from Server.scanState: "Running" while any library
-// scan is in flight anywhere in the process, "Idle" otherwise. There is no
-// "Cancelling" state to report — nothing about a Tinyfin scan can be
-// cancelled once started.
-//
-// Triggers is always an empty array, not omitted: Tinyfin has no
-// scheduling engine (no cron-like trigger configuration exists anywhere in
-// this project), so there is genuinely nothing to list — this is a real
-// gap, documented here rather than silently defaulted, not the same thing
-// as "this task doesn't exist" (which would be leaving the task out of the
-// response entirely).
-//
-// LastExecutionResult is omitted entirely until a scan has finished at
-// least once this process's lifetime (scanState.snapshot's lastEnd is the
-// zero time.Time) — sending a fabricated one before any scan has run would
-// misrepresent history that doesn't exist yet.
+// handleScheduledTasks is GET /ScheduledTasks (admin-only). isHidden and
+// isEnabled are accepted like the reference: isHidden filters on IsHidden,
+// isEnabled=true keeps only tasks that have at least one trigger.
 func (s *Server) handleScheduledTasks(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, s.scheduledTasksSnapshot())
+	all := s.scheduledTasksSnapshot()
+	q := r.URL.Query()
+	out := make([]scheduledTaskInfo, 0, len(all))
+	for _, t := range all {
+		if v := q.Get("isHidden"); v != "" {
+			if b, err := strconv.ParseBool(v); err == nil && t.IsHidden != b {
+				continue
+			}
+		}
+		if v := q.Get("isEnabled"); v != "" {
+			if b, err := strconv.ParseBool(v); err == nil && (len(t.Triggers) > 0) != b {
+				continue
+			}
+		}
+		out = append(out, t)
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
-// scheduledTasksSnapshot builds the same task list handleScheduledTasks
-// serves, factored out so websocket.go's notifyScheduledTasks (the
-// ScheduledTasksInfo push channel, docs/12) can push the identical shape
-// without duplicating this logic.
+// scheduledTasksSnapshot builds the task list; websocket.go's
+// notifyScheduledTasks pushes the identical shape.
 func (s *Server) scheduledTasksSnapshot() []scheduledTaskInfo {
-	running, lastStart, lastEnd, lastErr := s.scanState.snapshot()
-
-	state := "Idle"
-	if running {
-		state = "Running"
+	out := make([]scheduledTaskInfo, 0, len(taskRegistry))
+	for _, def := range taskRegistry {
+		out = append(out, s.taskInfo(def))
 	}
-
-	task := scheduledTaskInfo{
-		Name:  "Scan Media Libraries",
-		State: state,
-		Id:    scheduledTaskLibraryScanID,
-		// Non-nil so this serializes as [], never null (encoding/json would
-		// otherwise emit null for a nil slice) — see the doc comment above
-		// for why an empty list, not omission, is the honest answer here.
-		Triggers:    []taskTriggerInfo{},
-		Description: "Scans every configured library for new, changed, or removed media.",
-		Category:    "Library",
-		IsHidden:    false,
-		Key:         scheduledTaskLibraryScanID,
-	}
-
-	if !lastEnd.IsZero() {
-		status := "Completed"
-		if lastErr != nil {
-			status = "Failed"
-		}
-		task.LastExecutionResult = &taskExecutionResultInfo{
-			// Wire date format (wire.date.R1-R2); the reference writes the
-			// same 7-digit form here as everywhere else.
-			StartTimeUtc: formatWireTime(lastStart),
-			EndTimeUtc:   formatWireTime(lastEnd),
-			Status:       status,
-			Name:         task.Name,
-			Key:          task.Key,
-			Id:           task.Id,
-		}
-	}
-
-	return []scheduledTaskInfo{task}
+	return out
 }
 
-// handleScheduledTaskStart is POST /ScheduledTasks/Running/{taskId} — the
-// route jellyfin-web's Dashboard "Scan All Libraries" button (and the
-// Libraries page's equivalent) actually calls, once it has located the task
-// via GET /ScheduledTasks' Key === 'RefreshLibrary' (see
-// scheduledTaskLibraryScanID's doc comment). Any taskId other than that
-// constant addresses a task this project doesn't have, so it 404s rather
-// than silently starting the only scan this project knows how to run.
-func (s *Server) handleScheduledTaskStart(w http.ResponseWriter, r *http.Request) {
-	if r.PathValue("taskId") != scheduledTaskLibraryScanID {
+func (s *Server) taskInfo(def taskDef) scheduledTaskInfo {
+	st, pct, last := s.taskStatus(def)
+	info := scheduledTaskInfo{
+		Name:        def.name,
+		State:       st,
+		Id:          def.id,
+		Triggers:    s.taskTriggers(def),
+		Description: def.description,
+		Category:    def.category,
+		Key:         def.key,
+	}
+	if st == "Running" || st == "Cancelling" {
+		info.CurrentProgressPercentage = &pct
+	}
+	if last != nil {
+		info.LastExecutionResult = &taskExecutionResultInfo{
+			StartTimeUtc: formatWireTime(last.start),
+			EndTimeUtc:   formatWireTime(last.end),
+			Status:       last.status,
+			Name:         def.name,
+			Key:          def.key,
+			Id:           def.id,
+		}
+	}
+	return info
+}
+
+// handleScheduledTaskGet is GET /ScheduledTasks/{taskId}; the id is the
+// 32-hex Id, not the Key (the reference 404s on the Key).
+func (s *Server) handleScheduledTaskGet(w http.ResponseWriter, r *http.Request) {
+	def, ok := taskByID(r.PathValue("taskId"))
+	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	if err := s.refreshAllLibraries(r.Context()); err != nil {
+	writeJSON(w, http.StatusOK, s.taskInfo(def))
+}
+
+// handleScheduledTaskPost routes POST /ScheduledTasks/Running/{taskId} and
+// POST /ScheduledTasks/{taskId}/Triggers (distinct only by position).
+func (s *Server) handleScheduledTaskPost(w http.ResponseWriter, r *http.Request) {
+	first, second := r.PathValue("first"), r.PathValue("second")
+	switch {
+	case strings.EqualFold(first, "Running"):
+		r.SetPathValue("taskId", second)
+		s.handleScheduledTaskStart(w, r)
+	case strings.EqualFold(second, "Triggers"):
+		r.SetPathValue("taskId", first)
+		s.handleScheduledTaskTriggers(w, r)
+	default:
+		w.WriteHeader(http.StatusNotFound)
+	}
+}
+
+// handleScheduledTaskStart is POST /ScheduledTasks/Running/{taskId}: 204
+// once the task is queued (a task already running is left alone), 404 for an
+// unknown id.
+func (s *Server) handleScheduledTaskStart(w http.ResponseWriter, r *http.Request) {
+	def, ok := taskByID(r.PathValue("taskId"))
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if err := s.startTask(r.Context(), def); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// handleScheduledTaskStop is DELETE /ScheduledTasks/Running/{taskId}. 404
+// for an unknown id; 204 otherwise, including for a task that is not running
+// (the reference answers 500 there, a defect, see the spec).
+func (s *Server) handleScheduledTaskStop(w http.ResponseWriter, r *http.Request) {
+	def, ok := taskByID(r.PathValue("taskId"))
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	s.stopTask(def)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// handleScheduledTaskTriggers is POST /ScheduledTasks/{taskId}/Triggers: the
+// body is the full replacement list of triggers.
+func (s *Server) handleScheduledTaskTriggers(w http.ResponseWriter, r *http.Request) {
+	def, ok := taskByID(r.PathValue("taskId"))
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	var body []taskTriggerInfo
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body == nil {
+		writeValidationErrors(w, map[string][]string{"triggerInfos": {"The triggerInfos field is required."}})
+		return
+	}
+	for i, t := range body {
+		if !validTriggerType(t.Type) {
+			writeValidationErrors(w, map[string][]string{fmt.Sprintf("$[%d].Type", i): {"The JSON value could not be converted to a trigger type."}})
+			return
+		}
+	}
+	if err := s.setTaskTriggers(r.Context(), def, body); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

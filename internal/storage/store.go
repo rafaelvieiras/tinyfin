@@ -8,7 +8,10 @@
 // per-struct derivation notes).
 package storage
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // Store is the single interface the API/metadata role depends on (docs/03).
 // Every read and write it performs goes through this interface — nothing
@@ -313,6 +316,10 @@ type ActivityLogStore interface {
 	// pre-pagination match count (TotalRecordCount on the wire), same
 	// convention as ItemPage.TotalCount.
 	QueryActivityEntries(ctx context.Context, filter ActivityEntryFilter) ([]ActivityEntry, int, error)
+
+	// DeleteActivityEntriesBefore removes every entry older than cutoff and
+	// reports how many were deleted (the "Clean Activity Log" task).
+	DeleteActivityEntriesBefore(ctx context.Context, cutoff time.Time) (int64, error)
 }
 
 // APIKeyStore covers API keys: opaque credentials that belong to no user.

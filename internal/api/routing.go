@@ -37,6 +37,17 @@ var routePaths = []string{
 	// ("ScheduledTasks", a literal) is unique to it, same reasoning as every
 	// other entry in this list keyed off segment count.
 	"/ScheduledTasks/Running/{taskId}",
+	"/ScheduledTasks/{taskId}",
+	"/ScheduledTasks/{taskId}/Triggers",
+	"/System/Logs",
+	"/System/Logs/Log",
+	"/Backup",
+	"/Backup/Create",
+	"/Backup/Manifest",
+	"/Backup/Restore",
+	"/Plugins",
+	"/Packages",
+	"/Repositories",
 	// Fully literal, no wildcard segment at all — no collision is possible
 	// regardless of any other pattern in this list.
 	"/System/ActivityLog/Entries",

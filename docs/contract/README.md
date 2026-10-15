@@ -64,6 +64,7 @@ reference source open in the same session.
 | `specs/playback.md`, `scenarios/playback.json` | Track selection and burned-in subtitles: `AudioStreamIndex`/`SubtitleStreamIndex` in PlaybackInfo, the `TranscodingUrl` and its HLS master playlist; lazy library `AvTrack` |
 | `specs/chapters.md`, `scenarios/chapters.json` | Chapter marks (`Chapters` on the item, `Fields=Chapters`) and `GET /MediaSegments/{itemId}`; lazy library `Chapters` |
 | `specs/trickplay.md`, `scenarios/trickplay.json` | Seek-thumbnail sprite sheets: the `Trickplay` member, the tiles playlist and the JPEG sheets; lazy libraries `Trickplay` (generation on) and `TrickplayOff` |
+| `specs/admin.md`, `scenarios/admin.json` | Administration: scheduled tasks (list, get, triggers, run/stop), log files, snapshot backups, plugin catalog (empty by design) |
 | `specs/startup.md`, `scenarios/startup.json` | First-run wizard (`/Startup/*`); the scenarios are `fresh-server` ones, see *Fresh-server scenarios* |
 
 ## Scenario format

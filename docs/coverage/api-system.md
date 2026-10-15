@@ -4,9 +4,9 @@
 
 Server information and configuration, logs, backup, branding, localization, plugins and packages.
 
-[Overview](../COVERAGE.md) · 47 operations · 18 registered (38%) · 10 verified · ✅ 15 · 🟡 3 · 🗓️ 9 · ⛔ 20
+[Overview](../COVERAGE.md) · 47 operations · 27 registered (57%) · 19 verified · ✅ 18 · 🟡 6 · 🗓️ 7 · ⛔ 13 · ↔️ 3
 
-✅✅✅✅✅✅🟡🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔
+✅✅✅✅✅✅✅✅🟡🟡🟡🗓️🗓️🗓️⛔⛔⛔⛔⛔↔️
 
 Columns: **Auth** is the reference's authorization policy; **Web** = mentioned in docs/11 (called by the official web client); **Tests** = scenarios that exercise the route (passing / total).
 
@@ -14,10 +14,10 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ⛔ not-planned | `GET /Backup` | RequiresElevation | yes |  | State is one SQLite file (docs/05), so a backup is a file copy; the reference's archive format is specific to it. (priority: low) |
-| ⛔ not-planned | `POST /Backup/Create` | RequiresElevation | yes |  | State is one SQLite file (docs/05), so a backup is a file copy; the reference's archive format is specific to it. (priority: low) |
-| ⛔ not-planned | `GET /Backup/Manifest` | RequiresElevation | yes |  | State is one SQLite file (docs/05), so a backup is a file copy; the reference's archive format is specific to it. (priority: low) |
-| ⛔ not-planned | `POST /Backup/Restore` | RequiresElevation | yes |  | State is one SQLite file (docs/05), so a backup is a file copy; the reference's archive format is specific to it. (priority: low) |
+| ✅ supported | `GET /Backup` | RequiresElevation | yes | 1/1 |  |
+| 🟡 partial | `POST /Backup/Create` | RequiresElevation | yes | 1/1 | Snapshots the SQLite database only (zip with manifest.json + database/tinyfin.db); Metadata/Trickplay/Subtitles options are echoed but ignored. Unlike the reference it also works during a library scan. |
+| ✅ supported | `GET /Backup/Manifest` | RequiresElevation | yes | 1/1 |  |
+| 🟡 partial | `POST /Backup/Restore` | RequiresElevation | yes | 1/1 | Validates the request (400/404) and answers 501: restoring over a running server's database is not planned; copy database/tinyfin.db over the database file with the server stopped. |
 
 ## Branding
 
@@ -40,11 +40,11 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ⛔ not-planned | `GET /Packages` | RequiresElevation | yes |  | No plugin system (decisions D8, D11). (priority: low) |
+| ↔️ divergent-by-design | `GET /Packages` | RequiresElevation | yes | 1/1 | No plugin system (D8, D11): always an empty list, where the reference lists its bundled providers and a default repository. |
 | ⛔ not-planned | `POST /Packages/Installed/{name}` | RequiresElevation |  |  | No plugin system (decisions D8, D11). (priority: low) |
 | ⛔ not-planned | `DELETE /Packages/Installing/{packageId}` | RequiresElevation |  |  | No plugin system (decisions D8, D11). (priority: low) |
 | ⛔ not-planned | `GET /Packages/{name}` | RequiresElevation | yes |  | No plugin system (decisions D8, D11). (priority: low) |
-| ⛔ not-planned | `GET /Plugins` | RequiresElevation | yes |  | No plugin system (decisions D8, D11). (priority: low) |
+| ↔️ divergent-by-design | `GET /Plugins` | RequiresElevation | yes | 1/1 | No plugin system (D8, D11): always an empty list, where the reference lists its bundled providers and a default repository. |
 | ⛔ not-planned | `DELETE /Plugins/{pluginId}` | RequiresElevation | yes |  | No plugin system (decisions D8, D11). (priority: low) |
 | ⛔ not-planned | `GET /Plugins/{pluginId}/Configuration` | RequiresElevation |  |  | No plugin system (decisions D8, D11). (priority: low) |
 | ⛔ not-planned | `POST /Plugins/{pluginId}/Configuration` | RequiresElevation |  |  | No plugin system (decisions D8, D11). (priority: low) |
@@ -53,7 +53,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ⛔ not-planned | `POST /Plugins/{pluginId}/{version}/Disable` | RequiresElevation |  |  | No plugin system (decisions D8, D11). (priority: low) |
 | ⛔ not-planned | `POST /Plugins/{pluginId}/{version}/Enable` | RequiresElevation |  |  | No plugin system (decisions D8, D11). (priority: low) |
 | ⛔ not-planned | `GET /Plugins/{pluginId}/{version}/Image` | RequiresElevation |  |  | No plugin system (decisions D8, D11). (priority: low) |
-| ⛔ not-planned | `GET /Repositories` | RequiresElevation |  |  | No plugin system (decisions D8, D11). (priority: low) |
+| ↔️ divergent-by-design | `GET /Repositories` | RequiresElevation |  | 1/1 | No plugin system (D8, D11): always an empty list, where the reference lists its bundled providers and a default repository. |
 | ⛔ not-planned | `POST /Repositories` | RequiresElevation |  |  | No plugin system (decisions D8, D11). (priority: low) |
 | ⛔ not-planned | `GET /web/ConfigurationPage` | Anonymous |  |  | No plugin system (decisions D8, D11). (priority: low) |
 | 🟡 partial | `GET /web/ConfigurationPages` | RequiresElevation | yes |  | Always []: there is no plugin system. |
@@ -75,8 +75,8 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `GET /System/Info` | FirstTimeSetupOrIgnoreParentalControl | yes | 2/4 |  |
 | ✅ supported | `GET /System/Info/Public` | Anonymous | yes | 4/6 |  |
 | ✅ supported *(no scenario)* | `GET /System/Info/Storage` | RequiresElevation | yes |  |  |
-| 🗓️ planned | `GET /System/Logs` | RequiresElevation | yes |  | Not implemented. (priority: low) |
-| 🗓️ planned | `GET /System/Logs/Log` | RequiresElevation | yes |  | Not implemented. (priority: low) |
+| 🟡 partial | `GET /System/Logs` | RequiresElevation | yes | 2/2 | Lists the daily log_YYYYMMDD.log files cmd/tinyfin tees its output to; the log format is the Go standard logger's, with no retention. |
+| ✅ supported | `GET /System/Logs/Log` | RequiresElevation | yes | 1/1 |  |
 | ✅ supported | `GET /System/Ping` | Anonymous | yes | 1/1 |  |
 | ✅ supported | `POST /System/Ping` | Anonymous | yes | 1/1 |  |
 | 🗓️ planned | `POST /System/Restart` | LocalAccessOrRequiresElevation | yes |  | Not implemented; a supervisor restarts the process. (priority: low) |
