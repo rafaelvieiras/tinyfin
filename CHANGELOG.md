@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Music, third slice (`docs/contract/specs/music.md`): audio transcoding and Instant Mix.
+  `GET /Audio/{id}/stream` without `static=true` encodes (AAC by default; MP3, AAC, M4A, Opus,
+  FLAC, WAV by `Container`/`AudioCodec`/extension) and streams the result; `GET
+  /Audio/{id}/universal` serves the file when its container is accepted and fits
+  `MaxStreamingBitrate`, else an http encode or an HLS master/media playlist (`/Audio/{id}/
+  master.m3u8`, `main.m3u8`); PlaybackInfo of a track decides direct play or an audio
+  `TranscodingUrl` (reasons, `AudioBitrate`, `MaxStreamingBitrate`) from the device profile.
+  `InstantMix` for items, songs, albums, artists, playlists and music genres (a random order of
+  the tracks sharing a genre with the seed). 7 new scenarios (`music.mix.*`, `music.transcode.*`).
 - Music, second slice (`docs/contract/specs/music.md`): `GET /MusicGenres`, `/MusicGenres/{name}`
   (with `ItemCounts`) and `Genres`/`GenreIds` filters for tracks, albums and artists; `GET
   /Artists/{name}`; artist pictures (`folder.jpg`/`poster.jpg` Primary, `backdrop.jpg`/`fanart.jpg`

@@ -190,30 +190,6 @@ var audioContentTypes = map[string]string{
 	".mka": "audio/x-matroska", ".aiff": "audio/aiff", ".aif": "audio/aiff", ".ape": "audio/x-ape",
 }
 
-// handleAudioStream serves GET /Audio/{itemId}/stream and
-// /Audio/{itemId}/stream.{container}: the file as it is, with range support
-// (the direct path; re-encoding is not done, specs/music.md music.stream.R3).
-func (s *Server) handleAudioStream(w http.ResponseWriter, r *http.Request) {
-	file := r.PathValue("file")
-	if file != "stream" && !strings.HasPrefix(file, "stream.") {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-	item, err := s.store.GetItem(r.Context(), storage.ItemID(r.PathValue("itemId")))
-	if err != nil || !s.itemReadableByCaller(r, item) {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-	if item.Type != storage.ItemTypeAudio || !item.HasMediaFile() {
-		writeNotPlayable(w)
-		return
-	}
-	if ct, ok := audioContentTypes[strings.ToLower(extOf(item.Path))]; ok {
-		w.Header().Set("Content-Type", ct)
-	}
-	http.ServeFile(w, r, item.Path)
-}
-
 func extOf(p string) string {
 	if i := strings.LastIndexByte(p, '.'); i >= 0 {
 		return p[i:]

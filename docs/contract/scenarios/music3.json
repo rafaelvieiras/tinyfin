@@ -830,5 +830,838 @@
     }
    }
   ]
+ },
+ {
+  "id": "music.transcode.stream",
+  "endpoint": "GET /Audio/{itemId}/stream",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.transcode.R1",
+   "music.transcode.R2"
+  ],
+  "requires": [
+   "library:music",
+   "item:mfirst",
+   "item:mopening"
+  ],
+  "steps": [
+   {
+    "name": "no static: an AAC encode, streamed",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.mfirst.id}}/stream"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^audio\\/aac/",
+      "Accept-Ranges": "none"
+     }
+    },
+    "retryMs": 5000
+   },
+   {
+    "name": "audioCodec picks the encoder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.mopening.id}}/stream",
+     "query": {
+      "audioCodec": "mp3"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^audio\\/mpeg/",
+      "Accept-Ranges": "none"
+     }
+    },
+    "retryMs": 5000
+   },
+   {
+    "name": "the extension picks the container",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.mopening.id}}/stream.mp3"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^audio\\/mpeg/"
+     }
+    },
+    "retryMs": 5000
+   },
+   {
+    "name": "m4a container",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.mopening.id}}/stream",
+     "query": {
+      "audioCodec": "aac",
+      "container": "m4a"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^audio\\/mp4/"
+     }
+    },
+    "retryMs": 5000
+   },
+   {
+    "name": "the container wins over the codec",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.mopening.id}}/stream",
+     "query": {
+      "audioCodec": "mp3",
+      "container": "aac"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^audio\\/aac/"
+     }
+    },
+    "retryMs": 5000
+   },
+   {
+    "name": "a range is not honoured on an encode",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.mopening.id}}/stream",
+     "query": {
+      "audioCodec": "mp3"
+     },
+     "headers": {
+      "Range": "bytes=0-99"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^audio\\/mpeg/",
+      "Accept-Ranges": "none"
+     }
+    },
+    "retryMs": 5000
+   },
+   {
+    "name": "static=true is still the file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.mopening.id}}/stream",
+     "query": {
+      "static": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^audio\\/flac/",
+      "Accept-Ranges": "bytes"
+     }
+    },
+    "retryMs": 5000
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "music.transcode.universal",
+  "endpoint": "GET /Audio/{itemId}/universal",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.transcode.R3",
+   "music.transcode.R4"
+  ],
+  "requires": [
+   "library:music",
+   "item:mopening"
+  ],
+  "steps": [
+   {
+    "name": "the file's container is accepted: the file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.mopening.id}}/universal",
+     "query": {
+      "Container": "mp3,flac",
+      "TranscodingContainer": "mp3",
+      "AudioCodec": "mp3",
+      "TranscodingProtocol": "http"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^audio\\/flac/",
+      "Accept-Ranges": "bytes"
+     }
+    }
+   },
+   {
+    "name": "a range of the file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.mopening.id}}/universal",
+     "query": {
+      "Container": "flac"
+     },
+     "headers": {
+      "Range": "bytes=0-99"
+     }
+    },
+    "expect": {
+     "status": 206,
+     "headers": {
+      "Content-Type": "/^audio\\/flac/",
+      "Content-Range": "/^bytes 0-99\\//"
+     }
+    }
+   },
+   {
+    "name": "not accepted: encoded to TranscodingContainer",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.mopening.id}}/universal",
+     "query": {
+      "Container": "opus",
+      "TranscodingContainer": "mp3",
+      "AudioCodec": "mp3",
+      "TranscodingProtocol": "http"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^audio\\/mpeg/",
+      "Accept-Ranges": "none"
+     }
+    }
+   },
+   {
+    "name": "accepted but above MaxStreamingBitrate: encoded",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.mopening.id}}/universal",
+     "query": {
+      "Container": "flac",
+      "MaxStreamingBitrate": "64000",
+      "TranscodingContainer": "mp3",
+      "AudioCodec": "mp3",
+      "TranscodingProtocol": "http"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^audio\\/mpeg/",
+      "Accept-Ranges": "none"
+     }
+    }
+   },
+   {
+    "name": "accepted and under MaxStreamingBitrate: the file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.mopening.id}}/universal",
+     "query": {
+      "Container": "flac",
+      "MaxStreamingBitrate": "500000",
+      "TranscodingContainer": "mp3",
+      "AudioCodec": "mp3",
+      "TranscodingProtocol": "http"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^audio\\/flac/"
+     }
+    }
+   },
+   {
+    "name": "hls: a master playlist",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.mopening.id}}/universal",
+     "query": {
+      "Container": "opus",
+      "TranscodingContainer": "ts",
+      "AudioCodec": "aac",
+      "TranscodingProtocol": "hls"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^application\\/vnd\\.apple\\.mpegurl/"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "#EXTM3U"
+      },
+      {
+       "op": "contains",
+       "value": "#EXT-X-STREAM-INF:BANDWIDTH=128000"
+      },
+      {
+       "op": "contains",
+       "value": "main.m3u8?"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an unknown id",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/00000000000000000000000000000001/universal",
+     "query": {
+      "Container": "mp3"
+     }
+    },
+    "expect": {
+     "status": 404
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "music.transcode.playbackinfo",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.transcode.R5",
+   "music.transcode.R6",
+   "music.transcode.R7"
+  ],
+  "requires": [
+   "library:music",
+   "item:mopening"
+  ],
+  "steps": [
+   {
+    "name": "a profile that takes flac: direct play",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mopening.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "DirectPlayProfiles": [
+        {
+         "Type": "Audio",
+         "Container": "flac",
+         "AudioCodec": "flac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Type": "Audio",
+         "Container": "mp3",
+         "AudioCodec": "mp3",
+         "Protocol": "http",
+         "Context": "Streaming"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no device profile: direct play",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mopening.id}}/PlaybackInfo",
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "mp3 only: the stream URL of an mp3 encode",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mopening.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "DirectPlayProfiles": [
+        {
+         "Type": "Audio",
+         "Container": "mp3",
+         "AudioCodec": "mp3"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Type": "Audio",
+         "Container": "mp3",
+         "AudioCodec": "mp3",
+         "Protocol": "http",
+         "Context": "Streaming"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingSubProtocol",
+       "op": "eq",
+       "value": "http"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingContainer",
+       "op": "eq",
+       "value": "mp3"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "matches",
+       "value": "^/audio/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/stream\\.mp3\\?"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "AudioCodec=mp3"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "AudioBitrate=128000"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "TranscodeReasons=ContainerNotSupported,VideoCodecNotSupported,AudioCodecNotSupported"
+      }
+     ]
+    },
+    "capture": {
+     "turl": "$.MediaSources[0].TranscodingUrl"
+    }
+   },
+   {
+    "name": "the URL is playable",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "{{capture.turl}}"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^audio\\/mpeg/"
+     }
+    }
+   },
+   {
+    "name": "codec not taken: the codec reason only",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mopening.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "DirectPlayProfiles": [
+        {
+         "Type": "Audio",
+         "Container": "flac",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Type": "Audio",
+         "Container": "aac",
+         "AudioCodec": "aac",
+         "Protocol": "http",
+         "Context": "Streaming"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "TranscodeReasons=AudioCodecNotSupported"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "/stream.aac?"
+      }
+     ]
+    }
+   },
+   {
+    "name": "MaxStreamingBitrate under the file's rate",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mopening.id}}/PlaybackInfo",
+     "query": {
+      "MaxStreamingBitrate": "64000"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "DirectPlayProfiles": [
+        {
+         "Type": "Audio",
+         "Container": "flac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Type": "Audio",
+         "Container": "mp3",
+         "AudioCodec": "mp3",
+         "Protocol": "http",
+         "Context": "Streaming"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "AudioBitrate=64000"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "TranscodeReasons=ContainerBitrateExceedsLimit"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the profile's MaxStreamingBitrate is read too",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mopening.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "DirectPlayProfiles": [
+        {
+         "Type": "Audio",
+         "Container": "flac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Type": "Audio",
+         "Container": "mp3",
+         "AudioCodec": "mp3",
+         "Protocol": "http",
+         "Context": "Streaming"
+        }
+       ],
+       "MaxStreamingBitrate": 64000
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "AudioBitrate=64000"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no usable transcoding profile",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mopening.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "DirectPlayProfiles": [
+        {
+         "Type": "Audio",
+         "Container": "mp3"
+        }
+       ],
+       "TranscodingProfiles": []
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a Static context profile is not usable",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mopening.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "DirectPlayProfiles": [
+        {
+         "Type": "Audio",
+         "Container": "mp3"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Type": "Audio",
+         "Container": "mp3",
+         "AudioCodec": "mp3",
+         "Protocol": "http",
+         "Context": "Static"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "hls profile: a master playlist URL",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mopening.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "DirectPlayProfiles": [
+        {
+         "Type": "Audio",
+         "Container": "mp3",
+         "AudioCodec": "mp3"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Type": "Audio",
+         "Container": "ts",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingSubProtocol",
+       "op": "eq",
+       "value": "hls"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingContainer",
+       "op": "eq",
+       "value": "ts"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "matches",
+       "value": "/master\\.m3u8\\?"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "SegmentContainer=ts"
+      }
+     ]
+    },
+    "capture": {
+     "hurl": "$.MediaSources[0].TranscodingUrl"
+    }
+   },
+   {
+    "name": "the master playlist",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "{{capture.hurl}}"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^application\\/vnd\\.apple\\.mpegurl/"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "#EXTM3U"
+      },
+      {
+       "op": "contains",
+       "value": "main.m3u8?"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
  }
 ]

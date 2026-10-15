@@ -147,11 +147,6 @@
    "notes": "Deprecated in the reference and served by a plugin there; local trailers are served by /Items/{id}/LocalTrailers.",
    "priority": "low"
   },
-  "InstantMix": {
-   "status": "not-planned",
-   "notes": "Mixes are built from audio items; Tinyfin catalogs video only.",
-   "priority": "low"
-  },
   "LibraryStructure": {
    "status": "planned",
    "notes": "Adding, removing and updating the paths of an existing library is not implemented; a library's paths are set when it is created.",
@@ -312,10 +307,6 @@
    "status": "planned",
    "notes": "Raw file delivery is not implemented.",
    "priority": "low"
-  },
-  "GET /Items/{itemId}/InstantMix": {
-   "status": "not-planned",
-   "notes": "Mixes are built from audio items; Tinyfin catalogs video only."
   },
   "POST /Sessions/Capabilities": {
    "status": "planned",

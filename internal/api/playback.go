@@ -114,6 +114,9 @@ type playbackInfoRequestBody struct {
 	MediaSourceID       string `json:"MediaSourceId,omitempty"`
 	AudioStreamIndex    *int   `json:"AudioStreamIndex,omitempty"`
 	SubtitleStreamIndex *int   `json:"SubtitleStreamIndex,omitempty"`
+	// MaxStreamingBitrate bounds the rate of what the client takes (audio:
+	// direct play above it becomes a transcode).
+	MaxStreamingBitrate *int64 `json:"MaxStreamingBitrate,omitempty"`
 }
 
 // resolveDeviceProfile implements docs/07 O2's negotiation order: a
@@ -288,6 +291,10 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 
 	body := readPlaybackBody(r)
 	profile, inline := s.profileFor(r, body)
+	if item.Type == storage.ItemTypeAudio {
+		s.audioPlaybackInfo(w, r, item, profile, inline, body)
+		return
+	}
 	sel := selectionFor(r, body)
 
 	// A selection only applies to the media source it names (the reference

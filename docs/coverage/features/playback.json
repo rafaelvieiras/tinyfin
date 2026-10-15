@@ -302,10 +302,10 @@
   {
    "id": "playback.audio",
    "title": "Audio streaming and universal endpoint",
-   "status": "partial",
-   "description": "`GET /Audio/{id}/stream` serves a track as it is (range support) and PlaybackInfo offers it for direct play; no audio transcoding.",
-   "reference": "`/Audio/{id}/stream`, `/universal`.",
-   "notes": "Without static=true the reference transcodes to AAC; Tinyfin serves the file as it is. `/universal` is not implemented.",
+   "status": "supported",
+   "description": "`GET /Audio/{id}/stream` serves a track as it is for `static=true` (range support) and otherwise encodes it (AAC by default, MP3/AAC/M4A/Opus/FLAC/WAV by container or codec); `/universal` picks the file or an encode (http or HLS) from `Container`/`MaxStreamingBitrate`; PlaybackInfo of a track decides direct play or an audio TranscodingUrl from the device profile.",
+   "reference": "`/Audio/{id}/stream`, `/universal`, audio PlaybackInfo.",
+   "notes": "Encodes are streamed (no length, no ranges, fixed 128 kbit/s on `/stream`). Where the reference fails (repackaging an MP3 as MP3) Tinyfin encodes; see specs/music.md, Slice 3 differences.",
    "routes": [
     "GET /Audio/{itemId}/universal"
    ],
@@ -313,15 +313,26 @@
     "music.stream.R1",
     "music.stream.R2",
     "music.stream.R3",
-    "music.stream.R4"
+    "music.stream.R4",
+    "music.transcode.R1",
+    "music.transcode.R2",
+    "music.transcode.R3",
+    "music.transcode.R4",
+    "music.transcode.R5",
+    "music.transcode.R6",
+    "music.transcode.R7"
    ],
    "scenarios": [
     "music.stream.direct",
     "music.stream.unknown",
-    "music.playback.info"
+    "music.playback.info",
+    "music.transcode.stream",
+    "music.transcode.universal",
+    "music.transcode.playbackinfo"
    ],
    "code": [
-    "internal/api/music.go",
+    "internal/api/audio.go",
+    "internal/transcode/audio.go",
     "internal/playback/decision.go"
    ]
   },

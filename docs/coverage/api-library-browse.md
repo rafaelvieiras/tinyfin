@@ -16,7 +16,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 |---|---|---|---|---|---|
 | ✅ supported | `GET /Artists` *(deprecated)* | DefaultAuthorization | yes | 1/1 |  |
 | ✅ supported | `GET /Artists/AlbumArtists` *(deprecated)* | DefaultAuthorization | yes | 1/1 |  |
-| ✅ supported | `GET /Artists/{name}` *(deprecated)* | DefaultAuthorization |  | 1/1 |  |
+| ✅ supported | `GET /Artists/{name}` *(deprecated)* | DefaultAuthorization |  | 1/2 |  |
 
 ## Filter
 
@@ -81,7 +81,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ✅ supported | `GET /MusicGenres/{genreName}` *(deprecated)* | DefaultAuthorization |  | 1/1 |  |
+| ✅ supported | `GET /MusicGenres/{genreName}` *(deprecated)* | DefaultAuthorization |  | 1/2 |  |
 
 ## Person
 

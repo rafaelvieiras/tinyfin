@@ -61,17 +61,25 @@ func buildArgs(req Request) []string {
 		args = append(args, "-filter_complex", graph+"[v]")
 		videoMap = "[v]"
 	}
-	args = append(args, "-map", videoMap)
+	audioOnly := req.VideoCodec == "none"
+	if audioOnly {
+		// an audio file: nothing to map or encode on the picture side
+		args = append(args, "-vn")
+	} else {
+		args = append(args, "-map", videoMap)
+	}
 	if req.AudioStreamIndex != nil {
 		args = append(args, "-map", fmt.Sprintf("0:%d", *req.AudioStreamIndex))
 	} else {
 		args = append(args, "-map", "0:a:0")
 	}
 
-	videoCopy := req.VideoCodec == "" || req.VideoCodec == "copy"
+	videoCopy := req.VideoCodec == "" || req.VideoCodec == "copy" || req.VideoCodec == "none"
 	audioCopy := req.AudioCodec == "" || req.AudioCodec == "copy"
 
-	if videoCopy {
+	if audioOnly {
+		// no picture
+	} else if videoCopy {
 		args = append(args, "-c:v", "copy")
 	} else {
 		args = append(args, "-c:v", req.VideoCodec)

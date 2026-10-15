@@ -4,9 +4,9 @@
 
 BoxSets, playlists and instant mixes.
 
-[Overview](../COVERAGE.md) · 21 operations · 14 registered (67%) · 14 verified · ✅ 13 · ⛔ 7 · ↔️ 1
+[Overview](../COVERAGE.md) · 21 operations · 21 registered (100%) · 14 verified · ✅ 20 · ↔️ 1
 
-✅✅✅✅✅✅✅✅✅✅✅✅⛔⛔⛔⛔⛔⛔⛔↔️
+✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅↔️
 
 Columns: **Auth** is the reference's authorization policy; **Web** = mentioned in docs/11 (called by the official web client); **Tests** = scenarios that exercise the route (passing / total).
 
@@ -22,19 +22,19 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ⛔ not-planned | `GET /Albums/{itemId}/InstantMix` | DefaultAuthorization |  |  | Mixes are built from audio items; Tinyfin catalogs video only. (priority: low) |
-| ⛔ not-planned | `GET /Artists/{itemId}/InstantMix` | DefaultAuthorization |  |  | Mixes are built from audio items; Tinyfin catalogs video only. (priority: low) |
-| ⛔ not-planned | `GET /Items/{itemId}/InstantMix` | DefaultAuthorization |  |  | Mixes are built from audio items; Tinyfin catalogs video only. |
-| ⛔ not-planned | `GET /MusicGenres/InstantMix` *(deprecated)* | DefaultAuthorization |  |  | Mixes are built from audio items; Tinyfin catalogs video only. (priority: low) |
-| ⛔ not-planned | `GET /MusicGenres/{name}/InstantMix` *(deprecated)* | DefaultAuthorization |  |  | Mixes are built from audio items; Tinyfin catalogs video only. (priority: low) |
-| ⛔ not-planned | `GET /Playlists/{itemId}/InstantMix` | DefaultAuthorization |  |  | Mixes are built from audio items; Tinyfin catalogs video only. (priority: low) |
-| ⛔ not-planned | `GET /Songs/{itemId}/InstantMix` | DefaultAuthorization |  |  | Mixes are built from audio items; Tinyfin catalogs video only. (priority: low) |
+| ✅ supported *(no scenario)* | `GET /Albums/{itemId}/InstantMix` | DefaultAuthorization |  | 0/1 |  |
+| ✅ supported *(no scenario)* | `GET /Artists/{itemId}/InstantMix` | DefaultAuthorization |  | 0/1 |  |
+| ✅ supported *(no scenario)* | `GET /Items/{itemId}/InstantMix` | DefaultAuthorization |  | 0/4 |  |
+| ✅ supported *(no scenario)* | `GET /MusicGenres/InstantMix` *(deprecated)* | DefaultAuthorization |  | 0/1 |  |
+| ✅ supported *(no scenario)* | `GET /MusicGenres/{name}/InstantMix` *(deprecated)* | DefaultAuthorization |  | 0/1 |  |
+| ✅ supported *(no scenario)* | `GET /Playlists/{itemId}/InstantMix` | DefaultAuthorization |  | 0/1 |  |
+| ✅ supported *(no scenario)* | `GET /Songs/{itemId}/InstantMix` | DefaultAuthorization |  | 0/1 |  |
 
 ## Playlist
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ✅ supported | `POST /Playlists` | DefaultAuthorization | yes | 23/23 |  |
+| ✅ supported | `POST /Playlists` | DefaultAuthorization | yes | 23/24 |  |
 | ✅ supported | `GET /Playlists/{playlistId}` | DefaultAuthorization | yes | 13/13 |  |
 | ✅ supported | `POST /Playlists/{playlistId}` | DefaultAuthorization | yes | 4/4 |  |
 | ✅ supported | `DELETE /Playlists/{playlistId}/Items` | DefaultAuthorization | yes | 3/3 |  |

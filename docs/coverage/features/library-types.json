@@ -81,8 +81,15 @@
    "status": "partial",
    "description": "Scanned: folders with audio files become MusicAlbum, root folders MusicArtist, files Audio items with ID3/Vorbis tags (title, artist, album, album artist, track, disc, year, genre) and folder fallbacks; album picture from cover/folder/poster files or a picture embedded in a track; artist listings and lookup by name, music genres, artist pictures, artist.nfo/album.nfo, disc folders, loose files, lyrics files and direct audio streaming.",
    "reference": "Music library with artists, albums, tracks, lyrics and instant mixes.",
-   "notes": "Second slice. Left out: Instant Mix, music videos, audio transcoding, People on tracks, Folder items for disc folders, lyrics upload/search (specs/music.md, Not covered).",
+   "notes": "Third slice added Instant Mix and audio transcoding. Left out: music videos, People on tracks, Folder items for disc folders, lyrics upload/search (specs/music.md, Not covered).",
    "spec_rules": [
+    "music.mix.R1",
+    "music.mix.R2",
+    "music.mix.R3",
+    "music.mix.R4",
+    "music.mix.R5",
+    "music.mix.R6",
+    "music.mix.R7",
     "music.album.R1",
     "music.album.R2",
     "music.album.R3",
@@ -159,7 +166,11 @@
     "music2.loose.files",
     "music2.lyrics.timed",
     "music2.lyrics.plain",
-    "music2.lyrics.none"
+    "music2.lyrics.none",
+    "music.mix.song",
+    "music.mix.album-artist",
+    "music.mix.genre",
+    "music.mix.playlist"
    ],
    "code": [
     "internal/scan/music.go",

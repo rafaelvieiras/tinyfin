@@ -37,12 +37,17 @@ package deviceprofile
 // evaluation would produce. A future engineer implementing that narrowing
 // should start here.
 type DeviceProfile struct {
-	Name                string               `json:"Name,omitempty"`
-	DirectPlayProfiles  []DirectPlayProfile  `json:"DirectPlayProfiles"`
-	TranscodingProfiles []TranscodingProfile `json:"TranscodingProfiles"`
-	ContainerProfiles   []ContainerProfile   `json:"ContainerProfiles,omitempty"`
-	CodecProfiles       []CodecProfile       `json:"CodecProfiles,omitempty"`
-	SubtitleProfiles    []SubtitleProfile    `json:"SubtitleProfiles,omitempty"`
+	Name string `json:"Name,omitempty"`
+	// MaxStreamingBitrate bounds what the client takes (bits/s); a body-level
+	// MaxStreamingBitrate of the request takes precedence over it.
+	MaxStreamingBitrate int64 `json:"MaxStreamingBitrate,omitempty"`
+	// MusicStreamingTranscodingBitrate is the rate audio is transcoded to.
+	MusicStreamingTranscodingBitrate int64                `json:"MusicStreamingTranscodingBitrate,omitempty"`
+	DirectPlayProfiles               []DirectPlayProfile  `json:"DirectPlayProfiles"`
+	TranscodingProfiles              []TranscodingProfile `json:"TranscodingProfiles"`
+	ContainerProfiles                []ContainerProfile   `json:"ContainerProfiles,omitempty"`
+	CodecProfiles                    []CodecProfile       `json:"CodecProfiles,omitempty"`
+	SubtitleProfiles                 []SubtitleProfile    `json:"SubtitleProfiles,omitempty"`
 }
 
 // DirectPlayProfile mirrors the OpenAPI DirectPlayProfile schema exactly:

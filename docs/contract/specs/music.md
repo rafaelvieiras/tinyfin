@@ -4,7 +4,7 @@ A library with `CollectionType` `music`: the tagged audio files of an `Artist/Al
 
 Scenarios: [`../scenarios/music.json`](../scenarios/music.json). Fixture state: [`../fixtures.json`](../fixtures.json), media from `scripts/conformance-media.sh` (lazy library `Music`). Rule IDs are stable (`music.<topic>.R<n>`).
 
-Slice 1 is the scan, the model, the artist listings, pictures and the direct stream. Slice 2 ([genres](#genre), [artist lookup and pictures](#artist2), [nfo](#nfo), [disc folders and loose files](#layout), [lyrics](#lyrics)) was probed the same way, on a second lazy library `Music2` (scenarios: [`../scenarios/music2.json`](../scenarios/music2.json)). What both leave out is listed under [Not covered](#not-covered).
+Slice 1 is the scan, the model, the artist listings, pictures and the direct stream. Slice 3 adds [Instant Mix](#mix) and [audio transcoding](#transcode) (`music.mix.*`, `music.transcode.*`). Slice 2 ([genres](#genre), [artist lookup and pictures](#artist2), [nfo](#nfo), [disc folders and loose files](#layout), [lyrics](#lyrics)) was probed the same way, on a second lazy library `Music2` (scenarios: [`../scenarios/music2.json`](../scenarios/music2.json)). What both leave out is listed under [Not covered](#not-covered).
 
 ## Fixture facts this spec relies on
 
@@ -114,10 +114,33 @@ Slice 1 is the scan, the model, the artist listings, pictures and the direct str
 * **Lyrics files.** Only `.lrc` and `.txt` are read, `.lrc` first. Writing (`POST`/`DELETE /Audio/{id}/Lyrics`, remote search) is not implemented.
 * **Genres of an album after a refresh** follow the nfo only once the reference refreshed twice; see [music.nfo.R2](#nfo).
 
+## <a id="mix"></a>Instant Mix
+
+Probed on the 12.2 reference over the fixture of [Slice 1](#scan) (scenarios: [`../scenarios/music3.json`](../scenarios/music3.json), `music.mix.*`). Rock tracks: `First Song`, `Second Song`; Jazz: `Opening`; the other three tracks carry no genre.
+
+- **music.mix.R1** `GET /Items/{itemId}/InstantMix` (and `/Songs/{itemId}/InstantMix`) of a track answers the tracks that share a genre with it, the seed included: `TotalRecordCount` is the size of that pool, `Items` the page. The order is random (scenarios assert the set and the count). `Limit` cuts the page, not `TotalRecordCount`. An unknown id is `404`; each item is a normal `Audio` listing item (`Fields`, `EnableUserData`, ... apply as on any listing).
+- **music.mix.R2** A seed whose tracks carry no genre at all matches every track (6 here).
+- **music.mix.R3** `userId` is optional (the caller is the user); the pool holds only tracks the user can see.
+- **music.mix.R4** An album seeds with its tracks (`/Albums/{itemId}/InstantMix`, or the generic route): the union of their genres. `Album Alpha` 2, `Album Beta` 1, `Album Delta` (untagged) 6.
+- **music.mix.R5** An artist seeds with its tracks the same way (`/Artists/{itemId}/InstantMix`, `/Artists/InstantMix?id=`, or the generic route): `Artist One` (Rock and Jazz tracks) 3, `Artist Two` (untagged tracks) 6. The `{itemId}` routes accept any item as the seed.
+- **music.mix.R6** A genre seeds by name: `/MusicGenres/{name}/InstantMix` (case-insensitive; a name nothing carries is an empty mix, and so is an id in that position). The id of the genre is taken by `/MusicGenres/InstantMix?id=` and `/Items/{id}/InstantMix`.
+- **music.mix.R7** A playlist seeds with the union of the genres of its entries (`/Playlists/{itemId}/InstantMix` and the generic route answer the same): `[Opening, Untagged Track]` is Jazz only (an entry with no genre adds none), 1 track.
+
+## <a id="transcode"></a>Audio transcoding
+
+Probed on the reference with the same fixture (scenarios: `music.transcode.*`; the track that forces an encode is the FLAC file under a profile that only lists MP3).
+
+- **music.transcode.R1** `GET /Audio/{itemId}/stream` without `static=true` is an encode, not the file: `200`, `Content-Type` of the output (`audio/aac` by default), `Accept-Ranges: none`, no `Content-Length` (chunked). A `Range` header is ignored (full `200`). `static=true` stays the file (`music.stream.R1`).
+- **music.transcode.R2** The output is chosen by `Container` (or the extension of `stream.{container}`), else by `AudioCodec`: `mp3` `audio/mpeg`, `aac` `audio/aac`, `m4a` `audio/mp4`, `mp4` `video/mp4`, `ts` `video/mp2t`, `ogg`/`opus` `audio/ogg` (Opus), `flac` `audio/flac`. A known container wins over a conflicting codec (`audioCodec=mp3&container=aac` is AAC). On this route the rate is fixed at 128 kbit/s: `AudioBitRate` and `MaxStreamingBitrate` have no effect.
+- **music.transcode.R3** `GET /Audio/{itemId}/universal` is the file as it is (static headers, ranges, `Accept-Ranges: bytes`) when the file's container (case-insensitive) is in the comma separated `Container` and the file's own bit rate (size over duration) is not above `MaxStreamingBitrate`; `AudioCodec` is not looked at. An unknown id is `404`.
+- **music.transcode.R4** Otherwise it is an encode to `TranscodingContainer` (codec from it, else from `AudioCodec`, else AAC) with the headers of music.transcode.R1: over `TranscodingProtocol=http` (default) the bytes, over `hls` a master playlist (`application/vnd.apple.mpegurl`, `#EXT-X-STREAM-INF:BANDWIDTH=<rate>,AVERAGE-BANDWIDTH=<rate>,CODECS="mp4a.40.2"` and `main.m3u8?` with the request's query plus `SegmentContainer` and `TranscodeReasons`; the media playlist and segments are served under `/Audio/{id}/`). The rate is 128 kbit/s, `AudioBitRate` when given, held under `MaxStreamingBitrate`.
+- **music.transcode.R5** PlaybackInfo of a track without a `DeviceProfile` is direct play (`SupportsDirectPlay`, `SupportsDirectStream`, `SupportsTranscoding` true, no `TranscodingUrl`). With one, a `DirectPlayProfiles` entry of `Type` `Audio` whose `Container` list has the file's container and whose `AudioCodec` list (when present) has its codec takes it: direct play, `SupportsTranscoding` true only when a usable transcoding profile exists.
+- **music.transcode.R6** When no entry takes the file, the first `TranscodingProfiles` entry of `Type` `Audio` with `Context` not `Static` and `Protocol` `http` (default) or `hls` is used: `SupportsDirectPlay` and `SupportsDirectStream` false, `SupportsTranscoding` true, `TranscodingSubProtocol` the protocol, `TranscodingContainer` its container (absent for a list), and `TranscodingUrl` `/audio/<dashed id>/stream.<container>` (`master.m3u8` for hls, with `SegmentContainer`) with `DeviceId`, `MediaSourceId`, `AudioCodec` (first of the profile's list), `AudioBitrate`, `PlaySessionId`, `ApiKey`, `RequireAvc=false`, `EnableAudioVbrEncoding=true`, `Tag` and `TranscodeReasons`: `ContainerNotSupported,VideoCodecNotSupported,AudioCodecNotSupported` when the container is not taken, `AudioCodecNotSupported` when only the codec is not, `ContainerBitrateExceedsLimit` when only the rate is.
+- **music.transcode.R7** `AudioBitrate` is 128000, or the profile's `MusicStreamingTranscodingBitrate`, held under the effective maximum: `MaxStreamingBitrate` of the body, else the query's, else the profile's. A file whose rate is above it is not direct played. With no usable transcoding profile the answer is `SupportsDirectPlay`/`SupportsDirectStream`/`SupportsTranscoding` all false, no `TranscodingUrl` and no `ErrorCode`.
+
 ## <a id="not-covered"></a>Not covered by either slice
 
-* Instant Mix (`/Items/{id}/InstantMix`, `/Artists/InstantMix`, `/MusicGenres/{name}/InstantMix`: the reference answers a random order of the tracks sharing the seed's genre, `TotalRecordCount` the pool size, `Limit` cutting the page), `/Items/{id}/Similar` for music, music videos.
-* Audio transcoding: without `static=true` the reference answers with an AAC transcode (`audio/aac`); Tinyfin serves the file as it is on every `/Audio/{id}/stream` request (`/Audio/{id}/universal` is not routed), and a profile whose Audio direct play entries do not list the file's container gets `NoCompatibleStream`.
+* `/Items/{id}/Similar` for music, music videos.
 * `People` on tracks and albums (the reference lists the artists as `Artist`/`AlbumArtist` people), MusicBrainz ids read from tags (only the nfo ones are), `ReplayGain`, `Folder` items for disc folders (see [slice 2 differences](#lyrics)), lyrics upload/delete/search, `.elrc`/`.srt` lyrics.
 * Multi-valued tags are not split (`;` is part of a name, as on the reference).
 
@@ -128,8 +151,14 @@ Slice 1 is the scan, the model, the artist listings, pictures and the direct str
 * **Path of an artist with no folder.** The reference reports a path under its metadata folder; Tinyfin has none (`Path` absent).
 * **Empty members.** The reference always sends `Genres`, `Tags`, `Studios`, `Taglines`, `ProviderIds`, `LockedFields` and the other empty collections on a single read; Tinyfin follows its general rule for those members, not a music-specific one (`Artists`, `ArtistItems` and `AlbumArtists` are always sent on tracks and albums).
 * **Artist `DateLastMediaAdded`** is always `0001-01-01T00:00:00.0000000Z`, as on the reference.
-* **`SupportsTranscoding`** is false on a track's media source (no audio transcoding), true on the reference.
 * **Items created by a concurrent scan.** A library removed while a scan runs is not written to by the rest of the pass.
+
+## Slice 3 differences
+
+* **Same container and codec.** The reference fails (an empty `200` or `500`) when the encode would only repackage the file (`container=mp3` of an MP3, `container=flac` of a FLAC) and when no `Container`/`TranscodingContainer` is given to `/universal`; Tinyfin always encodes (AAC by default).
+* **Encoders.** `ogg`/`opus`/`vorbis` outputs are Opus (as on the reference); `wav` works (the reference answers `500`). Rates in the output are those the encoder produces, not asserted.
+* **Seek.** `StartTimeTicks` is ignored on an encode, as on the reference. HLS playlists are the ones ffmpeg writes (`seg_00000.ts`), see playback.md.
+* **PlaybackInfo of a track** lists the one source; versions of a track are not offered.
 
 ## Rule -> scenarios
 
@@ -164,3 +193,10 @@ Slice 1 is the scan, the model, the artist listings, pictures and the direct str
 | `music.lyrics.R1`, `R2`, `R4` | `music2.lyrics.timed` |
 | `music.lyrics.R3` | `music2.lyrics.plain` |
 | `music.lyrics.R5` | `music2.lyrics.none` |
+| `music.mix.R1`, `R2`, `R3` | `music.mix.song` |
+| `music.mix.R4`, `R5` | `music.mix.album-artist` |
+| `music.mix.R6` | `music.mix.genre` |
+| `music.mix.R7` | `music.mix.playlist` |
+| `music.transcode.R1`, `R2` | `music.transcode.stream` |
+| `music.transcode.R3`, `R4` | `music.transcode.universal` |
+| `music.transcode.R5`, `R6`, `R7` | `music.transcode.playbackinfo` |

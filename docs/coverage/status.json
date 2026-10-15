@@ -3,18 +3,18 @@
  "totals": {
   "features_by_status": {
    "not-planned": 17,
-   "partial": 20,
+   "partial": 19,
    "planned": 13,
-   "supported": 60
+   "supported": 61
   },
   "operations": 364,
-  "registered": 173,
+  "registered": 182,
   "routes_by_status": {
    "divergent-by-design": 16,
-   "not-planned": 104,
+   "not-planned": 95,
    "partial": 12,
    "planned": 87,
-   "supported": 145
+   "supported": 154
   },
   "verified": 131
  },
@@ -55,6 +55,7 @@
    "verified": true,
    "web": false,
    "scenarios": [
+    "music.mix.album-artist",
     "music2.artist.by-name"
    ]
   },
@@ -69,7 +70,8 @@
    "web": false,
    "scenarios": [
     "music.stream.direct",
-    "music.stream.unknown"
+    "music.stream.unknown",
+    "music.transcode.stream"
    ],
    "notes": "Music is not cataloged or streamed (video-first scope, docs/01).",
    "priority": "low"
@@ -85,7 +87,8 @@
    "web": false,
    "scenarios": [
     "music.stream.direct",
-    "music.stream.unknown"
+    "music.stream.unknown",
+    "music.transcode.stream"
    ],
    "notes": "Music is not cataloged or streamed (video-first scope, docs/01).",
    "priority": "low"
@@ -119,24 +122,26 @@
    "tag": "Audio",
    "group": "playback",
    "policy": "DefaultAuthorization",
-   "status": "not-planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": false,
-   "notes": "Music is not cataloged or streamed (video-first scope, docs/01).",
-   "priority": "low"
+   "scenarios": [
+    "music.transcode.universal"
+   ]
   },
   {
    "id": "HEAD /Audio/{itemId}/universal",
    "tag": "Audio",
    "group": "playback",
    "policy": "DefaultAuthorization",
-   "status": "not-planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": false,
-   "notes": "Music is not cataloged or streamed (video-first scope, docs/01).",
-   "priority": "low"
+   "scenarios": [
+    "music.transcode.universal"
+   ]
   },
   {
    "id": "GET /Auth/Keys",
@@ -1386,83 +1391,94 @@
    "tag": "InstantMix",
    "group": "collections-playlists",
    "policy": "DefaultAuthorization",
-   "status": "not-planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": false,
-   "notes": "Mixes are built from audio items; Tinyfin catalogs video only.",
-   "priority": "low"
+   "scenarios": [
+    "music.mix.album-artist"
+   ]
   },
   {
    "id": "GET /Artists/{itemId}/InstantMix",
    "tag": "InstantMix",
    "group": "collections-playlists",
    "policy": "DefaultAuthorization",
-   "status": "not-planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": false,
-   "notes": "Mixes are built from audio items; Tinyfin catalogs video only.",
-   "priority": "low"
+   "scenarios": [
+    "music.mix.album-artist"
+   ]
   },
   {
    "id": "GET /Items/{itemId}/InstantMix",
    "tag": "InstantMix",
    "group": "collections-playlists",
    "policy": "DefaultAuthorization",
-   "status": "not-planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": false,
-   "notes": "Mixes are built from audio items; Tinyfin catalogs video only."
+   "scenarios": [
+    "music.mix.album-artist",
+    "music.mix.genre",
+    "music.mix.playlist",
+    "music.mix.song"
+   ]
   },
   {
    "id": "GET /MusicGenres/InstantMix",
    "tag": "InstantMix",
    "group": "collections-playlists",
    "policy": "DefaultAuthorization",
-   "status": "not-planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": false,
-   "notes": "Mixes are built from audio items; Tinyfin catalogs video only.",
-   "priority": "low"
+   "scenarios": [
+    "music.mix.genre"
+   ]
   },
   {
    "id": "GET /MusicGenres/{name}/InstantMix",
    "tag": "InstantMix",
    "group": "collections-playlists",
    "policy": "DefaultAuthorization",
-   "status": "not-planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": false,
-   "notes": "Mixes are built from audio items; Tinyfin catalogs video only.",
-   "priority": "low"
+   "scenarios": [
+    "music.mix.genre"
+   ]
   },
   {
    "id": "GET /Playlists/{itemId}/InstantMix",
    "tag": "InstantMix",
    "group": "collections-playlists",
    "policy": "DefaultAuthorization",
-   "status": "not-planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": false,
-   "notes": "Mixes are built from audio items; Tinyfin catalogs video only.",
-   "priority": "low"
+   "scenarios": [
+    "music.mix.playlist"
+   ]
   },
   {
    "id": "GET /Songs/{itemId}/InstantMix",
    "tag": "InstantMix",
    "group": "collections-playlists",
    "policy": "DefaultAuthorization",
-   "status": "not-planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": false,
-   "notes": "Mixes are built from audio items; Tinyfin catalogs video only.",
-   "priority": "low"
+   "scenarios": [
+    "music.mix.song"
+   ]
   },
   {
    "id": "POST /Items/RemoteSearch/Apply/{itemId}",
@@ -3161,6 +3177,7 @@
    "scenarios": [
     "items.homevideos.video-media-and-playback",
     "music.playback.info",
+    "music.transcode.playbackinfo",
     "playback.audio.body",
     "playback.audio.ignored",
     "playback.audio.selection",
@@ -3244,6 +3261,7 @@
    "verified": true,
    "web": false,
    "scenarios": [
+    "music.mix.genre",
     "music2.genres.single"
    ]
   },
@@ -3285,6 +3303,7 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "music.mix.playlist",
     "playlists.acl.matrix",
     "playlists.auth.anonymous",
     "playlists.create.basic",
@@ -6317,8 +6336,15 @@
    "status": "partial",
    "description": "Scanned: folders with audio files become MusicAlbum, root folders MusicArtist, files Audio items with ID3/Vorbis tags (title, artist, album, album artist, track, disc, year, genre) and folder fallbacks; album picture from cover/folder/poster files or a picture embedded in a track; artist listings and lookup by name, music genres, artist pictures, artist.nfo/album.nfo, disc folders, loose files, lyrics files and direct audio streaming.",
    "reference": "Music library with artists, albums, tracks, lyrics and instant mixes.",
-   "notes": "Second slice. Left out: Instant Mix, music videos, audio transcoding, People on tracks, Folder items for disc folders, lyrics upload/search (specs/music.md, Not covered).",
+   "notes": "Third slice added Instant Mix and audio transcoding. Left out: music videos, People on tracks, Folder items for disc folders, lyrics upload/search (specs/music.md, Not covered).",
    "spec_rules": [
+    "music.mix.R1",
+    "music.mix.R2",
+    "music.mix.R3",
+    "music.mix.R4",
+    "music.mix.R5",
+    "music.mix.R6",
+    "music.mix.R7",
     "music.album.R1",
     "music.album.R2",
     "music.album.R3",
@@ -6395,7 +6421,11 @@
     "music2.loose.files",
     "music2.lyrics.timed",
     "music2.lyrics.plain",
-    "music2.lyrics.none"
+    "music2.lyrics.none",
+    "music.mix.song",
+    "music.mix.album-artist",
+    "music.mix.genre",
+    "music.mix.playlist"
    ],
    "code": [
     "internal/scan/music.go",
@@ -7048,23 +7078,34 @@
   {
    "id": "playback.audio",
    "title": "Audio streaming and universal endpoint",
-   "status": "partial",
-   "description": "`GET /Audio/{id}/stream` serves a track as it is (range support) and PlaybackInfo offers it for direct play; no audio transcoding.",
-   "reference": "`/Audio/{id}/stream`, `/universal`.",
-   "notes": "Without static=true the reference transcodes to AAC; Tinyfin serves the file as it is. `/universal` is not implemented.",
+   "status": "supported",
+   "description": "`GET /Audio/{id}/stream` serves a track as it is for `static=true` (range support) and otherwise encodes it (AAC by default, MP3/AAC/M4A/Opus/FLAC/WAV by container or codec); `/universal` picks the file or an encode (http or HLS) from `Container`/`MaxStreamingBitrate`; PlaybackInfo of a track decides direct play or an audio TranscodingUrl from the device profile.",
+   "reference": "`/Audio/{id}/stream`, `/universal`, audio PlaybackInfo.",
+   "notes": "Encodes are streamed (no length, no ranges, fixed 128 kbit/s on `/stream`). Where the reference fails (repackaging an MP3 as MP3) Tinyfin encodes; see specs/music.md, Slice 3 differences.",
    "spec_rules": [
     "music.stream.R1",
     "music.stream.R2",
     "music.stream.R3",
-    "music.stream.R4"
+    "music.stream.R4",
+    "music.transcode.R1",
+    "music.transcode.R2",
+    "music.transcode.R3",
+    "music.transcode.R4",
+    "music.transcode.R5",
+    "music.transcode.R6",
+    "music.transcode.R7"
    ],
    "scenarios": [
     "music.stream.direct",
     "music.stream.unknown",
-    "music.playback.info"
+    "music.playback.info",
+    "music.transcode.stream",
+    "music.transcode.universal",
+    "music.transcode.playbackinfo"
    ],
    "code": [
-    "internal/api/music.go",
+    "internal/api/audio.go",
+    "internal/transcode/audio.go",
     "internal/playback/decision.go"
    ],
    "routes": [
@@ -8189,6 +8230,9 @@
  "registered_not_in_openapi": [
   "DELETE /Users/{userId}/FavoriteItems/{itemId}",
   "DELETE /Users/{userId}/PlayedItems/{itemId}",
+  "GET /Artists/InstantMix",
+  "GET /Audio/{itemId}/main.m3u8",
+  "GET /Audio/{itemId}/master.m3u8",
   "GET /Audio/{itemId}/{file}",
   "GET /MusicGenres",
   "GET /Users/{userId}/Items",
