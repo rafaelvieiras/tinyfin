@@ -233,7 +233,7 @@ func (p *jobPool) wait() Stats {
 // err.
 func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, error) {
 	started := time.Now()
-	ctx = withPassState(withDirCache(ctx))
+	ctx = withLibOptions(withPassState(withDirCache(ctx)), lib)
 	pool := newJobPool(s.concurrency)
 
 	// A root that cannot be read, or that has no entry at all (a mount that is
@@ -357,7 +357,10 @@ func (s *Scanner) walkHomeVideos(ctx context.Context, pool *jobPool, lib storage
 			}
 			id := storage.ItemID(deterministicID("item-folder-" + string(lib.ID) + "-" + path))
 			typ := storage.ItemTypeFolder
-			firstPhoto := firstPhotoOf(ctx, path)
+			firstPhoto := ""
+			if optionsOf(ctx).photos {
+				firstPhoto = firstPhotoOf(ctx, path)
+			}
 			if firstPhoto != "" {
 				typ = storage.ItemTypePhotoAlbum
 			}
@@ -379,7 +382,7 @@ func (s *Scanner) walkHomeVideos(ctx context.Context, pool *jobPool, lib storage
 			continue
 		}
 		if IsPhotoFile(e.Name()) {
-			if isPhotoEntry(e.Name(), videoBases) {
+			if optionsOf(ctx).photos && isPhotoEntry(e.Name(), videoBases) {
 				s.processPhoto(ctx, lib, path, filepath.Base(dir), parent)
 			}
 			continue
@@ -473,6 +476,9 @@ func (s *Scanner) processHomeVideo(ctx context.Context, pool *jobPool, lib stora
 		MediaStreams: pr.streams,
 		RunTimeTicks: pr.ticks,
 		DateCreated:  pr.added,
+	}
+	if pr.title != "" && optionsOf(ctx).embeddedTitles {
+		item.Name, item.SortName = pr.title, pr.title
 	}
 	if err := s.upsertItem(ctx, item); err != nil {
 		return fmt.Errorf("upserting video %q: %w", path, err)
@@ -877,6 +883,9 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 	if videoType != "" {
 		item.VideoType, item.IsoType, item.Container = videoType, disc.isoType, disc.container
 	}
+	if pr.title != "" && optionsOf(ctx).embeddedTitles {
+		item.Name, item.SortName = pr.title, pr.title
+	}
 	if year > 0 {
 		item.ProductionYear = &year
 	}
@@ -1019,7 +1028,7 @@ func (ss *seasonSet) virtualSeason(ctx context.Context, number *int) (storage.It
 	item := storage.Item{
 		ID: id, Type: storage.ItemTypeSeason, LibraryID: ss.lib.ID,
 		ParentID: &ss.seriesID, SeriesID: &ss.seriesID,
-		Name: seasonName(number), DateCreated: fileDateAdded(ss.dir),
+		Name: seasonName(ctx, number), DateCreated: fileDateAdded(ss.dir),
 	}
 	if number != nil {
 		n := *number
@@ -1046,12 +1055,12 @@ func (ss *seasonSet) ensure(ctx context.Context, number int) error {
 
 // seasonName is the display name of a season: "Specials" for number 0,
 // "Season N", and "Season Unknown" for a season with no number.
-func seasonName(number *int) string {
+func seasonName(ctx context.Context, number *int) string {
 	switch {
 	case number == nil:
 		return "Season Unknown"
 	case *number == 0:
-		return "Specials"
+		return optionsOf(ctx).seasonZero
 	}
 	return fmt.Sprintf("Season %d", *number)
 }
@@ -1133,7 +1142,7 @@ func (s *Scanner) walkSeasons(ctx context.Context, pool *jobPool, lib storage.Li
 		}
 		if d.number != nil {
 			idx := *d.number
-			seasonItem.Name = seasonName(&idx)
+			seasonItem.Name = seasonName(ctx, &idx)
 			seasonItem.SortName = fmt.Sprintf("%04d", idx)
 			seasonItem.IndexNumber = &idx
 			seasons.real[idx] = d.id
@@ -1463,6 +1472,9 @@ func (s *Scanner) processEpisode(ctx context.Context, pool *jobPool, lib storage
 	if ef.Year > 0 {
 		y := ef.Year
 		item.ProductionYear = &y
+	}
+	if pr.title != "" && optionsOf(ctx).embeddedTitles {
+		item.Name, item.SortName = pr.title, pr.title
 	}
 
 	// Same ordering requirement as processMovie: upsert first so

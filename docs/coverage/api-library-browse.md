@@ -39,19 +39,19 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | 🗓️ planned | `GET /Albums/{itemId}/Similar` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | 🗓️ planned | `GET /Artists/{itemId}/Similar` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | 🗓️ planned | `DELETE /Items` | DefaultAuthorization | yes |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
-| ↔️ divergent-by-design | `GET /Items` | DefaultAuthorization | yes | 138/138 | The library-access restriction also applies when items are requested by Ids (the reference skips it). Recorded as a divergence in the contract scenarios. |
+| ↔️ divergent-by-design | `GET /Items` | DefaultAuthorization | yes | 146/146 | The library-access restriction also applies when items are requested by Ids (the reference skips it). Recorded as a divergence in the contract scenarios. |
 | ✅ supported | `GET /Items/Counts` | DefaultAuthorization | yes | 2/2 |  |
 | ✅ supported | `GET /Items/Latest` | DefaultAuthorization | yes | 2/2 |  |
 | 🗓️ planned | `GET /Items/Root` | DefaultAuthorization | yes |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | ✅ supported | `DELETE /Items/{itemId}` | DefaultAuthorization | yes | 6/6 |  |
-| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 119/119 |  |
+| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 137/137 |  |
 | ✅ supported | `GET /Items/{itemId}/Ancestors` | DefaultAuthorization | yes | 2/2 |  |
 | 🗓️ planned | `GET /Items/{itemId}/Collections` | DefaultAuthorization | yes |  | Called on every item detail page ('part of a collection'); 404 today (docs/11). (priority: medium) |
 | 🗓️ planned | `GET /Items/{itemId}/Download` | Download |  |  | Download permission exists in the user policy but no download route is served. (priority: medium) |
 | 🗓️ planned | `GET /Items/{itemId}/File` | DefaultAuthorization |  |  | Raw file delivery is not implemented. (priority: low) |
 | 🗓️ planned | `GET /Items/{itemId}/Intros` | DefaultAuthorization |  |  | Pre-roll trailers; the reference answers an empty list unless a plugin supplies intros. 404 today (docs/11); the player just skips. (priority: low) |
 | ✅ supported | `GET /Items/{itemId}/LocalTrailers` | DefaultAuthorization | yes | 7/7 |  |
-| ✅ supported | `POST /Items/{itemId}/Refresh` | RequiresElevation | yes | 2/2 |  |
+| ✅ supported | `POST /Items/{itemId}/Refresh` | RequiresElevation | yes | 7/7 |  |
 | 🟡 partial | `GET /Items/{itemId}/Similar` | DefaultAuthorization | yes | 1/1 | Always returns an empty list (honest empty instead of 404, so the web client hides 'More like this'). Reference: Ranks similar items by shared genres, tags, people and rating. (priority: low) |
 | ✅ supported | `GET /Items/{itemId}/SpecialFeatures` | DefaultAuthorization | yes | 5/5 |  |
 | ✅ supported | `GET /Items/{itemId}/ThemeMedia` | DefaultAuthorization | yes | 2/2 |  |
@@ -102,7 +102,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 |---|---|---|---|---|---|
 | ✅ supported *(no scenario)* | `GET /Shows/NextUp` | DefaultAuthorization | yes |  |  |
 | 🗓️ planned | `GET /Shows/Upcoming` | DefaultAuthorization | yes |  | Not implemented. (priority: low) |
-| ✅ supported | `GET /Shows/{seriesId}/Episodes` | DefaultAuthorization | yes | 5/5 |  |
+| ✅ supported | `GET /Shows/{seriesId}/Episodes` | DefaultAuthorization | yes | 6/6 |  |
 | ✅ supported | `GET /Shows/{seriesId}/Seasons` | DefaultAuthorization | yes | 6/6 |  |
 
 ## Studio

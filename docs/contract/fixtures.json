@@ -46,7 +46,12 @@
     {"key": "strmshows", "name": "StrmShows", "type": "tvshows", "path": "StrmShows", "lazy": true},
     {"key": "forget", "name": "Forget", "type": "movies", "path": "Forget", "lazy": true},
     {"key": "forgetroot", "name": "ForgetRoot", "type": "movies", "path": "ForgetRoot/Lib", "lazy": true},
-    {"key": "forgetshows", "name": "ForgetShows", "type": "tvshows", "path": "ForgetShows", "lazy": true}
+    {"key": "forgetshows", "name": "ForgetShows", "type": "tvshows", "path": "ForgetShows", "lazy": true},
+    {"key": "optseasons", "name": "OptSeasons", "type": "tvshows", "path": "OptSeasons", "lazy": true, "options": {"SeasonZeroDisplayName": "Bonus Stuff"}},
+    {"key": "optphotos", "name": "OptPhotos", "type": "homevideos", "path": "OptPhotos", "lazy": true, "options": {"EnablePhotos": false}},
+    {"key": "optemb", "name": "OptEmbedded", "type": "movies", "path": "OptEmbedded", "lazy": true, "options": {"EnableEmbeddedTitles": true}},
+    {"key": "optembdef", "name": "OptEmbeddedOff", "type": "movies", "path": "OptEmbeddedOff", "lazy": true},
+    {"key": "monitor", "name": "Monitor", "type": "movies", "path": "Monitor", "lazy": true, "options": {"EnableRealtimeMonitor": true}}
   ],
   "items": [
     {"key": "alpha", "type": "Movie", "path": "Movies/Alpha Movie (2015)/Alpha Movie (2015).mp4"},
@@ -360,6 +365,13 @@
     {"key": "forgetshow-s2", "type": "Season", "library": "forgetshows", "path": "ForgetShows/Forget Show (2357)/Season 02"},
     {"key": "forgetshow-e1", "type": "Episode", "library": "forgetshows", "path": "ForgetShows/Forget Show (2357)/Season 01/Forget Show S01E01.mp4"},
     {"key": "forgetshow-e2", "type": "Episode", "library": "forgetshows", "path": "ForgetShows/Forget Show (2357)/Season 01/Forget Show S01E02.mp4"},
+    {"key": "optseason-s0", "type": "Season", "library": "optseasons", "path": "OptSeasons/Opt Show (2371)/Season 00"},
+    {"key": "optseason-s1", "type": "Season", "library": "optseasons", "path": "OptSeasons/Opt Show (2371)/Season 01"},
+    {"key": "optphoto-clip", "type": "Video", "library": "optphotos", "path": "OptPhotos/clip.mp4"},
+    {"key": "optphoto-album", "type": "Folder", "library": "optphotos", "path": "OptPhotos/Album"},
+    {"key": "optemb-on", "type": "Movie", "library": "optemb", "path": "OptEmbedded/Emb On (2373)/Emb On (2373).mp4"},
+    {"key": "optemb-off", "type": "Movie", "library": "optembdef", "path": "OptEmbeddedOff/Emb Off (2374)/Emb Off (2374).mp4"},
+    {"key": "monitor-base", "type": "Movie", "library": "monitor", "path": "Monitor/Monitor Base (2361)/Monitor Base (2361).mp4"},
     {"key": "forgetshow-e3", "type": "Episode", "library": "forgetshows", "path": "ForgetShows/Forget Show (2357)/Season 02/Forget Show S02E01.mp4"}
   ]
 }

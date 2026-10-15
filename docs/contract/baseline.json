@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 553
+    "pass": 576
   },
   "scenarios": {
     "collections.add.appends": "pass",
@@ -340,6 +340,29 @@
     "quickconnect.initiate.device-headers-required": "pass",
     "quickconnect.initiate.invalid-token-ignored": "pass",
     "quickconnect.initiate.shape": "pass",
+    "scan.disc.dvd-media": "pass",
+    "scan.disc.dvd-title-set": "pass",
+    "scan.disc.exclusive": "pass",
+    "scan.disc.image-dvd": "pass",
+    "scan.disc.images": "pass",
+    "scan.disc.placeholders": "pass",
+    "scan.disc.stream": "pass",
+    "scan.forget.file": "pass",
+    "scan.forget.folder": "pass",
+    "scan.forget.library-folder": "pass",
+    "scan.forget.series": "pass",
+    "scan.forget.user-data": "pass",
+    "scan.ignore.empty-file": "pass",
+    "scan.ignore.fixed-names": "pass",
+    "scan.ignore.patterns": "pass",
+    "scan.ignore.root-extras": "pass",
+    "scan.monitor.changes": "pass",
+    "scan.options.embedded-titles": "pass",
+    "scan.options.photos": "pass",
+    "scan.options.season-zero": "pass",
+    "scan.strm.address": "pass",
+    "scan.strm.local-and-empty": "pass",
+    "scan.strm.playback": "pass",
     "users.auth.access-schedule": "pass",
     "users.auth.activity-failed-login-entry": "pass",
     "users.auth.activity-lockout-entry": "pass",

@@ -213,6 +213,7 @@ func NewServer(store storage.Store, cfg Config) *Server {
 	s.loadLocalNetwork()
 	s.routes()
 	go s.runWSWatchdog(context.Background())
+	go s.runLibraryMonitor(context.Background())
 	return s
 }
 

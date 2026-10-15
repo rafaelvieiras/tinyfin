@@ -60,38 +60,68 @@
    "id": "scan.video.extensions",
    "title": "Video extensions",
    "status": "supported",
-   "description": "`.mkv .mp4 .avi .webm .m4v .ts .mov .wmv .flv .mpg .mpeg .ogv .3gp .m2ts .vob .divx` (case-insensitive).",
+   "description": "`.mkv .mp4 .avi .webm .m4v .ts .mov .wmv .flv .mpg .mpeg .ogv .3gp .m2ts .vob .divx .strm .iso .img` (case-insensitive).",
    "reference": "Broader list driven by the container probe.",
-   "notes": "No `.strm`, `.iso`, `.rmvb`, `.asf`, `.m2v`, `.mts`.",
+   "notes": "No `.rmvb`, `.asf`, `.m2v`, `.mts`.",
    "code": [
     "internal/scan/nameparse.go"
    ],
    "unverified": true,
-   "unverified_reason": "Covered by Go unit tests in internal/scan, not by a contract scenario."
+   "unverified_reason": "Covered by Go unit tests in internal/scan and by the disc and strm scenarios for the new members."
   },
   {
    "id": "scan.disc.structures",
-   "title": "Disc structures (VIDEO_TS, BDMV, .iso)",
-   "status": "planned",
-   "description": "Not recognized: a `VIDEO_TS` folder is a plain folder of `.vob` files and `.iso` images are ignored.",
-   "reference": "Treats DVD/Blu-ray folders and ISO images as one movie.",
-   "notes": "No code path; gap found while seeding this tracker.",
+   "title": "Disc structures (VIDEO_TS, BDMV, .iso, .img)",
+   "status": "supported",
+   "description": "A folder with a `VIDEO_TS` holding VOBs, `VIDEO_TS.IFO` plus VOBs, or a `BDMV` is one Movie (`VideoType` Dvd/BluRay, `Path` the folder); `.iso`/`.img` are Movies of `VideoType` Iso with `IsoType` read from the ISO 9660 directory. DVD media info is the main title set's (duration summed, `Data` track included).",
+   "reference": "Same shapes; Blu-ray media info through the disc's playlist.",
+   "notes": "Blu-ray folders fall back to the largest `.m2ts` when ffprobe lacks `bluray:`; UDF-only images are detected heuristically (unverified); streaming a disc folder differs (see specs/scan.md).",
    "code": [
-    "internal/scan/nameparse.go"
+    "internal/scan/disc.go",
+    "internal/scan/scan.go",
+    "internal/api/playback.go"
    ],
-   "priority": "low"
+   "spec_rules": [
+    "scan.disc.R1",
+    "scan.disc.R2",
+    "scan.disc.R3",
+    "scan.disc.R4",
+    "scan.disc.R5",
+    "scan.disc.R6",
+    "scan.disc.R7"
+   ],
+   "scenarios": [
+    "scan.disc.dvd-media",
+    "scan.disc.dvd-title-set",
+    "scan.disc.placeholders",
+    "scan.disc.exclusive",
+    "scan.disc.images",
+    "scan.disc.image-dvd",
+    "scan.disc.stream"
+   ]
   },
   {
    "id": "scan.strm",
    "title": "`.strm` files",
-   "status": "planned",
-   "description": "Not recognized (not in the extension list).",
-   "reference": "A `.strm` text file pointing at a URL or path is a playable item.",
-   "notes": "No code path.",
+   "status": "supported",
+   "description": "A `.strm` is a Movie/Episode/Video whose media source is the address on its first line (Protocol Http, IsRemote) or, for a local path or an empty file, the file itself; nothing is probed at scan time; PlaybackInfo probes the address and keeps the result; the stream is proxied (500 when unreachable).",
+   "reference": "Same.",
+   "notes": "Only http/https addresses are proxied; other schemes answer 500.",
    "code": [
-    "internal/scan/nameparse.go"
+    "internal/scan/strm.go",
+    "internal/api/playback.go"
    ],
-   "priority": "low"
+   "spec_rules": [
+    "scan.strm.R1",
+    "scan.strm.R2",
+    "scan.strm.R3",
+    "scan.strm.R4"
+   ],
+   "scenarios": [
+    "scan.strm.address",
+    "scan.strm.local-and-empty",
+    "scan.strm.playback"
+   ]
   },
   {
    "id": "scan.sidecar.subtitles",
@@ -117,15 +147,30 @@
   },
   {
    "id": "scan.ignore",
-   "title": "`.ignore` and exclusion files",
-   "status": "partial",
-   "description": "Folders starting with `.` and `@eaDir`, `#recycle`, `metadata` are skipped; `.ignore` files and `.nomedia` are not read.",
-   "reference": "Honors `.ignore` (empty = whole folder, patterns inside) and `.nomedia`.",
-   "notes": "Only the fixed folder-name list is implemented.",
+   "title": "`.ignore` and exclusion rules",
+   "status": "supported",
+   "description": "Empty `.ignore` excludes its folder; otherwise gitignore-like name patterns (nearest file wins, slash patterns never match, case-insensitive); `.nomedia` has no effect; hidden folders and the fixed names (`@eaDir`, `#recycle`, `Subs`, ...) are never cataloged; extras-named folders under a movie library root are plain folders.",
+   "reference": "Same, probed on 12.2.",
+   "notes": "",
    "code": [
+    "internal/scan/ignore.go",
     "internal/scan/nameparse.go"
    ],
-   "priority": "medium"
+   "spec_rules": [
+    "scan.ignore.R1",
+    "scan.ignore.R2",
+    "scan.ignore.R3",
+    "scan.ignore.R4",
+    "scan.ignore.R5",
+    "scan.ignore.R6",
+    "scan.ignore.R7"
+   ],
+   "scenarios": [
+    "scan.ignore.empty-file",
+    "scan.ignore.patterns",
+    "scan.ignore.fixed-names",
+    "scan.ignore.root-extras"
+   ]
   },
   {
    "id": "scan.stacking.versions",
@@ -262,25 +307,46 @@
   {
    "id": "scan.remove-missing",
    "title": "Remove items whose file disappeared",
-   "status": "planned",
-   "description": "No code path deletes catalog items when their file is gone; only extras are pruned on rescan.",
-   "reference": "A scan removes items whose files no longer exist.",
-   "notes": "Needs confirmation by a test; found while seeding this tracker, not in ROADMAP.md.",
+   "status": "supported",
+   "description": "A library scan and the refresh of a series, season or folder forget items whose file or folder is gone (children, extras, collection and playlist membership with them); users' play state is kept; an inaccessible or empty library folder forgets nothing.",
+   "reference": "Same.",
+   "notes": "Image files cached for a forgotten item are removed.",
    "code": [
-    "internal/scan/extras.go",
-    "internal/scan/scan.go"
+    "internal/scan/forget.go",
+    "internal/storage/sqlite/migrations/0022_playstates_outlive_items.sql"
    ],
-   "priority": "medium"
+   "spec_rules": [
+    "scan.forget.R1",
+    "scan.forget.R2",
+    "scan.forget.R3",
+    "scan.forget.R4",
+    "scan.forget.R5"
+   ],
+   "scenarios": [
+    "scan.forget.file",
+    "scan.forget.folder",
+    "scan.forget.user-data",
+    "scan.forget.library-folder",
+    "scan.forget.series"
+   ]
   },
   {
    "id": "scan.monitor",
    "title": "Realtime library monitor",
-   "status": "not-planned",
-   "description": "No filesystem watcher; libraries change only through a manual refresh or the scheduled scan task.",
-   "reference": "Watches folders (inotify) and refreshes on change.",
-   "notes": "Idle cost and unreliable on network mounts; not on ROADMAP.md.",
+   "status": "supported",
+   "description": "A library with `EnableRealtimeMonitor` true is watched with inotify (Linux); a first-level folder that changed and stayed quiet for 30 s is re-walked. Off unless the option is sent.",
+   "reference": "Watches folders and refreshes on change (about 40 s).",
+   "notes": "Linux only; one watch per folder (inotify limit applies); network mounts that do not deliver events are not covered by it.",
    "code": [
-    "internal/api/scheduled_tasks.go"
+    "internal/scan/monitor_linux.go",
+    "internal/api/library_monitor.go"
+   ],
+   "spec_rules": [
+    "scan.monitor.R1",
+    "scan.monitor.R2"
+   ],
+   "scenarios": [
+    "scan.monitor.changes"
    ]
   },
   {
@@ -313,17 +379,28 @@
    "id": "scan.options",
    "title": "LibraryOptions",
    "status": "partial",
-   "description": "The object is persisted and returned as sent; only `PathInfos` (paths) and `AutomaticallyAddToCollection` change behavior. Other options (realtime monitor, savers, language, trickplay, subtitle fetchers, ...) are stored and ignored.",
-   "reference": "Every option changes scanner or provider behavior.",
-   "notes": "Most options are inert.",
+   "description": "Persisted and returned as sent. Applied by a scan: `PathInfos`, `AutomaticallyAddToCollection`, `EnableRealtimeMonitor`, `EnablePhotos`, `SeasonZeroDisplayName`, `EnableEmbeddedTitles`. Stored and inert: `Enabled`, `EnableAutomaticSeriesGrouping`, `SaveLocalMetadata`/`MetadataSavers`, language and country, embedded episode info, trickplay and chapter images, fetcher members.",
+   "reference": "Most options change scanner or provider behavior; `DisabledLocalMetadataReaders` has no effect on `.nfo` reading.",
+   "notes": "`Enabled` false hides the library on the reference and is not reproduced.",
    "code": [
+    "internal/scan/liboptions.go",
     "internal/api/library_admin.go",
     "internal/storage/library.go"
    ],
    "routes": [
     "POST /Library/VirtualFolders/LibraryOptions"
    ],
-   "priority": "medium"
+   "priority": "low",
+   "spec_rules": [
+    "scan.options.R1",
+    "scan.options.R2",
+    "scan.options.R3"
+   ],
+   "scenarios": [
+    "scan.options.season-zero",
+    "scan.options.photos",
+    "scan.options.embedded-titles"
+   ]
   },
   {
    "id": "scan.collections",
@@ -348,9 +425,9 @@
    "id": "scan.refresh",
    "title": "Library and item refresh",
    "status": "supported",
-   "description": "`POST /Library/Refresh` and `POST /Items/{id}/Refresh` start a scan; the scheduled task `RefreshLibrary` is the same job.",
+   "description": "`POST /Library/Refresh` starts a scan; `POST /Items/{id}/Refresh` on a library is a scan of it, on a series, season or folder re-walks it (new files, vanished files) before the metadata refresh, on another item refreshes its metadata.",
    "reference": "Same routes; refresh modes change what is re-fetched.",
-   "notes": "Refresh modes (`MetadataRefreshMode`, `ImageRefreshMode`, `ReplaceAllMetadata`) are accepted and ignored.",
+   "notes": "Refresh modes (`MetadataRefreshMode`, `ImageRefreshMode`, `ReplaceAllMetadata`) are accepted and ignored; `Recursive` has no effect (a folder is always re-walked).",
    "code": [
     "internal/api/item_refresh.go",
     "internal/api/library_admin.go"
@@ -359,8 +436,10 @@
     "POST /Library/Refresh",
     "POST /Items/{itemId}/Refresh"
    ],
-   "unverified": true,
-   "unverified_reason": "Scenarios use refresh only as a setup step."
+   "unverified": false,
+   "scenarios": [
+    "scan.forget.series"
+   ]
   }
  ]
 }

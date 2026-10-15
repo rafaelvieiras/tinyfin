@@ -643,5 +643,20 @@ vid "$ROOT/ForgetRoot/Lib/Forget Root (2356)/Forget Root (2356).mp4"
 FS="$ROOT/ForgetShows/Forget Show (2357)"
 vid "$FS/Season 01/Forget Show S01E01.mp4"; vid "$FS/Season 01/Forget Show S01E02.mp4"; vid "$FS/Season 02/Forget Show S02E01.mp4"
 mkdir -p "$ROOT/ForgetBackup"
+# The real-time monitor (own library "Monitor", lazy, the option on): one
+# movie, the scenario adds and removes another.
+vid "$ROOT/Monitor/Monitor Base (2361)/Monitor Base (2361).mp4"
+
+# Library options a scan applies (own libraries "OptSeasons", "OptPhotos",
+# "OptEmbedded", "OptEmbeddedOff", lazy, created with the option).
+OS="$ROOT/OptSeasons/Opt Show (2371)"
+vid "$OS/Season 00/Opt Show S00E01.mp4"; vid "$OS/Season 01/Opt Show S01E01.mp4"
+vid "$ROOT/OptPhotos/clip.mp4"; pic "$ROOT/OptPhotos/pic.jpg"; pic "$ROOT/OptPhotos/Album/p1.jpg"
+embedded() { # <out> : a copy of the small clip with a title tag
+  mkdir -p "$(dirname "$1")"
+  [ -f "$1" ] || "$FFMPEG" -v error -y -i "$many_src" -c copy -metadata title="Embedded Title Tag" "$1"
+}
+embedded "$ROOT/OptEmbedded/Emb On (2373)/Emb On (2373).mp4"
+embedded "$ROOT/OptEmbeddedOff/Emb Off (2374)/Emb Off (2374).mp4"
 
 echo "media tree ready under $ROOT"

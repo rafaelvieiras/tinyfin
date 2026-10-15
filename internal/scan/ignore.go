@@ -224,8 +224,12 @@ func readScanDir(ctx context.Context, dir string) ([]os.DirEntry, error) {
 	if r := ignoreRulesFor(ctx, dir); r != nil && r.all {
 		return nil, nil
 	}
+	only, _ := ctx.Value(onlyKey{}).(onlyEntry)
 	out := entries[:0:0]
 	for _, e := range entries {
+		if only.name != "" && filepath.Clean(dir) == only.root && e.Name() != only.name {
+			continue
+		}
 		if ignoredEntry(ctx, dir, e.Name(), e.IsDir()) {
 			continue
 		}
@@ -249,4 +253,14 @@ func (s *Scanner) upsertItem(ctx context.Context, item storage.Item) error {
 	}
 	noteSeen(ctx, item.ID)
 	return nil
+}
+
+// onlyKey/onlyEntry narrow the listing of one folder (a library's root) to a
+// single entry: a partial pass over the library walks just that part.
+type onlyKey struct{}
+
+type onlyEntry struct{ root, name string }
+
+func withOnly(ctx context.Context, root, name string) context.Context {
+	return context.WithValue(ctx, onlyKey{}, onlyEntry{root: filepath.Clean(root), name: name})
 }

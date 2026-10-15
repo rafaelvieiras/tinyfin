@@ -28,6 +28,8 @@ type probeResult struct {
 	record  bool
 	size    int64
 	mtimeNS int64
+	// title is the title tag of the file, read when the file was probed.
+	title string
 	// sigSize, when not zero, is the size the signature is recorded with
 	// (a disc is probed from several files); size otherwise.
 	sigSize int64
@@ -57,7 +59,7 @@ func (s *Scanner) probeOrReuse(ctx context.Context, pool *jobPool, itemID storag
 	}
 
 	sigs, hasSigs := s.store.(signatureStore)
-	if hasSigs && statErr == nil && !s.forceProbe {
+	if hasSigs && statErr == nil && !s.forceProbe && !optionsOf(ctx).embeddedTitles {
 		if sSize, sMtime, ok, err := sigs.GetScanSignature(ctx, itemID); err == nil && ok && sSize == size && sMtime == res.mtimeNS {
 			if old, err := s.store.GetItem(ctx, itemID); err == nil && len(old.MediaStreams) > 0 && old.RunTimeTicks != nil {
 				res.streams = old.MediaStreams
@@ -73,6 +75,7 @@ func (s *Scanner) probeOrReuse(ctx context.Context, pool *jobPool, itemID storag
 	res.err = err
 	res.streams = mediaStreamsFromProbe(info)
 	res.ticks = runtimeTicksFromProbe(info)
+	res.title = info.Format.title()
 	res.record = hasSigs && err == nil && statErr == nil
 	return res
 }

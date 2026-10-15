@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/rafaelvieiras/tinyfin/internal/collection"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
 
@@ -201,7 +202,7 @@ func (s *Scanner) RescanFolder(ctx context.Context, itemID storage.ItemID) (bool
 		return true, nil
 	}
 
-	ctx = withPassState(withDirCache(ctx))
+	ctx = withLibOptions(withPassState(withDirCache(ctx)), lib)
 	pool := newJobPool(s.concurrency)
 	dir := item.Path
 	parentDir := filepath.Dir(dir)
@@ -239,4 +240,50 @@ func (s *Scanner) RescanFolder(ctx context.Context, itemID storage.ItemID) (bool
 	}
 	_, err = s.store.GetItem(ctx, itemID)
 	return err == nil, nil
+}
+
+// RescanPath re-walks the part of lib that top stands for: the entry called
+// top directly below the library folder root (a movie's folder, a series, a
+// first-level folder). New files are cataloged and what is gone from there is
+// forgotten, as in a library scan, without looking at the rest of the
+// library. An empty top, or a file, is a change among the library folder's
+// own files: the whole library is scanned.
+func (s *Scanner) RescanPath(ctx context.Context, lib storage.Library, root, top string) error {
+	switch lib.CollectionType {
+	case storage.CollectionTypeMovies, storage.CollectionTypeTVShows, storage.CollectionTypeHomeVideos:
+	default:
+		return nil
+	}
+	if top == "" {
+		_, err := s.ScanLibrary(WithoutCollections(ctx), lib)
+		return err
+	}
+	if fi, err := os.Stat(filepath.Join(root, top)); err == nil && !fi.IsDir() {
+		_, err := s.ScanLibrary(WithoutCollections(ctx), lib)
+		return err
+	}
+	if entries, err := os.ReadDir(root); err != nil || len(entries) == 0 {
+		return nil // the library folder is gone or empty: not a reason to forget
+	}
+	ctx = withOnly(withLibOptions(withPassState(withDirCache(ctx)), lib), root, top)
+	pool := newJobPool(s.concurrency)
+	switch lib.CollectionType {
+	case storage.CollectionTypeMovies:
+		s.walkMovies(ctx, pool, lib, root)
+	case storage.CollectionTypeTVShows:
+		s.walkSeries(ctx, pool, lib, root)
+	case storage.CollectionTypeHomeVideos:
+		s.walkHomeVideos(ctx, pool, lib, root, nil)
+	}
+	pool.wait()
+	if pool.failed > 0 || ctx.Err() != nil {
+		return nil
+	}
+	s.forgetVanished(ctx, lib, forgetScope{roots: []string{root}, under: filepath.Join(root, top)})
+	if lib.CollectionType == storage.CollectionTypeMovies && s.dataDir != "" {
+		if _, err := collection.BuildAutomatic(ctx, s.store, s.dataDir); err != nil {
+			return err
+		}
+	}
+	return nil
 }

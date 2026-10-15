@@ -39,6 +39,21 @@ Scenarios: [`../scenarios/scan.json`](../scenarios/scan.json). Fixture state: [`
 - **scan.strm.R3** Asking for the playback info of a `.strm` item always offers one source with `SupportsDirectPlay`, `SupportsDirectStream` and `SupportsTranscoding` true; for an address the media is probed at that moment and its streams and duration are kept on the item.
 - **scan.strm.R4** The stream of an address is the remote body, proxied (`200`, the remote's `Content-Type` and `Content-Length`, `Accept-Ranges: none`); an address that cannot be read is `500` `text/plain`. The stream of a `.strm` that holds a local path or nothing is the `.strm` file itself, `application/octet-stream`.
 
+## <a id="options"></a>Library options a scan applies
+
+`LibraryOptions` has about forty members; they are stored and echoed back whole. These change what a scan catalogs:
+
+- **scan.options.R1** `EnablePhotos` (default true): off, the pictures of a home-videos library are not cataloged, and a folder that holds only pictures is a plain `Folder` instead of a `PhotoAlbum`.
+- **scan.options.R2** `SeasonZeroDisplayName` (default `Specials`) is the name of season 0, whatever its folder is called.
+- **scan.options.R3** `EnableEmbeddedTitles` (default false): on, a video's name is the `title` tag of the file when it has one (an `.nfo` title still wins).
+
+Members the reference accepts and does not apply to a scan here: `Enabled` (a disabled library disappears from the views and its items from listings), `EnableAutomaticSeriesGrouping`, `SaveLocalMetadata` and `MetadataSavers` (writing `.nfo` files), `EnableEmbeddedEpisodeInfos`, `EnableEmbeddedExtrasTitles`, `AutomaticRefreshIntervalDays`, `PreferredMetadataLanguage`, `MetadataCountryCode`, `TypeOptions`, chapter-image and trickplay extraction, subtitle, lyric and media-segment fetcher members. `DisabledLocalMetadataReaders` has no effect on the reference's scan of `.nfo` files either. `AutomaticallyAddToCollection` is covered by collections.md, `EnableRealtimeMonitor` below, `PathInfos` (several folders) by the library routes.
+
+## <a id="monitor"></a>Real-time monitor
+
+- **scan.monitor.R1** A library whose options say `EnableRealtimeMonitor` true is watched: a file or folder that appears, changes or goes away below one of its folders is cataloged or forgotten without any refresh, once the change has been quiet for a while (tens of seconds on the reference; 30 s here). A library created without the option (the default of a request body that does not carry it) is not watched.
+- **scan.monitor.R2** Only the first-level folder of the library that changed is re-walked, as a refresh of it would; a change among the library folder's own files is a scan of the library.
+
 ## Known differences
 
 - **Container names.** The reference gives an item's `Container` as the probed format name (`mov,mp4,m4a,3gp,3g2,mj2`) and its media source the file extension (`mp4`); Tinyfin gives the same value on both. Disc media sources follow the reference.
@@ -46,4 +61,5 @@ Scenarios: [`../scenarios/scan.json`](../scenarios/scan.json). Fixture state: [`
 - **Blu-ray streams.** When the installed `ffprobe` cannot open a disc folder (`bluray:` support is a build option), Tinyfin falls back to the largest `.m2ts` file of `BDMV/STREAM` for the streams and the duration; the reference reads the disc's main playlist. A folder whose index files are placeholders but whose stream file is real therefore has streams here and none on the reference.
 - **UDF images.** `IsoType` is read from the ISO 9660 directory; for an image without one (UDF only) it is looked up near the start of the file. Not verified against a real Blu-ray image.
 - **Streaming a disc folder.** A disc folder has no single file to send. The reference answers `500` to the first request for it and `200` with no body afterwards; Tinyfin answers `200` with no body when the disc was read (it has streams) and `500` when it was not. Not asserted.
+- **Watching.** The monitor uses inotify and exists on Linux only; other platforms ignore the option. The quiet period before a folder is re-walked is 30 s on Tinyfin and about 40 s on the reference.
 - **Empty `.strm`.** The reference reports `Size` `0` for it, Tinyfin leaves the member out.

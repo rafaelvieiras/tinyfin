@@ -1,0 +1,113 @@
+package api
+
+import (
+	"context"
+	"encoding/json"
+	"log"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/rafaelvieiras/tinyfin/internal/scan"
+	"github.com/rafaelvieiras/tinyfin/internal/storage"
+)
+
+// library_monitor.go: the real-time monitor (spec: scan.monitor.*). A library
+// whose LibraryOptions carry EnableRealtimeMonitor true has its folders
+// watched; when something in a first-level folder changed and stayed quiet
+// for monitorQuiet, that folder is re-walked. Off by default (the option has
+// to be sent), one inotify watch per folder, nothing is read or kept
+// otherwise.
+
+const (
+	// monitorQuiet is how long a folder must have been unchanged before it is
+	// re-walked: files are usually still being copied when the first event
+	// arrives.
+	monitorQuiet = 30 * time.Second
+	// monitorReconcile is how often the set of watched libraries is brought in
+	// line with the libraries and their options.
+	monitorReconcile = 20 * time.Second
+)
+
+// realtimeMonitorOn reports whether lib's options turn the monitor on.
+func realtimeMonitorOn(lib storage.Library) bool {
+	switch lib.CollectionType {
+	case storage.CollectionTypeMovies, storage.CollectionTypeTVShows, storage.CollectionTypeHomeVideos:
+	default:
+		return false
+	}
+	var o struct {
+		EnableRealtimeMonitor bool `json:"EnableRealtimeMonitor"`
+	}
+	return len(lib.LibraryOptions) > 0 && json.Unmarshal(lib.LibraryOptions, &o) == nil && o.EnableRealtimeMonitor
+}
+
+type watched struct {
+	signature string
+	monitor   *scan.Monitor
+}
+
+// runLibraryMonitor keeps one scan.Monitor per library that asks for one.
+func (s *Server) runLibraryMonitor(ctx context.Context) {
+	if !scan.MonitorSupported {
+		return
+	}
+	active := map[storage.LibraryID]*watched{}
+	defer func() {
+		for _, w := range active {
+			w.monitor.Close()
+		}
+	}()
+	tick := time.NewTicker(monitorReconcile)
+	defer tick.Stop()
+	for {
+		libs, err := s.store.QueryLibraries(ctx)
+		if err == nil {
+			seen := map[storage.LibraryID]bool{}
+			for _, lib := range libs {
+				if !realtimeMonitorOn(lib) {
+					continue
+				}
+				seen[lib.ID] = true
+				sig := strings.Join(lib.Paths, "\x00")
+				if w := active[lib.ID]; w != nil {
+					if w.signature == sig {
+						continue
+					}
+					w.monitor.Close()
+					delete(active, lib.ID)
+				}
+				id := lib.ID
+				m, err := scan.NewMonitor(lib.Paths, monitorQuiet, func(root, top string) { s.rescanChanged(id, root, top) })
+				if err != nil {
+					log.Printf("api: monitoring library %q: %v", lib.Name, err)
+					continue
+				}
+				active[lib.ID] = &watched{signature: sig, monitor: m}
+			}
+			for id, w := range active {
+				if !seen[id] {
+					w.monitor.Close()
+					delete(active, id)
+				}
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+		}
+	}
+}
+
+// rescanChanged re-walks the part of a library a monitor reported.
+func (s *Server) rescanChanged(id storage.LibraryID, root, top string) {
+	ctx := context.Background()
+	lib, err := s.store.GetLibrary(ctx, id)
+	if err != nil || !realtimeMonitorOn(lib) {
+		return
+	}
+	if err := s.scanner.RescanPath(ctx, lib, filepath.Clean(root), top); err != nil {
+		log.Printf("api: rescanning %q after a change in %s: %v", lib.Name, filepath.Join(root, top), err)
+	}
+}

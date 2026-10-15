@@ -2251,5 +2251,325 @@
     }
    }
   ]
+ },
+ {
+  "id": "scan.options.season-zero",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "scan.md#options",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.options.R2"
+  ],
+  "requires": [
+   "item:optseason-s0",
+   "item:optseason-s1"
+  ],
+  "steps": [
+   {
+    "name": "season 0 carries SeasonZeroDisplayName",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.optseason-s0.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Bonus Stuff"
+      },
+      {
+       "path": "$.IndexNumber",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "other seasons are not renamed",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.optseason-s1.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Season 1"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.options.photos",
+  "endpoint": "GET /Items",
+  "spec": "scan.md#options",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.options.R1"
+  ],
+  "requires": [
+   "library:optphotos",
+   "item:optphoto-clip",
+   "item:optphoto-album"
+  ],
+  "steps": [
+   {
+    "name": "with EnablePhotos off the pictures are not cataloged and a folder of them is a plain folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.optphotos.id}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "Photo,PhotoAlbum",
+      "Limit": "200"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "the folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.optphoto-album.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Folder"
+      }
+     ]
+    }
+   },
+   {
+    "name": "videos are cataloged",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.optphoto-clip.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Video"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.options.embedded-titles",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "scan.md#options",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.options.R3"
+  ],
+  "requires": [
+   "item:optemb-on",
+   "item:optemb-off"
+  ],
+  "steps": [
+   {
+    "name": "EnableEmbeddedTitles on: the title tag of the file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.optemb-on.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Embedded Title Tag"
+      }
+     ]
+    }
+   },
+   {
+    "name": "off (the default): the name the folder gives",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.optemb-off.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Emb Off (2374)"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.monitor.changes",
+  "endpoint": "GET /Items",
+  "spec": "scan.md#monitor",
+  "scope": "modern",
+  "tags": [
+   "scan",
+   "monitor",
+   "slow"
+  ],
+  "covers": [
+   "scan.monitor.R1",
+   "scan.monitor.R2"
+  ],
+  "requires": [
+   "fs:write",
+   "library:monitor",
+   "item:monitor-base"
+  ],
+  "steps": [
+   {
+    "name": "a movie is copied in",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "copy": "Monitor/Monitor Base (2361)/Monitor Base (2361).mp4",
+     "to": "Monitor/Monitor New (2362)/Monitor New (2362).mp4"
+    }
+   },
+   {
+    "name": "it shows up without a refresh",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.monitor.id}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "Limit": "200",
+      "SearchTerm": "Monitor New"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    },
+    "retryMs": 150000
+   },
+   {
+    "name": "and is deleted again",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "remove": "Monitor/Monitor New (2362)"
+    }
+   },
+   {
+    "name": "it is forgotten without a refresh",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.monitor.id}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "Limit": "200",
+      "SearchTerm": "Monitor New"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    },
+    "retryMs": 150000
+   },
+   {
+    "name": "the rest of the library is untouched",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.monitor-base.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Movie"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "remove the copy",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "remove": "Monitor/Monitor New (2362)"
+    }
+   }
+  ]
  }
 ]

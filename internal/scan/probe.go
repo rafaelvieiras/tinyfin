@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os/exec"
 	"strconv"
+	"strings"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
@@ -64,10 +65,23 @@ type ffprobeStream struct {
 
 type ffprobeOutput struct {
 	Streams []ffprobeStream `json:"streams"`
-	Format  struct {
-		Duration   string `json:"duration"`
-		FormatName string `json:"format_name"`
-	} `json:"format"`
+	Format  ffprobeFormat   `json:"format"`
+}
+
+type ffprobeFormat struct {
+	Duration   string            `json:"duration"`
+	FormatName string            `json:"format_name"`
+	Tags       map[string]string `json:"tags"`
+}
+
+// title returns the title tag of the container, whatever the case of its key.
+func (f ffprobeFormat) title() string {
+	for k, v := range f.Tags {
+		if strings.EqualFold(k, "title") {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
 }
 
 // probe runs ffprobe against path and returns its parsed JSON output. A
