@@ -77,6 +77,17 @@ acceleration flags for the vendor available on that worker (NVENC/VAAPI/QSV/AMF/
 the accelerators `jellyfin-ffmpeg` itself supports) — and manages the subprocess: starting it,
 streaming output as HLS segments, and tearing it down when the client disconnects or finishes.
 
+**Track selection and burn-in.** The selected audio stream is mapped by its index in the file
+(`-map 0:N`; external subtitle files are listed first in a media source, so the file index is the
+source index minus their count). A subtitle delivered by `Encode` needs a re-encoded picture and
+is rendered with libass's `subtitles` filter (text, embedded via `si=` or a sidecar file) at the
+source resolution before the scale, or with `overlay` (bitmap PGS/DVD/DVB). The cue times are
+shifted around the filter when the job starts at an offset. libass needs fonts: the system's
+through fontconfig (the container image must ship a font package), or a directory given with
+`-fonts-dir` / `TINYFIN_FONTS_DIR`; the reference's fallback-font setting is not read. A job is
+keyed by the item and the selection (codecs, tracks, subtitle method), so choosing another track in
+a play session starts a new job and stops the one it replaces.
+
 Because this role is stateless per request (`02`, `03`), nothing about scaling it out later
 requires touching the decision logic above it — adding a second transcode worker is a deployment
 change, not a code change, exactly per decision **D6**.

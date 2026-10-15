@@ -414,8 +414,9 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 // own RawQuery into the main.m3u8 link it emits, and handleHLSPlaylist
 // rewrites each segment line with that same query — so one token embedded
 // here propagates through the whole chain.
-func hlsMasterURL(itemID storage.ItemID, q url.Values) string {
-	return fmt.Sprintf("/Videos/%s/master.m3u8?%s", url.PathEscape(string(itemID)), q.Encode())
+func // The list of TranscodeReasons keeps its commas, like the reference writes it.
+hlsMasterURL(itemID storage.ItemID, q url.Values) string {
+	return fmt.Sprintf("/Videos/%s/master.m3u8?%s", url.PathEscape(string(itemID)), strings.ReplaceAll(q.Encode(), "%2C", ","))
 }
 
 // handleVideoStream serves GET /Videos/{itemId}/stream and

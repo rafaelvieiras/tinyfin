@@ -77,7 +77,7 @@ Scenarios: [`../scenarios/subtitles.json`](../scenarios/subtitles.json). Fixture
 
 Observed on the reference and deliberately not reproduced (not asserted by a scenario that runs against both):
 
-* **Burned-in subtitles.** A subtitle whose delivery is `Encode` is reported as such but Tinyfin's transcoder does not render it, and a default subtitle that needs `Encode` or `Hls` does not make Tinyfin transcode (the reference then reports `SupportsDirectPlay` false and a transcode reason `SubtitleCodecNotSupported`). HLS manifests carry no subtitle group.
+* **Burned-in subtitles.** A subtitle delivered by `Encode` is burned into the picture and a default one that needs `Encode` or `Hls` makes the answer a transcode, as on the reference; see [`playback.md`](playback.md). HLS manifests carry no subtitle group.
 * **Codec of a file with unexpected content.** The reference probes the content: a SubRip text saved as `.vtt` is `subrip` there; Tinyfin names the codec after the extension and does not read the files while scanning. A zero-length or unreadable file is not a stream on the reference and is one here.
 * **`.sub` and `.idx`.** Decided by content on the reference (a MicroDVD `.sub` and a VobSub `.idx` were not listed, an MPL2 `.sub` was, as codec `text`); Tinyfin lists neither.
 * **Default style of generated ASS/SSA.** A document generated from a WebVTT file has its second cue on layer 1 on the reference; Tinyfin writes layer 0.

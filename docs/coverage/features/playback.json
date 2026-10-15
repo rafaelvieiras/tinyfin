@@ -7,9 +7,9 @@
    "id": "playback.negotiation",
    "title": "PlaybackInfo negotiation",
    "status": "partial",
-   "description": "Picks Direct Play, Remux, Direct Stream or Transcode from a compiled-in device profile by container and codec lists.",
+   "description": "Picks Direct Play, Remux, Direct Stream or Transcode from the device profile by container and codec lists; honors `AudioStreamIndex`/`SubtitleStreamIndex` (query or body, with `MediaSourceId`) and a subtitle delivered by `Encode`/`Hls` ends direct play; `TranscodingUrl` carries the codecs, the tracks, `SubtitleMethod` and `TranscodeReasons`.",
    "reference": "Evaluates codec profiles, bitrate, level, audio channels, subtitle and HDR conditions.",
-   "notes": "`CodecProfile`/`ContainerProfile` conditions, MaxStreamingBitrate, AudioStreamIndex and SubtitleStreamIndex are not evaluated (docs/07 documented simplification).",
+   "notes": "`CodecProfile`/`ContainerProfile` conditions and MaxStreamingBitrate are not evaluated (docs/07 documented simplification); the URL has fewer parameters than the reference's (playback.md, known differences).",
    "code": [
     "internal/playback/decision.go",
     "internal/api/playback.go",
@@ -18,8 +18,25 @@
    "routes": [
     "POST /Items/{itemId}/PlaybackInfo"
    ],
-   "unverified": true,
-   "unverified_reason": "No contract scenario covers PlaybackInfo; verified by Go unit tests and real clients (ROADMAP.md)."
+   "spec_rules": [
+    "playback.audio.R1",
+    "playback.audio.R2",
+    "playback.audio.R3",
+    "playback.audio.R4",
+    "playback.subtitle.R1",
+    "playback.subtitle.R2",
+    "playback.subtitle.R3",
+    "playback.subtitle.R4",
+    "playback.subtitle.R5"
+   ],
+   "scenarios": [
+    "playback.audio.selection",
+    "playback.audio.ignored",
+    "playback.audio.body",
+    "playback.subtitle.encode",
+    "playback.subtitle.no-transcode",
+    "playback.subtitle.hls"
+   ]
   },
   {
    "id": "playback.directplay",
@@ -41,12 +58,13 @@
    "id": "playback.hls",
    "title": "HLS transcoding",
    "status": "partial",
-   "description": "One rendition: master playlist, growing media playlist, MPEG-TS segments through `jellyfin-ffmpeg`; first audio track only; scale by MaxHeight.",
-   "reference": "Adaptive ladders, fMP4, multiple audio tracks, subtitle burn-in, hardware acceleration, tone mapping.",
-   "notes": "H.264/HEVC targets only; no VAAPI/NVENC/QSV flags; no subtitle burn-in; stream index selection ignored.",
+   "description": "One rendition: master playlist, growing media playlist, MPEG-TS segments through `jellyfin-ffmpeg`; the audio track and the burned-in subtitle chosen by the URL (`AudioStreamIndex`, `SubtitleStreamIndex` + `SubtitleMethod=Encode`), one transcode job per selection, replaced when a play session changes track; scale by MaxHeight.",
+   "reference": "Adaptive ladders, fMP4, hardware acceleration, tone mapping, VOD-shaped playlists.",
+   "notes": "H.264/HEVC targets only; no VAAPI/NVENC/QSV flags; burn-in is libass (text) or overlay (bitmap, argument-tested only) with system fonts or `-fonts-dir`; no subtitle group in the playlist; StartTimeTicks of the URL is not applied.",
    "code": [
-    "internal/transcode/args.go",
     "internal/api/hls.go",
+    "internal/api/hlsparams.go",
+    "internal/transcode/args.go",
     "internal/transcode/transcode.go"
    ],
    "routes": [
@@ -55,7 +73,13 @@
    ],
    "priority": "medium",
    "unverified": true,
-   "unverified_reason": "Verified end to end by hand and by an ffmpeg smoke test, not by a contract scenario."
+   "unverified_reason": "The master playlist is a scenario; the transcoded content (track mapping, rendering) is checked by Go tests with a real ffmpeg, not by the contract runner.",
+   "spec_rules": [
+    "playback.hls.R1"
+   ],
+   "scenarios": [
+    "playback.hls.master"
+   ]
   },
   {
    "id": "playback.hwaccel",
@@ -74,8 +98,8 @@
    "title": "Subtitle delivery and conversion",
    "status": "partial",
    "description": "`Stream.{format}` (and with a start position) serves external SubRip/WebVTT/ASS/SSA/SAMI files and embedded text tracks as srt, vtt, ass, ssa, json and ttml with the reference's offsets (`startPositionTicks`, `endPositionTicks`, `copyTimestamps`, `addVttTimeMap`); `subtitles.m3u8` lists the WebVTT windows; PlaybackInfo sets `DeliveryMethod`/`DeliveryUrl` per stream from the device profile's `SubtitleProfiles`.",
-   "reference": "The same, plus burning a subtitle into the transcoded video, subtitle groups in HLS manifests and anonymous access to the stream routes.",
-   "notes": "No burn-in (`Encode`) and no subtitle rendition in HLS: a stream reported as `Encode` or `Hls` is not rendered by Tinyfin's transcoder, and its selection does not force a transcode. Bitmap tracks (PGS, DVD) are never converted. Stream routes need a token (divergence subtitles.stream.R9).",
+   "reference": "The same, plus subtitle groups in HLS manifests and anonymous access to the stream routes.",
+   "notes": "No subtitle rendition in HLS (delivery `Hls` ends direct play but the playlists have no subtitle group); burn-in is described in playback.hls. Bitmap tracks (PGS, DVD) are never converted. Stream routes need a token (divergence subtitles.stream.R9).",
    "spec_rules": [
     "subtitles.stream.R1",
     "subtitles.stream.R2",

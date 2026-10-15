@@ -167,7 +167,7 @@ func reasons(item storage.Item, profile deviceprofile.DeviceProfile, opts Option
 	}) || d.Mode == ModeDirectStream && len(out) == 0 {
 		out = append(out, "AudioCodecNotSupported")
 	}
-	if opts.BurnSubtitle {
+	if opts.BurnSubtitle || opts.NoDirectPlay {
 		out = append(out, "SubtitleCodecNotSupported")
 	}
 	if len(out) == 0 {

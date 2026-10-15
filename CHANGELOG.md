@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- HLS honors the chosen audio track (`AudioStreamIndex`) and burns the selected subtitle in
+  (`SubtitleMethod=Encode`): text tracks, embedded or sidecar, through libass, bitmap tracks through
+  `overlay`. PlaybackInfo accepts `AudioStreamIndex`/`SubtitleStreamIndex` with a `MediaSourceId`
+  (query or body), no longer direct plays a source whose selected subtitle needs `Encode`/`Hls`,
+  and writes the tracks, `SubtitleMethod` and `TranscodeReasons` into the `TranscodingUrl`. A new
+  track in a play session starts a new transcode job. Fonts: system fontconfig, or
+  `-fonts-dir`/`TINYFIN_FONTS_DIR`.
 - A scan forgets items whose file or folder is gone (children, extras, collection
   and playlist membership with them); users' play state is kept for when the
   file returns. An inaccessible or empty library folder forgets nothing.

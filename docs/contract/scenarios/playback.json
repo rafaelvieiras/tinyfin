@@ -1,0 +1,1258 @@
+[
+ {
+  "id": "playback.audio.selection",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "playback.md#audio",
+  "scope": "modern",
+  "tags": [
+   "playback"
+  ],
+  "covers": [
+   "playback.audio.R1",
+   "playback.audio.R2"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-multi"
+  ],
+  "steps": [
+   {
+    "name": "no selection: the default track plays directly",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultAudioStreamIndex",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a track the profile takes stays direct play",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}",
+      "AudioStreamIndex": "1"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultAudioStreamIndex",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a track the profile does not take is transcoded",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}",
+      "AudioStreamIndex": "2"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultAudioStreamIndex",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingSubProtocol",
+       "op": "eq",
+       "value": "hls"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingContainer",
+       "op": "eq",
+       "value": "ts"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "master.m3u8?"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "AudioStreamIndex=2"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "TranscodeReasons=AudioCodecNotSupported"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "notcontains",
+       "value": "SubtitleMethod"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.audio.ignored",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "playback.md#audio",
+  "scope": "modern",
+  "tags": [
+   "playback"
+  ],
+  "covers": [
+   "playback.audio.R3"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-multi"
+  ],
+  "steps": [
+   {
+    "name": "no MediaSourceId: the index is ignored",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "AudioStreamIndex": "2"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultAudioStreamIndex",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "an index that is not an audio stream is ignored",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}",
+      "AudioStreamIndex": "3"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultAudioStreamIndex",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "an index past the streams is ignored",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}",
+      "AudioStreamIndex": "9"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultAudioStreamIndex",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.audio.body",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "playback.md#audio",
+  "scope": "modern",
+  "tags": [
+   "playback"
+  ],
+  "covers": [
+   "playback.audio.R4"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-multi"
+  ],
+  "steps": [
+   {
+    "name": "the selection in the body",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {},
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      },
+      "MediaSourceId": "{{item.av-multi.id}}",
+      "AudioStreamIndex": 2
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultAudioStreamIndex",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "AudioStreamIndex=2"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.subtitle.encode",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "playback.md#subtitle",
+  "scope": "modern",
+  "tags": [
+   "playback"
+  ],
+  "covers": [
+   "playback.subtitle.R1",
+   "playback.subtitle.R2"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-multi"
+  ],
+  "steps": [
+   {
+    "name": "the default subtitle needs Encode: no direct play",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": []
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "SubtitleMethod=Encode"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "SubtitleStreamIndex=3"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "AudioStreamIndex=1"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "TranscodeReasons=SubtitleCodecNotSupported"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a chosen track delivered by Encode",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}",
+      "SubtitleStreamIndex": "4"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "eq",
+       "value": 4
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "SubtitleMethod=Encode"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "SubtitleStreamIndex=4"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "TranscodeReasons=SubtitleCodecNotSupported"
+      }
+     ]
+    }
+   },
+   {
+    "name": "audio and subtitle together: both reasons",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}",
+      "AudioStreamIndex": "2",
+      "SubtitleStreamIndex": "4"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "AudioStreamIndex=2"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "SubtitleMethod=Encode"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "TranscodeReasons=AudioCodecNotSupported,SubtitleCodecNotSupported"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no subtitle (-1) is not burned",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}",
+      "SubtitleStreamIndex": "-1"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": []
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "eq",
+       "value": -1
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.subtitle.no-transcode",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "playback.md#subtitle",
+  "scope": "modern",
+  "tags": [
+   "playback"
+  ],
+  "covers": [
+   "playback.subtitle.R3",
+   "playback.subtitle.R4"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-multi"
+  ],
+  "steps": [
+   {
+    "name": "External: the file is served beside the stream",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}",
+      "SubtitleStreamIndex": "3"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Embed: stays in the container",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}",
+      "SubtitleStreamIndex": "3"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "srt",
+         "Method": "Embed"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "Embed"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Embed does not survive a transcode for another reason",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}",
+      "AudioStreamIndex": "2",
+      "SubtitleStreamIndex": "3"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "srt",
+         "Method": "Embed"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "SubtitleMethod=Encode"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "SubtitleStreamIndex=3"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "TranscodeReasons=AudioCodecNotSupported"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an index that is no stream is reported as sent",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}",
+      "SubtitleStreamIndex": "9"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].DefaultSubtitleStreamIndex",
+       "op": "eq",
+       "value": 9
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.subtitle.hls",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "playback.md#subtitle",
+  "scope": "modern",
+  "tags": [
+   "playback"
+  ],
+  "covers": [
+   "playback.subtitle.R5"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-multi"
+  ],
+  "steps": [
+   {
+    "name": "Hls delivery: transcoded, method Hls",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "Hls"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "SubtitleMethod=Hls"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "SubtitleStreamIndex=3"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "TranscodeReasons=SubtitleCodecNotSupported"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.hls.master",
+  "endpoint": "GET /Videos/{itemId}/master.m3u8",
+  "spec": "playback.md#hls",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "transcode"
+  ],
+  "covers": [
+   "playback.hls.R1"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-multi"
+  ],
+  "steps": [
+   {
+    "name": "burn-in transcode",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}",
+      "AudioStreamIndex": "2",
+      "SubtitleStreamIndex": "4"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    },
+    "capture": {
+     "url": "$.MediaSources[0].TranscodingUrl"
+    }
+   },
+   {
+    "name": "the master playlist of the URL",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "{{capture.url}}"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/application\\/(vnd\\.apple\\.mpegurl|x-mpegurl)/"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "#EXTM3U"
+      },
+      {
+       "op": "contains",
+       "value": "#EXT-X-STREAM-INF"
+      },
+      {
+       "op": "contains",
+       "value": "main.m3u8?"
+      },
+      {
+       "op": "contains",
+       "value": "AudioStreamIndex=2"
+      },
+      {
+       "op": "contains",
+       "value": "SubtitleMethod=Encode"
+      }
+     ]
+    }
+   }
+  ]
+ }
+]
