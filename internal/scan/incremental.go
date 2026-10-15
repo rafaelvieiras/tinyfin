@@ -28,6 +28,11 @@ type probeResult struct {
 	record  bool
 	size    int64
 	mtimeNS int64
+	// title is the title tag of the file, read when the file was probed.
+	title string
+	// sigSize, when not zero, is the size the signature is recorded with
+	// (a disc is probed from several files); size otherwise.
+	sigSize int64
 	// added is the file's mtime in UTC (DateCreated), from the same stat
 	// that produced mtimeNS.
 	added time.Time
@@ -48,6 +53,10 @@ func (s *Scanner) probeOrReuse(ctx context.Context, pool *jobPool, itemID storag
 		res.added = fi.ModTime().UTC()
 		res.mtimeNS = fi.ModTime().UnixNano()
 	}
+	if IsStrm(path) {
+		// What a .strm file points at is probed when it is played, not here.
+		return res
+	}
 
 	// The subtitle files beside the video change independently of the
 	// video's own (size, mtime) signature, so they are listed on every
@@ -56,7 +65,7 @@ func (s *Scanner) probeOrReuse(ctx context.Context, pool *jobPool, itemID storag
 	external := externalSubtitles(ctx, path)
 
 	sigs, hasSigs := s.store.(signatureStore)
-	if hasSigs && statErr == nil && !s.forceProbe {
+	if hasSigs && statErr == nil && !s.forceProbe && !optionsOf(ctx).embeddedTitles {
 		if sSize, sMtime, ok, err := sigs.GetScanSignature(ctx, itemID); err == nil && ok && sSize == size && sMtime == res.mtimeNS {
 			if old, err := s.store.GetItem(ctx, itemID); err == nil && len(old.MediaStreams) > 0 && old.RunTimeTicks != nil {
 				res.streams = withExternalSubtitles(stripExternalSubtitles(old.MediaStreams), external)
@@ -72,6 +81,7 @@ func (s *Scanner) probeOrReuse(ctx context.Context, pool *jobPool, itemID storag
 	res.err = err
 	res.streams = withExternalSubtitles(mediaStreamsFromProbe(info), external)
 	res.ticks = runtimeTicksFromProbe(info)
+	res.title = info.Format.title()
 	res.record = hasSigs && err == nil && statErr == nil
 	return res
 }
@@ -83,7 +93,11 @@ func (s *Scanner) recordSignature(ctx context.Context, itemID storage.ItemID, re
 		return
 	}
 	if sigs, ok := s.store.(signatureStore); ok {
-		_ = sigs.SetScanSignature(ctx, itemID, res.size, res.mtimeNS)
+		size := res.size
+		if res.sigSize != 0 {
+			size = res.sigSize
+		}
+		_ = sigs.SetScanSignature(ctx, itemID, size, res.mtimeNS)
 	}
 }
 

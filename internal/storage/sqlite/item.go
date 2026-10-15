@@ -24,7 +24,8 @@ const itemColumns = `items.id, items.type, items.library_id, items.parent_id, it
 	items.media_streams,
 	items.people,
 	items.set_name,
-	items.date_created, items.extra_type, items.owner_id`
+	items.date_created, items.extra_type, items.owner_id,
+	items.video_type, items.iso_type, items.remote_url`
 
 // rowScanner is satisfied by both *sql.Row and *sql.Rows, so scanItem works
 // for both GetItem (a single row) and QueryItems (a cursor).
@@ -59,6 +60,7 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 		dateCreated                             time.Time
 		extraType                               string
 		ownerID                                 sql.NullString
+		videoType, isoType, remoteURL           string
 	)
 
 	if err := rs.Scan(
@@ -76,6 +78,7 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 		&setName,
 		&dateCreated,
 		&extraType, &ownerID,
+		&videoType, &isoType, &remoteURL,
 	); err != nil {
 		return storage.Item{}, err
 	}
@@ -98,6 +101,9 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 		SetName:        setName,
 		DateCreated:    dateCreated,
 		ExtraType:      extraType,
+		VideoType:      videoType,
+		IsoType:        isoType,
+		RemoteURL:      remoteURL,
 	}
 	if ownerID.Valid {
 		v := storage.ItemID(ownerID.String)
@@ -286,8 +292,9 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 		set_name,
 		search_text,
 		date_created,
-		extra_type, owner_id
-	) VALUES (?,?,?,?,?,?,?,?, ?,?,?,?, ?,?,?,?,?,?,?, ?,?,?, ?,?, ?,?,?, ?, ?,?,?, ?, ?, ?, ?, ?, ?, ?, ?)
+		extra_type, owner_id,
+		video_type, iso_type, remote_url
+	) VALUES (?,?,?,?,?,?,?,?, ?,?,?,?, ?,?,?,?,?,?,?, ?,?,?, ?,?, ?,?,?, ?, ?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(id) DO UPDATE SET
 		type=excluded.type, library_id=excluded.library_id, parent_id=excluded.parent_id, name=excluded.name,
 		original_title=excluded.original_title, sort_name=excluded.sort_name, overview=excluded.overview,
@@ -304,7 +311,8 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 		people=excluded.people,
 		set_name=excluded.set_name,
 		search_text=excluded.search_text,
-		extra_type=excluded.extra_type, owner_id=excluded.owner_id`
+		extra_type=excluded.extra_type, owner_id=excluded.owner_id,
+		video_type=excluded.video_type, iso_type=excluded.iso_type, remote_url=excluded.remote_url`
 
 	// The stored sort name is the normalized ordering key, not the raw
 	// title (items.sort.R8). Search text still sees the title as given.
@@ -328,6 +336,7 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 			searchText,
 			item.DateCreated,
 			item.ExtraType, idPtrToAny(item.OwnerID),
+			item.VideoType, item.IsoType, item.RemoteURL,
 		); err != nil {
 			return fmt.Errorf("sqlite: upserting item %q: %w", item.ID, err)
 		}
@@ -341,9 +350,10 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 }
 
 func (s *Store) DeleteItem(ctx context.Context, id storage.ItemID) error {
-	// Descendants, item_ancestors rows, playstates, image/subtitle/lyric
-	// refs, and item_relations all reference items.id with ON DELETE
-	// CASCADE, so a single delete here cleans up the whole subtree.
+	// Descendants, item_ancestors rows, image/subtitle/lyric refs, and
+	// item_relations all reference items.id with ON DELETE CASCADE, so a
+	// single delete here cleans up the whole subtree. Playstates are not
+	// among them: a user's play state outlives the item (migration 0022).
 	if _, err := s.exec(ctx, `DELETE FROM items WHERE id = ?`, string(id)); err != nil {
 		return fmt.Errorf("sqlite: deleting item %q: %w", id, err)
 	}

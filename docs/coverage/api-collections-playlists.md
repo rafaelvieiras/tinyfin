@@ -14,7 +14,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ↔️ divergent-by-design | `POST /Collections` | CollectionManagement | yes | 27/27 | Input is validated before anything is created and bad input is 400 (the reference creates an empty collection and answers 500). Recorded as a divergence in the contract scenarios. |
+| ↔️ divergent-by-design | `POST /Collections` | CollectionManagement | yes | 28/28 | Input is validated before anything is created and bad input is 400 (the reference creates an empty collection and answers 500). Recorded as a divergence in the contract scenarios. |
 | ✅ supported | `DELETE /Collections/{collectionId}/Items` | CollectionManagement |  | 6/6 |  |
 | ✅ supported | `POST /Collections/{collectionId}/Items` | CollectionManagement |  | 7/7 |  |
 

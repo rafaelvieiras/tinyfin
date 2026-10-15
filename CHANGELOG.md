@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A scan forgets items whose file or folder is gone (children, extras, collection
+  and playlist membership with them); users' play state is kept for when the
+  file returns. An inaccessible or empty library folder forgets nothing.
+  Refreshing a series, season or folder item re-walks it.
+- `.ignore` files (empty: whole folder; otherwise gitignore-like name patterns,
+  nearest file wins), hidden folders and the fixed exclusion names in every
+  library type; extras-named folders directly under a movie library root are
+  ordinary folders.
+- DVD and Blu-ray folders and `.iso`/`.img` images as movies (`VideoType`,
+  `IsoType`, DVD media info from the main title set, `Data` streams).
+- `.strm` files (address or path): item, media source, on-demand probe and
+  proxied stream.
+- Real-time library monitor (Linux, inotify) for libraries whose options carry
+  `EnableRealtimeMonitor`.
+- Library options applied by a scan: `EnablePhotos`, `SeasonZeroDisplayName`,
+  `EnableEmbeddedTitles`.
+- Contract: `specs/scan.md`, 23 scenarios; the runner can change the media tree
+  (`fs` steps, `-media-local-root`) and wait for a background change (`retryMs`).
+
 ### Changed
 
 - A media source is named after its file, like the reference.

@@ -1,0 +1,2575 @@
+[
+ {
+  "id": "scan.ignore.empty-file",
+  "endpoint": "GET /Items",
+  "spec": "scan.md#ignore",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.ignore.R1",
+   "scan.ignore.R5"
+  ],
+  "requires": [
+   "library:ignore",
+   "item:ign-plain",
+   "item:ign-nomedia"
+  ],
+  "steps": [
+   {
+    "name": "a folder with an empty or blank .ignore is not cataloged, .nomedia changes nothing",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.ignore.id}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "Limit": "200"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Plain (2301)"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "NoMedia (2304)"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Gone (2302)"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Blank (2303)"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.ignore.patterns",
+  "endpoint": "GET /Items",
+  "spec": "scan.md#ignore",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.ignore.R2",
+   "scan.ignore.R3",
+   "scan.ignore.R4"
+  ],
+  "requires": [
+   "library:ignore",
+   "item:ign-pat-keep",
+   "item:ign-pat-sub2",
+   "item:ign-anch-top",
+   "item:ign-anch-deep",
+   "item:ign-anch-x",
+   "item:ign-own-keep",
+   "item:ign-own-x",
+   "item:ign-neg-two",
+   "item:ign-neg-db"
+  ],
+  "steps": [
+   {
+    "name": "patterns: wildcards, case, comments, a folder pattern",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.ignore.id}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "Limit": "200",
+      "SearchTerm": "skip"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "sample files of the folder with the pattern",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.ignore.id}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "Limit": "200",
+      "SearchTerm": "sample"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "a pattern applies below the folder: only the other file is left of the folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ign-anch-deep.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Movie"
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "a"
+      },
+      {
+       "path": "$.Path",
+       "op": "matches",
+       "value": "/Anch/a/deep-keep\\.mp4$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the nearest .ignore alone applies: the ancestor's pattern is not inherited",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ign-own-x.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Movie"
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "x"
+      },
+      {
+       "path": "$.Path",
+       "op": "matches",
+       "value": "/Own/x/two-e2\\.mp4$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a negated pattern keeps its file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.ignore.id}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "Limit": "200",
+      "SearchTerm": "da-"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.ign-neg-two.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a pattern with a slash in it never matches",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ign-anch-x.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Movie"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a folder pattern leaves its sibling folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.ign-pat-sub2.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Movie"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.ignore.fixed-names",
+  "endpoint": "GET /Items",
+  "spec": "scan.md#ignore",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.ignore.R6"
+  ],
+  "requires": [
+   "library:ignore",
+   "item:ign-backup"
+  ],
+  "steps": [
+   {
+    "name": "hidden folders and the fixed names are not cataloged, others are",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.ignore.id}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "Limit": "200"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Backup"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "@eaDir"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "#recycle"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": ".hidden"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Subs"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "metadata"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "lost+found"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "System Volume Information"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "$RECYCLE.BIN"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.ignore.root-extras",
+  "endpoint": "GET /Items",
+  "spec": "scan.md#ignore",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.ignore.R7"
+  ],
+  "requires": [
+   "library:ignore"
+  ],
+  "steps": [
+   {
+    "name": "extras-named folders directly under the root are plain folders",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.ignore.id}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie,Folder",
+      "Limit": "200"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "extras"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "trailers"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "sample"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Root Extra (2320)"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Root Trailer (2321)"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Root Sample (2322)"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.disc.dvd-media",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "scan.md#disc",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.disc.R1",
+   "scan.disc.R3",
+   "scan.disc.R6"
+  ],
+  "requires": [
+   "item:disc-dvd-real"
+  ],
+  "steps": [
+   {
+    "name": "a folder with a VIDEO_TS holding VOBs is one DVD movie",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.disc-dvd-real.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Movie"
+      },
+      {
+       "path": "$.IsFolder",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Dvd Real (2321)"
+      },
+      {
+       "path": "$.VideoType",
+       "op": "eq",
+       "value": "Dvd"
+      },
+      {
+       "path": "$.Path",
+       "op": "matches",
+       "value": "/Discs/Dvd Real \\(2321\\)$"
+      },
+      {
+       "path": "$.Container",
+       "op": "eq",
+       "value": "mpeg"
+      },
+      {
+       "path": "$.RunTimeTicks",
+       "op": "gte",
+       "value": 15000000
+      },
+      {
+       "path": "$.RunTimeTicks",
+       "op": "lte",
+       "value": 30000000
+      },
+      {
+       "path": "$.MediaSources[0].VideoType",
+       "op": "eq",
+       "value": "Dvd"
+      },
+      {
+       "path": "$.MediaSources[0].Name",
+       "op": "eq",
+       "value": "Dvd Real (2321)/DVD"
+      },
+      {
+       "path": "$.MediaSources[0].Protocol",
+       "op": "eq",
+       "value": "File"
+      },
+      {
+       "path": "$.MediaSources[0].IsRemote",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[*].Codec",
+       "op": "contains",
+       "value": "mpeg2video"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[*].Codec",
+       "op": "contains",
+       "value": "ac3"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[*].Type",
+       "op": "contains",
+       "value": "Video"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[*].Type",
+       "op": "contains",
+       "value": "Audio"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.disc.dvd-title-set",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "scan.md#disc",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.disc.R3"
+  ],
+  "requires": [
+   "item:disc-dvd-multi",
+   "item:disc-dvd-real"
+  ],
+  "steps": [
+   {
+    "name": "the longest title set counts, its parts add up",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.disc-dvd-multi.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.VideoType",
+       "op": "eq",
+       "value": "Dvd"
+      },
+      {
+       "path": "$.RunTimeTicks",
+       "op": "gte",
+       "value": 35000000
+      },
+      {
+       "path": "$.RunTimeTicks",
+       "op": "lte",
+       "value": 50000000
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.disc.placeholders",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "scan.md#disc",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.disc.R1",
+   "scan.disc.R4",
+   "scan.disc.R6"
+  ],
+  "requires": [
+   "item:disc-dvd-junk",
+   "item:disc-dvd-root",
+   "item:disc-bd-junk",
+   "item:disc-bd-nested"
+  ],
+  "steps": [
+   {
+    "name": "DVD folder with unreadable VOBs",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.disc-dvd-junk.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.VideoType",
+       "op": "eq",
+       "value": "Dvd"
+      },
+      {
+       "path": "$.IsFolder",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].Name",
+       "op": "eq",
+       "value": "Dvd Junk (2323)/DVD"
+      }
+     ]
+    }
+   },
+   {
+    "name": "VIDEO_TS.IFO in the folder itself",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.disc-dvd-root.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.VideoType",
+       "op": "eq",
+       "value": "Dvd"
+      },
+      {
+       "path": "$.Path",
+       "op": "matches",
+       "value": "/Discs/Dvd Root \\(2324\\)$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Blu-ray folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.disc-bd-junk.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.VideoType",
+       "op": "eq",
+       "value": "BluRay"
+      },
+      {
+       "path": "$.IsFolder",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.Path",
+       "op": "matches",
+       "value": "/Discs/Bd Junk \\(2325\\)$"
+      },
+      {
+       "path": "$.MediaSources[0].VideoType",
+       "op": "eq",
+       "value": "BluRay"
+      },
+      {
+       "path": "$.MediaSources[0].Name",
+       "op": "eq",
+       "value": "Bd Junk (2325)/Bluray"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Blu-ray folder below a plain folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.disc-bd-nested.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.VideoType",
+       "op": "eq",
+       "value": "BluRay"
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Bd Nested (2326)"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.disc.exclusive",
+  "endpoint": "GET /Items",
+  "spec": "scan.md#disc",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.disc.R1",
+   "scan.disc.R2"
+  ],
+  "requires": [
+   "library:discs",
+   "item:disc-mixed",
+   "item:disc-ifo-mp4",
+   "item:disc-ifo-dir"
+  ],
+  "steps": [
+   {
+    "name": "a disc with media takes its folder, an IFO-only VIDEO_TS is a movie beside the files",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.discs.id}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "Limit": "200"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Mixed (2330)"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Ifo Only (2333)"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "VIDEO_TS"
+      },
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 13
+      }
+     ]
+    }
+   },
+   {
+    "name": "the video beside the disc is not cataloged",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.disc-mixed.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.VideoType",
+       "op": "eq",
+       "value": "Dvd"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an IFO-only VIDEO_TS folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.disc-ifo-dir.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "VIDEO_TS"
+      },
+      {
+       "path": "$.VideoType",
+       "op": "eq",
+       "value": "Dvd"
+      },
+      {
+       "path": "$.Path",
+       "op": "matches",
+       "value": "/Ifo Only \\(2333\\)/VIDEO_TS$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the file beside it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.disc-ifo-mp4.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.VideoType",
+       "op": "eq",
+       "value": "VideoFile"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.disc.images",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "scan.md#disc",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.disc.R5",
+   "scan.disc.R6"
+  ],
+  "requires": [
+   "item:disc-iso-junk",
+   "item:disc-iso-loose",
+   "item:disc-img-junk",
+   "item:disc-vob-only"
+  ],
+  "steps": [
+   {
+    "name": "an .iso file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.disc-iso-junk.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Movie"
+      },
+      {
+       "path": "$.VideoType",
+       "op": "eq",
+       "value": "Iso"
+      },
+      {
+       "path": "$.Path",
+       "op": "matches",
+       "value": "Iso Junk \\(2327\\)\\.iso$"
+      },
+      {
+       "path": "$.MediaSources[0].VideoType",
+       "op": "eq",
+       "value": "Iso"
+      },
+      {
+       "path": "$.MediaSources[0].Name",
+       "op": "eq",
+       "value": "Iso Junk (2327)/ISO"
+      },
+      {
+       "path": "$.MediaSources[0].Size",
+       "op": "eq",
+       "value": 4096
+      }
+     ]
+    }
+   },
+   {
+    "name": "an .iso file straight in the library folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.disc-iso-loose.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.VideoType",
+       "op": "eq",
+       "value": "Iso"
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Loose Iso (2328)"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an .img file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.disc-img-junk.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.VideoType",
+       "op": "eq",
+       "value": "Iso"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a lone .VOB file is an ordinary video",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.disc-vob-only.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.VideoType",
+       "op": "eq",
+       "value": "VideoFile"
+      },
+      {
+       "path": "$.Path",
+       "op": "matches",
+       "value": "VTS_01_1\\.VOB$"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.disc.image-dvd",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "scan.md#disc",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.disc.R5",
+   "scan.disc.R6"
+  ],
+  "requires": [
+   "item:disc-iso-dvd"
+  ],
+  "steps": [
+   {
+    "name": "an image that holds a DVD",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.disc-iso-dvd.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.VideoType",
+       "op": "eq",
+       "value": "Iso"
+      },
+      {
+       "path": "$.IsoType",
+       "op": "eq",
+       "value": "Dvd"
+      },
+      {
+       "path": "$.MediaSources[0].IsoType",
+       "op": "eq",
+       "value": "Dvd"
+      },
+      {
+       "path": "$.MediaSources[0].Name",
+       "op": "eq",
+       "value": "Iso Dvd (2329)/DVD"
+      },
+      {
+       "path": "$.RunTimeTicks",
+       "op": "gte",
+       "value": 15000000
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[*].Codec",
+       "op": "contains",
+       "value": "mpeg2video"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.disc.stream",
+  "endpoint": "GET /Videos/{itemId}/stream",
+  "spec": "scan.md#disc",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.disc.R7"
+  ],
+  "requires": [
+   "item:disc-iso-junk"
+  ],
+  "steps": [
+   {
+    "name": "an image is sent as the file it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.disc-iso-junk.id}}/stream",
+     "query": {
+      "static": "true",
+      "mediaSourceId": "{{item.disc-iso-junk.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Length": "4096"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.strm.address",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "scan.md#strm",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.strm.R1",
+   "scan.strm.R2"
+  ],
+  "requires": [
+   "item:strm-url"
+  ],
+  "steps": [
+   {
+    "name": "a .strm holding an address",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.strm-url.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Movie"
+      },
+      {
+       "path": "$.Path",
+       "op": "matches",
+       "value": "Strm Url \\(2341\\)\\.strm$"
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Strm Url (2341)"
+      },
+      {
+       "path": "$.LocationType",
+       "op": "eq",
+       "value": "FileSystem"
+      },
+      {
+       "path": "$.MediaSources[0].Path",
+       "op": "eq",
+       "value": "http://127.0.0.1:1/unreachable.mp4"
+      },
+      {
+       "path": "$.MediaSources[0].Protocol",
+       "op": "eq",
+       "value": "Http"
+      },
+      {
+       "path": "$.MediaSources[0].IsRemote",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "strm"
+      },
+      {
+       "path": "$.MediaSources[0].Size",
+       "op": "eq",
+       "value": 35
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.strm.local-and-empty",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "scan.md#strm",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.strm.R1",
+   "scan.strm.R2"
+  ],
+  "requires": [
+   "item:strm-local",
+   "item:strm-empty",
+   "item:strm-ep"
+  ],
+  "steps": [
+   {
+    "name": "a .strm holding a local path stays the file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.strm-local.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].Path",
+       "op": "matches",
+       "value": "Strm Local \\(2342\\)\\.strm$"
+      },
+      {
+       "path": "$.MediaSources[0].Protocol",
+       "op": "eq",
+       "value": "File"
+      },
+      {
+       "path": "$.MediaSources[0].IsRemote",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "strm"
+      },
+      {
+       "path": "$.MediaSources[0].Size",
+       "op": "eq",
+       "value": 28
+      }
+     ]
+    }
+   },
+   {
+    "name": "an empty .strm is still an item",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.strm-empty.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Movie"
+      },
+      {
+       "path": "$.MediaSources[0].Protocol",
+       "op": "eq",
+       "value": "File"
+      },
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "strm"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a .strm episode",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.strm-ep.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Episode"
+      },
+      {
+       "path": "$.MediaSources[0].Protocol",
+       "op": "eq",
+       "value": "Http"
+      },
+      {
+       "path": "$.MediaSources[0].Path",
+       "op": "eq",
+       "value": "http://127.0.0.1:1/episode.mp4"
+      },
+      {
+       "path": "$.MediaSources[0].IsRemote",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.strm.playback",
+  "endpoint": "GET /Items/{itemId}/PlaybackInfo",
+  "spec": "scan.md#strm",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.strm.R3",
+   "scan.strm.R4"
+  ],
+  "requires": [
+   "item:strm-url",
+   "item:strm-local"
+  ],
+  "steps": [
+   {
+    "name": "an address is offered as it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.strm-url.id}}/PlaybackInfo"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].Path",
+       "op": "eq",
+       "value": "http://127.0.0.1:1/unreachable.mp4"
+      },
+      {
+       "path": "$.MediaSources[0].Protocol",
+       "op": "eq",
+       "value": "Http"
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "an address that cannot be reached fails to stream",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.strm-url.id}}/stream",
+     "query": {
+      "static": "true",
+      "mediaSourceId": "{{item.strm-url.id}}"
+     }
+    },
+    "expect": {
+     "status": 500,
+     "headers": {
+      "Content-Type": "/^text\\/plain/"
+     }
+    }
+   },
+   {
+    "name": "a local path is the file itself",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.strm-local.id}}/stream",
+     "query": {
+      "static": "true",
+      "mediaSourceId": "{{item.strm-local.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "application/octet-stream",
+      "Content-Length": "28"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.forget.file",
+  "endpoint": "POST /Items/{itemId}/Refresh",
+  "spec": "scan.md#forget",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.forget.R1",
+   "scan.forget.R5"
+  ],
+  "requires": [
+   "fs:write",
+   "library:forget",
+   "item:forget-gone",
+   "item:forget-keep"
+  ],
+  "steps": [
+   {
+    "name": "keep a copy of the file",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "copy": "Forget/Forget Gone (2352)/Forget Gone (2352).mp4",
+     "to": "ForgetBackup/forget-gone.mp4"
+    }
+   },
+   {
+    "name": "the item is there",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.forget-gone.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Movie"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a collection holds both movies",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Collections",
+     "query": {
+      "name": "Forget Collection",
+      "ids": "{{item.forget-gone.id}},{{item.forget-keep.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "col": "$.Id"
+    }
+   },
+   {
+    "name": "the collection has two members",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.col}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      }
+     ]
+    }
+   },
+   {
+    "name": "the folder disappears",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "remove": "Forget/Forget Gone (2352)"
+    }
+   },
+   {
+    "name": "a library refresh",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{library.forget.id}}/Refresh",
+     "query": {
+      "Recursive": "true",
+      "MetadataRefreshMode": "Default",
+      "ImageRefreshMode": "Default"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "the item is gone",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.forget-gone.id}}"
+    },
+    "expect": {
+     "status": 404
+    },
+    "retryMs": 20000
+   },
+   {
+    "name": "its neighbours stay",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.forget-keep.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Movie"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the collection lost the member and stays",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.col}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "the collection is still there",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.col}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "BoxSet"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "put it back",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "copy": "ForgetBackup/forget-gone.mp4",
+     "to": "Forget/Forget Gone (2352)/Forget Gone (2352).mp4"
+    }
+   },
+   {
+    "name": "remove the collection",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{capture.col}}"
+    },
+    "expect": {
+     "status": [
+      200,
+      204,
+      404
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.forget.folder",
+  "endpoint": "POST /Items/{itemId}/Refresh",
+  "spec": "scan.md#forget",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.forget.R1"
+  ],
+  "requires": [
+   "fs:write",
+   "library:forget",
+   "item:forget-loose-folder",
+   "item:forget-loose-one",
+   "item:forget-loose-two"
+  ],
+  "steps": [
+   {
+    "name": "keep a copy of one file",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "copy": "Forget/Forget Loose/Loose One (2354).mp4",
+     "to": "ForgetBackup/loose-one.mp4"
+    }
+   },
+   {
+    "name": "the folder holds two movies",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.forget-loose-folder.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Folder"
+      }
+     ]
+    }
+   },
+   {
+    "name": "one of them is deleted",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "remove": "Forget/Forget Loose/Loose One (2354).mp4"
+    }
+   },
+   {
+    "name": "a library refresh",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{library.forget.id}}/Refresh",
+     "query": {
+      "Recursive": "true",
+      "MetadataRefreshMode": "Default",
+      "ImageRefreshMode": "Default"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "the movie is gone",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.forget-loose-one.id}}"
+    },
+    "expect": {
+     "status": 404
+    },
+    "retryMs": 20000
+   },
+   {
+    "name": "the folder that held two movies is not an item any more",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.forget-loose-folder.id}}"
+    },
+    "expect": {
+     "status": 404
+    },
+    "retryMs": 20000
+   },
+   {
+    "name": "the other movie is the folder's movie now",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.forget-loose-two.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Movie"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "put it back",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "copy": "ForgetBackup/loose-one.mp4",
+     "to": "Forget/Forget Loose/Loose One (2354).mp4"
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.forget.user-data",
+  "endpoint": "POST /Items/{itemId}/Refresh",
+  "spec": "scan.md#forget",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.forget.R2"
+  ],
+  "requires": [
+   "fs:write",
+   "library:forget",
+   "item:forget-played",
+   "user:admin"
+  ],
+  "steps": [
+   {
+    "name": "mark it played",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/UserPlayedItems/{{item.forget-played.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Played",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "keep a copy",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "copy": "Forget/Forget Played (2353)/Forget Played (2353).mp4",
+     "to": "ForgetBackup/forget-played.mp4"
+    }
+   },
+   {
+    "name": "the folder disappears",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "remove": "Forget/Forget Played (2353)"
+    }
+   },
+   {
+    "name": "a library refresh",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{library.forget.id}}/Refresh",
+     "query": {
+      "Recursive": "true",
+      "MetadataRefreshMode": "Default",
+      "ImageRefreshMode": "Default"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "the item is gone",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.forget-played.id}}"
+    },
+    "expect": {
+     "status": 404
+    },
+    "retryMs": 20000
+   },
+   {
+    "name": "the file is back",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "copy": "ForgetBackup/forget-played.mp4",
+     "to": "Forget/Forget Played (2353)/Forget Played (2353).mp4"
+    }
+   },
+   {
+    "name": "a library refresh",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{library.forget.id}}/Refresh",
+     "query": {
+      "Recursive": "true",
+      "MetadataRefreshMode": "Default",
+      "ImageRefreshMode": "Default"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "the item is back with its play state",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.forget-played.id}}",
+     "query": {
+      "userId": "{{user.admin.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.UserData.Played",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    },
+    "retryMs": 20000
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "put it back",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "copy": "ForgetBackup/forget-played.mp4",
+     "to": "Forget/Forget Played (2353)/Forget Played (2353).mp4"
+    }
+   },
+   {
+    "name": "unmark",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.forget-played.id}}"
+    },
+    "expect": {
+     "status": [
+      200,
+      404
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.forget.library-folder",
+  "endpoint": "POST /Items/{itemId}/Refresh",
+  "spec": "scan.md#forget",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.forget.R3"
+  ],
+  "requires": [
+   "fs:write",
+   "library:forgetroot",
+   "item:forgetroot-movie"
+  ],
+  "steps": [
+   {
+    "name": "the library folder is not there (an unmounted disk)",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "rename": "ForgetRoot/Lib",
+     "to": "ForgetRoot/Lib.off"
+    }
+   },
+   {
+    "name": "refresh",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{library.forgetroot.id}}/Refresh",
+     "query": {
+      "Recursive": "true",
+      "MetadataRefreshMode": "Default",
+      "ImageRefreshMode": "Default"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "give the scan time",
+    "sleepMs": 4000,
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {}
+   },
+   {
+    "name": "nothing is forgotten",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.forgetroot-movie.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Movie"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the folder is there but empty",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "mkdir": "ForgetRoot/Lib"
+    }
+   },
+   {
+    "name": "refresh",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{library.forgetroot.id}}/Refresh",
+     "query": {
+      "Recursive": "true",
+      "MetadataRefreshMode": "Default",
+      "ImageRefreshMode": "Default"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "give the scan time",
+    "sleepMs": 4000,
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {}
+   },
+   {
+    "name": "still nothing is forgotten",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.forgetroot-movie.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Movie"
+      }
+     ]
+    }
+   },
+   {
+    "name": "something that is no media",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "write": "ForgetRoot/Lib/notes.txt",
+     "content": "x"
+    }
+   },
+   {
+    "name": "refresh",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{library.forgetroot.id}}/Refresh",
+     "query": {
+      "Recursive": "true",
+      "MetadataRefreshMode": "Default",
+      "ImageRefreshMode": "Default"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "now the library has nothing of its own",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.forgetroot-movie.id}}"
+    },
+    "expect": {
+     "status": 404
+    },
+    "retryMs": 20000
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "remove the note",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "remove": "ForgetRoot/Lib/notes.txt"
+    }
+   },
+   {
+    "name": "restore the folder",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "rename": "ForgetRoot/Lib.off",
+     "to": "ForgetRoot/Lib",
+     "ifExists": true,
+     "replace": true
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.forget.series",
+  "endpoint": "POST /Items/{itemId}/Refresh",
+  "spec": "scan.md#forget",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.forget.R4"
+  ],
+  "requires": [
+   "fs:write",
+   "library:forgetshows",
+   "item:forgetshow",
+   "item:forgetshow-e1",
+   "item:forgetshow-e2",
+   "item:forgetshow-e3",
+   "item:forgetshow-s2"
+  ],
+  "steps": [
+   {
+    "name": "keep copies",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "copy": "ForgetShows/Forget Show (2357)/Season 01/Forget Show S01E01.mp4",
+     "to": "ForgetBackup/show-e1.mp4"
+    }
+   },
+   {
+    "name": "keep copies",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "copy": "ForgetShows/Forget Show (2357)/Season 02/Forget Show S02E01.mp4",
+     "to": "ForgetBackup/show-e3.mp4"
+    }
+   },
+   {
+    "name": "an episode and a season disappear, one episode appears",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "remove": "ForgetShows/Forget Show (2357)/Season 01/Forget Show S01E01.mp4"
+    }
+   },
+   {
+    "name": "the second season goes",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "remove": "ForgetShows/Forget Show (2357)/Season 02"
+    }
+   },
+   {
+    "name": "a new episode",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "copy": "ForgetBackup/show-e1.mp4",
+     "to": "ForgetShows/Forget Show (2357)/Season 01/Forget Show S01E05.mp4"
+    }
+   },
+   {
+    "name": "refresh",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.forgetshow.id}}/Refresh",
+     "query": {
+      "Recursive": "true",
+      "MetadataRefreshMode": "Default",
+      "ImageRefreshMode": "Default"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "the episode is gone",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.forgetshow-e1.id}}"
+    },
+    "expect": {
+     "status": 404
+    },
+    "retryMs": 20000
+   },
+   {
+    "name": "the season is gone",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.forgetshow-s2.id}}"
+    },
+    "expect": {
+     "status": 404
+    },
+    "retryMs": 20000
+   },
+   {
+    "name": "the other episode stays",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.forgetshow-e2.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Episode"
+      }
+     ]
+    }
+   },
+   {
+    "name": "and the new one is cataloged",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Shows/{{item.forgetshow.id}}/Episodes"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].IndexNumber",
+       "op": "contains",
+       "value": 5
+      }
+     ]
+    },
+    "retryMs": 20000
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "remove the new episode",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "remove": "ForgetShows/Forget Show (2357)/Season 01/Forget Show S01E05.mp4"
+    }
+   },
+   {
+    "name": "restore",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "copy": "ForgetBackup/show-e1.mp4",
+     "to": "ForgetShows/Forget Show (2357)/Season 01/Forget Show S01E01.mp4"
+    }
+   },
+   {
+    "name": "restore",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "copy": "ForgetBackup/show-e3.mp4",
+     "to": "ForgetShows/Forget Show (2357)/Season 02/Forget Show S02E01.mp4"
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.options.season-zero",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "scan.md#options",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.options.R2"
+  ],
+  "requires": [
+   "item:optseason-s0",
+   "item:optseason-s1"
+  ],
+  "steps": [
+   {
+    "name": "season 0 carries SeasonZeroDisplayName",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.optseason-s0.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Bonus Stuff"
+      },
+      {
+       "path": "$.IndexNumber",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "other seasons are not renamed",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.optseason-s1.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Season 1"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.options.photos",
+  "endpoint": "GET /Items",
+  "spec": "scan.md#options",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.options.R1"
+  ],
+  "requires": [
+   "library:optphotos",
+   "item:optphoto-clip",
+   "item:optphoto-album"
+  ],
+  "steps": [
+   {
+    "name": "with EnablePhotos off the pictures are not cataloged and a folder of them is a plain folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.optphotos.id}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "Photo,PhotoAlbum",
+      "Limit": "200"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "the folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.optphoto-album.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Folder"
+      }
+     ]
+    }
+   },
+   {
+    "name": "videos are cataloged",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.optphoto-clip.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Video"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.options.embedded-titles",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "scan.md#options",
+  "scope": "modern",
+  "tags": [
+   "scan"
+  ],
+  "covers": [
+   "scan.options.R3"
+  ],
+  "requires": [
+   "item:optemb-on",
+   "item:optemb-off"
+  ],
+  "steps": [
+   {
+    "name": "EnableEmbeddedTitles on: the title tag of the file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.optemb-on.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Embedded Title Tag"
+      }
+     ]
+    }
+   },
+   {
+    "name": "off (the default): the name the folder gives",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.optemb-off.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Emb Off (2374)"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.monitor.changes",
+  "endpoint": "GET /Items",
+  "spec": "scan.md#monitor",
+  "scope": "modern",
+  "tags": [
+   "scan",
+   "monitor",
+   "slow"
+  ],
+  "covers": [
+   "scan.monitor.R1",
+   "scan.monitor.R2"
+  ],
+  "requires": [
+   "fs:write",
+   "library:monitor",
+   "item:monitor-base"
+  ],
+  "steps": [
+   {
+    "name": "a movie is copied in",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "copy": "Monitor/Monitor Base (2361)/Monitor Base (2361).mp4",
+     "to": "Monitor/Monitor New (2362)/Monitor New (2362).mp4"
+    }
+   },
+   {
+    "name": "it shows up without a refresh",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.monitor.id}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "Limit": "200",
+      "SearchTerm": "Monitor New"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    },
+    "retryMs": 150000
+   },
+   {
+    "name": "and is deleted again",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "remove": "Monitor/Monitor New (2362)"
+    }
+   },
+   {
+    "name": "it is forgotten without a refresh",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.monitor.id}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "Limit": "200",
+      "SearchTerm": "Monitor New"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    },
+    "retryMs": 150000
+   },
+   {
+    "name": "the rest of the library is untouched",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.monitor-base.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Movie"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "remove the copy",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "remove": "Monitor/Monitor New (2362)"
+    }
+   }
+  ]
+ }
+]

@@ -90,6 +90,7 @@ func run(args []string) int {
 	adminUser := fs.String("admin-user", "admin", "administrator user name")
 	adminPass := fs.String("admin-pass", "", "administrator password")
 	mediaRoot := fs.String("media-root", "/media", "media root AS SEEN BY THE SERVER")
+	mediaLocal := fs.String("media-local-root", "", "the same media root as the RUNNER sees it; lets fs steps change files (scenarios that require fs:write are BLOCKED without it); never defaulted, the runner must not guess where to write")
 	fixtures := fs.String("fixtures", "docs/contract/fixtures.json", "fixtures file")
 	scenarios := fs.String("scenarios", "docs/contract/scenarios", "scenarios directory")
 	scope := fs.String("scope", "", "only run scenarios with this scope (modern|legacy-web-required|scope-negative)")
@@ -149,6 +150,7 @@ func run(args []string) int {
 	c.IncludeRisky = *risky
 	c.ServerDataDir = *dataDir
 	c.ReadFileCmd = *readCmd
+	c.MediaLocalRoot = *mediaLocal
 	switch *suffix {
 	case "":
 	case "auto":

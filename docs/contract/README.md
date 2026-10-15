@@ -168,6 +168,14 @@ reference source open in the same session.
   an absolute path is used as is (the reference answers with one). Without
   `-server-data-dir`/`-read-file-cmd` the step, and every scenario that
   `requires` `serverfile:read`, is BLOCKED.
+* Non-HTTP step `{"fs": {...}}` changes the media tree under `-media-local-root`
+  (the media root as the runner sees it; never defaulted): `write` (+`content`),
+  `mkdir`, `remove`, `rename`/`to` (`ifExists`, `replace`: a cleanup step that is
+  safe whatever happened) and `copy`/`to`. Paths are relative to the media root.
+  Scenarios that use it `require` `fs:write` (BLOCKED without the flag) and put
+  every file back in `cleanup`. A step's `retryMs` repeats its request every
+  half second until its expectations hold, the way a scenario waits for a
+  background refresh.
 * `{"config": {"section": "network", "set": {...}}}` patches a named
   configuration section (`GET`/`POST /System/Configuration/<section>`); every
   section touched is restored when the scenario ends, like the main one.
@@ -322,7 +330,8 @@ scenario that is not pending or divergent; `risky` ones run only with
 | items | 156 | 156 | 0 | 0 | 0 |
 | playstate | 107 | 107 | 0 | 0 | 0 |
 | quickconnect | 16 | 16 | 0 | 0 | 0 |
+| scan | 23 | 23 | 0 | 0 | 0 |
 | subtitles | 23 | 23 | 0 | 0 | 0 |
 | users | 202 | 202 | 0 | 0 | 0 |
 | wire | 14 | 14 | 0 | 0 | 0 |
-| **Total** | 576 | 576 | 0 | 0 | 0 |
+| **Total** | 599 | 599 | 0 | 0 | 0 |

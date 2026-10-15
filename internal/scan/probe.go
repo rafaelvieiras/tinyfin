@@ -68,9 +68,23 @@ type ffprobeStream struct {
 
 type ffprobeOutput struct {
 	Streams []ffprobeStream `json:"streams"`
-	Format  struct {
-		Duration string `json:"duration"`
-	} `json:"format"`
+	Format  ffprobeFormat   `json:"format"`
+}
+
+type ffprobeFormat struct {
+	Duration   string            `json:"duration"`
+	FormatName string            `json:"format_name"`
+	Tags       map[string]string `json:"tags"`
+}
+
+// title returns the title tag of the container, whatever the case of its key.
+func (f ffprobeFormat) title() string {
+	for k, v := range f.Tags {
+		if strings.EqualFold(k, "title") {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
 }
 
 // probe runs ffprobe against path and returns its parsed JSON output. A
@@ -181,6 +195,13 @@ func mediaStreamsFromProbe(info ffprobeOutput) []storage.MediaStreamRef {
 				ref.SampleRate = &sr
 			}
 			streams = append(streams, ref)
+			idx++
+		case "data":
+			streams = append(streams, storage.MediaStreamRef{
+				Index: idx, Type: storage.StreamTypeData, Codec: st.CodecName,
+				IsDefault: st.Disposition.Default == 1, IsForced: st.Disposition.Forced == 1,
+				Title: st.Tags.Title, Language: st.Tags.Language,
+			})
 			idx++
 		case "subtitle":
 			lang := st.Tags.Language

@@ -217,6 +217,8 @@ type baseItemDto struct {
 	IsHD         bool   `json:"IsHD,omitempty"`
 	HasSubtitles bool   `json:"HasSubtitles,omitempty"`
 	VideoType    string `json:"VideoType,omitempty"`
+	// IsoType is the kind of disc inside a disc image (Dvd, BluRay).
+	IsoType string `json:"IsoType,omitempty"`
 
 	// PlayAccess/CanDelete/CanDownload/Etag/DisplayPreferencesId are all
 	// per-request-caller fields (docs/12's same section) — populated only
@@ -1142,6 +1144,10 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 
 	if videoFileItemTypes[item.Type] && item.Path != "" {
 		dto.VideoType = "VideoFile"
+		if item.VideoType != "" {
+			dto.VideoType = item.VideoType
+			dto.IsoType = item.IsoType
+		}
 		if primary := primaryVideoStreamFor(item.MediaStreams); primary != nil {
 			dto.Width = primary.Width
 			dto.Height = primary.Height
