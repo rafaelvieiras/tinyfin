@@ -344,6 +344,9 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 		if err := recomputeAncestors(ctx, ex, item.ID); err != nil {
 			return fmt.Errorf("sqlite: recomputing ancestors for item %q: %w", item.ID, err)
 		}
+		if err := registerNamed(ctx, ex, item); err != nil {
+			return fmt.Errorf("sqlite: indexing names of item %q: %w", item.ID, err)
+		}
 		return nil
 	})
 	return err
@@ -547,12 +550,25 @@ func videoStreamExists(pred string) string {
 	return "EXISTS (SELECT 1 FROM json_each(items.media_streams) vs WHERE json_extract(vs.value,'$.Type') = 'Video' AND " + pred + ")"
 }
 
-func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (storage.ItemPage, error) {
-	if filter.Limit <= 0 {
-		return storage.ItemPage{}, fmt.Errorf("sqlite: QueryItems: Limit must be > 0, got %d", filter.Limit)
-	}
+// itemParts is the FROM-clause tail of an item query: joins, WHERE and the
+// bind values of both (joins first), plus the lower-cased search term when
+// the filter carries one.
+type itemParts struct {
+	joinSQL    string
+	whereSQL   string
+	args       []any
+	searchTerm string
+	// rankSQL/rankArgs: the similarity score expression, when asked for.
+	rankSQL  string
+	rankArgs []any
+}
+
+// buildItemParts turns an ItemFilter into the join and where clauses every
+// item-returning query shares (QueryItems, QueryNamed, SearchHints). empty
+// reports a filter nothing can satisfy.
+func buildItemParts(filter storage.ItemFilter) (itemParts, bool) {
 	if filter.NoMatch || (filter.RestrictToLibraries && len(filter.LibraryIDs) == 0) {
-		return storage.ItemPage{Offset: filter.Offset}, nil
+		return itemParts{}, true
 	}
 
 	var (
@@ -679,8 +695,19 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 		}
 	}
 
-	for _, g := range filter.Genres {
-		addWhere("EXISTS (SELECT 1 FROM json_each(items.genres) WHERE value = ?)", g)
+	if len(filter.Genres) > 0 {
+		args := make([]any, len(filter.Genres))
+		for i, g := range filter.Genres {
+			args[i] = strings.ToLower(g)
+		}
+		addWhere("EXISTS (SELECT 1 FROM json_each(items.genres) WHERE lower(value) IN ("+sqlPlaceholders(len(args))+"))", args...)
+	}
+	if len(filter.Studios) > 0 {
+		args := make([]any, len(filter.Studios))
+		for i, g := range filter.Studios {
+			args[i] = strings.ToLower(g)
+		}
+		addWhere("EXISTS (SELECT 1 FROM json_each(items.studios) WHERE lower(value) IN ("+sqlPlaceholders(len(args))+"))", args...)
 	}
 	if len(filter.Tags) > 0 {
 		args := make([]any, len(filter.Tags))
@@ -710,8 +737,47 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 		}
 		addWhere("items.official_rating IN ("+sqlPlaceholders(len(args))+")", args...)
 	}
-	if filter.PersonName != "" {
-		addWhere("EXISTS (SELECT 1 FROM json_each(items.people) WHERE lower(json_extract(value,'$.Name')) = ?)", strings.ToLower(filter.PersonName))
+	if names := append(append([]string{}, filter.PersonNames...), nonEmptyStrings(filter.PersonName)...); len(names) > 0 {
+		args := make([]any, 0, len(names)+len(filter.PersonTypes))
+		for _, n := range names {
+			args = append(args, n)
+		}
+		cond := "json_extract(value,'$.Name') IN (" + sqlPlaceholders(len(names)) + ")"
+		if len(filter.PersonTypes) > 0 {
+			cond += " AND lower(json_extract(value,'$.Type')) IN (" + sqlPlaceholders(len(filter.PersonTypes)) + ")"
+			for _, t := range filter.PersonTypes {
+				args = append(args, strings.ToLower(t))
+			}
+		}
+		addWhere("EXISTS (SELECT 1 FROM json_each(items.people) WHERE "+cond+")", args...)
+	}
+	var rankSQL string
+	var rankArgs []any
+	if sp := filter.Similar; sp != nil {
+		var terms []string
+		part := func(source, col string, vals []string) {
+			if len(vals) == 0 {
+				return
+			}
+			terms = append(terms, "(SELECT COUNT(DISTINCT "+col+") FROM json_each("+source+") sj WHERE "+col+" IN ("+sqlPlaceholders(len(vals))+"))")
+			for _, v := range vals {
+				rankArgs = append(rankArgs, strings.ToLower(v))
+			}
+		}
+		part("items.genres", "lower(sj.value)", sp.Genres)
+		part("items.studios", "lower(sj.value)", sp.Studios)
+		part("items.people", "lower(json_extract(sj.value,'$.Name'))", sp.People)
+		part("items.tags", "lower(sj.value)", sp.Tags)
+		if len(terms) == 0 {
+			return itemParts{}, true
+		}
+		rankSQL = "(" + strings.Join(terms, " + ") + ")"
+		addWhere(rankSQL+" > 0", rankArgs...)
+	}
+	if filter.PlaylistViewer != nil {
+		u := string(*filter.PlaylistViewer)
+		addWhere("(items.type <> 'Playlist' OR EXISTS (SELECT 1 FROM playlist_access pa WHERE pa.playlist_id = items.id AND "+
+			"(pa.open_access = 1 OR pa.owner_id = ? OR EXISTS (SELECT 1 FROM playlist_shares ps WHERE ps.playlist_id = pa.playlist_id AND ps.user_id = ?))))", u, u)
 	}
 	if len(filter.Years) > 0 {
 		args := make([]any, len(filter.Years))
@@ -733,9 +799,17 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 
 	var searchTerm string
 	if filter.NameContains != "" {
-		searchTerm = strings.ToLower(filter.NameContains)
-		joins = append(joins, "LEFT JOIN items search_series ON search_series.id = items.series_id")
-		addWhere("(instr(lower(items.name), ?) > 0 OR instr(lower(COALESCE(search_series.name, '')), ?) > 0)", searchTerm, searchTerm)
+		// A name matches when its search key contains the term's, or its
+		// stored sort key contains the term's sort form (which drops
+		// punctuation the search key turns into spaces). A term with no
+		// letter or digit restricts nothing.
+		searchTerm = storage.SearchKey(filter.NameContains)
+		switch {
+		case searchTerm == "":
+		default:
+			addWhere("(instr(search_key(items.name), ?) > 0 OR instr(items.sort_name, ?) > 0)",
+				searchTerm, storage.SortSearchKey(filter.NameContains))
+		}
 	}
 	if filter.SearchText != "" {
 		joins = append(joins, "JOIN items_fts ON items_fts.rowid = items.rowid")
@@ -890,7 +964,7 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 			addWhere("COALESCE(ps.playback_position_ticks, 0) > 0")
 		}
 	} else if filter.Resumable {
-		return storage.ItemPage{Offset: filter.Offset}, nil
+		return itemParts{}, true
 	}
 
 	if filter.CollapseBoxSets {
@@ -937,6 +1011,19 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 	args = append(args, joinArgs...)
 	args = append(args, whereArgs...)
 
+	return itemParts{joinSQL: joinSQL, whereSQL: whereSQL, args: args, searchTerm: searchTerm, rankSQL: rankSQL, rankArgs: rankArgs}, false
+}
+
+func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (storage.ItemPage, error) {
+	if filter.Limit <= 0 {
+		return storage.ItemPage{}, fmt.Errorf("sqlite: QueryItems: Limit must be > 0, got %d", filter.Limit)
+	}
+	parts, empty := buildItemParts(filter)
+	if empty {
+		return storage.ItemPage{Offset: filter.Offset}, nil
+	}
+	joinSQL, whereSQL, args, searchTerm := parts.joinSQL, parts.whereSQL, parts.args, parts.searchTerm
+
 	orderBy := buildOrderBy(filter.SortBy)
 	var orderArgs []any
 	switch {
@@ -951,14 +1038,36 @@ func (s *Store) QueryItems(ctx context.Context, filter storage.ItemFilter) (stor
 		}
 		b.WriteString(" END, items.id ASC")
 		orderBy = b.String()
+	case parts.rankSQL != "" && len(filter.SortBy) == 0:
+		// Most shared values first.
+		orderBy = "ORDER BY " + parts.rankSQL + " DESC, items.sort_name ASC, items.id ASC"
+		orderArgs = parts.rankArgs
 	case searchTerm != "" && len(filter.SortBy) == 0:
-		// Best match first: exact name, then prefix, then inner match;
-		// ties by sort name.
-		orderBy = "ORDER BY CASE WHEN lower(items.name) = ? THEN 0 WHEN instr(lower(items.name), ?) = 1 THEN 1 " +
-			"WHEN instr(lower(items.name), ?) > 0 THEN 2 ELSE 3 END, items.sort_name ASC, items.id ASC"
-		orderArgs = []any{searchTerm, searchTerm, searchTerm}
+		// Best match first (searchRankSQL), ties by sort name.
+		rank, rankArgs := searchRankSQL("search_key(items.name)", "items.type", searchTerm)
+		orderBy = "ORDER BY " + rank + ", items.sort_name ASC, items.id ASC"
+		orderArgs = rankArgs
 	}
 	return s.runItemQuery(ctx, filter, joinSQL, whereSQL, args, orderBy, orderArgs)
+}
+
+// searchRankSQL is the relevance of a name for a search term (lower is
+// better): exact, starts with, has the term at the end of a word followed by
+// a space, then (seasons and episodes) any other match, then the rest. nameKey
+// is an SQL expression of the name's search key, typeCol the item type.
+func searchRankSQL(nameKey, typeCol, term string) (string, []any) {
+	return "CASE WHEN " + nameKey + " = ? THEN 0 WHEN instr(" + nameKey + ", ?) = 1 THEN 1 " +
+			"WHEN instr(" + nameKey + ", ? || ' ') > 0 THEN 2 " +
+			"WHEN " + typeCol + " IN ('Season','Episode') THEN 3 ELSE 4 END",
+		[]any{term, term, term}
+}
+
+// nonEmptyStrings is s as a one-element slice, or nothing when s is empty.
+func nonEmptyStrings(s string) []string {
+	if s == "" {
+		return nil
+	}
+	return []string{s}
 }
 
 // escapeLike escapes LIKE wildcards in s for use with ESCAPE '\'.

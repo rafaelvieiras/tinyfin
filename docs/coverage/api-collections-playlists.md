@@ -4,9 +4,9 @@
 
 BoxSets, playlists and instant mixes.
 
-[Overview](../COVERAGE.md) · 21 operations · 3 registered (14%) · 3 verified · ✅ 2 · 🗓️ 11 · ⛔ 7 · ↔️ 1
+[Overview](../COVERAGE.md) · 21 operations · 14 registered (67%) · 14 verified · ✅ 13 · ⛔ 7 · ↔️ 1
 
-✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔↔️
+✅✅✅✅✅✅✅✅✅✅✅✅⛔⛔⛔⛔⛔⛔⛔↔️
 
 Columns: **Auth** is the reference's authorization policy; **Web** = mentioned in docs/11 (called by the official web client); **Tests** = scenarios that exercise the route (passing / total).
 
@@ -14,7 +14,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ↔️ divergent-by-design | `POST /Collections` | CollectionManagement | yes | 28/28 | Input is validated before anything is created and bad input is 400 (the reference creates an empty collection and answers 500). Recorded as a divergence in the contract scenarios. |
+| ↔️ divergent-by-design | `POST /Collections` | CollectionManagement | yes | 29/29 | Input is validated before anything is created and bad input is 400 (the reference creates an empty collection and answers 500). Recorded as a divergence in the contract scenarios. |
 | ✅ supported | `DELETE /Collections/{collectionId}/Items` | CollectionManagement |  | 6/6 |  |
 | ✅ supported | `POST /Collections/{collectionId}/Items` | CollectionManagement |  | 7/7 |  |
 
@@ -34,20 +34,22 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| 🗓️ planned | `POST /Playlists` | DefaultAuthorization | yes |  | Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage. (priority: medium) |
-| 🗓️ planned | `GET /Playlists/{playlistId}` | DefaultAuthorization | yes |  | Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage. (priority: medium) |
-| 🗓️ planned | `POST /Playlists/{playlistId}` | DefaultAuthorization | yes |  | Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage. (priority: medium) |
-| 🗓️ planned | `DELETE /Playlists/{playlistId}/Items` | DefaultAuthorization | yes |  | Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage. (priority: medium) |
-| 🗓️ planned | `GET /Playlists/{playlistId}/Items` | DefaultAuthorization | yes |  | Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage. (priority: medium) |
-| 🗓️ planned | `POST /Playlists/{playlistId}/Items` | DefaultAuthorization | yes |  | Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage. (priority: medium) |
-| 🗓️ planned | `POST /Playlists/{playlistId}/Items/{itemId}/Move/{newIndex}` | DefaultAuthorization |  |  | Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage. (priority: medium) |
-| 🗓️ planned | `GET /Playlists/{playlistId}/Users` | DefaultAuthorization |  |  | Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage. (priority: medium) |
-| 🗓️ planned | `DELETE /Playlists/{playlistId}/Users/{userId}` | DefaultAuthorization |  |  | Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage. (priority: medium) |
-| 🗓️ planned | `GET /Playlists/{playlistId}/Users/{userId}` | DefaultAuthorization |  |  | Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage. (priority: medium) |
-| 🗓️ planned | `POST /Playlists/{playlistId}/Users/{userId}` | DefaultAuthorization |  |  | Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage. (priority: medium) |
+| ✅ supported | `POST /Playlists` | DefaultAuthorization | yes | 23/23 |  |
+| ✅ supported | `GET /Playlists/{playlistId}` | DefaultAuthorization | yes | 13/13 |  |
+| ✅ supported | `POST /Playlists/{playlistId}` | DefaultAuthorization | yes | 4/4 |  |
+| ✅ supported | `DELETE /Playlists/{playlistId}/Items` | DefaultAuthorization | yes | 3/3 |  |
+| ✅ supported | `GET /Playlists/{playlistId}/Items` | DefaultAuthorization | yes | 7/7 |  |
+| ✅ supported | `POST /Playlists/{playlistId}/Items` | DefaultAuthorization | yes | 5/5 |  |
+| ✅ supported | `POST /Playlists/{playlistId}/Items/{itemId}/Move/{newIndex}` | DefaultAuthorization |  | 2/2 |  |
+| ✅ supported | `GET /Playlists/{playlistId}/Users` | DefaultAuthorization |  | 4/4 |  |
+| ✅ supported | `DELETE /Playlists/{playlistId}/Users/{userId}` | DefaultAuthorization |  | 1/1 |  |
+| ✅ supported | `GET /Playlists/{playlistId}/Users/{userId}` | DefaultAuthorization |  | 2/2 |  |
+| ✅ supported | `POST /Playlists/{playlistId}/Users/{userId}` | DefaultAuthorization |  | 2/2 |  |
 
 ## Related features
 
 - [`collections.manage`](collections.md) Create, add, remove, delete
 - [`collections.playlists`](collections.md) Playlists
 - [`library-types.playlists`](library-types.md) Playlists library
+- [`playlists.model`](playlists.md) Playlists and entries
+- [`playlists.access`](playlists.md) Ownership, open access and shares

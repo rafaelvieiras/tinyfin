@@ -181,6 +181,35 @@
    "code": [
     "internal/api/routing.go"
    ]
+  },
+  {
+   "id": "system.small-routes",
+   "title": "Ping, UTC time and localization lists",
+   "status": "supported",
+   "description": "`/System/Ping` (GET and POST), `/GetUtcTime`, `/Localization/Options`, `/Localization/ParentalRatings`, `/Localization/Cultures`, `/Localization/Countries`.",
+   "reference": "Same.",
+   "spec_rules": [
+    "misc.ping.R1",
+    "misc.time.R1",
+    "misc.localization.R1",
+    "misc.localization.R2"
+   ],
+   "scenarios": [
+    "misc.ping",
+    "misc.utc-time",
+    "misc.localization"
+   ],
+   "code": [
+    "internal/api/misc_routes.go",
+    "internal/api/localization.go"
+   ],
+   "routes": [
+    "GET /System/Ping",
+    "POST /System/Ping",
+    "GET /GetUtcTime",
+    "GET /Localization/Options",
+    "GET /Localization/ParentalRatings"
+   ]
   }
  ]
 }

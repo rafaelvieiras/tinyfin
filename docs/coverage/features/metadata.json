@@ -27,19 +27,34 @@
   {
    "id": "metadata.fields.genres",
    "title": "Genres, tags, studios, people",
-   "status": "partial",
-   "description": "Stored from NFO and TMDB and returned on items; `Genres`/`Studios` filters on `/Items` are accepted but the facet and browse routes (`/Genres`, `/Persons`, `/Studios`) are missing or empty.",
+   "status": "supported",
+   "description": "Stored from NFO and TMDB, returned on items and browsable: `/Genres`, `/Studios`, `/Persons`, `/Years` list and open them, `Genres`, `Studios`, `Person`, `GenreIds`, `StudioIds`, `PersonIds` filter `/Items`.",
    "reference": "Browse, filter and image routes for each.",
-   "notes": "Facets and browse routes are the gap.",
+   "notes": "Genre, studio and person images are not generated (their image slots are empty); named items cannot be favorited.",
    "code": [
-    "internal/storage/item.go"
+    "internal/api/named.go",
+    "internal/storage/sqlite/named.go",
+    "internal/storage/named.go"
    ],
    "routes": [
     "GET /Genres",
     "GET /Persons",
     "GET /Studios"
    ],
-   "priority": "medium"
+   "spec_rules": [
+    "browse.genres.R1",
+    "browse.studios.R1",
+    "browse.persons.R1",
+    "browse.years.R1",
+    "browse.item.R2"
+   ],
+   "scenarios": [
+    "browse.genres.list",
+    "browse.studios",
+    "browse.persons",
+    "browse.years",
+    "browse.item-filters"
+   ]
   },
   {
    "id": "metadata.parental",
@@ -104,24 +119,35 @@
   {
    "id": "metadata.search",
    "title": "Search",
-   "status": "partial",
-   "description": "`SearchTerm` on `/Items` matches names; the dedicated `/Search/Hints` route does not exist.",
+   "status": "supported",
+   "description": "`SearchTerm` on `/Items` and `GET /Search/Hints` match names without regard to case, accents or punctuation, ranked (starts with, ends a word, seasons and episodes, rest); the hints also find genre, studio and person names carried by what the user can see.",
    "reference": "Hint search across items, people and genres.",
-   "notes": "Hints route missing; web search falls back to /Items.",
+   "notes": "With a Limit the reference keeps an unspecified subset; Tinyfin keeps the first results of the ranking.",
    "spec_rules": [
-    "items.search.R1"
+    "items.search.R1",
+    "search.hints.R1",
+    "search.hints.R3",
+    "search.hints.R5",
+    "search.items.R1"
    ],
    "scenarios": [
     "items.search.term",
-    "items.search.scoped"
+    "items.search.scoped",
+    "search.hints.shape-movie",
+    "search.hints.matching",
+    "search.hints.ranking",
+    "search.hints.kinds",
+    "search.items.names"
    ],
    "code": [
-    "internal/api/items_query.go"
+    "internal/api/search.go",
+    "internal/api/items_query.go",
+    "internal/storage/sqlite/search.go",
+    "internal/storage/named.go"
    ],
    "routes": [
     "GET /Search/Hints"
-   ],
-   "priority": "high"
+   ]
   },
   {
    "id": "metadata.sort-filter",

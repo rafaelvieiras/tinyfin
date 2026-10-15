@@ -4,9 +4,9 @@
 
 Item listing, single items, genres/people/studios, search and the other browse endpoints.
 
-[Overview](../COVERAGE.md) · 58 operations · 23 registered (40%) · 18 verified · ✅ 18 · 🟡 4 · 🗓️ 30 · ⛔ 5 · ↔️ 1
+[Overview](../COVERAGE.md) · 58 operations · 39 registered (67%) · 34 verified · ✅ 37 · 🟡 1 · 🗓️ 14 · ⛔ 5 · ↔️ 1
 
-✅✅✅✅✅✅🟡🟡🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔
+✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔
 
 Columns: **Auth** is the reference's authorization policy; **Web** = mentioned in docs/11 (called by the official web client); **Tests** = scenarios that exercise the route (passing / total).
 
@@ -22,15 +22,15 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| 🟡 partial | `GET /Items/Filters` | DefaultAuthorization | yes |  | Always returns empty facets. Reference: Lists the genres, tags, ratings and years present. (priority: medium) |
-| 🟡 partial | `GET /Items/Filters2` | DefaultAuthorization | yes |  | Always returns empty facets. Reference: Lists the genres, tags, ratings and years present. (priority: medium) |
+| ✅ supported | `GET /Items/Filters` | DefaultAuthorization | yes | 1/1 |  |
+| 🟡 partial | `GET /Items/Filters2` | DefaultAuthorization | yes | 1/1 | Genres and tags are listed; AudioLanguages only when item types are named and as codes; SubtitleLanguages is always empty. Reference: Lists the genres, tags, and the audio and subtitle languages present. (priority: low) |
 
 ## Genre
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| 🗓️ planned | `GET /Genres` | DefaultAuthorization | yes |  | Genres are read from NFO and TMDB and stored on items, but there is no genre browse route (docs/11 gap). (priority: medium) |
-| 🗓️ planned | `GET /Genres/{genreName}` | DefaultAuthorization | yes |  | Genres are read from NFO and TMDB and stored on items, but there is no genre browse route (docs/11 gap). (priority: medium) |
+| ✅ supported | `GET /Genres` | DefaultAuthorization | yes | 4/4 |  |
+| ✅ supported | `GET /Genres/{genreName}` | DefaultAuthorization | yes | 1/1 |  |
 
 ## Library
 
@@ -39,20 +39,20 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | 🗓️ planned | `GET /Albums/{itemId}/Similar` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | 🗓️ planned | `GET /Artists/{itemId}/Similar` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | 🗓️ planned | `DELETE /Items` | DefaultAuthorization | yes |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
-| ↔️ divergent-by-design | `GET /Items` | DefaultAuthorization | yes | 146/146 | The library-access restriction also applies when items are requested by Ids (the reference skips it). Recorded as a divergence in the contract scenarios. |
+| ↔️ divergent-by-design | `GET /Items` | DefaultAuthorization | yes | 157/157 | The library-access restriction also applies when items are requested by Ids (the reference skips it). Recorded as a divergence in the contract scenarios. |
 | ✅ supported | `GET /Items/Counts` | DefaultAuthorization | yes | 2/2 |  |
 | ✅ supported | `GET /Items/Latest` | DefaultAuthorization | yes | 2/2 |  |
-| 🗓️ planned | `GET /Items/Root` | DefaultAuthorization | yes |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
-| ✅ supported | `DELETE /Items/{itemId}` | DefaultAuthorization | yes | 6/6 |  |
-| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 145/145 |  |
+| ✅ supported *(no scenario)* | `GET /Items/Root` | DefaultAuthorization | yes |  |  |
+| ✅ supported | `DELETE /Items/{itemId}` | DefaultAuthorization | yes | 7/7 |  |
+| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 160/160 |  |
 | ✅ supported | `GET /Items/{itemId}/Ancestors` | DefaultAuthorization | yes | 2/2 |  |
-| 🗓️ planned | `GET /Items/{itemId}/Collections` | DefaultAuthorization | yes |  | Called on every item detail page ('part of a collection'); 404 today (docs/11). (priority: medium) |
+| ✅ supported | `GET /Items/{itemId}/Collections` | DefaultAuthorization | yes | 1/1 |  |
 | 🗓️ planned | `GET /Items/{itemId}/Download` | Download |  |  | Download permission exists in the user policy but no download route is served. (priority: medium) |
 | 🗓️ planned | `GET /Items/{itemId}/File` | DefaultAuthorization |  |  | Raw file delivery is not implemented. (priority: low) |
-| 🗓️ planned | `GET /Items/{itemId}/Intros` | DefaultAuthorization |  |  | Pre-roll trailers; the reference answers an empty list unless a plugin supplies intros. 404 today (docs/11); the player just skips. (priority: low) |
+| ✅ supported | `GET /Items/{itemId}/Intros` | DefaultAuthorization | yes | 1/1 |  |
 | ✅ supported | `GET /Items/{itemId}/LocalTrailers` | DefaultAuthorization | yes | 7/7 |  |
 | ✅ supported | `POST /Items/{itemId}/Refresh` | RequiresElevation | yes | 7/7 |  |
-| 🟡 partial | `GET /Items/{itemId}/Similar` | DefaultAuthorization | yes | 1/1 | Always returns an empty list (honest empty instead of 404, so the web client hides 'More like this'). Reference: Ranks similar items by shared genres, tags, people and rating. (priority: low) |
+| ✅ supported | `GET /Items/{itemId}/Similar` | DefaultAuthorization | yes | 2/2 |  |
 | ✅ supported | `GET /Items/{itemId}/SpecialFeatures` | DefaultAuthorization | yes | 5/5 |  |
 | ✅ supported | `GET /Items/{itemId}/ThemeMedia` | DefaultAuthorization | yes | 2/2 |  |
 | ✅ supported | `GET /Items/{itemId}/ThemeSongs` | DefaultAuthorization |  | 5/5 |  |
@@ -66,16 +66,16 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `POST /Library/Refresh` | RequiresElevation | yes | 1/1 |  |
 | 🗓️ planned | `POST /Library/Series/Added` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | 🗓️ planned | `POST /Library/Series/Updated` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
-| 🗓️ planned | `GET /Movies/{itemId}/Similar` | DefaultAuthorization | yes |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
-| 🗓️ planned | `GET /Shows/{itemId}/Similar` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
-| 🗓️ planned | `GET /Trailers/{itemId}/Similar` | DefaultAuthorization | yes |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
+| ✅ supported | `GET /Movies/{itemId}/Similar` | DefaultAuthorization | yes | 1/1 |  |
+| ✅ supported *(no scenario)* | `GET /Shows/{itemId}/Similar` | DefaultAuthorization |  |  |  |
+| ✅ supported *(no scenario)* | `GET /Trailers/{itemId}/Similar` | DefaultAuthorization | yes |  |  |
 | ✅ supported | `GET /UserItems/Resume` | DefaultAuthorization | yes | 15/15 |  |
 
 ## Movie
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| 🗓️ planned | `GET /Movies/Recommendations` | DefaultAuthorization | yes |  | Recommendation carousel not implemented. (priority: low) |
+| ✅ supported | `GET /Movies/Recommendations` | DefaultAuthorization | yes | 1/1 |  |
 
 ## MusicGenre
 
@@ -87,14 +87,14 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| 🗓️ planned | `GET /Persons` | DefaultAuthorization | yes |  | People are stored from TMDB, but there is no person browse route (docs/11: the search screen's cast query 404s). (priority: medium) |
-| 🗓️ planned | `GET /Persons/{name}` | DefaultAuthorization | yes |  | People are stored from TMDB, but there is no person browse route (docs/11: the search screen's cast query 404s). (priority: medium) |
+| ✅ supported | `GET /Persons` | DefaultAuthorization | yes | 2/2 |  |
+| ✅ supported | `GET /Persons/{name}` | DefaultAuthorization | yes | 2/2 |  |
 
 ## Search
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| 🗓️ planned | `GET /Search/Hints` | DefaultAuthorization |  |  | In scope for v1 (docs/01) but not built; clients fall back to /Items?SearchTerm. (priority: high) |
+| ✅ supported | `GET /Search/Hints` | DefaultAuthorization | yes | 13/13 |  |
 
 ## Show
 
@@ -109,14 +109,14 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| 🟡 partial | `GET /Studios` | DefaultAuthorization | yes |  | Always returns an empty list although studios are stored from TMDB. (priority: medium) |
-| 🗓️ planned | `GET /Studios/{name}` | DefaultAuthorization | yes |  | Studios are stored from TMDB; the per-studio detail route is not implemented. (priority: low) |
+| ✅ supported | `GET /Studios` | DefaultAuthorization | yes | 2/2 |  |
+| ✅ supported | `GET /Studios/{name}` | DefaultAuthorization | yes | 1/1 |  |
 
 ## Suggestion
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| 🗓️ planned | `GET /Items/Suggestions` | DefaultAuthorization |  |  | Not implemented. (priority: low) |
+| ✅ supported | `GET /Items/Suggestions` | DefaultAuthorization | yes | 1/1 |  |
 
 ## Trailer
 
@@ -128,18 +128,23 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ✅ supported | `GET /UserViews` | DefaultAuthorization | yes | 20/20 |  |
+| ✅ supported | `GET /UserViews` | DefaultAuthorization | yes | 21/21 |  |
 | 🗓️ planned | `GET /UserViews/GroupingOptions` | DefaultAuthorization |  |  | Not implemented. (priority: low) |
 
 ## Year
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| 🗓️ planned | `GET /Years` | DefaultAuthorization | yes |  | Not implemented (year filter on /Items works; the Years browse routes do not). (priority: low) |
-| 🗓️ planned | `GET /Years/{year}` | DefaultAuthorization |  |  | Not implemented (year filter on /Items works; the Years browse routes do not). (priority: low) |
+| ✅ supported | `GET /Years` | DefaultAuthorization | yes | 2/2 |  |
+| ✅ supported | `GET /Years/{year}` | DefaultAuthorization |  | 1/1 |  |
 
 ## Related features
 
+- [`browse.named`](browse.md) Genres, studios, people, years
+- [`browse.facets`](browse.md) Filter facets
+- [`browse.similar`](browse.md) Similar items
+- [`browse.recommendations`](browse.md) Movie recommendations and suggestions
+- [`browse.item-extras`](browse.md) Intros and collections of an item
 - [`metadata.fields.genres`](metadata.md) Genres, tags, studios, people
 - [`metadata.search`](metadata.md) Search
 - [`metadata.sort-filter`](metadata.md) Sorting, filtering and paging on /Items

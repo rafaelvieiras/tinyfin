@@ -260,6 +260,8 @@ func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, 
 		case storage.CollectionTypeHomeVideos:
 			s.recordRootFolder(ctx, lib, root)
 			s.walkHomeVideos(ctx, pool, lib, root, nil)
+		case storage.CollectionTypePlaylists:
+			// Playlists are made through the API; nothing to walk.
 		case storage.CollectionTypeBoxSets:
 			// The collections library holds items made through the API and
 			// by the automatic collections below; there is no directory to

@@ -724,5 +724,46 @@ embedded() { # <out> : a copy of the small clip with a title tag
 }
 embedded "$ROOT/OptEmbedded/Emb On (2373)/Emb On (2373).mp4"
 embedded "$ROOT/OptEmbeddedOff/Emb Off (2374)/Emb Off (2374).mp4"
+# Search, people and browse (own libraries "Search" and "SearchShows", lazy):
+# movies and a series whose .nfo carries genres, studios, people and tags, so
+# the name searches, the genre/studio/person/year listings and the similarity
+# rules have data. Lists are separated by "|".
+credit() { # <tag> <list> : one <tag> element per item of the "|"-separated list
+  local IFS='|' v
+  for v in $2; do [ -n "$v" ] && printf '<%s>%s</%s>' "$1" "$v" "$1"; done
+  return 0
+}
+actors() { # <list> : one <actor> per name, in order
+  local IFS='|' v i=0
+  for v in $1; do [ -n "$v" ] && printf '<actor><name>%s</name><role>Role of %s</role><order>%d</order></actor>' "$v" "$v" "$i"; i=$((i + 1)); done
+  return 0
+}
+searchmovie() { # <title> <year> <genres> <studios> <actors> <directors> <tags> <mpaa>
+  local d="$ROOT/Search/$1 ($2)"
+  vid "$d/$1 ($2).mp4"
+  nfo "$d/$1 ($2).nfo" "<movie><title>$1</title><year>$2</year><plot>The story of $1.</plot>$(credit genre "$3")$(credit studio "$4")$(actors "$5")$(credit director "$6")$(credit tag "$7")$([ -n "$8" ] && printf '<mpaa>%s</mpaa>' "$8")</movie>"
+}
+searchmovie "Zeta Quest" 2011 "Action|Comedy" "Acme Pictures" "Ann Actor|Bob Player" "Dana Director" "cult" "PG"
+searchmovie "Yankee Dawn" 2012 "Drama" "Acme Pictures|Bolt Films" "Ann Actor" "Dana Director" "cult|indie" "R"
+searchmovie "Xray Vision" 2013 "Action" "Bolt Films" "Cy Cast" "Evan Eye" "" "G"
+searchmovie "Whiskey Alpha" 2013 "Animation|Family" "Cartoon Co" "Ann Actor" "" "" "G"
+searchmovie "Alpha Wolf" 2014 "Horror" "" "" "" "" "R"
+# Credits in a document: actors ranked by <order> (one with a <type>), two
+# directors, <credits> and <writer> as writers, repeated names and genres.
+WC="$ROOT/Search/Writers Cut (2017)"
+vid "$WC/Writers Cut (2017).mp4"
+nfo "$WC/Writers Cut (2017).nfo" "<movie><title>Writers Cut</title><year>2017</year><credits>Wally Writer</credits><writer>Walt Writer</writer><director>Dana Director</director><director>Dee Second</director><actor><name>Zed Last</name><role>Third</role><order>2</order></actor><actor><name>Ann Actor</name><role>First</role><order>0</order></actor><actor><name>Gus Guest</name><role>Cameo</role><type>GuestStar</type><order>1</order></actor><actor><name>Dana Director</name><role>Self</role><order>3</order></actor><studio>Acme Pictures</studio><studio>acme pictures</studio><genre>action</genre><genre>Action</genre></movie>"
+SS="$ROOT/SearchShows/Search Show (2016)"
+vid "$SS/Season 01/Search Show (2016) S01E01.mp4"
+nfo "$SS/tvshow.nfo" "<tvshow><title>Search Show</title><genre>Drama</genre><genre>Comedy</genre><studio>Bolt Films</studio><actor><name>Ann Actor</name><role>Lead</role></actor><mpaa>TV-14</mpaa></tvshow>"
+nfo "$SS/Season 01/Search Show (2016) S01E01.nfo" "<episodedetails><title>Pilot Search</title><season>1</season><episode>1</episode><director>Dana Director</director></episodedetails>"
+
+# Names with punctuation and accents (own library "Punct", lazy): the search
+# normalisation rules.
+PU="$ROOT/Punct"
+vid "$PU/Mr. O'Neil-Smith_Jr: Part 2! & 3 (2019)/Mr. O'Neil-Smith_Jr: Part 2! & 3 (2019).mp4"
+vid "$PU/Café Über Straße (2018)/Café Über Straße (2018).mp4"
+vid "$PU/Dot.Dash (2017)/Dot.Dash (2017).mp4"
+vid "$PU/Comma,Join (2016)/Comma,Join (2016).mp4"
 
 echo "media tree ready under $ROOT"

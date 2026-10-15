@@ -1,0 +1,326 @@
+[
+ {
+  "id": "misc.ping",
+  "endpoint": "GET /System/Ping",
+  "spec": "misc.md#ping",
+  "scope": "modern",
+  "tags": [
+   "misc"
+  ],
+  "covers": [
+   "misc.ping.R1"
+  ],
+  "requires": [],
+  "steps": [
+   {
+    "name": "public info",
+    "request": {
+     "method": "GET",
+     "path": "/System/Info/Public"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ProductName",
+       "op": "exists"
+      }
+     ]
+    },
+    "capture": {
+     "pn": "$.ProductName"
+    }
+   },
+   {
+    "name": "GET, anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/System/Ping"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "eq",
+       "value": "{{capture.pn}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "POST, anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/System/Ping"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "eq",
+       "value": "{{capture.pn}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "GET, authenticated",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Ping"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "eq",
+       "value": "{{capture.pn}}"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "misc.utc-time",
+  "endpoint": "GET /GetUtcTime",
+  "spec": "misc.md#utc-time",
+  "scope": "modern",
+  "tags": [
+   "misc"
+  ],
+  "covers": [
+   "misc.time.R1"
+  ],
+  "requires": [],
+  "steps": [
+   {
+    "name": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/GetUtcTime"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.RequestReceptionTime",
+       "op": "matches",
+       "value": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d\\.\\d{7}Z$"
+      },
+      {
+       "path": "$.ResponseTransmissionTime",
+       "op": "matches",
+       "value": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d\\.\\d{7}Z$"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "misc.localization",
+  "endpoint": "GET /Localization/Options",
+  "spec": "misc.md#localization",
+  "scope": "modern",
+  "tags": [
+   "misc"
+  ],
+  "covers": [
+   "misc.localization.R1",
+   "misc.localization.R2",
+   "misc.localization.R3"
+  ],
+  "requires": [
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "options, anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Localization/Options"
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "options",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Localization/Options"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "type",
+       "value": "array"
+      },
+      {
+       "path": "$[0].Name",
+       "op": "type",
+       "value": "string"
+      },
+      {
+       "path": "$[*].Value",
+       "op": "contains",
+       "value": "en-US"
+      },
+      {
+       "path": "$[*].Value",
+       "op": "contains",
+       "value": "pt-BR"
+      },
+      {
+       "path": "$[*].Value",
+       "op": "contains",
+       "value": "de"
+      }
+     ]
+    }
+   },
+   {
+    "name": "ratings, anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Localization/ParentalRatings"
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "ratings",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Localization/ParentalRatings"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[0].Name",
+       "op": "eq",
+       "value": "Unrated"
+      },
+      {
+       "path": "$[0].Value",
+       "op": "absent"
+      },
+      {
+       "path": "$[?Name=G].Value",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$[?Name=PG].Value",
+       "op": "eq",
+       "value": 10
+      },
+      {
+       "path": "$[?Name=PG-13].Value",
+       "op": "eq",
+       "value": 13
+      },
+      {
+       "path": "$[?Name=R].Value",
+       "op": "eq",
+       "value": 17
+      },
+      {
+       "path": "$[?Name=TV-MA].RatingScore.score",
+       "op": "eq",
+       "value": 17
+      },
+      {
+       "path": "$[?Name=TV-MA].RatingScore.subScore",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$[?Name=NC-17].Value",
+       "op": "eq",
+       "value": 17
+      },
+      {
+       "path": "$[?Name=Banned].Value",
+       "op": "eq",
+       "value": 1001
+      }
+     ]
+    }
+   },
+   {
+    "name": "cultures, anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Localization/Cultures"
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "cultures",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Localization/Cultures"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[0].Name",
+       "op": "type",
+       "value": "string"
+      },
+      {
+       "path": "$[0].TwoLetterISOLanguageName",
+       "op": "exists"
+      },
+      {
+       "path": "$[0].ThreeLetterISOLanguageName",
+       "op": "exists"
+      }
+     ]
+    }
+   },
+   {
+    "name": "countries",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Localization/Countries"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[0].Name",
+       "op": "type",
+       "value": "string"
+      },
+      {
+       "path": "$[0].TwoLetterISORegionName",
+       "op": "exists"
+      },
+      {
+       "path": "$[0].ThreeLetterISORegionName",
+       "op": "exists"
+      }
+     ]
+    }
+   }
+  ]
+ }
+]

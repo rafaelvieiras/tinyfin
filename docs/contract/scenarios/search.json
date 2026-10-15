@@ -1,0 +1,2911 @@
+[
+ {
+  "id": "search.hints.auth-and-required",
+  "endpoint": "GET /Search/Hints",
+  "spec": "search.md#hints",
+  "scope": "modern",
+  "tags": [
+   "search"
+  ],
+  "covers": [
+   "search.hints.R1",
+   "search.hints.R12"
+  ],
+  "requires": [
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "alpha"
+     }
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "missing searchTerm",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.searchTerm",
+       "op": "exists"
+      }
+     ],
+     "problem": 400
+    }
+   },
+   {
+    "name": "empty searchTerm",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": ""
+     }
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   },
+   {
+    "name": "blank searchTerm",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "   "
+     }
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   }
+  ]
+ },
+ {
+  "id": "search.hints.shape-movie",
+  "endpoint": "GET /Search/Hints",
+  "spec": "search.md#hints",
+  "scope": "modern",
+  "tags": [
+   "search"
+  ],
+  "covers": [
+   "search.hints.R2"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "zeta",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "zeta"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].ItemId",
+       "op": "eq",
+       "value": "{{item.szeta.id}}"
+      },
+      {
+       "path": "$.SearchHints[0].Id",
+       "op": "eq",
+       "value": "{{item.szeta.id}}"
+      },
+      {
+       "path": "$.SearchHints[0].Name",
+       "op": "eq",
+       "value": "Zeta Quest"
+      },
+      {
+       "path": "$.SearchHints[0].Type",
+       "op": "eq",
+       "value": "Movie"
+      },
+      {
+       "path": "$.SearchHints[0].MediaType",
+       "op": "eq",
+       "value": "Video"
+      },
+      {
+       "path": "$.SearchHints[0].ProductionYear",
+       "op": "eq",
+       "value": 2011
+      },
+      {
+       "path": "$.SearchHints[0].RunTimeTicks",
+       "op": "type",
+       "value": "number"
+      },
+      {
+       "path": "$.SearchHints[0].Artists",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.SearchHints[0].ChannelId",
+       "op": "exists"
+      },
+      {
+       "path": "$.SearchHints[0].IsFolder",
+       "op": "absent"
+      },
+      {
+       "path": "$.SearchHints[0].Series",
+       "op": "absent"
+      },
+      {
+       "path": "$.SearchHints[0].MatchedTerm",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "search.hints.shape-other",
+  "endpoint": "GET /Search/Hints",
+  "spec": "search.md#hints",
+  "scope": "modern",
+  "tags": [
+   "search"
+  ],
+  "covers": [
+   "search.hints.R2",
+   "search.hints.R4"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "item:sshow",
+   "item:spilot",
+   "library:searchshows",
+   "item:s02e01",
+   "item:show",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "series",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "search show",
+      "includeItemTypes": "Series"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].Type",
+       "op": "eq",
+       "value": "Series"
+      },
+      {
+       "path": "$.SearchHints[0].IsFolder",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.SearchHints[0].MediaType",
+       "op": "eq",
+       "value": "Unknown"
+      },
+      {
+       "path": "$.SearchHints[0].ItemId",
+       "op": "eq",
+       "value": "{{item.sshow.id}}"
+      },
+      {
+       "path": "$.SearchHints[0].ProductionYear",
+       "op": "eq",
+       "value": 2016
+      }
+     ]
+    }
+   },
+   {
+    "name": "episode",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "pilot"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].Type",
+       "op": "eq",
+       "value": "Episode"
+      },
+      {
+       "path": "$.SearchHints[0].Name",
+       "op": "eq",
+       "value": "Pilot Search"
+      },
+      {
+       "path": "$.SearchHints[0].Series",
+       "op": "eq",
+       "value": "Search Show"
+      },
+      {
+       "path": "$.SearchHints[0].IndexNumber",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].ParentIndexNumber",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].MediaType",
+       "op": "eq",
+       "value": "Video"
+      },
+      {
+       "path": "$.SearchHints[0].IsFolder",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "season",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "season 2"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].Type",
+       "op": "eq",
+       "value": "Season"
+      },
+      {
+       "path": "$.SearchHints[0].Name",
+       "op": "eq",
+       "value": "Season 2"
+      },
+      {
+       "path": "$.SearchHints[0].Series",
+       "op": "eq",
+       "value": "Test Show"
+      },
+      {
+       "path": "$.SearchHints[0].IndexNumber",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.SearchHints[0].IsFolder",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.SearchHints[0].MediaType",
+       "op": "eq",
+       "value": "Unknown"
+      },
+      {
+       "path": "$.SearchHints[0].ItemId",
+       "op": "exists"
+      }
+     ]
+    }
+   },
+   {
+    "name": "person",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "dana"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].Type",
+       "op": "eq",
+       "value": "Person"
+      },
+      {
+       "path": "$.SearchHints[0].Name",
+       "op": "eq",
+       "value": "Dana Director"
+      },
+      {
+       "path": "$.SearchHints[0].ItemId",
+       "op": "hex32"
+      },
+      {
+       "path": "$.SearchHints[0].MediaType",
+       "op": "eq",
+       "value": "Unknown"
+      },
+      {
+       "path": "$.SearchHints[0].ProductionYear",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "genre",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "horror"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].Type",
+       "op": "eq",
+       "value": "Genre"
+      },
+      {
+       "path": "$.SearchHints[0].Name",
+       "op": "eq",
+       "value": "Horror"
+      },
+      {
+       "path": "$.SearchHints[0].ItemId",
+       "op": "hex32"
+      },
+      {
+       "path": "$.SearchHints[0].MediaType",
+       "op": "eq",
+       "value": "Unknown"
+      }
+     ]
+    }
+   },
+   {
+    "name": "studio",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "cartoon"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].Type",
+       "op": "eq",
+       "value": "Studio"
+      },
+      {
+       "path": "$.SearchHints[0].Name",
+       "op": "eq",
+       "value": "Cartoon Co"
+      },
+      {
+       "path": "$.SearchHints[0].ItemId",
+       "op": "hex32"
+      },
+      {
+       "path": "$.SearchHints[0].MediaType",
+       "op": "eq",
+       "value": "Unknown"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "search.hints.matching",
+  "endpoint": "GET /Search/Hints",
+  "spec": "search.md#hints",
+  "scope": "modern",
+  "tags": [
+   "search"
+  ],
+  "covers": [
+   "search.hints.R3"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:bravo",
+   "item:charlie",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "case",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "BRAVO MOVIE"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].ItemId",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "surrounding space",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "  bravo  "
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "inner substring",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "rav"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "punctuation of the term is ignored",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "movie, (2020)"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].ItemId",
+       "op": "eq",
+       "value": "{{item.bravo.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "hyphen is a space",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "bravo-movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "underscore is a space",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "bravo_movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "repeated spaces",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "bravo    movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "words must be adjacent and in order",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "movie bravo"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.SearchHints",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "a space is not removed",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "bravomovie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "no match",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "zzzz"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.SearchHints",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "only punctuation matches nothing",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "&"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "percent is not a wildcard",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "%"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "search.hints.matching-names",
+  "endpoint": "GET /Search/Hints",
+  "spec": "search.md#hints",
+  "scope": "modern",
+  "tags": [
+   "search"
+  ],
+  "covers": [
+   "search.hints.R3"
+  ],
+  "requires": [
+   "item:pname",
+   "item:pcafe",
+   "item:pdot",
+   "item:pcomma",
+   "library:punct",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "apostrophe is dropped",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "o'neil",
+      "includeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].ItemId",
+       "op": "eq",
+       "value": "{{item.pname.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "apostrophe-free form",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "oneil",
+      "includeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "hyphen between words",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "neil smith",
+      "includeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "underscore is a space",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "smith jr",
+      "includeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "underscore is not removed",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "smithjr",
+      "includeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "colon, bang and ampersand across words",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "part 2 3",
+      "includeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "accents are ignored",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "cafe uber",
+      "includeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].ItemId",
+       "op": "eq",
+       "value": "{{item.pcafe.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "accented term",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "Über",
+      "includeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "sharp s",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "strasse",
+      "includeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "a dot is a space",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "dot dash",
+      "includeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].ItemId",
+       "op": "eq",
+       "value": "{{item.pdot.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a dot is not removed",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "dotdash",
+      "includeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "a comma may be a space or nothing",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "comma join",
+      "includeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "a comma joined",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "commajoin",
+      "includeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].ItemId",
+       "op": "eq",
+       "value": "{{item.pcomma.id}}"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "search.hints.ranking",
+  "endpoint": "GET /Search/Hints",
+  "spec": "search.md#hints",
+  "scope": "modern",
+  "tags": [
+   "search"
+  ],
+  "covers": [
+   "search.hints.R5"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "item:sshow",
+   "item:spilot",
+   "library:searchshows",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "t: starts-with, then word ends, then the rest",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "t"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "gte",
+       "value": 19
+      },
+      {
+       "path": "$.SearchHints[0].Name",
+       "op": "eq",
+       "value": "Test Show"
+      },
+      {
+       "path": "$.SearchHints[1].Name",
+       "op": "eq",
+       "value": "Test Show"
+      },
+      {
+       "path": "$.SearchHints[2].Name",
+       "op": "eq",
+       "value": "Test Show"
+      },
+      {
+       "path": "$.SearchHints[3].Name",
+       "op": "eq",
+       "value": "Test Show"
+      },
+      {
+       "path": "$.SearchHints[4].Name",
+       "op": "eq",
+       "value": "Pilot Search"
+      },
+      {
+       "path": "$.SearchHints[5].Name",
+       "op": "eq",
+       "value": "Walt Writer"
+      },
+      {
+       "path": "$.SearchHints[6].Name",
+       "op": "eq",
+       "value": "Bolt Films"
+      },
+      {
+       "path": "$.SearchHints[7].Name",
+       "op": "eq",
+       "value": "Ann Actor"
+      },
+      {
+       "path": "$.SearchHints[8].Name",
+       "op": "eq",
+       "value": "Cy Cast"
+      },
+      {
+       "path": "$.SearchHints[9].Name",
+       "op": "eq",
+       "value": "Dana Director"
+      },
+      {
+       "path": "$.SearchHints[10].Name",
+       "op": "eq",
+       "value": "Gus Guest"
+      },
+      {
+       "path": "$.SearchHints[11].Name",
+       "op": "eq",
+       "value": "Wally Writer"
+      },
+      {
+       "path": "$.SearchHints[12].Name",
+       "op": "eq",
+       "value": "Zed Last"
+      },
+      {
+       "path": "$.SearchHints[0].Type",
+       "op": "eq",
+       "value": "Episode"
+      },
+      {
+       "path": "$.SearchHints[3].Type",
+       "op": "eq",
+       "value": "Series"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a: capitals sort ahead of the lower-case sort names",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "a"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.SearchHints[0].Name",
+       "op": "eq",
+       "value": "Ann Actor"
+      },
+      {
+       "path": "$.SearchHints[1].Name",
+       "op": "eq",
+       "value": "Acme Pictures"
+      },
+      {
+       "path": "$.SearchHints[2].Name",
+       "op": "eq",
+       "value": "Action"
+      },
+      {
+       "path": "$.SearchHints[3].Name",
+       "op": "eq",
+       "value": "Alpha Movie (2015)"
+      },
+      {
+       "path": "$.SearchHints[4].Name",
+       "op": "eq",
+       "value": "Alpha Wolf"
+      },
+      {
+       "path": "$.SearchHints[5].Name",
+       "op": "eq",
+       "value": "Animation"
+      },
+      {
+       "path": "$.SearchHints[6].Name",
+       "op": "eq",
+       "value": "Dana Director"
+      },
+      {
+       "path": "$.SearchHints[7].Name",
+       "op": "eq",
+       "value": "Zeta Quest"
+      },
+      {
+       "path": "$.SearchHints[8].Name",
+       "op": "eq",
+       "value": "Season 1"
+      },
+      {
+       "path": "$.SearchHints[9].Name",
+       "op": "eq",
+       "value": "Season 1"
+      },
+      {
+       "path": "$.SearchHints[10].Name",
+       "op": "eq",
+       "value": "Season 2"
+      },
+      {
+       "path": "$.SearchHints[11].Name",
+       "op": "eq",
+       "value": "Pilot Search"
+      }
+     ]
+    }
+   },
+   {
+    "name": "exact name first",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "action"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.SearchHints[0].Name",
+       "op": "eq",
+       "value": "Action"
+      },
+      {
+       "path": "$.SearchHints[0].Type",
+       "op": "eq",
+       "value": "Genre"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "search.hints.kinds",
+  "endpoint": "GET /Search/Hints",
+  "spec": "search.md#hints",
+  "scope": "modern",
+  "tags": [
+   "search"
+  ],
+  "covers": [
+   "search.hints.R4",
+   "search.hints.R6"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "people by default",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "ann"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].Type",
+       "op": "eq",
+       "value": "Person"
+      }
+     ]
+    }
+   },
+   {
+    "name": "includePeople false",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "ann",
+      "includePeople": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "genres by default",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "action"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].Type",
+       "op": "eq",
+       "value": "Genre"
+      }
+     ]
+    }
+   },
+   {
+    "name": "includeGenres false",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "action",
+      "includeGenres": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "studios by default",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "bolt"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].Type",
+       "op": "eq",
+       "value": "Studio"
+      }
+     ]
+    }
+   },
+   {
+    "name": "includeStudios false",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "bolt",
+      "includeStudios": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "type list names the person kind",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "ann",
+      "includeItemTypes": "Person"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].Type",
+       "op": "eq",
+       "value": "Person"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a media type list leaves names out",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "ann",
+      "includeItemTypes": "Movie,Series"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "type list selects movies",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "quest",
+      "includeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].Type",
+       "op": "eq",
+       "value": "Movie"
+      }
+     ]
+    }
+   },
+   {
+    "name": "excluded type",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "pilot",
+      "excludeItemTypes": "Episode"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "includeMedia false keeps genres only",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "action",
+      "includeMedia": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].Type",
+       "op": "eq",
+       "value": "Genre"
+      }
+     ]
+    }
+   },
+   {
+    "name": "includeMedia false drops people",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "ann",
+      "includeMedia": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "includeMedia false drops movies",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "zeta",
+      "includeMedia": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "folders are not hints",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "search",
+      "includeItemTypes": "Folder"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "search.hints.media-types",
+  "endpoint": "GET /Search/Hints",
+  "spec": "search.md#hints",
+  "scope": "modern",
+  "tags": [
+   "search"
+  ],
+  "covers": [
+   "search.hints.R7"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "item:sshow",
+   "item:spilot",
+   "library:searchshows",
+   "item:s01e01",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "video only",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "show",
+      "mediaTypes": "Video"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.SearchHints[0].Type",
+       "op": "eq",
+       "value": "Episode"
+      },
+      {
+       "path": "$.SearchHints[1].Type",
+       "op": "eq",
+       "value": "Episode"
+      },
+      {
+       "path": "$.SearchHints[2].Type",
+       "op": "eq",
+       "value": "Episode"
+      }
+     ]
+    }
+   },
+   {
+    "name": "names have no media type",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "ann",
+      "mediaTypes": "Video"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "audio matches nothing",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "show",
+      "mediaTypes": "Audio"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "search.hints.parent",
+  "endpoint": "GET /Search/Hints",
+  "spec": "search.md#hints",
+  "scope": "modern",
+  "tags": [
+   "search"
+  ],
+  "covers": [
+   "search.hints.R8"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "item:sshow",
+   "item:spilot",
+   "library:searchshows",
+   "library:movies",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "inside the library, no names",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "a",
+      "parentId": "{{library.search.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 5
+      }
+     ]
+    }
+   },
+   {
+    "name": "another library",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "a",
+      "parentId": "{{library.movies.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      }
+     ]
+    }
+   },
+   {
+    "name": "names are not under a parent",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "ann",
+      "parentId": "{{library.search.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "series library includes seasons and episodes",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "search",
+      "parentId": "{{library.searchshows.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      }
+     ]
+    }
+   },
+   {
+    "name": "invalid parent id",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "a",
+      "parentId": "bad"
+     }
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   }
+  ]
+ },
+ {
+  "id": "search.hints.paging",
+  "endpoint": "GET /Search/Hints",
+  "spec": "search.md#hints",
+  "scope": "modern",
+  "tags": [
+   "search"
+  ],
+  "covers": [
+   "search.hints.R9"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "item:sshow",
+   "item:spilot",
+   "library:searchshows",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "limit keeps the first results",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "a",
+      "limit": "3"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.SearchHints",
+       "op": "len",
+       "value": 3
+      }
+     ]
+    }
+   },
+   {
+    "name": "start index skips from the limited list",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "a",
+      "limit": "3",
+      "startIndex": "2"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.SearchHints",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "limit larger than the matches",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "bolt",
+      "limit": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "limit zero",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "a",
+      "limit": "0"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.SearchHints",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "start index past the end",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "a",
+      "startIndex": "1000"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.SearchHints",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.TotalRecordCount",
+       "op": "gte",
+       "value": 10
+      }
+     ]
+    }
+   },
+   {
+    "name": "start index without limit",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "ann",
+      "startIndex": "0"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "bad limit",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "a",
+      "limit": "abc"
+     }
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   },
+   {
+    "name": "bad start index",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "a",
+      "startIndex": "abc"
+     }
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   }
+  ]
+ },
+ {
+  "id": "search.hints.flags",
+  "endpoint": "GET /Search/Hints",
+  "spec": "search.md#hints",
+  "scope": "modern",
+  "tags": [
+   "search"
+  ],
+  "covers": [
+   "search.hints.R10"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "isMovie true changes nothing",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "zeta",
+      "isMovie": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "isMovie false changes nothing",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "zeta",
+      "isMovie": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "isSeries true matches nothing",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "zeta",
+      "isSeries": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "isKids true matches nothing",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "zeta",
+      "isKids": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "isNews true matches nothing",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "zeta",
+      "isNews": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "isSports true matches nothing",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "zeta",
+      "isSports": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "isSeries false changes nothing",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "zeta",
+      "isSeries": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "not a boolean",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "zeta",
+      "isMovie": "maybe"
+     }
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   }
+  ]
+ },
+ {
+  "id": "search.hints.access",
+  "endpoint": "GET /Search/Hints",
+  "spec": "search.md#hints",
+  "scope": "modern",
+  "tags": [
+   "search",
+   "parental"
+  ],
+  "covers": [
+   "search.hints.R11"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "user:nofolders",
+   "user:rating10",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "no library, no media",
+    "as": "nofolders",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "zeta"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "no library, no people",
+    "as": "nofolders",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "ann"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "no library, no genres",
+    "as": "nofolders",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "action"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "no library, no studios",
+    "as": "nofolders",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "bolt"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "a rated-out movie",
+    "as": "rating10",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "wolf"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "a genre only rated-out items carry",
+    "as": "rating10",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "horror"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "a movie within the limit",
+    "as": "rating10",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "zeta"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "a genre of a visible item",
+    "as": "rating10",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "animation"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "the same genre for an unrestricted user",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "horror"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "search.items.names",
+  "endpoint": "GET /Items",
+  "spec": "search.md#items",
+  "scope": "modern",
+  "tags": [
+   "search",
+   "items"
+  ],
+  "covers": [
+   "search.items.R1",
+   "search.items.R2"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "no type: names are results too",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "searchTerm": "ann"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "Person"
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Ann Actor"
+      }
+     ]
+    }
+   },
+   {
+    "name": "studio",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "searchTerm": "bolt"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "Studio"
+      }
+     ]
+    }
+   },
+   {
+    "name": "genre",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "searchTerm": "horror"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "Genre"
+      }
+     ]
+    }
+   },
+   {
+    "name": "with a type, names are not",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "searchTerm": "ann",
+      "IncludeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "a genre named like the term",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "searchTerm": "action"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Action"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a parent excludes names",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "searchTerm": "ann",
+      "ParentId": "{{library.search.id}}",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "search.items.matching",
+  "endpoint": "GET /Items",
+  "spec": "search.md#items",
+  "scope": "modern",
+  "tags": [
+   "search",
+   "items"
+  ],
+  "covers": [
+   "search.items.R3",
+   "search.items.R4"
+  ],
+  "requires": [
+   "item:szeta",
+   "item:syankee",
+   "item:sxray",
+   "item:swhiskey",
+   "item:swolf",
+   "item:swriters",
+   "library:search",
+   "item:sshow",
+   "item:spilot",
+   "library:searchshows",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "an episode is not found by its series name",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "searchTerm": "search show"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "Series"
+      }
+     ]
+    }
+   },
+   {
+    "name": "episode by its own name",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "searchTerm": "pilot",
+      "IncludeItemTypes": "Episode"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "normalised term",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "searchTerm": "BRAVO-movie",
+      "IncludeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "only punctuation restricts nothing",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "searchTerm": "...",
+      "IncludeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "gte",
+       "value": 3
+      }
+     ]
+    }
+   },
+   {
+    "name": "sort is ignored, rank then sort name",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "searchTerm": "alpha",
+      "IncludeItemTypes": "Movie",
+      "SortBy": "SortName",
+      "SortOrder": "Descending"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Alpha Movie (2015)"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Alpha Wolf"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Whiskey Alpha"
+      }
+     ]
+    }
+   }
+  ]
+ }
+]

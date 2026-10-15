@@ -22,6 +22,7 @@ import (
 
 	"github.com/rafaelvieiras/tinyfin/internal/collection"
 	"github.com/rafaelvieiras/tinyfin/internal/guid"
+	"github.com/rafaelvieiras/tinyfin/internal/playlist"
 	"github.com/rafaelvieiras/tinyfin/internal/rating"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
@@ -42,6 +43,8 @@ var itemsKnownKinds = func() map[string]storage.ItemType {
 	} {
 		m[strings.ToLower(k)] = storage.ItemType(k)
 	}
+	// The wire name of the Playlists folder kind.
+	m["playlistsfolder"] = storage.ItemTypeManualPlaylistsFolder
 	return m
 }()
 
@@ -100,6 +103,20 @@ func itemsListParam(q url.Values, key string) []string {
 	var out []string
 	for _, v := range q[key] {
 		for _, tok := range strings.Split(v, ",") {
+			if tok = strings.TrimSpace(tok); tok != "" {
+				out = append(out, tok)
+			}
+		}
+	}
+	return out
+}
+
+// pipeListParam collects the values of key split on "|" only (repeated keys
+// and pipe-separated values alike), trimmed, empty tokens removed.
+func pipeListParam(q url.Values, key string) []string {
+	var out []string
+	for _, v := range q[key] {
+		for _, tok := range strings.Split(v, "|") {
 			if tok = strings.TrimSpace(tok); tok != "" {
 				out = append(out, tok)
 			}
@@ -181,6 +198,9 @@ type itemsScope struct {
 	// policy's BlockUnratedItems hides.
 	maxRating    *rating.Score
 	blockUnrated []storage.ItemType
+	// userID is the user the scope is for (empty for an API key). It limits
+	// the playlists the scope shows to the ones the user may read.
+	userID storage.UserID
 }
 
 func (s *Server) itemsScopeFor(ctx context.Context, u storage.User) (itemsScope, error) {
@@ -189,7 +209,7 @@ func (s *Server) itemsScopeFor(ctx context.Context, u storage.User) (itemsScope,
 		return itemsScope{}, err
 	}
 	p := storedUserPolicy(u)
-	sc := itemsScope{libIDs: map[storage.LibraryID]bool{}, blockedTags: p.BlockedTags, allowedTags: p.AllowedTags}
+	sc := itemsScope{libIDs: map[storage.LibraryID]bool{}, blockedTags: p.BlockedTags, allowedTags: p.AllowedTags, userID: u.ID}
 	if p.MaxParentalRating != nil {
 		m := rating.Score{Value: *p.MaxParentalRating}
 		if p.MaxParentalSubRating != nil {
@@ -206,9 +226,17 @@ func (s *Server) itemsScopeFor(ctx context.Context, u storage.User) (itemsScope,
 	for _, id := range p.BlockedMediaFolders {
 		blocked[strings.ToLower(id)] = true
 	}
-	for _, lib := range libs {
+	var plLib *storage.Library
+	for i, lib := range libs {
 		id := strings.ToLower(string(lib.ID))
 		allowed := false
+		if lib.CollectionType == storage.CollectionTypePlaylists {
+			// Playlists are not a folder a policy grants: who may read one
+			// is the playlist's own access record (PlaylistViewer). A user
+			// with no library at all sees nothing, playlists included.
+			plLib = &libs[i]
+			continue
+		}
 		if p.EnableAllFolders {
 			allowed = !blocked[id]
 		} else {
@@ -218,6 +246,10 @@ func (s *Server) itemsScopeFor(ctx context.Context, u storage.User) (itemsScope,
 			sc.libs = append(sc.libs, lib)
 			sc.libIDs[lib.ID] = true
 		}
+	}
+	if plLib != nil && len(sc.libs) > 0 {
+		sc.libs = append(sc.libs, *plLib)
+		sc.libIDs[plLib.ID] = true
 	}
 	return sc, nil
 }
@@ -240,6 +272,10 @@ func (sc itemsScope) apply(f *storage.ItemFilter) {
 	f.AllowedTags = sc.allowedTags
 	f.ParentalMax = sc.maxRating
 	f.BlockUnratedTypes = sc.blockUnrated
+	if sc.userID != "" {
+		u := sc.userID
+		f.PlaylistViewer = &u
+	}
 }
 
 // scopedFilter applies user's scope to f.
@@ -324,6 +360,15 @@ func (s *Server) itemReadable(ctx context.Context, sc itemsScope, item storage.I
 	if item.Type == storage.ItemTypeBoxSet && !s.collectionVisible(ctx, sc, item) {
 		return false
 	}
+	if item.Type == storage.ItemTypePlaylist && !s.playlistReadable(ctx, sc.userID, item.ID) {
+		return false
+	}
+	return s.ratingAllows(ctx, sc, item)
+}
+
+// ratingAllows applies the policy's parental limits to one item: its own
+// rating (else its series') against the maximum, and the unrated block.
+func (s *Server) ratingAllows(ctx context.Context, sc itemsScope, item storage.Item) bool {
 	own, ownOK := rating.Parse(item.OfficialRating)
 	eff, effOK := own, ownOK
 	var ser rating.Score
@@ -550,7 +595,11 @@ func parseItemsQuery(q url.Values, legacy bool) (itemsQuery, error) {
 	}
 
 	// Metadata.
-	f.Genres = itemsListParam(q, "genres")
+	// Genres and Studios take values separated by "|" (any of them
+	// matches); a comma belongs to the name.
+	f.Genres = pipeListParam(q, "genres")
+	f.Studios = pipeListParam(q, "studios")
+	f.PersonTypes = itemsListParam(q, "persontypes")
 	f.Tags = itemsListParam(q, "tags")
 	f.OfficialRatings = itemsListParam(q, "officialratings")
 	// Rating bounds: unrecognized or "Unrated" values filter nothing.
@@ -749,6 +798,27 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 
 	filter := iq.filter
 	scope.apply(&filter)
+	// GenreIds, StudioIds and PersonIds name named items by identifier; an
+	// identifier that names nothing matches no item.
+	for _, nf := range []struct {
+		key  string
+		kind storage.NamedKind
+		dst  *[]string
+	}{
+		{"genreids", storage.NamedGenre, &filter.Genres},
+		{"studioids", storage.NamedStudio, &filter.Studios},
+		{"personids", storage.NamedPerson, &filter.PersonNames},
+	} {
+		tokens := itemsListParam(q, nf.key)
+		if len(tokens) == 0 {
+			continue
+		}
+		names, _ := s.resolveNamedIDs(ctx, nf.kind, tokens)
+		if len(names) == 0 {
+			filter.NoMatch = true
+		}
+		*nf.dst = append(*nf.dst, names...)
+	}
 	if filter.Played != nil || filter.Favorite != nil || filter.Resumable {
 		uid := user.ID
 		filter.UserID = &uid
@@ -769,8 +839,13 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case norm == userRootItemID:
 			views = true
-		case norm == playlistsFolderItemID:
-			empty = true
+		case norm == playlistsFolderItemID || norm == playlistsViewID:
+			// The playlists the user may read, listed like the children of
+			// any folder.
+			folder := playlist.FolderID()
+			filter.ParentID = &folder
+			filter.ItemTypes, filter.ExcludeItemTypes = nil, nil
+			iq.hasParent = true
 		default:
 			if lib, err := s.store.GetLibrary(ctx, storage.LibraryID(norm)); err == nil {
 				if !scope.libIDs[lib.ID] {
@@ -805,6 +880,35 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 			if isFolderType(parent.Type) && !scope.libIDs[parent.LibraryID] {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
+			}
+			if parent.Type == storage.ItemTypePlaylist {
+				if !s.playlistReadable(ctx, scope.userID, parent.ID) {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				entries, perr := s.store.PlaylistEntries(ctx, parent.ID)
+				if perr != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				// The entries, in order (or as sorted when asked); library
+				// access does not apply to them, the parental limits do.
+				filter.ParentID = nil
+				filter.RestrictToLibraries, filter.LibraryIDs, filter.LibraryID = false, nil, nil
+				filter.PlaylistViewer = nil
+				filter.IDs = entries
+				filter.OrderByIDs = len(entries) > 1
+				if len(entries) == 0 {
+					filter.NoMatch = true
+				}
+				iq.hasParent = true
+				recursiveQuery = iq.recursive != nil && *iq.recursive
+				if !recursiveQuery {
+					filter.ItemTypes, filter.ExcludeItemTypes = nil, nil
+				} else {
+					filter.OrderByIDs = false
+				}
+				break
 			}
 			if parent.Type == storage.ItemTypeBoxSet {
 				if !s.collectionVisible(ctx, scope, parent) {
@@ -881,6 +985,14 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 	if countOnly {
 		filter.Limit = 1
 	}
+
+	// A search that names no item type also finds the genres, studios and
+	// people whose name matches, ranked together with the items.
+	if filter.NameContains != "" && storage.SearchKey(filter.NameContains) != "" &&
+		len(filter.ItemTypes) == 0 && !iq.hasParent && filter.LibraryID == nil && !filter.NoMatch {
+		s.writeSearchItems(ctx, w, filter, iq, countOnly, startIndex)
+		return
+	}
 	page, err := s.store.QueryItems(ctx, filter)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -904,12 +1016,65 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// writeSearchItems answers a GET /Items search over items and named items
+// (genres, studios, people) in one ranked list.
+func (s *Server) writeSearchItems(ctx context.Context, w http.ResponseWriter, filter storage.ItemFilter, iq itemsQuery, countOnly bool, startIndex int) {
+	term := filter.NameContains
+	filter.NameContains = ""
+	sq := storage.SearchQuery{
+		Items: filter, Term: term,
+		Kinds:  []storage.NamedKind{storage.NamedGenre, storage.NamedStudio, storage.NamedPerson},
+		Offset: startIndex,
+	}
+	if countOnly {
+		sq.Limit = -1
+	} else if iq.limit != unboundedLimit {
+		sq.Limit = iq.limit
+	}
+	page, err := s.store.SearchHints(ctx, sq)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	items := make([]any, 0, len(page.Hits))
+	var scope storage.ItemFilter
+	if sc, err := s.callerScope(ctx); err == nil {
+		sc.apply(&scope)
+	}
+	wantExtras := iq.fields["localtrailercount"] || iq.fields["specialfeaturecount"] || iq.fields["partcount"]
+	for _, h := range page.Hits {
+		switch {
+		case h.Item != nil:
+			dto := s.baseItemDto(ctx, *h.Item)
+			if wantExtras {
+				s.applyExtraInfo(ctx, &dto, *h.Item)
+			}
+			items = append(items, shapeListItem(dto, iq))
+		case h.Named != nil:
+			e, err := s.store.CountNamed(ctx, *h.Named, scope)
+			if err != nil {
+				continue
+			}
+			e.NamedRef = *h.Named
+			items = append(items, shapeNamed(s.namedItemDto(e, namedDtoOpts{userData: iq.userData, counts: true}), iq, h.Named.Kind))
+		}
+	}
+	writeJSON(w, http.StatusOK, namedItemsResult{
+		Items:            items,
+		TotalRecordCount: resolveTotalRecordCount(iq.totalRecord, len(items), page.Total),
+		StartIndex:       startIndex,
+	})
+}
+
 // viewLibraries is the libraries a user is shown as views: the ones the
 // scope allows, except that the collections library appears only while the
 // user can see at least one collection.
 func (s *Server) viewLibraries(ctx context.Context, sc itemsScope) []storage.Library {
 	out := make([]storage.Library, 0, len(sc.libs))
 	for _, lib := range sc.libs {
+		if lib.CollectionType == storage.CollectionTypePlaylists {
+			continue
+		}
 		if lib.CollectionType == storage.CollectionTypeBoxSets && lib.ID == collection.LibraryID() {
 			f := storage.ItemFilter{LibraryID: &lib.ID, ItemTypes: []storage.ItemType{storage.ItemTypeBoxSet}, Limit: 1}
 			sc.apply(&f)
@@ -970,7 +1135,9 @@ func shapeListItem(d baseItemDto, iq itemsQuery) baseItemDto {
 	if !has("sortname") {
 		d.SortName = ""
 	}
-	if !has("childcount") {
+	// A playlist reports how many entries it has when it has some.
+	keepPlaylistCount := d.Type == string(storage.ItemTypePlaylist) && d.ChildCount != nil && *d.ChildCount > 0
+	if !has("childcount") && !keepPlaylistCount {
 		d.ChildCount = nil
 	}
 	if !has("recursiveitemcount") {
@@ -1035,6 +1202,16 @@ func shapeListItem(d baseItemDto, iq itemsQuery) baseItemDto {
 	return d
 }
 
+// handleItemsRoot serves GET /Items/Root: the user's root folder, the same
+// item GET /Items/{zero id} answers.
+func (s *Server) handleItemsRoot(w http.ResponseWriter, r *http.Request) {
+	dto := s.userRootDto()
+	if ac, ok := AuthFromContext(r.Context()); ok && ac != nil {
+		dto.UserData = s.userDataFor(r.Context(), ac.User.ID, storage.Item{ID: storage.ItemID(userRootItemID), Type: "UserRootFolder"})
+	}
+	writeJSON(w, http.StatusOK, dto)
+}
+
 // handleItemGet serves GET /Items/{itemId} and the legacy
 // GET /Users/{userId}/Items/{itemId}: the full item object for the context
 // user (items.get.R1-R9). An item the user cannot see is a 404 problem
@@ -1086,11 +1263,20 @@ func (s *Server) handleItemGet(w http.ResponseWriter, r *http.Request) {
 	case playlistsFolderItemID:
 		writeJSON(w, http.StatusOK, s.playlistsFolderDto())
 		return
+	case playlistsViewID:
+		if s.userHasPlaylists(ctx, scope) {
+			writeJSON(w, http.StatusOK, s.playlistsViewDto(ctx))
+			return
+		}
 	}
 	item, err := s.store.GetItem(ctx, storage.ItemID(norm))
 	if err != nil {
 		if lib, libErr := s.store.GetLibrary(ctx, storage.LibraryID(norm)); libErr == nil && scope.libIDs[lib.ID] {
 			writeJSON(w, http.StatusOK, s.libraryBaseItemDto(ctx, lib))
+			return
+		}
+		if dto, ok := s.namedItemByID(ctx, scope, norm); ok {
+			writeJSON(w, http.StatusOK, dto)
 			return
 		}
 		notFound()
@@ -1102,5 +1288,8 @@ func (s *Server) handleItemGet(w http.ResponseWriter, r *http.Request) {
 	}
 	dto := s.baseItemDto(ctx, item)
 	s.applyExtraInfo(ctx, &dto, item)
+	if item.Type == storage.ItemTypePlaylist {
+		s.applyPlaylistDetail(ctx, &dto, item)
+	}
 	writeJSON(w, http.StatusOK, dto)
 }

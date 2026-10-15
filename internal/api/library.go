@@ -71,9 +71,17 @@ func (s *Server) handleUserViews(w http.ResponseWriter, r *http.Request) {
 	}
 
 	libs := s.viewLibraries(r.Context(), scope)
-	items := make([]baseItemDto, 0, len(libs))
+	items := make([]baseItemDto, 0, len(libs)+1)
 	for _, lib := range libs {
 		items = append(items, s.libraryBaseItemDto(r.Context(), lib))
+	}
+	// The Playlists view is listed once the user can read a playlist; the
+	// views are ordered by name.
+	if s.userHasPlaylists(r.Context(), scope) {
+		items = append(items, s.playlistsViewDto(r.Context()))
+		sort.SliceStable(items, func(i, j int) bool {
+			return strings.ToLower(items[i].Name) < strings.ToLower(items[j].Name)
+		})
 	}
 
 	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{
@@ -564,54 +572,6 @@ func (s *Server) handleItemAncestors(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, ancestors)
-}
-
-// handleItemSimilar serves GET /Items/{itemId}/Similar. Always empty —
-// there's no similarity/recommendation algorithm in this slice (that's
-// metadata-provider-adjacent, 08, same boundary as Studios/Filters below) —
-// but registered rather than left 404ing: found by testing against a real
-// jellyfin-web build that its item-detail page shows the "More Like This"
-// section unconditionally before the request resolves (no .catch), so a 404
-// leaves a permanently-empty visible section instead of a cleanly-hidden
-// one. An honest empty QueryResult lets the client hide it itself.
-func (s *Server) handleItemSimilar(w http.ResponseWriter, r *http.Request) {
-	item, err := s.store.GetItem(r.Context(), storage.ItemID(r.PathValue("itemId")))
-	if err != nil || !s.itemReadableByCaller(r, item) {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{Items: []baseItemDto{}})
-}
-
-// filterOptions mirrors the reference server's QueryFilters/QueryFiltersLegacy
-// response shape (GET /Items/Filters2 and the older /Items/Filters), trimmed
-// to always-empty: this project has no genre/tag/studio scanning yet (08),
-// so an honest empty set of facets is accurate today, not a stand-in for
-// real aggregation. Registered instead of left 404ing purely to stop
-// FilterButton (jellyfin-web, called unconditionally on every library-view
-// mount, not lazily on popover open) from failing every visit — see
-// handleItemSimilar's doc comment for the same reasoning.
-type filterOptions struct {
-	Genres          []string `json:"Genres"`
-	Tags            []string `json:"Tags"`
-	OfficialRatings []string `json:"OfficialRatings"`
-	Years           []int    `json:"Years"`
-}
-
-func (s *Server) handleItemsFilters(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, filterOptions{Genres: []string{}, Tags: []string{}, OfficialRatings: []string{}, Years: []int{}})
-}
-
-func (s *Server) handleItemsFilters2(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, filterOptions{Genres: []string{}, Tags: []string{}, OfficialRatings: []string{}, Years: []int{}})
-}
-
-// handleStudios serves GET /Studios. Same "no such metadata yet, honest
-// empty over 404" reasoning as handleItemSimilar/handleItemsFilters — there
-// is no Studios field on storage.Item at all today (dto.go's baseItemDto
-// doc comment).
-func (s *Server) handleStudios(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{Items: []baseItemDto{}})
 }
 
 // liveTvProgramsResult mirrors the reference server's QueryResult<BaseItemDto>

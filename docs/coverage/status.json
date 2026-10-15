@@ -3,20 +3,20 @@
  "totals": {
   "features_by_status": {
    "not-planned": 19,
-   "partial": 17,
-   "planned": 14,
-   "supported": 49
+   "partial": 16,
+   "planned": 15,
+   "supported": 59
   },
   "operations": 364,
-  "registered": 123,
+  "registered": 155,
   "routes_by_status": {
    "divergent-by-design": 11,
    "not-planned": 116,
-   "partial": 12,
-   "planned": 125,
-   "supported": 100
+   "partial": 9,
+   "planned": 93,
+   "supported": 135
   },
-  "verified": 76
+  "verified": 110
  },
  "routes": [
   {
@@ -647,6 +647,7 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "browse.intros-and-collections",
     "collections.add.appends",
     "collections.add.errors",
     "collections.auth.anonymous",
@@ -850,12 +851,13 @@
    "tag": "Filter",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "partial",
+   "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
-   "notes": "Always returns empty facets.",
-   "priority": "medium"
+   "scenarios": [
+    "browse.facets"
+   ]
   },
   {
    "id": "GET /Items/Filters2",
@@ -864,34 +866,42 @@
    "policy": "DefaultAuthorization",
    "status": "partial",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
-   "notes": "Always returns empty facets.",
-   "priority": "medium"
+   "scenarios": [
+    "browse.facets"
+   ],
+   "notes": "Genres and tags are listed; AudioLanguages only when item types are named and as codes; SubtitleLanguages is always empty.",
+   "priority": "low"
   },
   {
    "id": "GET /Genres",
    "tag": "Genre",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Genres are read from NFO and TMDB and stored on items, but there is no genre browse route (docs/11 gap).",
-   "priority": "medium"
+   "scenarios": [
+    "browse.genres.list",
+    "browse.genres.query",
+    "browse.item-filters",
+    "playlists.item.metadata-refresh"
+   ]
   },
   {
    "id": "GET /Genres/{genreName}",
    "tag": "Genre",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Genres are read from NFO and TMDB and stored on items, but there is no genre browse route (docs/11 gap).",
-   "priority": "medium"
+   "scenarios": [
+    "browse.genres.single"
+   ]
   },
   {
    "id": "GET /Artists/{name}/Images/{imageType}/{imageIndex}",
@@ -1641,6 +1651,7 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "browse.item-filters",
     "collections.add.appends",
     "collections.auto.build",
     "collections.auto.option-off",
@@ -1776,6 +1787,14 @@
     "items.user.unknown-user",
     "items.userdata.folder-unplayed-count",
     "items.userdata.reflected-in-listing",
+    "playlists.acl.matrix",
+    "playlists.create.basic",
+    "playlists.create.errors",
+    "playlists.create.variants",
+    "playlists.delete",
+    "playlists.entries.visibility",
+    "playlists.update.rename",
+    "playlists.view",
     "playstate.percent.folder",
     "scan.disc.exclusive",
     "scan.forget.file",
@@ -1785,6 +1804,8 @@
     "scan.ignore.root-extras",
     "scan.monitor.changes",
     "scan.options.photos",
+    "search.items.matching",
+    "search.items.names",
     "wire.id.item-objects",
     "wire.path.trailing-slash-reads"
    ],
@@ -1823,12 +1844,10 @@
    "tag": "Library",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
-   "web": true,
-   "notes": "Library notification hooks and file/download endpoints are not implemented.",
-   "priority": "low"
+   "web": true
   },
   {
    "id": "DELETE /Items/{itemId}",
@@ -1845,7 +1864,8 @@
     "collections.auth.no-permission",
     "collections.auto.rescan",
     "collections.delete.basic",
-    "collections.list.library-view-appears"
+    "collections.list.library-view-appears",
+    "playlists.delete"
    ]
   },
   {
@@ -1858,6 +1878,10 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "browse.genres.single",
+    "browse.persons",
+    "browse.persons.credits",
+    "browse.years",
     "collections.add.appends",
     "collections.add.errors",
     "collections.auth.manager",
@@ -1916,6 +1940,17 @@
     "items.seasons.episode-folder",
     "items.seasons.folder-without-videos",
     "items.seasons.merged-folders",
+    "playlists.create.basic",
+    "playlists.create.for-user",
+    "playlists.create.variants",
+    "playlists.delete",
+    "playlists.entries.mutate",
+    "playlists.entries.visibility",
+    "playlists.item.metadata",
+    "playlists.item.metadata-refresh",
+    "playlists.item.userdata",
+    "playlists.update.rename",
+    "playlists.view",
     "playstate.folder.keeps-leaf-positions",
     "playstate.folder.leaf-unmarked-after-folder-played",
     "playstate.folder.leaf-updates-ancestor",
@@ -2024,12 +2059,13 @@
    "tag": "Library",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Called on every item detail page ('part of a collection'); 404 today (docs/11).",
-   "priority": "medium"
+   "scenarios": [
+    "browse.intros-and-collections"
+   ]
   },
   {
    "id": "GET /Items/{itemId}/Download",
@@ -2060,12 +2096,13 @@
    "tag": "Library",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
-   "web": false,
-   "notes": "Pre-roll trailers; the reference answers an empty list unless a plugin supplies intros. 404 today (docs/11); the player just skips.",
-   "priority": "low"
+   "status": "supported",
+   "registered": true,
+   "verified": true,
+   "web": true,
+   "scenarios": [
+    "browse.intros-and-collections"
+   ]
   },
   {
    "id": "GET /Items/{itemId}/LocalTrailers",
@@ -2110,15 +2147,14 @@
    "tag": "Library",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "partial",
+   "status": "supported",
    "registered": true,
    "verified": true,
    "web": true,
    "scenarios": [
+    "browse.similar",
     "items.rating.other-read-paths"
-   ],
-   "notes": "Always returns an empty list (honest empty instead of 404, so the web client hides 'More like this').",
-   "priority": "low"
+   ]
   },
   {
    "id": "GET /Items/{itemId}/SpecialFeatures",
@@ -2295,36 +2331,33 @@
    "tag": "Library",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Library notification hooks and file/download endpoints are not implemented.",
-   "priority": "low"
+   "scenarios": [
+    "browse.similar"
+   ]
   },
   {
    "id": "GET /Shows/{itemId}/Similar",
    "tag": "Library",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
-   "web": false,
-   "notes": "Library notification hooks and file/download endpoints are not implemented.",
-   "priority": "low"
+   "web": false
   },
   {
    "id": "GET /Trailers/{itemId}/Similar",
    "tag": "Library",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
-   "web": true,
-   "notes": "Library notification hooks and file/download endpoints are not implemented.",
-   "priority": "low"
+   "web": true
   },
   {
    "id": "GET /UserItems/Resume",
@@ -2911,8 +2944,11 @@
    "policy": "FirstTimeSetupOrDefault",
    "status": "supported",
    "registered": true,
-   "verified": false,
-   "web": true
+   "verified": true,
+   "web": true,
+   "scenarios": [
+    "misc.localization"
+   ]
   },
   {
    "id": "GET /Localization/Cultures",
@@ -2921,32 +2957,37 @@
    "policy": "FirstTimeSetupOrDefault",
    "status": "supported",
    "registered": true,
-   "verified": false,
-   "web": true
+   "verified": true,
+   "web": true,
+   "scenarios": [
+    "misc.localization"
+   ]
   },
   {
    "id": "GET /Localization/Options",
    "tag": "Localization",
    "group": "system",
    "policy": "FirstTimeSetupOrDefault",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": false,
-   "notes": "Setup wizard and profile pages call it; clients fall back to a built-in list.",
-   "priority": "medium"
+   "scenarios": [
+    "misc.localization"
+   ]
   },
   {
    "id": "GET /Localization/ParentalRatings",
    "tag": "Localization",
    "group": "system",
    "policy": "FirstTimeSetupOrDefault",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": false,
-   "notes": "Used by the user policy page; not implemented.",
-   "priority": "medium"
+   "scenarios": [
+    "misc.localization"
+   ]
   },
   {
    "id": "DELETE /Audio/{itemId}/Lyrics",
@@ -3101,12 +3142,13 @@
    "tag": "Movie",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Recommendation carousel not implemented.",
-   "priority": "low"
+   "scenarios": [
+    "browse.recommendations"
+   ]
   },
   {
    "id": "GET /MusicGenres/{genreName}",
@@ -3125,156 +3167,226 @@
    "tag": "Person",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "People are stored from TMDB, but there is no person browse route (docs/11: the search screen's cast query 404s).",
-   "priority": "medium"
+   "scenarios": [
+    "browse.item-filters",
+    "browse.persons"
+   ]
   },
   {
    "id": "GET /Persons/{name}",
    "tag": "Person",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "People are stored from TMDB, but there is no person browse route (docs/11: the search screen's cast query 404s).",
-   "priority": "medium"
+   "scenarios": [
+    "browse.persons",
+    "browse.persons.hidden"
+   ]
   },
   {
    "id": "POST /Playlists",
    "tag": "Playlist",
    "group": "collections-playlists",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage.",
-   "priority": "medium"
+   "scenarios": [
+    "playlists.acl.matrix",
+    "playlists.auth.anonymous",
+    "playlists.create.basic",
+    "playlists.create.errors",
+    "playlists.create.expand",
+    "playlists.create.for-user",
+    "playlists.create.variants",
+    "playlists.delete",
+    "playlists.entries.mutate",
+    "playlists.entries.paging",
+    "playlists.entries.visibility",
+    "playlists.item.metadata",
+    "playlists.item.metadata-refresh",
+    "playlists.item.userdata",
+    "playlists.update",
+    "playlists.update.entries",
+    "playlists.update.rename",
+    "playlists.users.grant",
+    "playlists.users.manage",
+    "playlists.users.owner-asks",
+    "playlists.users.read",
+    "playlists.users.unshare",
+    "playlists.view"
+   ]
   },
   {
    "id": "GET /Playlists/{playlistId}",
    "tag": "Playlist",
    "group": "collections-playlists",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage.",
-   "priority": "medium"
+   "scenarios": [
+    "playlists.acl.matrix",
+    "playlists.auth.anonymous",
+    "playlists.create.basic",
+    "playlists.create.expand",
+    "playlists.create.for-user",
+    "playlists.create.variants",
+    "playlists.delete",
+    "playlists.entries.mutate",
+    "playlists.entries.visibility",
+    "playlists.update",
+    "playlists.update.entries",
+    "playlists.users.grant",
+    "playlists.users.unshare"
+   ]
   },
   {
    "id": "POST /Playlists/{playlistId}",
    "tag": "Playlist",
    "group": "collections-playlists",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage.",
-   "priority": "medium"
+   "scenarios": [
+    "playlists.acl.matrix",
+    "playlists.update",
+    "playlists.update.entries",
+    "playlists.update.rename"
+   ]
   },
   {
    "id": "DELETE /Playlists/{playlistId}/Items",
    "tag": "Playlist",
    "group": "collections-playlists",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage.",
-   "priority": "medium"
+   "scenarios": [
+    "playlists.acl.matrix",
+    "playlists.entries.mutate",
+    "playlists.item.metadata-refresh"
+   ]
   },
   {
    "id": "GET /Playlists/{playlistId}/Items",
    "tag": "Playlist",
    "group": "collections-playlists",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage.",
-   "priority": "medium"
+   "scenarios": [
+    "playlists.acl.matrix",
+    "playlists.auth.anonymous",
+    "playlists.create.basic",
+    "playlists.create.expand",
+    "playlists.entries.mutate",
+    "playlists.entries.paging",
+    "playlists.entries.visibility"
+   ]
   },
   {
    "id": "POST /Playlists/{playlistId}/Items",
    "tag": "Playlist",
    "group": "collections-playlists",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage.",
-   "priority": "medium"
+   "scenarios": [
+    "playlists.acl.matrix",
+    "playlists.auth.anonymous",
+    "playlists.entries.mutate",
+    "playlists.item.metadata-refresh",
+    "playlists.users.grant"
+   ]
   },
   {
    "id": "POST /Playlists/{playlistId}/Items/{itemId}/Move/{newIndex}",
    "tag": "Playlist",
    "group": "collections-playlists",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": false,
-   "notes": "Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage.",
-   "priority": "medium"
+   "scenarios": [
+    "playlists.acl.matrix",
+    "playlists.entries.mutate"
+   ]
   },
   {
    "id": "GET /Playlists/{playlistId}/Users",
    "tag": "Playlist",
    "group": "collections-playlists",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": false,
-   "notes": "Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage.",
-   "priority": "medium"
+   "scenarios": [
+    "playlists.auth.anonymous",
+    "playlists.users.manage",
+    "playlists.users.read",
+    "playlists.users.unshare"
+   ]
   },
   {
    "id": "DELETE /Playlists/{playlistId}/Users/{userId}",
    "tag": "Playlist",
    "group": "collections-playlists",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": false,
-   "notes": "Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage.",
-   "priority": "medium"
+   "scenarios": [
+    "playlists.users.unshare"
+   ]
   },
   {
    "id": "GET /Playlists/{playlistId}/Users/{userId}",
    "tag": "Playlist",
    "group": "collections-playlists",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": false,
-   "notes": "Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage.",
-   "priority": "medium"
+   "scenarios": [
+    "playlists.users.owner-asks",
+    "playlists.users.read"
+   ]
   },
   {
    "id": "POST /Playlists/{playlistId}/Users/{userId}",
    "tag": "Playlist",
    "group": "collections-playlists",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": false,
-   "notes": "Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage.",
-   "priority": "medium"
+   "scenarios": [
+    "playlists.users.grant",
+    "playlists.users.manage"
+   ]
   },
   {
    "id": "GET /Packages",
@@ -3576,12 +3688,25 @@
    "tag": "Search",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
-   "web": false,
-   "notes": "In scope for v1 (docs/01) but not built; clients fall back to /Items?SearchTerm.",
-   "priority": "high"
+   "status": "supported",
+   "registered": true,
+   "verified": true,
+   "web": true,
+   "scenarios": [
+    "playlists.item.metadata",
+    "search.hints.access",
+    "search.hints.auth-and-required",
+    "search.hints.flags",
+    "search.hints.kinds",
+    "search.hints.matching",
+    "search.hints.matching-names",
+    "search.hints.media-types",
+    "search.hints.paging",
+    "search.hints.parent",
+    "search.hints.ranking",
+    "search.hints.shape-movie",
+    "search.hints.shape-other"
+   ]
   },
   {
    "id": "GET /Sessions",
@@ -4058,24 +4183,27 @@
    "tag": "Studio",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "partial",
+   "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
-   "notes": "Always returns an empty list although studios are stored from TMDB.",
-   "priority": "medium"
+   "scenarios": [
+    "browse.item-filters",
+    "browse.studios"
+   ]
   },
   {
    "id": "GET /Studios/{name}",
    "tag": "Studio",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Studios are stored from TMDB; the per-studio detail route is not implemented.",
-   "priority": "low"
+   "scenarios": [
+    "browse.studios"
+   ]
   },
   {
    "id": "GET /FallbackFont/Fonts",
@@ -4222,12 +4350,13 @@
    "tag": "Suggestion",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
-   "web": false,
-   "notes": "Not implemented.",
-   "priority": "low"
+   "status": "supported",
+   "registered": true,
+   "verified": true,
+   "web": true,
+   "scenarios": [
+    "browse.suggestions"
+   ]
   },
   {
    "id": "POST /SyncPlay/Buffering",
@@ -4510,12 +4639,13 @@
    "tag": "System",
    "group": "system",
    "policy": "Anonymous",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Used by clients for clock sync; not implemented.",
-   "priority": "medium"
+   "scenarios": [
+    "misc.utc-time"
+   ]
   },
   {
    "id": "GET /System/ActivityLog/Entries",
@@ -4656,6 +4786,7 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "misc.ping",
     "startup.wizard.pre-setup",
     "startup.wizard.user-and-complete",
     "wire.identity.version",
@@ -4702,24 +4833,26 @@
    "tag": "System",
    "group": "system",
    "policy": "Anonymous",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Trivial and used by some clients for reachability; not implemented.",
-   "priority": "medium"
+   "scenarios": [
+    "misc.ping"
+   ]
   },
   {
    "id": "POST /System/Ping",
    "tag": "System",
    "group": "system",
    "policy": "Anonymous",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Trivial and used by some clients for reachability; not implemented.",
-   "priority": "medium"
+   "scenarios": [
+    "misc.ping"
+   ]
   },
   {
    "id": "POST /System/Restart",
@@ -5522,9 +5655,11 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "browse.recommendations",
     "collections.delete.basic",
     "collections.userdata.leaves",
     "items.legacy.item-alias-path-ids",
+    "playlists.item.userdata",
     "playstate.auth.anonymous-mark-played",
     "playstate.auth.token-only-header",
     "playstate.folder.keeps-leaf-positions",
@@ -5598,7 +5733,8 @@
     "items.runtime.other-types",
     "items.scope.no-libraries-user",
     "items.scope.parent-library-forbidden",
-    "items.search.scoped"
+    "items.search.scoped",
+    "playlists.view"
    ]
   },
   {
@@ -5720,27 +5856,166 @@
    "tag": "Year",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Not implemented (year filter on /Items works; the Years browse routes do not).",
-   "priority": "low"
+   "scenarios": [
+    "browse.years",
+    "browse.years.total"
+   ]
   },
   {
    "id": "GET /Years/{year}",
    "tag": "Year",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": false,
-   "notes": "Not implemented (year filter on /Items works; the Years browse routes do not).",
-   "priority": "low"
+   "scenarios": [
+    "browse.years"
+   ]
   }
  ],
  "features": [
+  {
+   "id": "browse.named",
+   "title": "Genres, studios, people, years",
+   "status": "supported",
+   "description": "`GET /Genres`, `/Studios`, `/Persons`, `/Years` and their single forms: distinct names carried by what the user may see, counts by type, name filters, paging; opened by id through `/Items/{id}`.",
+   "reference": "Same lists; genre images are generated collages.",
+   "notes": "Image slots are empty; a person nothing visible credits is 404 (the reference answers 200); `TotalRecordCount` of `/Years` is the number of years.",
+   "spec_rules": [
+    "browse.genres.R1",
+    "browse.genres.R2",
+    "browse.genres.R3",
+    "browse.persons.R3",
+    "browse.years.R2",
+    "browse.item.R1"
+   ],
+   "scenarios": [
+    "browse.genres.list",
+    "browse.genres.query",
+    "browse.genres.single",
+    "browse.studios",
+    "browse.persons",
+    "browse.years"
+   ],
+   "code": [
+    "internal/api/named.go",
+    "internal/storage/sqlite/named.go"
+   ],
+   "routes": [
+    "GET /Genres",
+    "GET /Genres/{genreName}",
+    "GET /Studios",
+    "GET /Studios/{name}",
+    "GET /Persons",
+    "GET /Persons/{name}",
+    "GET /Years",
+    "GET /Years/{year}"
+   ]
+  },
+  {
+   "id": "browse.facets",
+   "title": "Filter facets",
+   "status": "partial",
+   "description": "`/Items/Filters` (genres, tags, ratings, years of a parent) and `/Items/Filters2` (genres with ids, tags, audio languages).",
+   "reference": "Also lists subtitle languages and uses the user's views.",
+   "notes": "SubtitleLanguages is always empty; AudioLanguages only when item types are named.",
+   "spec_rules": [
+    "browse.facets.R1",
+    "browse.facets.R2"
+   ],
+   "scenarios": [
+    "browse.facets"
+   ],
+   "code": [
+    "internal/api/named.go"
+   ],
+   "routes": [
+    "GET /Items/Filters",
+    "GET /Items/Filters2"
+   ],
+   "priority": "low"
+  },
+  {
+   "id": "browse.similar",
+   "title": "Similar items",
+   "status": "supported",
+   "description": "Movies and series ranked by the number of shared genres, studios, people and tags.",
+   "reference": "Same idea; the reference's ranking of ties is not specified.",
+   "spec_rules": [
+    "browse.similar.R1"
+   ],
+   "scenarios": [
+    "browse.similar"
+   ],
+   "code": [
+    "internal/api/similar.go",
+    "internal/storage/sqlite/item.go"
+   ],
+   "routes": [
+    "GET /Items/{itemId}/Similar",
+    "GET /Movies/{itemId}/Similar",
+    "GET /Shows/{itemId}/Similar",
+    "GET /Trailers/{itemId}/Similar"
+   ]
+  },
+  {
+   "id": "browse.recommendations",
+   "title": "Movie recommendations and suggestions",
+   "status": "supported",
+   "description": "Categories from the movies the user played last (similar, same director, same actor); a random sample of items as suggestions.",
+   "reference": "Same category kinds (also liked-item categories); suggestions are an unspecified mix of everything.",
+   "spec_rules": [
+    "browse.recommendations.R2",
+    "browse.suggestions.R1"
+   ],
+   "scenarios": [
+    "browse.recommendations",
+    "browse.suggestions"
+   ],
+   "code": [
+    "internal/api/similar.go"
+   ],
+   "routes": [
+    "GET /Movies/Recommendations",
+    "GET /Items/Suggestions"
+   ]
+  },
+  {
+   "id": "browse.item-extras",
+   "title": "Intros and collections of an item",
+   "status": "supported",
+   "description": "`/Items/{id}/Intros` is empty (no pre-roll content exists); `/Items/{id}/Collections` lists the collections holding the item.",
+   "reference": "Same.",
+   "spec_rules": [
+    "browse.intros.R1",
+    "browse.collections.R1"
+   ],
+   "scenarios": [
+    "browse.intros-and-collections"
+   ],
+   "code": [
+    "internal/api/similar.go"
+   ],
+   "routes": [
+    "GET /Items/{itemId}/Intros",
+    "GET /Items/{itemId}/Collections"
+   ]
+  },
+  {
+   "id": "browse.named-favorites",
+   "title": "Favorites of genres, people and studios",
+   "status": "planned",
+   "description": "Named items have no stored user data: they are never favorites and `IsFavorite` filters list nothing.",
+   "reference": "A person or genre can be favorited.",
+   "notes": "Needs a per-user store keyed by name rather than by item row.",
+   "priority": "low"
+  },
   {
    "id": "collections.manage",
    "title": "Create, add, remove, delete",
@@ -6007,19 +6282,34 @@
   {
    "id": "metadata.fields.genres",
    "title": "Genres, tags, studios, people",
-   "status": "partial",
-   "description": "Stored from NFO and TMDB and returned on items; `Genres`/`Studios` filters on `/Items` are accepted but the facet and browse routes (`/Genres`, `/Persons`, `/Studios`) are missing or empty.",
+   "status": "supported",
+   "description": "Stored from NFO and TMDB, returned on items and browsable: `/Genres`, `/Studios`, `/Persons`, `/Years` list and open them, `Genres`, `Studios`, `Person`, `GenreIds`, `StudioIds`, `PersonIds` filter `/Items`.",
    "reference": "Browse, filter and image routes for each.",
-   "notes": "Facets and browse routes are the gap.",
+   "notes": "Genre, studio and person images are not generated (their image slots are empty); named items cannot be favorited.",
+   "spec_rules": [
+    "browse.genres.R1",
+    "browse.studios.R1",
+    "browse.persons.R1",
+    "browse.years.R1",
+    "browse.item.R2"
+   ],
+   "scenarios": [
+    "browse.genres.list",
+    "browse.studios",
+    "browse.persons",
+    "browse.years",
+    "browse.item-filters"
+   ],
    "code": [
-    "internal/storage/item.go"
+    "internal/api/named.go",
+    "internal/storage/sqlite/named.go",
+    "internal/storage/named.go"
    ],
    "routes": [
     "GET /Genres",
     "GET /Persons",
     "GET /Studios"
-   ],
-   "priority": "medium"
+   ]
   },
   {
    "id": "metadata.parental",
@@ -6084,24 +6374,35 @@
   {
    "id": "metadata.search",
    "title": "Search",
-   "status": "partial",
-   "description": "`SearchTerm` on `/Items` matches names; the dedicated `/Search/Hints` route does not exist.",
+   "status": "supported",
+   "description": "`SearchTerm` on `/Items` and `GET /Search/Hints` match names without regard to case, accents or punctuation, ranked (starts with, ends a word, seasons and episodes, rest); the hints also find genre, studio and person names carried by what the user can see.",
    "reference": "Hint search across items, people and genres.",
-   "notes": "Hints route missing; web search falls back to /Items.",
+   "notes": "With a Limit the reference keeps an unspecified subset; Tinyfin keeps the first results of the ranking.",
    "spec_rules": [
-    "items.search.R1"
+    "items.search.R1",
+    "search.hints.R1",
+    "search.hints.R3",
+    "search.hints.R5",
+    "search.items.R1"
    ],
    "scenarios": [
     "items.search.term",
-    "items.search.scoped"
+    "items.search.scoped",
+    "search.hints.shape-movie",
+    "search.hints.matching",
+    "search.hints.ranking",
+    "search.hints.kinds",
+    "search.items.names"
    ],
    "code": [
-    "internal/api/items_query.go"
+    "internal/api/search.go",
+    "internal/api/items_query.go",
+    "internal/storage/sqlite/search.go",
+    "internal/storage/named.go"
    ],
    "routes": [
     "GET /Search/Hints"
-   ],
-   "priority": "high"
+   ]
   },
   {
    "id": "metadata.sort-filter",
@@ -6495,6 +6796,94 @@
    "unverified_reason": "Covered by Go unit tests in internal/scan, not by a contract scenario."
   },
   {
+   "id": "playlists.model",
+   "title": "Playlists and entries",
+   "status": "supported",
+   "description": "Create (body or query form), read, update, add, remove and move entries; an item may repeat; series, seasons, folders and collections expand to their playable items; genres, studios, rating and running time are derived from the entries.",
+   "reference": "Same routes.",
+   "notes": "A move to an index outside the list is 400 (the reference answers 500); metadata is refreshed on every change.",
+   "spec_rules": [
+    "playlists.create.R1",
+    "playlists.create.R5",
+    "playlists.entries.R2",
+    "playlists.entries.R3",
+    "playlists.entries.R4",
+    "playlists.item.R2"
+   ],
+   "scenarios": [
+    "playlists.create.basic",
+    "playlists.create.expand",
+    "playlists.entries.mutate",
+    "playlists.item.metadata"
+   ],
+   "code": [
+    "internal/api/playlists.go",
+    "internal/playlist/playlist.go",
+    "internal/storage/sqlite/playlist.go"
+   ],
+   "routes": [
+    "POST /Playlists",
+    "GET /Playlists/{playlistId}",
+    "POST /Playlists/{playlistId}",
+    "GET /Playlists/{playlistId}/Items",
+    "POST /Playlists/{playlistId}/Items",
+    "DELETE /Playlists/{playlistId}/Items",
+    "POST /Playlists/{playlistId}/Items/{itemId}/Move/{newIndex}"
+   ]
+  },
+  {
+   "id": "playlists.access",
+   "title": "Ownership, open access and shares",
+   "status": "supported",
+   "description": "Owner, open flag and per-user share with a CanEdit flag; hidden playlists are 404; the owner lists and manages shares.",
+   "reference": "Same model; the reference's share removal is a no-op and its share-add can leave edit access ungranted.",
+   "spec_rules": [
+    "playlists.acl.R1",
+    "playlists.acl.R2",
+    "playlists.acl.R3",
+    "playlists.users.R1",
+    "playlists.users.R3",
+    "playlists.users.R4"
+   ],
+   "scenarios": [
+    "playlists.acl.matrix",
+    "playlists.users.read",
+    "playlists.users.manage",
+    "playlists.users.unshare"
+   ],
+   "code": [
+    "internal/api/playlists.go",
+    "internal/storage/sqlite/playlist.go"
+   ],
+   "routes": [
+    "GET /Playlists/{playlistId}/Users",
+    "GET /Playlists/{playlistId}/Users/{userId}",
+    "POST /Playlists/{playlistId}/Users/{userId}",
+    "DELETE /Playlists/{playlistId}/Users/{userId}"
+   ]
+  },
+  {
+   "id": "playlists.view",
+   "title": "Playlists view and deletion",
+   "status": "supported",
+   "description": "A Playlists view in the user's views once a playlist is readable, listing the readable playlists; the owner deletes a playlist through `DELETE /Items/{id}`.",
+   "reference": "Same.",
+   "spec_rules": [
+    "playlists.view.R1",
+    "playlists.view.R2",
+    "playlists.delete.R1"
+   ],
+   "scenarios": [
+    "playlists.view",
+    "playlists.delete"
+   ],
+   "code": [
+    "internal/api/playlists.go",
+    "internal/api/library.go",
+    "internal/api/collections.go"
+   ]
+  },
+  {
    "id": "realtime.playstate",
    "title": "Play start/progress/stop reporting",
    "status": "supported",
@@ -6867,16 +7256,18 @@
    "id": "scan.nfo",
    "title": "NFO sidecars",
    "status": "supported",
-   "description": "`\u003cmovie\u003e`, `\u003ctvshow\u003e`, `\u003cepisodedetails\u003e` (several documents merge), `\u003cnamedseason\u003e`; title, originaltitle, sorttitle, plot, year, premiered/aired, genre, tag, mpaa, ratings, uniqueid, set, runtime, season/episode.",
+   "description": "`\u003cmovie\u003e`, `\u003ctvshow\u003e`, `\u003cepisodedetails\u003e` (several documents merge), `\u003cnamedseason\u003e`; title, originaltitle, sorttitle, plot, year, premiered/aired, genre, tag, mpaa, ratings, uniqueid, set, runtime, season/episode. Also `\u003cstudio\u003e`, `\u003cactor\u003e` (role, type, order), `\u003cdirector\u003e`, `\u003ccredits\u003e` and `\u003cwriter\u003e`.",
    "reference": "Reads the Kodi NFO schema including cast and studios.",
-   "notes": "Not read: `\u003cactor\u003e`, `\u003cstudio\u003e`, `\u003cdirector\u003e`, `\u003ccredits\u003e`, `\u003ctrailer\u003e`, `\u003cfileinfo\u003e`, artist/album NFOs.",
+   "notes": "Not read: `\u003ctrailer\u003e`, `\u003cfileinfo\u003e`, actor thumbnails, artist/album NFOs.",
    "spec_rules": [
-    "items.names.R6"
+    "items.names.R6",
+    "browse.persons.R4"
    ],
    "scenarios": [
     "items.names.series-nfo-and-named-season",
     "items.names.nfo-trims-surrounding-whitespace",
-    "items.runtime.series-from-nfo"
+    "items.runtime.series-from-nfo",
+    "browse.persons.credits"
    ],
    "code": [
     "internal/scan/nfo.go"
@@ -7234,6 +7625,35 @@
    ]
   },
   {
+   "id": "system.small-routes",
+   "title": "Ping, UTC time and localization lists",
+   "status": "supported",
+   "description": "`/System/Ping` (GET and POST), `/GetUtcTime`, `/Localization/Options`, `/Localization/ParentalRatings`, `/Localization/Cultures`, `/Localization/Countries`.",
+   "reference": "Same.",
+   "spec_rules": [
+    "misc.ping.R1",
+    "misc.time.R1",
+    "misc.localization.R1",
+    "misc.localization.R2"
+   ],
+   "scenarios": [
+    "misc.ping",
+    "misc.utc-time",
+    "misc.localization"
+   ],
+   "code": [
+    "internal/api/misc_routes.go",
+    "internal/api/localization.go"
+   ],
+   "routes": [
+    "GET /System/Ping",
+    "POST /System/Ping",
+    "GET /GetUtcTime",
+    "GET /Localization/Options",
+    "GET /Localization/ParentalRatings"
+   ]
+  },
+  {
    "id": "users.auth.password",
    "title": "Password login",
    "status": "supported",
@@ -7433,6 +7853,7 @@
   "DELETE /Users/{userId}/PlayedItems/{itemId}",
   "GET /Users/{userId}/Items",
   "GET /Users/{userId}/Items/{itemId}",
+  "GET /Users/{userId}/Items/{itemId}/Intros",
   "GET /Users/{userId}/Items/{itemId}/LocalTrailers",
   "GET /Users/{userId}/Items/{itemId}/SpecialFeatures",
   "GET /Videos/{itemId}/main.m3u8",

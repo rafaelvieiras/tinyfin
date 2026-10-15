@@ -51,6 +51,25 @@ type commonNFOFields struct {
 	Rating        float64      `xml:"rating"`
 	Ratings       *ratingsEl   `xml:"ratings"`
 	UniqueIDs     []uniqueIDEl `xml:"uniqueid"`
+
+	// Studios, Actors, Directors, Credits and Writers are the credits of
+	// the item: <studio>, <actor>, <director>, <credits> (a writer) and
+	// <writer>, each repeatable.
+	Studios   []string  `xml:"studio"`
+	Actors    []actorEl `xml:"actor"`
+	Directors []string  `xml:"director"`
+	Credits   []string  `xml:"credits"`
+	Writers   []string  `xml:"writer"`
+}
+
+// actorEl is one <actor><name/><role/><type/><order/></actor> credit. Type
+// is the credit kind and defaults to Actor; Order ranks the actors of one
+// document (credits without one come last, in document order).
+type actorEl struct {
+	Name  string `xml:"name"`
+	Role  string `xml:"role"`
+	Type  string `xml:"type"`
+	Order string `xml:"order"`
 }
 
 // ratingsEl is Kodi's newer <ratings><rating><value>...</value></rating>
@@ -255,8 +274,14 @@ func applyCommonNFOFields(item *storage.Item, n commonNFOFields) {
 	if t, ok := parseNFODate(n.Premiered); ok {
 		item.PremiereDate = &t
 	}
-	if len(n.Genres) > 0 {
-		item.Genres = n.Genres
+	if g := dedupeNames(n.Genres); len(g) > 0 {
+		item.Genres = g
+	}
+	if st := dedupeNames(n.Studios); len(st) > 0 {
+		item.Studios = st
+	}
+	if people := nfoPeople(n); len(people) > 0 {
+		item.People = people
 	}
 	if len(n.Tags) > 0 {
 		item.Tags = n.Tags
@@ -273,6 +298,72 @@ func applyCommonNFOFields(item *storage.Item, n commonNFOFields) {
 		}
 		item.ProviderIDs["Tmdb"] = id
 	}
+}
+
+// dedupeNames trims the names, drops empty ones and repeats that differ only
+// in case (the first spelling wins).
+func dedupeNames(in []string) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, n := range in {
+		n = trimSpace(n)
+		k := strings.ToLower(n)
+		if n == "" || seen[k] {
+			continue
+		}
+		seen[k] = true
+		out = append(out, n)
+	}
+	return out
+}
+
+// nfoPeople builds the credits of a document: the actors in their <order>
+// (those without one after, in document order), then the directors, then
+// the writers (<credits> before <writer>). A person repeated with the same
+// credit type is kept once.
+func nfoPeople(n commonNFOFields) []storage.Person {
+	type ranked struct {
+		p     storage.Person
+		order int
+		seq   int
+	}
+	var actors []ranked
+	for i, a := range n.Actors {
+		name := trimSpace(a.Name)
+		if name == "" {
+			continue
+		}
+		typ := trimSpace(a.Type)
+		if typ == "" {
+			typ = "Actor"
+		}
+		order := 1 << 30
+		if v := nfoNumber(a.Order); v != nil && *v >= 0 {
+			order = *v
+		}
+		actors = append(actors, ranked{p: storage.Person{Name: name, Role: trimSpace(a.Role), Type: typ}, order: order, seq: i})
+	}
+	sort.SliceStable(actors, func(i, j int) bool { return actors[i].order < actors[j].order })
+	var out []storage.Person
+	seen := map[string]bool{}
+	add := func(p storage.Person) {
+		k := strings.ToLower(p.Name) + "\x00" + p.Type
+		if seen[k] {
+			return
+		}
+		seen[k] = true
+		out = append(out, p)
+	}
+	for _, a := range actors {
+		add(a.p)
+	}
+	for _, d := range dedupeNames(n.Directors) {
+		add(storage.Person{Name: d, Type: "Director"})
+	}
+	for _, w := range dedupeNames(append(append([]string{}, n.Credits...), n.Writers...)) {
+		add(storage.Person{Name: w, Type: "Writer"})
+	}
+	return out
 }
 
 // applyMovieNFO looks for a movie .nfo next to videoFile inside folder —

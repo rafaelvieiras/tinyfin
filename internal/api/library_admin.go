@@ -49,6 +49,9 @@ func (s *Server) handleGetVirtualFolders(w http.ResponseWriter, r *http.Request)
 	}
 	out := make([]virtualFolderInfo, 0, len(libs))
 	for _, lib := range libs {
+		if lib.CollectionType == storage.CollectionTypePlaylists {
+			continue // playlists are not a media folder
+		}
 		out = append(out, virtualFolderInfo{
 			Name: lib.Name, Locations: lib.Paths,
 			CollectionType: string(lib.CollectionType), ItemId: string(lib.ID),

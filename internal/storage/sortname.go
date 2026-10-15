@@ -28,7 +28,18 @@ func NormalizeSortName(title string) string {
 	for _, art := range [...]string{"the", "a", "an"} {
 		s = removeArticle(s, art)
 	}
+	return sortKeyCore(s)
+}
 
+// SortSearchKey is the sort-name form of a search term: NormalizeSortName
+// without the removal of leading articles (a search for "a b" must not
+// become a search for "b").
+func SortSearchKey(term string) string {
+	return sortKeyCore(strings.TrimFunc(term, unicode.IsSpace))
+}
+
+// sortKeyCore is steps 2 to 4 of NormalizeSortName.
+func sortKeyCore(s string) string {
 	// Steps 2 and 3 work on code points; the transliteration needs the
 	// whole string (it depends on neighbours), so it runs afterwards.
 	work := make([]rune, 0, len(s)+16)

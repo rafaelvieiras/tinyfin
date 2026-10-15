@@ -505,6 +505,7 @@ func (s *Server) routes() {
 	// "/Users/Public" above) — http.ServeMux itself always resolves a
 	// literal segment ahead of a wildcard regardless of order.
 	s.mux.HandleFunc("GET /Items/Latest", requireAuth(s.handleItemsLatest))
+	s.mux.HandleFunc("GET /Items/Root", requireAuth(s.handleItemsRoot))
 	s.mux.HandleFunc("GET /Items/Filters", requireAuth(s.handleItemsFilters))
 	s.mux.HandleFunc("GET /Items/Filters2", requireAuth(s.handleItemsFilters2))
 	s.mux.HandleFunc("GET /Items/Counts", requireAuth(s.handleItemsCounts))
@@ -537,6 +538,40 @@ func (s *Server) routes() {
 	// this route with either regardless of registration order.
 	s.mux.HandleFunc("GET /Shows/NextUp", requireAuth(s.handleShowsNextUp))
 	s.mux.HandleFunc("GET /Studios", requireAuth(s.handleStudios))
+	s.mux.HandleFunc("GET /Studios/{name}", requireAuth(s.handleStudioByName))
+	s.mux.HandleFunc("GET /Genres", requireAuth(s.handleGenres))
+	s.mux.HandleFunc("GET /Genres/{genreName}", requireAuth(s.handleGenreByName))
+	s.mux.HandleFunc("GET /Persons", requireAuth(s.handlePersons))
+	s.mux.HandleFunc("GET /Persons/{name}", requireAuth(s.handlePersonByName))
+	s.mux.HandleFunc("GET /Years", requireAuth(s.handleYears))
+	s.mux.HandleFunc("GET /Years/{year}", requireAuth(s.handleYearByNumber))
+	s.mux.HandleFunc("GET /Search/Hints", requireAuth(s.handleSearchHints))
+	s.mux.HandleFunc("GET /Movies/Recommendations", requireAuth(s.handleMovieRecommendations))
+	s.mux.HandleFunc("GET /Items/Suggestions", requireAuth(s.handleItemsSuggestions))
+	s.mux.HandleFunc("GET /Movies/{itemId}/Similar", requireAuth(s.handleItemSimilar))
+	s.mux.HandleFunc("GET /Shows/{itemId}/Similar", requireAuth(s.handleItemSimilar))
+	s.mux.HandleFunc("GET /Trailers/{itemId}/Similar", requireAuth(s.handleItemSimilar))
+	s.mux.HandleFunc("GET /Items/{itemId}/Intros", requireAuth(s.handleItemIntros))
+	s.mux.HandleFunc("GET /Users/{userId}/Items/{itemId}/Intros", requireAuth(s.handleItemIntros))
+	s.mux.HandleFunc("GET /Items/{itemId}/Collections", requireAuth(s.handleItemCollections))
+	// Playlists (playlists.go).
+	s.mux.HandleFunc("POST /Playlists", requireAuth(s.handleCreatePlaylist))
+	s.mux.HandleFunc("GET /Playlists/{playlistId}", requireAuth(s.handleGetPlaylist))
+	s.mux.HandleFunc("POST /Playlists/{playlistId}", requireAuth(s.handleUpdatePlaylist))
+	s.mux.HandleFunc("GET /Playlists/{playlistId}/Items", requireAuth(s.handlePlaylistItems))
+	s.mux.HandleFunc("POST /Playlists/{playlistId}/Items", requireAuth(s.handleAddToPlaylist))
+	s.mux.HandleFunc("DELETE /Playlists/{playlistId}/Items", requireAuth(s.handleRemoveFromPlaylist))
+	s.mux.HandleFunc("POST /Playlists/{playlistId}/Items/{itemId}/Move/{newIndex}", requireAuth(s.handleMovePlaylistItem))
+	s.mux.HandleFunc("GET /Playlists/{playlistId}/Users", requireAuth(s.handlePlaylistUsers))
+	s.mux.HandleFunc("GET /Playlists/{playlistId}/Users/{userId}", requireAuth(s.handlePlaylistUser))
+	s.mux.HandleFunc("POST /Playlists/{playlistId}/Users/{userId}", requireAuth(s.handleSetPlaylistUser))
+	s.mux.HandleFunc("DELETE /Playlists/{playlistId}/Users/{userId}", requireAuth(s.handleDeletePlaylistUser))
+	// Small utility routes (misc_routes.go).
+	s.mux.HandleFunc("GET /System/Ping", s.handleSystemPing)
+	s.mux.HandleFunc("POST /System/Ping", s.handleSystemPing)
+	s.mux.HandleFunc("GET /GetUtcTime", s.handleGetUtcTime)
+	s.mux.HandleFunc("GET /Localization/Options", s.openUntilSetUp(s.handleLocalizationOptions))
+	s.mux.HandleFunc("GET /Localization/ParentalRatings", s.openUntilSetUp(s.handleLocalizationParentalRatings))
 	// LiveTv/Programs — jellyfin-web's series detail page calls this
 	// unconditionally even though no LiveTV tuner is ever configured here.
 	// See library.go's handleLiveTvPrograms doc comment.

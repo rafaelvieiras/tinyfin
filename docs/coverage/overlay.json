@@ -122,44 +122,14 @@
    "notes": "Not implemented.",
    "priority": "low"
   },
-  "Genre": {
-   "status": "planned",
-   "notes": "Genres are read from NFO and TMDB and stored on items, but there is no genre browse route (docs/11 gap).",
-   "priority": "medium"
-  },
   "MusicGenre": {
    "status": "not-planned",
    "notes": "Music libraries are not scanned (video-first scope, docs/01).",
    "priority": "low"
   },
-  "Person": {
-   "status": "planned",
-   "notes": "People are stored from TMDB, but there is no person browse route (docs/11: the search screen's cast query 404s).",
-   "priority": "medium"
-  },
-  "Year": {
-   "status": "planned",
-   "notes": "Not implemented (year filter on /Items works; the Years browse routes do not).",
-   "priority": "low"
-  },
-  "Studio": {
-   "status": "planned",
-   "notes": "Studios are stored from TMDB; the per-studio detail route is not implemented.",
-   "priority": "low"
-  },
   "Artist": {
    "status": "not-planned",
    "notes": "Music libraries are not scanned (video-first scope, docs/01); not on ROADMAP.md.",
-   "priority": "low"
-  },
-  "Search": {
-   "status": "planned",
-   "notes": "In scope for v1 (docs/01) but not built; clients fall back to /Items?SearchTerm.",
-   "priority": "high"
-  },
-  "Suggestion": {
-   "status": "planned",
-   "notes": "Not implemented.",
    "priority": "low"
   },
   "Movie": {
@@ -176,11 +146,6 @@
    "status": "not-planned",
    "notes": "Deprecated in the reference and served by a plugin there; local trailers are served by /Items/{id}/LocalTrailers.",
    "priority": "low"
-  },
-  "Playlist": {
-   "status": "planned",
-   "notes": "Playlists are in scope for v1 (docs/01) but nothing is implemented; no playlist storage.",
-   "priority": "medium"
   },
   "InstantMix": {
    "status": "not-planned",
@@ -299,28 +264,11 @@
   }
  },
  "routes": {
-  "GET /Items/{itemId}/Similar": {
-   "status": "partial",
-   "notes": "Always returns an empty list (honest empty instead of 404, so the web client hides 'More like this').",
-   "reference": "Ranks similar items by shared genres, tags, people and rating.",
-   "priority": "low"
-  },
-  "GET /Items/Filters": {
-   "status": "partial",
-   "notes": "Always returns empty facets.",
-   "reference": "Lists the genres, tags, ratings and years present.",
-   "priority": "medium"
-  },
   "GET /Items/Filters2": {
    "status": "partial",
-   "notes": "Always returns empty facets.",
-   "reference": "Lists the genres, tags, ratings and years present.",
-   "priority": "medium"
-  },
-  "GET /Studios": {
-   "status": "partial",
-   "notes": "Always returns an empty list although studios are stored from TMDB.",
-   "priority": "medium"
+   "notes": "Genres and tags are listed; AudioLanguages only when item types are named and as codes; SubtitleLanguages is always empty.",
+   "reference": "Lists the genres, tags, and the audio and subtitle languages present.",
+   "priority": "low"
   },
   "GET /LiveTv/Programs": {
    "status": "partial",
@@ -360,16 +308,6 @@
    "via": "GET /Videos/{itemId}/{file}",
    "notes": "Served by the wildcard file route."
   },
-  "GET /Items/{itemId}/Collections": {
-   "status": "planned",
-   "notes": "Called on every item detail page ('part of a collection'); 404 today (docs/11).",
-   "priority": "medium"
-  },
-  "GET /Items/{itemId}/Intros": {
-   "status": "planned",
-   "notes": "Pre-roll trailers; the reference answers an empty list unless a plugin supplies intros. 404 today (docs/11); the player just skips.",
-   "priority": "low"
-  },
   "GET /Items/{itemId}/Download": {
    "status": "planned",
    "notes": "Download permission exists in the user policy but no download route is served.",
@@ -399,21 +337,6 @@
    "notes": "Not implemented.",
    "priority": "low"
   },
-  "GET /System/Ping": {
-   "status": "planned",
-   "notes": "Trivial and used by some clients for reachability; not implemented.",
-   "priority": "medium"
-  },
-  "POST /System/Ping": {
-   "status": "planned",
-   "notes": "Trivial and used by some clients for reachability; not implemented.",
-   "priority": "medium"
-  },
-  "GET /GetUtcTime": {
-   "status": "planned",
-   "notes": "Used by clients for clock sync; not implemented.",
-   "priority": "medium"
-  },
   "GET /Items/{itemId}/Images/{imageType}/{imageIndex}/{tag}/{format}/{maxWidth}/{maxHeight}/{percentPlayed}/{unplayedCount}": {
    "status": "planned",
    "notes": "The long resize form; Tinyfin serves the originals through the two short forms and ignores resize parameters.",
@@ -423,16 +346,6 @@
    "status": "planned",
    "notes": "User avatars are not stored.",
    "priority": "low"
-  },
-  "GET /Localization/Options": {
-   "status": "planned",
-   "notes": "Setup wizard and profile pages call it; clients fall back to a built-in list.",
-   "priority": "medium"
-  },
-  "GET /Localization/ParentalRatings": {
-   "status": "planned",
-   "notes": "Used by the user policy page; not implemented.",
-   "priority": "medium"
   },
   "POST /Users/AuthenticateWithQuickConnect": {
    "status": "divergent-by-design",

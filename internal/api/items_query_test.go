@@ -241,7 +241,7 @@ func TestItemsList_Queries(t *testing.T) {
 		{"search substring", &f.aliceTok, q("SearchTerm", "lph"), want{200, 1, []string{"alpha"}, false}},
 		{"search case-insensitive", &f.aliceTok, q("SearchTerm", "ALPHA"), want{200, 1, []string{"alpha"}, false}},
 		{"search ranking ignores sort", &f.aliceTok, q("SearchTerm", "movie", "IncludeItemTypes", "Movie", "SortBy", "SortName", "SortOrder", "Descending"), want{200, 3, movies3, true}},
-		{"search matches series name for episodes", &f.adminTok, q("SearchTerm", "Test", "IncludeItemTypes", "Episode"), want{200, 3, nil, false}},
+		{"search does not match episodes by their series name", &f.adminTok, q("SearchTerm", "Test", "IncludeItemTypes", "Episode"), want{200, 0, nil, false}},
 		{"search outside parent", &f.adminTok, q("ParentId", string(f.movies), "SearchTerm", "Test", "Recursive", "true"), want{200, 0, nil, false}},
 		{"search restricted", &f.nofoldersTok, q("SearchTerm", "Alpha"), want{200, 0, nil, false}},
 		{"sort name desc", &f.adminTok, q("Recursive", "true", "IncludeItemTypes", "Movie", "SortBy", "Name", "SortOrder", "Descending"), want{200, 3, []string{"charlie", "bravo", "alpha"}, true}},

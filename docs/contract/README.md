@@ -324,14 +324,18 @@ scenario that is not pending or divergent; `risky` ones run only with
 
 | Area | Scenarios | Pass | Fail | Blocked | Skipped |
 |---|---|---|---|---|---|
+| browse | 15 | 15 | 0 | 0 | 0 |
 | collections | 30 | 30 | 0 | 0 | 0 |
 | extras | 15 | 15 | 0 | 0 | 0 |
 | images | 13 | 13 | 0 | 0 | 0 |
 | items | 156 | 156 | 0 | 0 | 0 |
+| misc | 3 | 3 | 0 | 0 | 0 |
+| playlists | 23 | 23 | 0 | 0 | 0 |
 | playstate | 107 | 107 | 0 | 0 | 0 |
 | quickconnect | 16 | 16 | 0 | 0 | 0 |
 | scan | 23 | 23 | 0 | 0 | 0 |
+| search | 14 | 14 | 0 | 0 | 0 |
 | subtitles | 23 | 23 | 0 | 0 | 0 |
 | users | 202 | 202 | 0 | 0 | 0 |
 | wire | 14 | 14 | 0 | 0 | 0 |
-| **Total** | 599 | 599 | 0 | 0 | 0 |
+| **Total** | 654 | 654 | 0 | 0 | 0 |
