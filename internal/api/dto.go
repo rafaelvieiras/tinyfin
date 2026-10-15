@@ -1172,11 +1172,11 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 	if ac, ok := AuthFromContext(ctx); ok && ac.Authenticated {
 		dto.UserData = s.userDataFor(ctx, ac.User.ID, item)
 		dto.PlayAccess = "Full"
-		dto.CanDelete = ac.User.IsAdministrator
+		dto.CanDelete = mayDeleteContent(ac, item) && !isFolderType(item.Type)
 		if item.Type == storage.ItemTypeBoxSet {
 			dto.CanDelete = canManageCollections(ac)
 		}
-		dto.CanDownload = ac.User.IsAdministrator && !isFolderType(item.Type)
+		dto.CanDownload = mayDownloadContent(ac) && !isFolderType(item.Type)
 		dto.Etag = etagFor(item)
 		dto.DisplayPreferencesID = displayPreferencesIDFor(item.Type)
 	}

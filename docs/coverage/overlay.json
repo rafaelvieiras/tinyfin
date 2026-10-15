@@ -308,11 +308,6 @@
    "via": "GET /Videos/{itemId}/{file}",
    "notes": "Served by the wildcard file route."
   },
-  "GET /Items/{itemId}/Download": {
-   "status": "planned",
-   "notes": "Download permission exists in the user policy but no download route is served.",
-   "priority": "medium"
-  },
   "GET /Items/{itemId}/File": {
    "status": "planned",
    "notes": "Raw file delivery is not implemented.",

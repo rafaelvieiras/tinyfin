@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Content policy: `GET /Items/{itemId}/Download` serves the original file as an attachment
+  (ranges, `Content-Disposition`) and enforces `EnableContentDownloading` (403, 400 for an
+  administrator without it, 401 for an API key). `DELETE /Items/{itemId}` now follows
+  `EnableContentDeletion` / `EnableContentDeletionFromFolders` with no administrator bypass (401
+  without permission; a permitted caller is still refused with 403, files are never deleted) and
+  `CanDelete`/`CanDownload` on items reflect the policy. The first-run and seeded administrators
+  get `EnableContentDeletion`. Contract: `specs/policy.md`, 8 scenarios.
 - Chapters: the scan reads the chapter marks of a file (`ffprobe -show_chapters`, stored per item,
   migration 0026 re-probes existing items once) and `Chapters` is returned on a single read and
   with `Fields=Chapters` (title, or `Chapter N` when the file gives none). No chapter pictures.

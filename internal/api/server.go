@@ -655,6 +655,7 @@ func (s *Server) routes() {
 	// wildcard covers both /stream and /stream.{container}, and — since
 	// hls.go — HLS segment files (seg_00000.ts) too; handleVideoStream
 	// itself dispatches on the segment shape (see playback.go).
+	s.mux.HandleFunc("GET /Items/{itemId}/Download", requireAuth(s.handleItemDownload))
 	s.mux.HandleFunc("GET /Videos/{itemId}/{file}", requireAuth(s.handleVideoStream))
 	// Subtitles (subtitles.go). The file segment is "Stream.{format}" or
 	// "subtitles.m3u8": ServeMux wildcards cover whole segments, so the

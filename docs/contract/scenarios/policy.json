@@ -1,0 +1,617 @@
+[
+ {
+  "id": "policy.download.default",
+  "endpoint": "GET /Items/{itemId}/Download",
+  "spec": "policy.md",
+  "scope": "modern",
+  "tags": [
+   "policy"
+  ],
+  "covers": [
+   "policy.download.R1"
+  ],
+  "requires": [
+   "item:alpha",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "whole file",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}/Download"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Disposition": "/^attachment; filename=\"Alpha Movie \\(2015\\)\\.mp4\"/",
+      "Content-Type": "/video\\/mp4/",
+      "Accept-Ranges": "bytes"
+     }
+    },
+    "as": "alice"
+   },
+   {
+    "name": "range",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}/Download",
+     "headers": {
+      "Range": "bytes=0-9"
+     }
+    },
+    "expect": {
+     "status": 206,
+     "headers": {
+      "Content-Range": "/^bytes 0-9\\//",
+      "Content-Length": "10"
+     }
+    },
+    "as": "alice"
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "policy.download.denied",
+  "endpoint": "GET /Items/{itemId}/Download",
+  "spec": "policy.md",
+  "scope": "modern",
+  "tags": [
+   "policy"
+  ],
+  "covers": [
+   "policy.download.R2"
+  ],
+  "requires": [
+   "item:alpha",
+   "user:nodownload"
+  ],
+  "steps": [
+   {
+    "name": "user without the permission",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}/Download"
+    },
+    "expect": {
+     "status": 403
+    },
+    "as": "nodownload"
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "policy.download.admin-denied",
+  "endpoint": "GET /Items/{itemId}/Download",
+  "spec": "policy.md",
+  "scope": "modern",
+  "tags": [
+   "policy"
+  ],
+  "covers": [
+   "policy.download.R2"
+  ],
+  "requires": [
+   "item:alpha"
+  ],
+  "steps": [
+   {
+    "name": "create tmp-policy-dl-admin",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-policy-dl-admin",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u": "$.Id",
+     "ap": "$.Policy.AuthenticationProviderId",
+     "rp": "$.Policy.PasswordResetProviderId"
+    }
+   },
+   {
+    "name": "set policy",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.ap}}",
+      "PasswordResetProviderId": "{{capture.rp}}",
+      "IsAdministrator": true,
+      "EnableAllFolders": true,
+      "EnableContentDownloading": false
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "login",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-policy-dl-admin",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-policy-dl-admin{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tok": "$.AccessToken"
+    }
+   },
+   {
+    "name": "administrator without the permission",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}/Download"
+    },
+    "expect": {
+     "status": 400
+    },
+    "as": "token:{{capture.tok}}"
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete tmp-policy-dl-admin",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u}}"
+    },
+    "expect": {}
+   }
+  ]
+ },
+ {
+  "id": "policy.download.errors",
+  "endpoint": "GET /Items/{itemId}/Download",
+  "spec": "policy.md",
+  "scope": "modern",
+  "tags": [
+   "policy"
+  ],
+  "covers": [
+   "policy.download.R3"
+  ],
+  "requires": [
+   "item:alpha",
+   "user:alice",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}/Download"
+    },
+    "expect": {
+     "status": 401
+    },
+    "as": "anonymous"
+   },
+   {
+    "name": "unknown id",
+    "request": {
+     "method": "GET",
+     "path": "/Items/00000000000000000000000000000001/Download"
+    },
+    "expect": {
+     "status": 404
+    },
+    "as": "alice"
+   },
+   {
+    "name": "library folder",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{library.movies.id}}/Download"
+    },
+    "expect": {
+     "status": 400
+    },
+    "as": "alice"
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "policy.item.can-flags",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "policy.md",
+  "scope": "modern",
+  "tags": [
+   "policy"
+  ],
+  "covers": [
+   "policy.item.R1"
+  ],
+  "requires": [
+   "item:alpha",
+   "user:alice",
+   "user:nodownload"
+  ],
+  "steps": [
+   {
+    "name": "default user",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.CanDownload",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.CanDelete",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    },
+    "as": "alice"
+   },
+   {
+    "name": "administrator with the permissions",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.CanDownload",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.CanDelete",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    },
+    "as": "admin"
+   },
+   {
+    "name": "download denied",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.CanDownload",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.CanDelete",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    },
+    "as": "nodownload"
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "policy.delete.denied",
+  "endpoint": "DELETE /Items/{itemId}",
+  "spec": "policy.md",
+  "scope": "modern",
+  "tags": [
+   "policy"
+  ],
+  "covers": [
+   "policy.delete.R1",
+   "policy.item.R1"
+  ],
+  "requires": [
+   "item:alpha",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "default user",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 401,
+     "text": [
+      {
+       "op": "contains",
+       "value": "Unauthorized access"
+      }
+     ]
+    },
+    "as": "alice"
+   },
+   {
+    "name": "unknown id",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/00000000000000000000000000000001"
+    },
+    "expect": {
+     "status": 404
+    },
+    "as": "alice"
+   },
+   {
+    "name": "anonymous",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 401
+    },
+    "as": "anonymous"
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "policy.delete.folders-not-matching",
+  "endpoint": "DELETE /Items/{itemId}",
+  "spec": "policy.md",
+  "scope": "modern",
+  "tags": [
+   "policy"
+  ],
+  "covers": [
+   "policy.delete.R1",
+   "policy.item.R1"
+  ],
+  "requires": [
+   "item:alpha"
+  ],
+  "steps": [
+   {
+    "name": "create tmp-policy-del-folders",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-policy-del-folders",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u": "$.Id",
+     "ap": "$.Policy.AuthenticationProviderId",
+     "rp": "$.Policy.PasswordResetProviderId"
+    }
+   },
+   {
+    "name": "set policy",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.ap}}",
+      "PasswordResetProviderId": "{{capture.rp}}",
+      "EnableAllFolders": true,
+      "EnableContentDeletion": false,
+      "EnableContentDeletionFromFolders": [
+       "00000000000000000000000000000001"
+      ]
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "login",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-policy-del-folders",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-policy-del-folders{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tok": "$.AccessToken"
+    }
+   },
+   {
+    "name": "a folder list that does not hold the item's library",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 401
+    },
+    "as": "token:{{capture.tok}}"
+   },
+   {
+    "name": "CanDelete false",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.CanDelete",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    },
+    "as": "token:{{capture.tok}}"
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete tmp-policy-del-folders",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u}}"
+    },
+    "expect": {}
+   }
+  ]
+ },
+ {
+  "id": "policy.delete.admin-without-flag",
+  "endpoint": "DELETE /Items/{itemId}",
+  "spec": "policy.md",
+  "scope": "modern",
+  "tags": [
+   "policy"
+  ],
+  "covers": [
+   "policy.delete.R1",
+   "policy.item.R1"
+  ],
+  "requires": [
+   "item:alpha"
+  ],
+  "steps": [
+   {
+    "name": "create tmp-policy-del-admin",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-policy-del-admin",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u": "$.Id",
+     "ap": "$.Policy.AuthenticationProviderId",
+     "rp": "$.Policy.PasswordResetProviderId"
+    }
+   },
+   {
+    "name": "set policy",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.ap}}",
+      "PasswordResetProviderId": "{{capture.rp}}",
+      "IsAdministrator": true,
+      "EnableAllFolders": true,
+      "EnableContentDeletion": false
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "login",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-policy-del-admin",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-policy-del-admin{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tok": "$.AccessToken"
+    }
+   },
+   {
+    "name": "administrator without the permission",
+    "request": {
+     "method": "DELETE",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 401
+    },
+    "as": "token:{{capture.tok}}"
+   },
+   {
+    "name": "CanDelete false",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.CanDelete",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    },
+    "as": "token:{{capture.tok}}"
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete tmp-policy-del-admin",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u}}"
+    },
+    "expect": {}
+   }
+  ]
+ }
+]

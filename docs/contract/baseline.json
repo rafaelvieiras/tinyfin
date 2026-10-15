@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 676
+    "pass": 684
   },
   "scenarios": {
     "browse.facets": "pass",
@@ -377,6 +377,14 @@
     "playstate.user.nonadmin-other-user-forbidden": "pass",
     "playstate.user.nonadmin-other-user-forbidden-unmark": "pass",
     "playstate.user.nonadmin-unknown-user-forbidden": "pass",
+    "policy.delete.admin-without-flag": "pass",
+    "policy.delete.denied": "pass",
+    "policy.delete.folders-not-matching": "pass",
+    "policy.download.admin-denied": "pass",
+    "policy.download.default": "pass",
+    "policy.download.denied": "pass",
+    "policy.download.errors": "pass",
+    "policy.item.can-flags": "pass",
     "quickconnect.authorize.already-authorized": "pass",
     "quickconnect.authorize.anonymous-refused": "pass",
     "quickconnect.authorize.invalid-user-id": "pass",

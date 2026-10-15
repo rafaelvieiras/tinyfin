@@ -4,7 +4,7 @@
 
 Item listing, single items, genres/people/studios, search and the other browse endpoints.
 
-[Overview](../COVERAGE.md) · 58 operations · 39 registered (67%) · 34 verified · ✅ 37 · 🟡 1 · 🗓️ 14 · ⛔ 5 · ↔️ 1
+[Overview](../COVERAGE.md) · 58 operations · 40 registered (69%) · 35 verified · ✅ 38 · 🟡 1 · 🗓️ 13 · ⛔ 5 · ↔️ 1
 
 ✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔
 
@@ -43,11 +43,11 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `GET /Items/Counts` | DefaultAuthorization | yes | 2/2 |  |
 | ✅ supported | `GET /Items/Latest` | DefaultAuthorization | yes | 2/2 |  |
 | ✅ supported *(no scenario)* | `GET /Items/Root` | DefaultAuthorization | yes |  |  |
-| ✅ supported | `DELETE /Items/{itemId}` | DefaultAuthorization | yes | 7/7 |  |
-| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 166/166 |  |
+| ✅ supported | `DELETE /Items/{itemId}` | DefaultAuthorization | yes | 10/10 |  |
+| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 169/169 |  |
 | ✅ supported | `GET /Items/{itemId}/Ancestors` | DefaultAuthorization | yes | 2/2 |  |
 | ✅ supported | `GET /Items/{itemId}/Collections` | DefaultAuthorization | yes | 1/1 |  |
-| 🗓️ planned | `GET /Items/{itemId}/Download` | Download |  |  | Download permission exists in the user policy but no download route is served. (priority: medium) |
+| ✅ supported | `GET /Items/{itemId}/Download` | Download |  | 4/4 |  |
 | 🗓️ planned | `GET /Items/{itemId}/File` | DefaultAuthorization |  |  | Raw file delivery is not implemented. (priority: low) |
 | ✅ supported | `GET /Items/{itemId}/Intros` | DefaultAuthorization | yes | 1/1 |  |
 | ✅ supported | `GET /Items/{itemId}/LocalTrailers` | DefaultAuthorization | yes | 7/7 |  |
@@ -150,3 +150,4 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 - [`metadata.sort-filter`](metadata.md) Sorting, filtering and paging on /Items
 - [`scan.extras`](scan.md) Trailers, specials, theme songs and videos
 - [`scan.refresh`](scan.md) Library and item refresh
+- [`users.content-policy`](users.md) Download and deletion permissions

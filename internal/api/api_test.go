@@ -66,7 +66,8 @@ func createTestAdminUser(t *testing.T, st storage.UserStore, name, password stri
 	if err != nil {
 		t.Fatalf("bcrypt.GenerateFromPassword: %v", err)
 	}
-	id, err := st.CreateUser(context.Background(), storage.User{Name: name, PasswordHash: string(hash), IsAdministrator: true})
+	id, err := st.CreateUser(context.Background(), storage.User{Name: name, PasswordHash: string(hash), IsAdministrator: true,
+		Policy: `{"IsHidden":false,"EnableContentDeletion":true,"EnableRemoteControlOfOtherUsers":true}`})
 	if err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}

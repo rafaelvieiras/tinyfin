@@ -231,11 +231,13 @@ func (s *Server) handleDeleteItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if item.Type != storage.ItemTypeBoxSet {
-		if ac.User.IsAdministrator || storedUserPolicy(ac.User).EnableContentDeletion {
-			w.WriteHeader(http.StatusForbidden)
-		} else {
+		if !mayDeleteContent(ac, item) {
 			writeUnauthorizedAccess(w)
+			return
 		}
+		// Tinyfin never removes media files: a caller that may delete is
+		// refused (403), one that may not gets the reference's 401.
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 	if !canManageCollections(ac) {

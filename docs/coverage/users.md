@@ -4,9 +4,9 @@
 
 Accounts, login paths, policy enforcement and setup.
 
-[Overview](../COVERAGE.md) · 10 features · ✅ 8 · 🗓️ 1 · ⛔ 1
+[Overview](../COVERAGE.md) · 11 features · ✅ 8 · 🟡 1 · 🗓️ 1 · ⛔ 1
 
-✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️⛔⛔
+✅✅✅✅✅✅✅✅✅✅✅✅✅✅🟡🟡🗓️🗓️⛔⛔
 
 | Status | Feature | Jellyfin 12.2 | Tinyfin | Evidence | Notes |
 |---|---|---|---|---|---|
@@ -20,4 +20,5 @@ Accounts, login paths, policy enforcement and setup.
 | ✅ supported *(unverified)* | **First-run wizard**<br>`users.startup` | Same flow with an empty-password root account. | Configuration, user, remote access and complete; no default account is created (divergence). | spec: [`startup.state.R1`](../contract/specs/startup.md)<br>scenarios 0/2 pass: [`startup.wizard.user-and-complete`](../contract/scenarios/startup.json)<br>[`startup.wizard.no-default-login`](../contract/scenarios/startup.json)<br>code: [`internal/api/startup.go`](../../internal/api/startup.go)<br>routes: `POST /Startup/User`<br>`POST /Startup/Complete` | Unverified: Fresh-server scenarios are run separately and are not in the baseline. |
 | ✅ supported *(unverified)* | **Display preferences**<br>`users.display-prefs` | Same. | Per-user, per-client preferences are stored and returned. | code: [`internal/api/displaypreferences.go`](../../internal/api/displaypreferences.go)<br>routes: `GET /DisplayPreferences/{displayPreferencesId}` | Unverified: No scenario; verified by the web client (docs/11). |
 | 🗓️ planned | **User images**<br>`users.avatar` | Upload, serve and delete a user avatar. | No user image storage. | routes: `GET /UserImage` | Not on ROADMAP.md. (priority: low) |
+| 🟡 partial | **Download and deletion permissions**<br>`users.content-policy` | Same checks; a permitted delete removes the file and the item. | `EnableContentDownloading` gates `GET /Items/{itemId}/Download` (original file as an attachment, ranges); `EnableContentDeletion` and `EnableContentDeletionFromFolders` decide the 401 of `DELETE /Items/{itemId}` and the `CanDelete`/`CanDownload` item fields (no administrator bypass). | spec: [`policy.download.R1`](../contract/specs/policy.md)<br>[`policy.download.R2`](../contract/specs/policy.md)<br>[`policy.download.R3`](../contract/specs/policy.md)<br>[`policy.delete.R1`](../contract/specs/policy.md)<br>[`policy.delete.R2`](../contract/specs/policy.md)<br>[`policy.item.R1`](../contract/specs/policy.md)<br>scenarios 8/8 pass: [`policy.download.default`](../contract/scenarios/policy.json)<br>[`policy.download.denied`](../contract/scenarios/policy.json)<br>[`policy.download.admin-denied`](../contract/scenarios/policy.json)<br>+5<br>code: [`internal/api/policy_enforce.go`](../../internal/api/policy_enforce.go)<br>[`internal/api/collections.go`](../../internal/api/collections.go)<br>[`internal/api/dto.go`](../../internal/api/dto.go)<br>routes: `GET /Items/{itemId}/Download`<br>`DELETE /Items/{itemId}` | Tinyfin never deletes media files: a permitted caller gets 403. `EnableMediaPlayback` and the transcoding/remuxing flags are stored but not enforced. (priority: medium) |
 

@@ -355,7 +355,8 @@ func seedAdmin(args []string) int {
 		fmt.Fprintln(os.Stderr, "seed-admin:", err)
 		return 2
 	}
-	id, err := st.CreateUser(context.Background(), storage.User{Name: *user, PasswordHash: string(hash), IsAdministrator: true})
+	id, err := st.CreateUser(context.Background(), storage.User{Name: *user, PasswordHash: string(hash), IsAdministrator: true,
+		Policy: `{"IsHidden":false,"EnableContentDeletion":true,"EnableRemoteControlOfOtherUsers":true}`})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "seed-admin:", err)
 		return 2

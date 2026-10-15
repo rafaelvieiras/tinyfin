@@ -196,6 +196,42 @@
     "GET /UserImage"
    ],
    "priority": "low"
+  },
+  {
+   "id": "users.content-policy",
+   "title": "Download and deletion permissions",
+   "status": "partial",
+   "description": "`EnableContentDownloading` gates `GET /Items/{itemId}/Download` (original file as an attachment, ranges); `EnableContentDeletion` and `EnableContentDeletionFromFolders` decide the 401 of `DELETE /Items/{itemId}` and the `CanDelete`/`CanDownload` item fields (no administrator bypass).",
+   "reference": "Same checks; a permitted delete removes the file and the item.",
+   "notes": "Tinyfin never deletes media files: a permitted caller gets 403. `EnableMediaPlayback` and the transcoding/remuxing flags are stored but not enforced.",
+   "code": [
+    "internal/api/policy_enforce.go",
+    "internal/api/collections.go",
+    "internal/api/dto.go"
+   ],
+   "routes": [
+    "GET /Items/{itemId}/Download",
+    "DELETE /Items/{itemId}"
+   ],
+   "spec_rules": [
+    "policy.download.R1",
+    "policy.download.R2",
+    "policy.download.R3",
+    "policy.delete.R1",
+    "policy.delete.R2",
+    "policy.item.R1"
+   ],
+   "scenarios": [
+    "policy.download.default",
+    "policy.download.denied",
+    "policy.download.admin-denied",
+    "policy.download.errors",
+    "policy.item.can-flags",
+    "policy.delete.denied",
+    "policy.delete.folders-not-matching",
+    "policy.delete.admin-without-flag"
+   ],
+   "priority": "medium"
   }
  ]
 }
