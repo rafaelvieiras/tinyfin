@@ -60,6 +60,10 @@ type Config struct {
 	// subdirectory for HLS output (playlist + segments). Empty means
 	// os.TempDir().
 	WorkDir string
+	// FontsDir is a directory of fonts for burned-in text subtitles
+	// (libass' fontsdir). Empty means fontconfig's system fonts, which is
+	// what a container with fonts installed (e.g. fonts-dejavu) wants.
+	FontsDir string
 }
 
 // ffmpegPath returns the binary to invoke, applying the FFmpegPath-empty
@@ -100,6 +104,30 @@ type Request struct {
 	MaxHeight      int    // 0 = no scaling
 	StartTimeTicks int64  // seek offset, 100ns ticks (Jellyfin's tick unit), 0 = from start
 	SegmentSeconds int    // HLS segment target duration, 0 = package default (6s)
+
+	// AudioStreamIndex is the index, within InputPath, of the audio stream
+	// to map (ffmpeg's "0:N"); nil means the file's first audio stream.
+	AudioStreamIndex *int
+	// Subtitle, when set, is burned into the picture. It only takes effect
+	// together with a re-encoded video (VideoCodec not "copy").
+	Subtitle *Subtitle
+	// FontsDir is filled from Config.FontsDir by Start.
+	FontsDir string
+}
+
+// Subtitle describes the track to burn in.
+type Subtitle struct {
+	// Path is the file the text is read from: the video itself for an
+	// embedded track, the sidecar file for an external one (Embedded false).
+	Path string
+	// Embedded: the track is a stream of Path; Index is then its position
+	// among the subtitle streams of that file (the subtitles filter's si=).
+	Embedded bool
+	Index    int
+	// Bitmap marks picture subtitles (PGS, DVD, DVB), rendered with the
+	// overlay filter from the stream StreamIndex of the input.
+	Bitmap      bool
+	StreamIndex int
 }
 
 // Manager starts and tracks jobs, keyed by an opaque session ID the caller
@@ -144,6 +172,10 @@ func (m *Manager) Start(ctx context.Context, sessionID string, req Request) (*Jo
 	// package generates itself.
 	if strings.ContainsAny(sessionID, `/\`) || sessionID == "." || sessionID == ".." {
 		return nil, fmt.Errorf("transcode: invalid session id %q", sessionID)
+	}
+
+	if req.FontsDir == "" {
+		req.FontsDir = m.cfg.FontsDir
 	}
 
 	// Stop+replace (see doc comment above). Safe even if no job exists yet

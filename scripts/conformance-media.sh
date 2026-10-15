@@ -559,6 +559,28 @@ setmovie Sets "Saga Case Lower" 2011 "<set><name>case saga</name></set>"
 setmovie SetsOff "Saga Gamma One" 2008 "<set><name>Gamma Saga</name></set>"
 setmovie SetsOff "Saga Gamma Two" 2009 "<set><name>Gamma Saga</name></set>"
 
+# Audio-track selection and burned-in subtitles (own library "AvTrack", lazy):
+# an MKV with two audio tracks (AAC "eng" 440 Hz, default; MP3 "por" 880 Hz) and
+# two embedded text subtitles (SubRip "eng", ASS "por"), plus a twin with one
+# SubRip file beside it. 320x240, 4 s.
+AV="$ROOT/AvTrack"
+avmulti() { # <out> [extra subtitle file]
+  [ -f "$1" ] && return 0
+  mkdir -p "$(dirname "$1")"
+  local t; t="$(mktemp -d)"
+  printf '1\n00:00:00,500 --> 00:00:03,500\nBURN IN TEXT\n' >"$t/a.srt"
+  "$FFMPEG" -v error -y -f lavfi -i "testsrc=duration=4:size=320x240:rate=6" \
+    -f lavfi -i "sine=frequency=440:duration=4" -f lavfi -i "sine=frequency=880:duration=4" \
+    -i "$t/a.srt" -i "$t/a.srt" -map 0 -map 1 -map 2 -map 3 -map 4 \
+    -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a:0 aac -c:a:1 libmp3lame -c:s:0 srt -c:s:1 ass \
+    -metadata:s:a:0 language=eng -metadata:s:a:1 language=por \
+    -metadata:s:s:0 language=eng -metadata:s:s:1 language=por \
+    -disposition:a:0 default -disposition:a:1 0 -disposition:s:0 default -disposition:s:1 0 -shortest "$1"
+  rm -rf "$t"
+}
+avmulti "$AV/Av Multi (2400)/Av Multi (2400).mkv"
+clip "$AV/Av Plain (2401)/Av Plain (2401).mp4" 4 440
+printf '1\n00:00:00,500 --> 00:00:03,500\nBURN IN TEXT\n' >"$AV/Av Plain (2401)/Av Plain (2401).en.srt"
 # Subtitles (own library "SubFiles", lazy): movies with external subtitle files
 # named in the ways the reference understands, embedded text tracks, and files
 # in every text format the conversion route reads. The folder is not called

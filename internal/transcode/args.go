@@ -3,6 +3,7 @@ package transcode
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 // ticksPerSecond is Jellyfin's tick unit: 100ns per tick, so
@@ -43,7 +44,29 @@ func buildArgs(req Request) []string {
 	}
 
 	args = append(args, "-i", req.InputPath)
-	args = append(args, "-map", "0:v:0", "-map", "0:a:0")
+
+	// Burn-in (docs/contract/specs/subtitles.md, "Burned-in subtitles") is a
+	// filter on the video, so it needs a re-encode: a copied video stream
+	// cannot be filtered (the caller promotes the mode, see
+	// internal/playback.Options.BurnSubtitle).
+	burn := req.Subtitle != nil && !(req.VideoCodec == "" || req.VideoCodec == "copy")
+	videoMap := "0:v:0"
+	if burn && req.Subtitle.Bitmap {
+		// Bitmap tracks (PGS, DVD, DVB) are decoded to pictures and
+		// overlaid; the scale, if any, follows the overlay.
+		graph := fmt.Sprintf("[0:v:0][0:%d]overlay=eof_action=pass:repeatlast=0", req.Subtitle.StreamIndex)
+		if req.MaxHeight > 0 {
+			graph += fmt.Sprintf(",scale=-2:%d", req.MaxHeight)
+		}
+		args = append(args, "-filter_complex", graph+"[v]")
+		videoMap = "[v]"
+	}
+	args = append(args, "-map", videoMap)
+	if req.AudioStreamIndex != nil {
+		args = append(args, "-map", fmt.Sprintf("0:%d", *req.AudioStreamIndex))
+	} else {
+		args = append(args, "-map", "0:a:0")
+	}
 
 	videoCopy := req.VideoCodec == "" || req.VideoCodec == "copy"
 	audioCopy := req.AudioCodec == "" || req.AudioCodec == "copy"
@@ -70,8 +93,8 @@ func buildArgs(req Request) []string {
 		// can't be filtered, so this is nested under the videoCopy==false
 		// branch rather than applied unconditionally whenever MaxHeight is
 		// set.
-		if req.MaxHeight > 0 {
-			args = append(args, "-vf", fmt.Sprintf("scale=-2:%d", req.MaxHeight))
+		if vf := videoFilter(req, burn); vf != "" {
+			args = append(args, "-vf", vf)
 		}
 	}
 
@@ -124,4 +147,55 @@ func buildArgs(req Request) []string {
 	)
 
 	return args
+}
+
+// videoFilter builds the -vf chain of a re-encode: the text-subtitle burn-in
+// first, at the source resolution (libass lays the text out for the picture
+// it is given, so rendering before the scale keeps the proportions of the
+// authored style), then the scale. A bitmap burn-in is a filter graph of its
+// own (see buildArgs) and contributes nothing here. After an input-side seek
+// the frames restart at zero while the cues keep their absolute times, so the
+// chain shifts the timestamps by the seek offset around the renderer.
+func videoFilter(req Request, burn bool) string {
+	var chain []string
+	if burn && !req.Subtitle.Bitmap {
+		seek := req.StartTimeTicks > 0
+		if seek {
+			chain = append(chain, fmt.Sprintf("setpts=PTS+%s/TB", strconv.FormatFloat(float64(req.StartTimeTicks)/ticksPerSecond, 'f', 3, 64)))
+		}
+		f := "subtitles=filename=" + quoteFilterValue(req.Subtitle.Path)
+		if req.Subtitle.Embedded {
+			f += fmt.Sprintf(":si=%d", req.Subtitle.Index)
+		}
+		if req.FontsDir != "" {
+			f += ":fontsdir=" + quoteFilterValue(req.FontsDir)
+		}
+		chain = append(chain, f)
+		if seek {
+			chain = append(chain, "setpts=PTS-STARTPTS")
+		}
+	}
+	if req.MaxHeight > 0 && !(burn && req.Subtitle.Bitmap) {
+		chain = append(chain, fmt.Sprintf("scale=-2:%d", req.MaxHeight))
+	}
+	return strings.Join(chain, ",")
+}
+
+// quoteFilterValue escapes v for use as a filter option value inside a
+// -vf chain. ffmpeg parses the argument twice (ffmpeg-filters(1), "Notes on
+// filtergraph escaping"): first the option separators of the filter, then the
+// graph's own, so a value is escaped for the option level (\ ' :) and the
+// result again for the graph level (\ ' [ ] , ;).
+func quoteFilterValue(v string) string {
+	esc := func(s, special string) string {
+		var b strings.Builder
+		for _, r := range s {
+			if r == '\\' || strings.ContainsRune(special, r) {
+				b.WriteByte('\\')
+			}
+			b.WriteRune(r)
+		}
+		return b.String()
+	}
+	return esc(esc(v, `':`), `'[],;`)
 }
