@@ -423,7 +423,8 @@ func (s *Scanner) processTrack(ctx context.Context, pool *jobPool, lib storage.L
 	if pr.tags == nil {
 		// Reused from an earlier probe: the tags are what the item holds.
 		if old, err := s.store.GetItem(ctx, itemID); err == nil && old.Type == storage.ItemTypeAudio {
-			item.Name, item.SortName = old.Name, old.SortName
+			item.Name = old.Name
+			item.SortName = trackSortName(old.Name, old.IndexNumber, old.ParentIndexNumber)
 			item.Album, item.AlbumArtist, item.Artists = old.Album, old.AlbumArtist, old.Artists
 			item.Genres, item.IndexNumber, item.ParentIndexNumber = old.Genres, old.IndexNumber, old.ParentIndexNumber
 			item.ProductionYear, item.PremiereDate = old.ProductionYear, old.PremiereDate

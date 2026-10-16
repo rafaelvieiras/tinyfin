@@ -782,6 +782,13 @@ func buildItemParts(filter storage.ItemFilter) (itemParts, bool) {
 		}
 		addWhere("lower(items.album_artist) IN ("+sqlPlaceholders(len(args))+")", args...)
 	}
+	if len(filter.ContributingNames) > 0 {
+		args := make([]any, len(filter.ContributingNames))
+		for i, n := range filter.ContributingNames {
+			args[i] = strings.ToLower(n)
+		}
+		addWhere("EXISTS (SELECT 1 FROM json_each(items.artists) WHERE lower(value) IN ("+sqlPlaceholders(len(args))+") AND lower(value) <> lower(items.album_artist))", args...)
+	}
 	switch filter.ArtistRole {
 	case "Artist":
 		addWhere(`EXISTS (SELECT 1 FROM items t WHERE t.library_id = items.library_id AND t.type = 'Audio'

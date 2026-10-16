@@ -668,6 +668,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /Movies/{itemId}/Similar", requireAuth(s.handleItemSimilar))
 	s.mux.HandleFunc("GET /Shows/{itemId}/Similar", requireAuth(s.handleItemSimilar))
 	s.mux.HandleFunc("GET /Trailers/{itemId}/Similar", requireAuth(s.handleItemSimilar))
+	s.mux.HandleFunc("GET /Artists/{itemId}/Similar", requireAuth(s.handleItemSimilar))
+	s.mux.HandleFunc("GET /Albums/{itemId}/Similar", requireAuth(s.handleItemSimilar))
 	s.mux.HandleFunc("GET /Items/{itemId}/Intros", requireAuth(s.handleItemIntros))
 	s.mux.HandleFunc("GET /Users/{userId}/Items/{itemId}/Intros", requireAuth(s.handleItemIntros))
 	s.mux.HandleFunc("GET /Items/{itemId}/Collections", requireAuth(s.handleItemCollections))

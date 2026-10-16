@@ -4,7 +4,7 @@ A library with `CollectionType` `music`: the tagged audio files of an `Artist/Al
 
 Scenarios: [`../scenarios/music.json`](../scenarios/music.json). Fixture state: [`../fixtures.json`](../fixtures.json), media from `scripts/conformance-media.sh` (lazy library `Music`). Rule IDs are stable (`music.<topic>.R<n>`).
 
-Slice 1 is the scan, the model, the artist listings, pictures and the direct stream. Slice 3 adds [Instant Mix](#mix) and [audio transcoding](#transcode) (`music.mix.*`, `music.transcode.*`). Slice 2 ([genres](#genre), [artist lookup and pictures](#artist2), [nfo](#nfo), [disc folders and loose files](#layout), [lyrics](#lyrics)) was probed the same way, on a second lazy library `Music2` (scenarios: [`../scenarios/music2.json`](../scenarios/music2.json)). What both leave out is listed under [Not covered](#not-covered).
+Slice 1 is the scan, the model, the artist listings, pictures and the direct stream. Slice 4 ([latest](#latest), [contributing artists](#contrib), [similar items](#similar), sort names) was probed through the WebUI comparison of wave 20 on a fourth lazy library `Music4` (scenarios: [`../scenarios/music4.json`](../scenarios/music4.json)). Slice 3 adds [Instant Mix](#mix) and [audio transcoding](#transcode) (`music.mix.*`, `music.transcode.*`). Slice 2 ([genres](#genre), [artist lookup and pictures](#artist2), [nfo](#nfo), [disc folders and loose files](#layout), [lyrics](#lyrics)) was probed the same way, on a second lazy library `Music2` (scenarios: [`../scenarios/music2.json`](../scenarios/music2.json)). What both leave out is listed under [Not covered](#not-covered).
 
 ## Fixture facts this spec relies on
 
@@ -29,6 +29,7 @@ Slice 1 is the scan, the model, the artist listings, pictures and the direct str
 - **music.track.R1** A track (`Type` `Audio`) has `MediaType` `Audio`, `IsFolder` false, `Album`, `AlbumId` (the album item), `AlbumArtist`, `AlbumArtists` (`[{Name, Id}]`), `Artists` (names) and `ArtistItems` (`[{Name, Id}]`), `Container` (the file extension), and one media source named after the file without its extension holding one `Audio` stream.
 - **music.track.R2** `ArtistItems` and `AlbumArtists` ids are the ids of `MusicArtist` items: the artist folder when its name equals the name (case-insensitive), else the artist made from the name. The track artist and the album artist are separate members (`Guest Singer` vs `Various Artists`).
 - **music.track.R3** `AlbumPrimaryImageTag` is the album's Primary image tag, when the album has a picture.
+- **music.track.R4** A track's `SortName` is `<disc> - <track> - <title>` with both numbers zero-padded to 4 digits (`0001 - 0001 - First Song`), `<track> - <title>` with no disc, the title alone with neither; it is not normalized (case and articles are kept), and `SortBy=SortName` orders by it byte-wise (`01 - Untagged Track` after `0005 - ...`).
 
 ## <a id="album"></a>The album
 
@@ -138,15 +139,36 @@ Probed on the reference with the same fixture (scenarios: `music.transcode.*`; t
 - **music.transcode.R6** When no entry takes the file, the first `TranscodingProfiles` entry of `Type` `Audio` with `Context` not `Static` and `Protocol` `http` (default) or `hls` is used: `SupportsDirectPlay` and `SupportsDirectStream` false, `SupportsTranscoding` true, `TranscodingSubProtocol` the protocol, `TranscodingContainer` its container (absent for a list), and `TranscodingUrl` `/audio/<dashed id>/stream.<container>` (`master.m3u8` for hls, with `SegmentContainer`) with `DeviceId`, `MediaSourceId`, `AudioCodec` (first of the profile's list), `AudioBitrate`, `PlaySessionId`, `ApiKey`, `RequireAvc=false`, `EnableAudioVbrEncoding=true`, `Tag` and `TranscodeReasons`: `ContainerNotSupported,VideoCodecNotSupported,AudioCodecNotSupported` when the container is not taken, `AudioCodecNotSupported` when only the codec is not, `ContainerBitrateExceedsLimit` when only the rate is.
 - **music.transcode.R7** `AudioBitrate` is 128000, or the profile's `MusicStreamingTranscodingBitrate`, held under the effective maximum: `MaxStreamingBitrate` of the body, else the query's, else the profile's. A file whose rate is above it is not direct played. With no usable transcoding profile the answer is `SupportsDirectPlay`/`SupportsDirectStream`/`SupportsTranscoding` all false, no `TranscodingUrl` and no `ErrorCode`.
 
+## <a id="latest"></a>Latest music
+
+Probed with `Music4`: `Artist Six/Album Eta` (2 tracks), `Artist Seven/Album Theta`, `Artist Eight/Album Iota`, and the compilation `Various Compilers/Album Kappa` whose tracks are by `Artist Six` and `Artist Eight`.
+
+- **music.latest.R1** `GET /Items/Latest` groups by default (`GroupItems` true): a track is listed as its album (`Type` `MusicAlbum`), so `IncludeItemTypes=Audio` and no type both list the albums, newest first, and never the tracks. `MusicArtist` items are never part of the default list.
+- **music.latest.R2** `GroupItems=false` lists the tracks (`Audio`) and leaves the albums and the artists out of the default list; `IncludeItemTypes=Audio,MusicAlbum&GroupItems=false` lists both. `MusicArtist` is listed only when asked for (`IncludeItemTypes=MusicArtist`, not scoped to a music library). `Limit` cuts the page.
+- **music.latest.R3** With `ParentId` a music library and grouping on, `IncludeItemTypes` is ignored: the albums are listed whatever the types (even `MusicArtist` or `Movie`). With `GroupItems=false` the types apply.
+
+## <a id="contrib"></a>Contributing artists
+
+- **music.list.R5** `GET /Items` takes `ContributingArtistIds`: the items (`Audio`, `MusicAlbum`) that name the artist among their `Artists` while the artist is not the item's album artist. On a compilation, the track artists are contributors and `Various Compilers` (album artist) is not; an album artist that appears only on its own albums contributes to nothing (0 items). `ArtistIds` (music.list.R4) still lists the artist's own albums and the compilation.
+
+## <a id="similar"></a>Similar music
+
+- **music.similar.R1** `GET /Artists/{itemId}/Similar` (and `/Items/{itemId}/Similar`) answers `{Items, TotalRecordCount, StartIndex}` of the other artists the caller can see (any music library) that share a genre with the artist, most shared first (order among ties is not stable on the reference); `Limit` cuts the page and the total. An artist's genres are those of `artist.nfo`, else of its tracks. An unknown id answers `200` with an empty list on `/Artists/{itemId}/Similar`; an artist with no genre at all is similar to every other artist.
+- **music.similar.R2** `GET /Albums/{itemId}/Similar` (and the generic route) lists the other albums that share a genre; an album with no genre is similar to every other album, an album whose genres nobody shares has none.
+- **music.similar.R3** `GET /Items/{itemId}/Similar` of a track lists the other tracks that share a genre (a track with no genre: every other track). There is no `/Songs/{itemId}/Similar` route (`404` on the reference).
+- **music.similar.R4** The reference computes an artist's genres after the scan has settled: right after a library is created the artist answers a transient superset (every artist), so the scenarios retry (`retryMs`).
+
 ## <a id="not-covered"></a>Not covered by either slice
 
-* `/Items/{id}/Similar` for music, music videos.
+* Music videos.
 * `People` on tracks and albums (the reference lists the artists as `Artist`/`AlbumArtist` people), MusicBrainz ids read from tags (only the nfo ones are), `ReplayGain`, `Folder` items for disc folders (see [slice 2 differences](#lyrics)), lyrics upload/delete/search, `.elrc`/`.srt` lyrics.
 * Multi-valued tags are not split (`;` is part of a name, as on the reference).
 
 ## Known differences
 
-* **`SortName`.** The reference keeps `0001 - 0001 - First Song` (disc, track, title) as the sort name of a track; Tinyfin stores the normalized sort key like for every other item (`0000000001  0000000001  first song`). The order of tracks in a listing is the same.
+* **Expected (out of scope).** The WebUI against the reference also reaches `GET /SyncPlay/List` and `GET /LiveTv/Programs/Recommended` (Tinyfin: `404`, console noise only), and the reference enriches artists and albums online (photos, biographies, tags, MusicBrainz ids, genres such as `trip hop`, `Person` hits in `/Search/Hints`); Tinyfin has no online providers. Album `RunTimeTicks` is the real duration (the reference uses a tag estimate) and `MediaSources` are listed on albums by Tinyfin only.
+* **Latest of a loose track.** A track with no album (music.loose.R2) is not grouped by Tinyfin's latest list (no album to show), the reference's choice was not probed.
+* **First pass.** On a library created and scanned a moment ago the reference's `Similar` of artists is transient (music.similar.R4); Tinyfin is consistent at once.
 * **Track runtime.** ffprobe 4.4 (the one Tinyfin was built against here) reports a slightly longer duration for an MP3 file than the reference's ffprobe (`2.0375 s` vs `2.0 s`).
 * **Path of an artist with no folder.** The reference reports a path under its metadata folder; Tinyfin has none (`Path` absent).
 * **Empty members.** The reference always sends `Genres`, `Tags`, `Studios`, `Taglines`, `ProviderIds`, `LockedFields` and the other empty collections on a single read; Tinyfin follows its general rule for those members, not a music-specific one (`Artists`, `ArtistItems` and `AlbumArtists` are always sent on tracks and albums).

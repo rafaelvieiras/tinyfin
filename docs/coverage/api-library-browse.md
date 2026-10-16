@@ -4,9 +4,9 @@
 
 Item listing, single items, genres/people/studios, search and the other browse endpoints.
 
-[Overview](../COVERAGE.md) · 58 operations · 44 registered (76%) · 39 verified · ✅ 42 · 🟡 1 · 🗓️ 13 · ⛔ 1 · ↔️ 1
+[Overview](../COVERAGE.md) · 58 operations · 46 registered (79%) · 41 verified · ✅ 44 · 🟡 1 · 🗓️ 11 · ⛔ 1 · ↔️ 1
 
-✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️
+✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🟡🗓️🗓️🗓️🗓️
 
 Columns: **Auth** is the reference's authorization policy; **Web** = mentioned in docs/11 (called by the official web client); **Tests** = scenarios that exercise the route (passing / total).
 
@@ -16,7 +16,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 |---|---|---|---|---|---|
 | ✅ supported | `GET /Artists` *(deprecated)* | DefaultAuthorization | yes | 1/1 |  |
 | ✅ supported | `GET /Artists/AlbumArtists` *(deprecated)* | DefaultAuthorization | yes | 1/1 |  |
-| ✅ supported | `GET /Artists/{name}` *(deprecated)* | DefaultAuthorization |  | 1/2 |  |
+| ✅ supported | `GET /Artists/{name}` *(deprecated)* | DefaultAuthorization |  | 2/2 |  |
 
 ## Filter
 
@@ -36,12 +36,12 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| 🗓️ planned | `GET /Albums/{itemId}/Similar` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
-| 🗓️ planned | `GET /Artists/{itemId}/Similar` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
+| ✅ supported | `GET /Albums/{itemId}/Similar` | DefaultAuthorization |  | 1/1 |  |
+| ✅ supported | `GET /Artists/{itemId}/Similar` | DefaultAuthorization |  | 1/1 |  |
 | 🗓️ planned | `DELETE /Items` | DefaultAuthorization | yes |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
-| ↔️ divergent-by-design | `GET /Items` | DefaultAuthorization | yes | 168/168 | The library-access restriction also applies when items are requested by Ids (the reference skips it). Recorded as a divergence in the contract scenarios. |
+| ↔️ divergent-by-design | `GET /Items` | DefaultAuthorization | yes | 170/170 | The library-access restriction also applies when items are requested by Ids (the reference skips it). Recorded as a divergence in the contract scenarios. |
 | ✅ supported | `GET /Items/Counts` | DefaultAuthorization | yes | 2/2 |  |
-| ✅ supported | `GET /Items/Latest` | DefaultAuthorization | yes | 2/2 |  |
+| ✅ supported | `GET /Items/Latest` | DefaultAuthorization | yes | 3/3 |  |
 | ✅ supported *(no scenario)* | `GET /Items/Root` | DefaultAuthorization | yes |  |  |
 | ✅ supported | `DELETE /Items/{itemId}` | DefaultAuthorization | yes | 10/10 |  |
 | ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 184/184 |  |
@@ -52,7 +52,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `GET /Items/{itemId}/Intros` | DefaultAuthorization | yes | 1/1 |  |
 | ✅ supported | `GET /Items/{itemId}/LocalTrailers` | DefaultAuthorization | yes | 7/7 |  |
 | ✅ supported | `POST /Items/{itemId}/Refresh` | RequiresElevation | yes | 7/7 |  |
-| ✅ supported | `GET /Items/{itemId}/Similar` | DefaultAuthorization | yes | 2/2 |  |
+| ✅ supported | `GET /Items/{itemId}/Similar` | DefaultAuthorization | yes | 5/5 |  |
 | ✅ supported | `GET /Items/{itemId}/SpecialFeatures` | DefaultAuthorization | yes | 5/5 |  |
 | ✅ supported | `GET /Items/{itemId}/ThemeMedia` | DefaultAuthorization | yes | 2/2 |  |
 | ✅ supported | `GET /Items/{itemId}/ThemeSongs` | DefaultAuthorization |  | 5/5 |  |
@@ -81,7 +81,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ✅ supported | `GET /MusicGenres/{genreName}` *(deprecated)* | DefaultAuthorization |  | 1/2 |  |
+| ✅ supported | `GET /MusicGenres/{genreName}` *(deprecated)* | DefaultAuthorization |  | 2/2 |  |
 
 ## Person
 

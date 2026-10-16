@@ -152,6 +152,8 @@ var routePaths = []string{
 	"/Movies/{itemId}/Similar",
 	"/Shows/{itemId}/Similar",
 	"/Trailers/{itemId}/Similar",
+	"/Artists/{itemId}/Similar",
+	"/Albums/{itemId}/Similar",
 	"/Users/{userId}/Items/{itemId}/Intros",
 	"/Playlists",
 	"/Playlists/{playlistId}",

@@ -97,6 +97,10 @@ func (it Item) SortKey() string {
 			return fmt.Sprintf("%04d", *it.IndexNumber)
 		}
 		return raw
+	case ItemTypeAudio:
+		// A track keeps the "disc - track - title" form the scan built
+		// (music.track.R4), as an episode does.
+		return raw
 	case ItemTypeEpisode:
 		switch {
 		case it.ParentIndexNumber != nil && it.IndexNumber != nil:

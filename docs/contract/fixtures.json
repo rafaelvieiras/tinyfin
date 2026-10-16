@@ -62,7 +62,8 @@
     {"key": "trickplay", "name": "Trickplay", "type": "movies", "path": "Trickplay", "lazy": true, "options": {"EnableTrickplayImageExtraction": true, "ExtractTrickplayImagesDuringLibraryScan": true}},
     {"key": "trickplayoff", "name": "TrickplayOff", "type": "movies", "path": "TrickplayOff", "lazy": true},
     {"key": "music", "name": "Music", "type": "music", "path": "Music", "lazy": true},
-    {"key": "music2", "name": "Music2", "type": "music", "path": "Music2", "lazy": true}
+    {"key": "music2", "name": "Music2", "type": "music", "path": "Music2", "lazy": true},
+    {"key": "music4", "name": "Music4", "type": "music", "path": "Music4", "lazy": true}
   ],
   "items": [
     {"key": "alpha", "type": "Movie", "path": "Movies/Alpha Movie (2015)/Alpha Movie (2015).mp4"},
@@ -442,6 +443,20 @@
     {"key": "m2flatalbum", "type": "MusicAlbum", "library": "music2", "path": "Music2/Flat Album"},
     {"key": "m2discsonly", "type": "MusicAlbum", "library": "music2", "path": "Music2/Artist Five"},
     {"key": "m2artist3", "type": "MusicArtist", "library": "music2", "path": "Music2/Artist Three"},
-    {"key": "m2artist4", "type": "MusicArtist", "library": "music2", "path": "Music2/Artist Four"}
+    {"key": "m2artist4", "type": "MusicArtist", "library": "music2", "path": "Music2/Artist Four"},
+    {"key": "m4eta1", "type": "Audio", "library": "music4", "path": "Music4/Artist Six/Album Eta/01 - Eta One.mp3"},
+    {"key": "m4eta2", "type": "Audio", "library": "music4", "path": "Music4/Artist Six/Album Eta/02 - Eta Two.mp3"},
+    {"key": "m4theta1", "type": "Audio", "library": "music4", "path": "Music4/Artist Seven/Album Theta/01 - Theta One.mp3"},
+    {"key": "m4iota1", "type": "Audio", "library": "music4", "path": "Music4/Artist Eight/Album Iota/01 - Iota One.mp3"},
+    {"key": "m4kappa1", "type": "Audio", "library": "music4", "path": "Music4/Various Compilers/Album Kappa/01 - Kappa One.mp3"},
+    {"key": "m4kappa2", "type": "Audio", "library": "music4", "path": "Music4/Various Compilers/Album Kappa/02 - Kappa Two.mp3"},
+    {"key": "m4eta", "type": "MusicAlbum", "library": "music4", "path": "Music4/Artist Six/Album Eta"},
+    {"key": "m4theta", "type": "MusicAlbum", "library": "music4", "path": "Music4/Artist Seven/Album Theta"},
+    {"key": "m4iota", "type": "MusicAlbum", "library": "music4", "path": "Music4/Artist Eight/Album Iota"},
+    {"key": "m4kappa", "type": "MusicAlbum", "library": "music4", "path": "Music4/Various Compilers/Album Kappa"},
+    {"key": "m4artist6", "type": "MusicArtist", "library": "music4", "path": "Music4/Artist Six"},
+    {"key": "m4artist7", "type": "MusicArtist", "library": "music4", "path": "Music4/Artist Seven"},
+    {"key": "m4artist8", "type": "MusicArtist", "library": "music4", "path": "Music4/Artist Eight"},
+    {"key": "m4compilers", "type": "MusicArtist", "library": "music4", "path": "Music4/Various Compilers"}
   ]
 }

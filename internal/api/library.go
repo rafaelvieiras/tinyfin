@@ -229,8 +229,48 @@ func (s *Server) handleItemsLatest(w http.ResponseWriter, r *http.Request) {
 			wanted = append(wanted, k)
 		}
 	}
+	// Music (specs/music.md music.latest.R1): grouped, the tracks of an album
+	// are listed as that album (an Audio request, or none, lists albums);
+	// ungrouped, the albums are left out of the default list. Artists are
+	// only listed when asked for.
+	musicGrouped := !strings.EqualFold(q.Get("groupitems"), "false")
+	// Scoped to a music library and grouped, the types asked for are ignored:
+	// the albums are listed (music.latest.R3).
+	if musicGrouped {
+		if raw := strings.TrimSpace(q.Get("parentid")); raw != "" {
+			if g, valid := normalizeGUID(raw); valid {
+				if lib, err := s.store.GetLibrary(ctx, storage.LibraryID(g)); err == nil && lib.CollectionType == storage.CollectionTypeMusic {
+					wanted = []storage.ItemType{storage.ItemTypeMusicAlbum}
+				}
+			}
+		}
+	}
 	if len(wanted) > 0 {
 		filter.ItemTypes, filter.ExcludeItemTypes = wanted, nil
+		if musicGrouped {
+			hasAlbum := false
+			for _, t := range wanted {
+				hasAlbum = hasAlbum || t == storage.ItemTypeMusicAlbum
+			}
+			out := wanted[:0:0]
+			for _, t := range wanted {
+				switch {
+				case t == storage.ItemTypeAudio && hasAlbum:
+				case t == storage.ItemTypeAudio:
+					out = append(out, storage.ItemTypeMusicAlbum)
+				default:
+					out = append(out, t)
+				}
+			}
+			filter.ItemTypes = out
+		}
+	} else {
+		filter.ExcludeItemTypes = append(filter.ExcludeItemTypes, storage.ItemTypeMusicArtist)
+		if musicGrouped {
+			filter.ExcludeItemTypes = append(filter.ExcludeItemTypes, storage.ItemTypeAudio)
+		} else {
+			filter.ExcludeItemTypes = append(filter.ExcludeItemTypes, storage.ItemTypeMusicAlbum)
+		}
 	}
 	s.applyParentID(r, &filter)
 	scope, err := s.callerScope(ctx)
@@ -341,9 +381,12 @@ func mediaTypesFilter(q []string) []storage.ItemType {
 // out since handleItemsLatest and handleUserItemsResume both need the exact
 // same resolution.
 func (s *Server) applyParentID(r *http.Request, filter *storage.ItemFilter) {
-	v := r.URL.Query().Get("parentId")
+	v := caseInsensitiveQuery(r).Get("parentid")
 	if v == "" {
 		return
+	}
+	if g, ok := normalizeGUID(v); ok {
+		v = g
 	}
 	if _, err := s.store.GetLibrary(r.Context(), storage.LibraryID(v)); err == nil {
 		libID := storage.LibraryID(v)

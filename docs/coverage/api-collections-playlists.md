@@ -4,7 +4,7 @@
 
 BoxSets, playlists and instant mixes.
 
-[Overview](../COVERAGE.md) · 21 operations · 21 registered (100%) · 14 verified · ✅ 20 · ↔️ 1
+[Overview](../COVERAGE.md) · 21 operations · 21 registered (100%) · 21 verified · ✅ 20 · ↔️ 1
 
 ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅↔️
 
@@ -22,19 +22,19 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ✅ supported *(no scenario)* | `GET /Albums/{itemId}/InstantMix` | DefaultAuthorization |  | 0/1 |  |
-| ✅ supported *(no scenario)* | `GET /Artists/{itemId}/InstantMix` | DefaultAuthorization |  | 0/1 |  |
-| ✅ supported *(no scenario)* | `GET /Items/{itemId}/InstantMix` | DefaultAuthorization |  | 0/4 |  |
-| ✅ supported *(no scenario)* | `GET /MusicGenres/InstantMix` *(deprecated)* | DefaultAuthorization |  | 0/1 |  |
-| ✅ supported *(no scenario)* | `GET /MusicGenres/{name}/InstantMix` *(deprecated)* | DefaultAuthorization |  | 0/1 |  |
-| ✅ supported *(no scenario)* | `GET /Playlists/{itemId}/InstantMix` | DefaultAuthorization |  | 0/1 |  |
-| ✅ supported *(no scenario)* | `GET /Songs/{itemId}/InstantMix` | DefaultAuthorization |  | 0/1 |  |
+| ✅ supported | `GET /Albums/{itemId}/InstantMix` | DefaultAuthorization |  | 1/1 |  |
+| ✅ supported | `GET /Artists/{itemId}/InstantMix` | DefaultAuthorization |  | 1/1 |  |
+| ✅ supported | `GET /Items/{itemId}/InstantMix` | DefaultAuthorization |  | 4/4 |  |
+| ✅ supported | `GET /MusicGenres/InstantMix` *(deprecated)* | DefaultAuthorization |  | 1/1 |  |
+| ✅ supported | `GET /MusicGenres/{name}/InstantMix` *(deprecated)* | DefaultAuthorization |  | 1/1 |  |
+| ✅ supported | `GET /Playlists/{itemId}/InstantMix` | DefaultAuthorization |  | 1/1 |  |
+| ✅ supported | `GET /Songs/{itemId}/InstantMix` | DefaultAuthorization |  | 1/1 |  |
 
 ## Playlist
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ✅ supported | `POST /Playlists` | DefaultAuthorization | yes | 23/24 |  |
+| ✅ supported | `POST /Playlists` | DefaultAuthorization | yes | 24/24 |  |
 | ✅ supported | `GET /Playlists/{playlistId}` | DefaultAuthorization | yes | 13/13 |  |
 | ✅ supported | `POST /Playlists/{playlistId}` | DefaultAuthorization | yes | 4/4 |  |
 | ✅ supported | `DELETE /Playlists/{playlistId}/Items` | DefaultAuthorization | yes | 3/3 |  |

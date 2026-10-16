@@ -916,4 +916,21 @@ song "$M2/Artist Five/CD1/01 - Only Disc One.mp3" 2 440 -id3v2_version 3 -metada
 song "$M2/Artist Five/CD2/01 - Only Disc Two.mp3" 2 550 -id3v2_version 3 -metadata title="Only Disc Two" -metadata artist="Artist Five" \
   -metadata album="Discs Only" -metadata album_artist="Artist Five" -metadata track="1"
 
+# Music 4 (own library "Music4", lazy): artists that share a genre (similar
+# lists), and a compilation whose track artists are not its album artist
+# (contributing-artist filter), under one library for the "latest" listing.
+M4="$ROOT/Music4"
+song "$M4/Artist Six/Album Eta/01 - Eta One.mp3" 2 440 -id3v2_version 3 -metadata title="Eta One" -metadata artist="Artist Six" \
+  -metadata album="Album Eta" -metadata album_artist="Artist Six" -metadata track="1" -metadata date="2001" -metadata genre="Trip Hop"
+song "$M4/Artist Six/Album Eta/02 - Eta Two.mp3" 2 450 -id3v2_version 3 -metadata title="Eta Two" -metadata artist="Artist Six" \
+  -metadata album="Album Eta" -metadata album_artist="Artist Six" -metadata track="2" -metadata date="2001" -metadata genre="Trip Hop"
+song "$M4/Artist Seven/Album Theta/01 - Theta One.mp3" 2 460 -id3v2_version 3 -metadata title="Theta One" -metadata artist="Artist Seven" \
+  -metadata album="Album Theta" -metadata album_artist="Artist Seven" -metadata track="1" -metadata date="2003" -metadata genre="Trip Hop"
+song "$M4/Artist Eight/Album Iota/01 - Iota One.mp3" 2 470 -id3v2_version 3 -metadata title="Iota One" -metadata artist="Artist Eight" \
+  -metadata album="Album Iota" -metadata album_artist="Artist Eight" -metadata track="1" -metadata date="2005" -metadata genre="Polka"
+song "$M4/Various Compilers/Album Kappa/01 - Kappa One.mp3" 2 480 -id3v2_version 3 -metadata title="Kappa One" -metadata artist="Artist Six" \
+  -metadata album="Album Kappa" -metadata album_artist="Various Compilers" -metadata track="1" -metadata date="2007" -metadata genre="Trip Hop"
+song "$M4/Various Compilers/Album Kappa/02 - Kappa Two.mp3" 2 490 -id3v2_version 3 -metadata title="Kappa Two" -metadata artist="Artist Eight" \
+  -metadata album="Album Kappa" -metadata album_artist="Various Compilers" -metadata track="2" -metadata date="2007" -metadata genre="Polka"
+
 echo "media tree ready under $ROOT"

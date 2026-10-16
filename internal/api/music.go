@@ -243,6 +243,7 @@ func (s *Server) applyMusicFilters(ctx context.Context, q url.Values, f *storage
 	}
 	f.ArtistNames = append(f.ArtistNames, names("artistids")...)
 	f.AlbumArtistNames = append(f.AlbumArtistNames, names("albumartistids")...)
+	f.ContributingNames = append(f.ContributingNames, names("contributingartistids")...)
 	for _, tok := range itemsListParam(q, "albumids") {
 		f.AlbumIDs = append(f.AlbumIDs, storage.ItemID(tok))
 	}

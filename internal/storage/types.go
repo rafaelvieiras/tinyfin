@@ -138,7 +138,10 @@ type ItemFilter struct {
 	// the albums (the tracks of an album).
 	ArtistNames      []string
 	AlbumArtistNames []string
-	AlbumIDs         []ItemID
+	// ContributingNames matches an item whose track artists include any of
+	// the names while its album artist is not that name.
+	ContributingNames []string
+	AlbumIDs          []ItemID
 	// ArtistRole narrows a MusicArtist listing to the artists that appear on
 	// a track ("Artist") or on an album ("AlbumArtist") of the same library.
 	ArtistRole string

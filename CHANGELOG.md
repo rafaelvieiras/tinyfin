@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Music, fourth slice (WebUI comparison, `docs/contract/specs/music.md`, `music4.json`):
+  `GET /Items/Latest` groups tracks as albums (music library scope ignores the types, artists only
+  when asked for, `GroupItems=false` lists tracks) and honors `ParentId` in any letter case; the
+  `ContributingArtistIds` filter; `GET /Artists/{id}/Similar`, `/Albums/{id}/Similar` and
+  similar tracks/albums/artists by shared genre; a track's `SortName` keeps the
+  `disc - track - title` form.
 - Music, third slice (`docs/contract/specs/music.md`): audio transcoding and Instant Mix.
   `GET /Audio/{id}/stream` without `static=true` encodes (AAC by default; MP3, AAC, M4A, Opus,
   FLAC, WAV by `Container`/`AudioCodec`/extension) and streams the result; `GET

@@ -8,15 +8,15 @@
    "supported": 61
   },
   "operations": 364,
-  "registered": 182,
+  "registered": 184,
   "routes_by_status": {
    "divergent-by-design": 16,
    "not-planned": 95,
    "partial": 12,
-   "planned": 87,
-   "supported": 154
+   "planned": 85,
+   "supported": 156
   },
-  "verified": 131
+  "verified": 142
  },
  "routes": [
   {
@@ -124,7 +124,7 @@
    "policy": "DefaultAuthorization",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": false,
    "scenarios": [
     "music.transcode.universal"
@@ -137,7 +137,7 @@
    "policy": "DefaultAuthorization",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": false,
    "scenarios": [
     "music.transcode.universal"
@@ -1393,7 +1393,7 @@
    "policy": "DefaultAuthorization",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": false,
    "scenarios": [
     "music.mix.album-artist"
@@ -1406,7 +1406,7 @@
    "policy": "DefaultAuthorization",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": false,
    "scenarios": [
     "music.mix.album-artist"
@@ -1419,7 +1419,7 @@
    "policy": "DefaultAuthorization",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": false,
    "scenarios": [
     "music.mix.album-artist",
@@ -1435,7 +1435,7 @@
    "policy": "DefaultAuthorization",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": false,
    "scenarios": [
     "music.mix.genre"
@@ -1448,7 +1448,7 @@
    "policy": "DefaultAuthorization",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": false,
    "scenarios": [
     "music.mix.genre"
@@ -1461,7 +1461,7 @@
    "policy": "DefaultAuthorization",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": false,
    "scenarios": [
     "music.mix.playlist"
@@ -1474,7 +1474,7 @@
    "policy": "DefaultAuthorization",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": false,
    "scenarios": [
     "music.mix.song"
@@ -1653,24 +1653,26 @@
    "tag": "Library",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": false,
-   "notes": "Library notification hooks and file/download endpoints are not implemented.",
-   "priority": "low"
+   "scenarios": [
+    "music.similar.album"
+   ]
   },
   {
    "id": "GET /Artists/{itemId}/Similar",
    "tag": "Library",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": false,
-   "notes": "Library notification hooks and file/download endpoints are not implemented.",
-   "priority": "low"
+   "scenarios": [
+    "music.similar.artist"
+   ]
   },
   {
    "id": "DELETE /Items",
@@ -1835,8 +1837,10 @@
     "music.album.tracks",
     "music.artist.detail",
     "music.artists.list",
+    "music.filter.contributing",
     "music.list.artist-filter",
     "music.scan.library",
+    "music.track.sortname",
     "music2.disc.folders",
     "music2.genres.filter",
     "music2.loose.files",
@@ -1890,7 +1894,8 @@
    "web": true,
    "scenarios": [
     "collections.list.latest-and-counts",
-    "items.rating.other-read-paths"
+    "items.rating.other-read-paths",
+    "music.latest.albums"
    ]
   },
   {
@@ -2238,7 +2243,10 @@
    "web": true,
    "scenarios": [
     "browse.similar",
-    "items.rating.other-read-paths"
+    "items.rating.other-read-paths",
+    "music.similar.album",
+    "music.similar.artist",
+    "music.similar.track"
    ]
   },
   {
@@ -6336,8 +6344,17 @@
    "status": "partial",
    "description": "Scanned: folders with audio files become MusicAlbum, root folders MusicArtist, files Audio items with ID3/Vorbis tags (title, artist, album, album artist, track, disc, year, genre) and folder fallbacks; album picture from cover/folder/poster files or a picture embedded in a track; artist listings and lookup by name, music genres, artist pictures, artist.nfo/album.nfo, disc folders, loose files, lyrics files and direct audio streaming.",
    "reference": "Music library with artists, albums, tracks, lyrics and instant mixes.",
-   "notes": "Third slice added Instant Mix and audio transcoding. Left out: music videos, People on tracks, Folder items for disc folders, lyrics upload/search (specs/music.md, Not covered).",
+   "notes": "Third slice added Instant Mix and audio transcoding; the fourth (WebUI comparison) the grouped latest list, ContributingArtistIds, similar artists/albums/tracks and track sort names. Left out: music videos, People on tracks, Folder items for disc folders, lyrics upload/search (specs/music.md, Not covered).",
    "spec_rules": [
+    "music.latest.R1",
+    "music.latest.R2",
+    "music.latest.R3",
+    "music.list.R5",
+    "music.similar.R1",
+    "music.similar.R2",
+    "music.similar.R3",
+    "music.similar.R4",
+    "music.track.R4",
     "music.mix.R1",
     "music.mix.R2",
     "music.mix.R3",
@@ -6398,6 +6415,12 @@
    ],
    "scenarios": [
     "music.scan.library",
+    "music.latest.albums",
+    "music.filter.contributing",
+    "music.similar.artist",
+    "music.similar.album",
+    "music.similar.track",
+    "music.track.sortname",
     "music.track.id3",
     "music.track.vorbis",
     "music.track.untagged",

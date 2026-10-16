@@ -1,0 +1,1434 @@
+[
+ {
+  "id": "music.latest.albums",
+  "endpoint": "GET /Items/Latest",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.latest.R1",
+   "music.latest.R2",
+   "music.latest.R3"
+  ],
+  "requires": [
+   "library:music4"
+  ],
+  "steps": [
+   {
+    "name": "grouped: tracks are listed as their albums",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "ParentId": "{{library.music4.id}}",
+      "IncludeItemTypes": "Audio"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 4
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Eta"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Theta"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Iota"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Kappa"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Eta One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Eta Two"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Theta One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Iota One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Kappa One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Kappa Two"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Artist Six"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Artist Seven"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Artist Eight"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Various Compilers"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no type: albums, no artists, no tracks",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "ParentId": "{{library.music4.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 4
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Eta"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Theta"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Iota"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Kappa"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Eta One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Eta Two"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Theta One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Iota One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Kappa One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Kappa Two"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Artist Six"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Artist Seven"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Artist Eight"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Various Compilers"
+      }
+     ]
+    }
+   },
+   {
+    "name": "grouped explicitly",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "ParentId": "{{library.music4.id}}",
+      "IncludeItemTypes": "Audio",
+      "GroupItems": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 4
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Eta"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Theta"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Iota"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Kappa"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Eta One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Eta Two"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Theta One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Iota One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Kappa One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Kappa Two"
+      }
+     ]
+    }
+   },
+   {
+    "name": "ungrouped: the tracks, not the albums",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "ParentId": "{{library.music4.id}}",
+      "GroupItems": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 6
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Eta One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Eta Two"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Theta One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Iota One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Kappa One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Kappa Two"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Album Eta"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Album Theta"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Album Iota"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Album Kappa"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Artist Six"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Artist Seven"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Artist Eight"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Various Compilers"
+      }
+     ]
+    }
+   },
+   {
+    "name": "ungrouped, tracks asked for",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "ParentId": "{{library.music4.id}}",
+      "IncludeItemTypes": "Audio",
+      "GroupItems": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 6
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Eta One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Eta Two"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Theta One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Iota One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Kappa One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Kappa Two"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Album Eta"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Album Theta"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Album Iota"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Album Kappa"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Artist Six"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Artist Seven"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Artist Eight"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Various Compilers"
+      }
+     ]
+    }
+   },
+   {
+    "name": "scoped to the library and grouped, the types are ignored",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "ParentId": "{{library.music4.id}}",
+      "IncludeItemTypes": "MusicArtist"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 4
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Eta"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Theta"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Iota"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Kappa"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Artist Six"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Artist Seven"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Artist Eight"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Various Compilers"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Eta One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Eta Two"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Theta One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Iota One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Kappa One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Kappa Two"
+      }
+     ]
+    }
+   },
+   {
+    "name": "artists are listed only when asked for, and not scoped",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "IncludeItemTypes": "MusicArtist"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 4
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Artist Six"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Artist Seven"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Artist Eight"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Various Compilers"
+      }
+     ]
+    }
+   },
+   {
+    "name": "limit cuts the page",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "ParentId": "{{library.music4.id}}",
+      "IncludeItemTypes": "Audio",
+      "Limit": "2"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Eta One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Eta Two"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Theta One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Iota One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Kappa One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Kappa Two"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Artist Six"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Artist Seven"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Artist Eight"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Various Compilers"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "music.filter.contributing",
+  "endpoint": "GET /Items",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.list.R5"
+  ],
+  "requires": [
+   "item:m4artist6",
+   "item:m4artist7",
+   "item:m4artist8",
+   "item:m4compilers"
+  ],
+  "steps": [
+   {
+    "name": "an artist that only contributes: the compilation",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicAlbum",
+      "ParentId": "{{library.music4.id}}",
+      "ContributingArtistIds": "{{item.m4artist6.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Album Kappa"
+      }
+     ]
+    }
+   },
+   {
+    "name": "its tracks on the compilation",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Audio",
+      "ParentId": "{{library.music4.id}}",
+      "ContributingArtistIds": "{{item.m4artist6.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Kappa One"
+      }
+     ]
+    }
+   },
+   {
+    "name": "another contributor",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Audio",
+      "ParentId": "{{library.music4.id}}",
+      "ContributingArtistIds": "{{item.m4artist8.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Kappa Two"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an album artist that contributes to nothing",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicAlbum",
+      "ParentId": "{{library.music4.id}}",
+      "ContributingArtistIds": "{{item.m4artist7.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "the compilation's album artist is not a contributor",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicAlbum",
+      "ParentId": "{{library.music4.id}}",
+      "ContributingArtistIds": "{{item.m4compilers.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "control: ArtistIds lists the artist's own album too",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicAlbum",
+      "ParentId": "{{library.music4.id}}",
+      "ArtistIds": "{{item.m4artist6.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Album Eta"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Album Kappa"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "music.similar.artist",
+  "endpoint": "GET /Artists/{itemId}/Similar",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.similar.R1",
+   "music.similar.R4"
+  ],
+  "requires": [
+   "item:m4artist6",
+   "item:m4artist7",
+   "item:m4artist8",
+   "item:m4compilers"
+  ],
+  "steps": [
+   {
+    "name": "artists that share a genre",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists/{{item.m4artist6.id}}/Similar"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Artist Seven"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Various Compilers"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Artist Eight"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Artist Six"
+      }
+     ]
+    },
+    "retryMs": 15000
+   },
+   {
+    "name": "another artist",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists/{{item.m4artist8.id}}/Similar"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Various Compilers"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Artist Six"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Artist Seven"
+      }
+     ]
+    },
+    "retryMs": 15000
+   },
+   {
+    "name": "both genres",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists/{{item.m4compilers.id}}/Similar"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Artist Six"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Artist Seven"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Artist Eight"
+      }
+     ]
+    },
+    "retryMs": 15000
+   },
+   {
+    "name": "the generic route answers the same",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m4artist6.id}}/Similar"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Artist Seven"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Various Compilers"
+      }
+     ]
+    },
+    "retryMs": 15000
+   },
+   {
+    "name": "limit cuts the page",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists/{{item.m4compilers.id}}/Similar",
+     "query": {
+      "limit": "1"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "music.similar.album",
+  "endpoint": "GET /Albums/{itemId}/Similar",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.similar.R2"
+  ],
+  "requires": [
+   "item:m4eta",
+   "item:m4theta",
+   "item:m4iota",
+   "item:m4kappa"
+  ],
+  "steps": [
+   {
+    "name": "albums that share a genre",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Albums/{{item.m4eta.id}}/Similar"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Album Theta"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Album Kappa"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Album Iota"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Album Eta"
+      }
+     ]
+    },
+    "retryMs": 15000
+   },
+   {
+    "name": "another album",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Albums/{{item.m4iota.id}}/Similar"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Album Kappa"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Album Eta"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Album Theta"
+      }
+     ]
+    },
+    "retryMs": 15000
+   },
+   {
+    "name": "both genres",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Albums/{{item.m4kappa.id}}/Similar"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Album Eta"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Album Theta"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Album Iota"
+      }
+     ]
+    },
+    "retryMs": 15000
+   },
+   {
+    "name": "the generic route answers the same",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m4eta.id}}/Similar"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Album Theta"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Album Kappa"
+      }
+     ]
+    },
+    "retryMs": 15000
+   }
+  ]
+ },
+ {
+  "id": "music.similar.track",
+  "endpoint": "GET /Items/{itemId}/Similar",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.similar.R3"
+  ],
+  "requires": [
+   "item:m4eta1",
+   "item:m4iota1"
+  ],
+  "steps": [
+   {
+    "name": "tracks that share a genre",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m4eta1.id}}/Similar"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Eta Two"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Theta One"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Kappa One"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Eta One"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Iota One"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Kappa Two"
+      }
+     ]
+    },
+    "retryMs": 15000
+   },
+   {
+    "name": "another genre",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m4iota1.id}}/Similar"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Kappa Two"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Eta One"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Kappa One"
+      }
+     ]
+    },
+    "retryMs": 15000
+   }
+  ]
+ },
+ {
+  "id": "music.track.sortname",
+  "endpoint": "GET /Items",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.track.R4"
+  ],
+  "requires": [
+   "item:m4eta1"
+  ],
+  "steps": [
+   {
+    "name": "a track keeps disc, track and title as its sort name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Audio",
+      "ParentId": "{{library.music4.id}}",
+      "SortBy": "SortName",
+      "Fields": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 6
+      },
+      {
+       "path": "$.Items[0].SortName",
+       "op": "eq",
+       "value": "0001 - Eta One"
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Eta One"
+      },
+      {
+       "path": "$.Items[5].SortName",
+       "op": "eq",
+       "value": "0002 - Kappa Two"
+      },
+      {
+       "path": "$.Items[5].Name",
+       "op": "eq",
+       "value": "Kappa Two"
+      }
+     ]
+    }
+   }
+  ]
+ }
+]
