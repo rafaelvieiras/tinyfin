@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 756
+    "pass": 760
   },
   "scenarios": {
     "admin.backup.create": "pass",
@@ -457,6 +457,10 @@
     "policy.download.denied": "pass",
     "policy.download.errors": "pass",
     "policy.item.can-flags": "pass",
+    "policy.playback.audio-transcoding-off": "pass",
+    "policy.playback.media-playback-off": "pass",
+    "policy.playback.transcoding-off": "pass",
+    "policy.playback.transcoding-partial": "pass",
     "quickconnect.authorize.already-authorized": "pass",
     "quickconnect.authorize.anonymous-refused": "pass",
     "quickconnect.authorize.invalid-user-id": "pass",

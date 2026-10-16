@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Playback flags of `UserPolicy` (`docs/contract/specs/policy.md`, `policy2.json`): PlaybackInfo offers no
+  transcode (`SupportsTranscoding` false, no `TranscodingUrl`) to a user with video transcoding, audio
+  transcoding and remuxing all off, and a track is offered as it is when `EnableAudioPlaybackTranscoding`
+  is off; `EnableMediaPlayback` and the stream routes are not gated, as on the reference. 4 new scenarios.
 - Music, fifth slice (`docs/contract/specs/music.md`, `music5.json`): a track's and an album's
   `People` (composer, album artist, artists; `Role` always sent), the credits as `/Persons`
   entries, `Person`/`PersonTypes`/`PersonIds` filters on them (an item id stands for the person

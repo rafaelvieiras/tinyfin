@@ -39,6 +39,28 @@ func mayDownloadContent(ac *AuthContext) bool {
 	return storedUserPolicy(ac.User).EnableContentDownloading
 }
 
+// mayTranscodeVideo reports whether PlaybackInfo may offer a stream other than
+// Direct Play for a video: any of EnableVideoPlaybackTranscoding,
+// EnableAudioPlaybackTranscoding and EnablePlaybackRemuxing is enough (the
+// reference only refuses when all three are off). Callers without a user are
+// not restricted.
+func mayTranscodeVideo(ac *AuthContext) bool {
+	if ac == nil || !ac.Authenticated || ac.IsAPIKey {
+		return true
+	}
+	p := storedUserPolicy(ac.User)
+	return p.EnableVideoPlaybackTranscoding || p.EnableAudioPlaybackTranscoding || p.EnablePlaybackRemuxing
+}
+
+// mayTranscodeAudio reports whether PlaybackInfo may offer a transcode of a
+// track: EnableAudioPlaybackTranscoding alone decides.
+func mayTranscodeAudio(ac *AuthContext) bool {
+	if ac == nil || !ac.Authenticated || ac.IsAPIKey {
+		return true
+	}
+	return storedUserPolicy(ac.User).EnableAudioPlaybackTranscoding
+}
+
 // handleItemDownload is GET /Items/{itemId}/Download: the original file as an
 // attachment, with range support. Policy: 401 for an API key, 403 for a user
 // without EnableContentDownloading (400 for an administrator without it, as

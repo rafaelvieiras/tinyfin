@@ -61,7 +61,7 @@ reference source open in the same session.
 | `../../scripts/conformance-media.sh` | Generates the synthetic media tree |
 | `specs/collections.md`, `scenarios/collections.json` | Collections (`BoxSet`): routes, listing, visibility and the automatic collections; lazy libraries `Sets`/`SetsOff` |
 | `specs/subtitles.md`, `scenarios/subtitles.json` | Subtitles: external files, embedded tracks, conversion routes, delivery in PlaybackInfo, upload and delete; lazy library `SubFiles` (the scenarios tagged `media-write` have the server write beside the media, so its media mount must be writable) |
-| `specs/policy.md`, `scenarios/policy.json` | Policy enforcement: `EnableContentDownloading` (download route), `EnableContentDeletion`/`EnableContentDeletionFromFolders` (delete route, `CanDelete`/`CanDownload`) |
+| `specs/policy.md`, `scenarios/policy.json` | Policy enforcement: `EnableContentDownloading` (download route), `EnableContentDeletion`/`EnableContentDeletionFromFolders` (delete route, `CanDelete`/`CanDownload`), and the playback flags (`scenarios/policy2.json`: the transcode offer of PlaybackInfo) |
 | `specs/playback.md`, `scenarios/playback.json` | Track selection and burned-in subtitles: `AudioStreamIndex`/`SubtitleStreamIndex` in PlaybackInfo, the `TranscodingUrl` and its HLS master playlist; lazy library `AvTrack` |
 | `specs/chapters.md`, `scenarios/chapters.json` | Chapter marks (`Chapters` on the item, `Fields=Chapters`) and `GET /MediaSegments/{itemId}`; lazy library `Chapters` |
 | `specs/trickplay.md`, `scenarios/trickplay.json` | Seek-thumbnail sprite sheets: the `Trickplay` member, the tiles playlist and the JPEG sheets; lazy libraries `Trickplay` (generation on) and `TrickplayOff` |

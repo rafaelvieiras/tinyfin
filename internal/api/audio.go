@@ -352,7 +352,7 @@ func (s *Server) audioPlaybackInfo(w http.ResponseWriter, r *http.Request, item 
 	ac, _ := AuthFromContext(r.Context())
 
 	if !inline {
-		source.SupportsDirectPlay, source.SupportsDirectStream, source.SupportsTranscoding = true, true, true
+		source.SupportsDirectPlay, source.SupportsDirectStream, source.SupportsTranscoding = true, true, mayTranscodeAudio(ac)
 		resp.MediaSources = []mediaSourceInfoDto{source}
 		writeJSON(w, http.StatusOK, resp)
 		return
@@ -422,6 +422,12 @@ func (s *Server) audioPlaybackInfo(w http.ResponseWriter, r *http.Request, item 
 		reasons = []string{"ContainerNotSupported", "VideoCodecNotSupported", "AudioCodecNotSupported"}
 	} else if !direct {
 		reasons = []string{"AudioCodecNotSupported"}
+	}
+	if !mayTranscodeAudio(ac) {
+		// policy.playback.R3: with audio transcoding off the track is
+		// offered as it is, whatever the profile says.
+		source.SupportsTranscoding = false
+		direct = true
 	}
 	if direct {
 		source.SupportsDirectPlay, source.SupportsDirectStream = true, true

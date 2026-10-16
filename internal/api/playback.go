@@ -362,6 +362,13 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 		resp.MediaSources = append([]mediaSourceInfoDto{source}, s.versionSources(r.Context(), item)...)
 
 	case playback.ModeRemux, playback.ModeDirectStream, playback.ModeTranscode:
+		if ac, _ := AuthFromContext(r.Context()); !mayTranscodeVideo(ac) {
+			// policy.playback.R2: nothing but Direct Play is on offer. The
+			// source is still listed, with no way to stream it.
+			source.TranscodingSubProtocol = "http"
+			resp.MediaSources = []mediaSourceInfoDto{source}
+			break
+		}
 		source.SupportsDirectStream = decision.Mode != playback.ModeTranscode && !opts.BurnSubtitle && !opts.NoDirectPlay
 		source.SupportsTranscoding = true
 		var token string

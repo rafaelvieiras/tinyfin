@@ -2,7 +2,7 @@
 
 Which `UserPolicy` flags change what a caller may do with an item's file: `EnableContentDeletion`, `EnableContentDeletionFromFolders` and `EnableContentDownloading`. Probed on the 12.2 reference with online metadata off.
 
-Scenarios: [`../scenarios/policy.json`](../scenarios/policy.json). Fixture state: [`../fixtures.json`](../fixtures.json) (`alpha`, users `alice` and `nodownload`); the other users are created and deleted by the scenarios.
+Scenarios: [`../scenarios/policy.json`](../scenarios/policy.json), [`../scenarios/policy2.json`](../scenarios/policy2.json) (playback flags; libraries `AvTrack` and `Music`). Fixture state: [`../fixtures.json`](../fixtures.json) (`alpha`, users `alice` and `nodownload`); the other users are created and deleted by the scenarios.
 
 ## <a id="download"></a>GET /Items/{itemId}/Download
 
@@ -20,9 +20,25 @@ Scenarios: [`../scenarios/policy.json`](../scenarios/policy.json). Fixture state
 
 - **policy.item.R1** `CanDelete` is true exactly when R1 of *delete* would allow the caller (no administrator bypass; false for folder-like items other than collections the caller may manage); `CanDownload` is true when `EnableContentDownloading` is true and the item is not folder-like. Both are false for a user without the respective permission.
 
+## <a id="playback"></a>Playback flags
+
+`EnableMediaPlayback`, `EnableAudioPlaybackTranscoding`, `EnableVideoPlaybackTranscoding` and `EnablePlaybackRemuxing`, on a non-administrator probed with `POST /Items/{id}/PlaybackInfo`, the stream routes and the session reporting routes. Only the transcode offer of PlaybackInfo reacts; no route refuses.
+
+- **policy.playback.R1** `EnableMediaPlayback=false` changes nothing the reference answers: PlaybackInfo keeps its media source (`ErrorCode` absent, direct play on offer as for anyone), `GET /Videos/{id}/stream`, `/Audio/{id}/stream`, the HLS `master.m3u8`/`main.m3u8`, `/Sessions/Playing*`, `/PlayingItems/{id}` and `/Audio/{id}/universal` all answer as for a user with the flag. Tinyfin matches by not enforcing it.
+- **policy.playback.R2** For a video, PlaybackInfo offers no transcode when `EnableVideoPlaybackTranscoding`, `EnableAudioPlaybackTranscoding` and `EnablePlaybackRemuxing` are **all** false: the source is still listed (one entry, no `ErrorCode`), `SupportsTranscoding` false, no `TranscodingUrl`, and `SupportsDirectPlay`/`SupportsDirectStream` false when the profile cannot play the file as it is (a track or container it does not take). A source the profile direct plays stays direct play (with `SupportsTranscoding` false). With any one of the three on, the offer is the usual HLS `TranscodingUrl`.
+- **policy.playback.R3** For a track (`Audio`), `EnableAudioPlaybackTranscoding=false` alone decides: `SupportsTranscoding` false, no `TranscodingUrl`, and the track is offered as it is whatever the profile says (`SupportsDirectPlay` and `SupportsDirectStream` true), with or without a device profile. The video flags are ignored for a track.
+- **policy.playback.R4** The stream routes ignore the three transcoding flags too: a user with all of them off is served `master.m3u8`, `main.m3u8` and the transcoded `stream`/`stream.mp4`/`stream.mp3` when the URL is built by hand.
+
+Known differences, observed and not reproduced:
+
+* **Progressive offer.** With `EnableVideoPlaybackTranscoding` and `EnablePlaybackRemuxing` both false and `EnableAudioPlaybackTranscoding` true, the reference's `TranscodingUrl` for a video is a progressive `/videos/{id}/stream?...` (no codec parameters, `TranscodingSubProtocol` `http`, `SubtitleMethod=Encode`) instead of the HLS `master.m3u8`; Tinyfin keeps offering HLS.
+* **No device profile.** The reference answers `SupportsDirectStream` true for a video without a profile when transcoding is allowed (Tinyfin false, as before this wave).
+* **Folder access.** A user with no enabled folder (`EnableAllFolders` false) gets `404` from PlaybackInfo, `Download` and the item on both servers, but the reference serves `GET /Videos/{id}/stream` and the HLS routes to that user (`200`/`206`); Tinyfin answers `404` there. Not asserted.
+* `MaxParentalRating`, `BlockedTags`, `AllowedTags`, `BlockUnratedItems` and `EnabledFolders` are enforced on item queries (users/items scenarios); whether they gate the stream routes was not probed beyond the folder case above.
+
 ## Not enforced yet
 
-`MaxActiveSessions` is enforced on login (`users.auth.R16`). `EnableMediaPlayback`, `EnableAudioPlaybackTranscoding`, `EnableVideoPlaybackTranscoding` and `EnablePlaybackRemuxing` are stored and returned but ignored by PlaybackInfo and the stream routes.
+`MaxActiveSessions` is enforced on login (`users.auth.R16`). Of the playback flags only the transcode offer of PlaybackInfo is policy-driven (R2, R3); every other flag below is stored and returned but has no effect, as on the reference where probed: `EnableMediaPlayback` (R1). Not probed at all: `EnableRemoteControlOfOtherUsers`, `EnableSharedDeviceControl`, `EnableLiveTvAccess`/`EnableLiveTvManagement`, `EnableSyncTranscoding`, `EnableSubtitleManagement`, `ForceRemoteSourceTranscoding`, `RemoteClientBitrateLimit`, `EnabledChannels`/`EnabledDevices`, `BlockedMediaFolders` and the stream-route behavior of the tag, rating and folder flags.
 
 ## Rule → scenarios
 
@@ -33,3 +49,7 @@ Scenarios: [`../scenarios/policy.json`](../scenarios/policy.json). Fixture state
 | `policy.download.R3` | `policy.download.errors` |
 | `policy.delete.R1` | `policy.delete.denied`, `policy.delete.folders-not-matching`, `policy.delete.admin-without-flag` |
 | `policy.item.R1` | `policy.item.can-flags`, `policy.delete.denied`, `policy.delete.folders-not-matching`, `policy.delete.admin-without-flag` |
+| `policy.playback.R1` | `policy.playback.media-playback-off` |
+| `policy.playback.R2` | `policy.playback.transcoding-off`, `policy.playback.transcoding-partial` |
+| `policy.playback.R3` | `policy.playback.audio-transcoding-off` |
+| `policy.playback.R4` | `policy.playback.transcoding-off` |
