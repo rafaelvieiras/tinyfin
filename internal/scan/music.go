@@ -37,10 +37,10 @@ var albumCoverNames = []string{
 
 // musicTags are the tags of one audio file the catalog keeps.
 type musicTags struct {
-	title, album, albumArtist, artist, genre string
-	track, disc                              *int
-	year                                     *int
-	premiere                                 *time.Time
+	title, album, albumArtist, artist, composer, genre string
+	track, disc                                        *int
+	year                                               *int
+	premiere                                           *time.Time
 }
 
 // tagValue returns the first non-empty tag among keys, whatever the case of
@@ -102,6 +102,7 @@ func readMusicTags(tags map[string]string) musicTags {
 		album:       tagValue(tags, "album"),
 		albumArtist: tagValue(tags, "album_artist", "albumartist", "album artist"),
 		artist:      tagValue(tags, "artist"),
+		composer:    tagValue(tags, "composer"),
 		genre:       tagValue(tags, "genre"),
 		track:       leadingNumber(tagValue(tags, "track", "tracknumber")),
 		disc:        leadingNumber(tagValue(tags, "disc", "discnumber")),
@@ -116,6 +117,24 @@ var discFolderRe = regexp.MustCompile(`(?i)^(cd|disc|disk)[\s._-]*\d+\b`)
 
 // isDiscFolderName reports whether a folder name is a disc folder.
 func isDiscFolderName(name string) bool { return discFolderRe.MatchString(name) }
+
+// musicPeople is the People member of a track or an album
+// (music.people.R1): the composer tag, then the album artist, then the
+// artists, each with an empty role. Conductor, lyricist and performer tags
+// make no person.
+func musicPeople(composer, albumArtist string, artists []string) []storage.Person {
+	var out []storage.Person
+	if composer = strings.TrimSpace(composer); composer != "" {
+		out = append(out, storage.Person{Name: composer, Type: "Composer"})
+	}
+	if albumArtist != "" {
+		out = append(out, storage.Person{Name: albumArtist, Type: "AlbumArtist"})
+	}
+	for _, a := range artists {
+		out = append(out, storage.Person{Name: a, Type: "Artist"})
+	}
+	return out
+}
 
 // tagList is the list a tag's value stands for: the reference does not split
 // a tag on ";" (it is one name), so a non-empty value is a list of one.
@@ -385,6 +404,7 @@ func (s *Scanner) processAlbum(ctx context.Context, pool *jobPool, lib storage.L
 	}
 	album.AlbumArtist = acc.albumArtist
 	album.Artists = acc.artists
+	album.People = musicPeople("", album.AlbumArtist, album.Artists)
 	album.ProductionYear, album.PremiereDate = acc.year, acc.premiere
 	album.Genres = acc.genres
 	if acc.haveTicks {
@@ -427,6 +447,7 @@ func (s *Scanner) processTrack(ctx context.Context, pool *jobPool, lib storage.L
 			item.SortName = trackSortName(old.Name, old.IndexNumber, old.ParentIndexNumber)
 			item.Album, item.AlbumArtist, item.Artists = old.Album, old.AlbumArtist, old.Artists
 			item.Genres, item.IndexNumber, item.ParentIndexNumber = old.Genres, old.IndexNumber, old.ParentIndexNumber
+			item.People = old.People
 			item.ProductionYear, item.PremiereDate = old.ProductionYear, old.PremiereDate
 		} else {
 			item.Name, item.SortName = base, base
@@ -440,6 +461,7 @@ func (s *Scanner) processTrack(ctx context.Context, pool *jobPool, lib storage.L
 		item.SortName = trackSortName(item.Name, mt.track, mt.disc)
 		item.Album, item.AlbumArtist = mt.album, mt.albumArtist
 		item.Artists = tagList(mt.artist)
+		item.People = musicPeople(mt.composer, item.AlbumArtist, item.Artists)
 		item.Genres = tagList(mt.genre)
 		item.IndexNumber, item.ParentIndexNumber = mt.track, mt.disc
 		item.ProductionYear, item.PremiereDate = mt.year, mt.premiere

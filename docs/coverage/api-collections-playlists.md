@@ -23,9 +23,9 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
 | ✅ supported | `GET /Albums/{itemId}/InstantMix` | DefaultAuthorization |  | 1/1 |  |
-| ✅ supported | `GET /Artists/{itemId}/InstantMix` | DefaultAuthorization |  | 1/1 |  |
+| ✅ supported | `GET /Artists/{itemId}/InstantMix` | DefaultAuthorization |  | 2/2 |  |
 | ✅ supported | `GET /Items/{itemId}/InstantMix` | DefaultAuthorization |  | 4/4 |  |
-| ✅ supported | `GET /MusicGenres/InstantMix` *(deprecated)* | DefaultAuthorization |  | 1/1 |  |
+| ✅ supported | `GET /MusicGenres/InstantMix` *(deprecated)* | DefaultAuthorization |  | 2/2 |  |
 | ✅ supported | `GET /MusicGenres/{name}/InstantMix` *(deprecated)* | DefaultAuthorization |  | 1/1 |  |
 | ✅ supported | `GET /Playlists/{itemId}/InstantMix` | DefaultAuthorization |  | 1/1 |  |
 | ✅ supported | `GET /Songs/{itemId}/InstantMix` | DefaultAuthorization |  | 1/1 |  |

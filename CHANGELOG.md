@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Music, fifth slice (`docs/contract/specs/music.md`, `music5.json`): a track's and an album's
+  `People` (composer, album artist, artists; `Role` always sent), the credits as `/Persons`
+  entries, `Person`/`PersonTypes`/`PersonIds` filters on them (an item id stands for the person
+  of its name; `/Persons` ignores `IncludeItemTypes`); `GET /Items/Latest` lists tracks that sit
+  in no album as themselves under an artist folder or when libraries of other kinds are around,
+  and an album folder as the album; the by-ids Instant Mix routes require `id` (`400`).
 - Music, fourth slice (WebUI comparison, `docs/contract/specs/music.md`, `music4.json`):
   `GET /Items/Latest` groups tracks as albums (music library scope ignores the types, artists only
   when asked for, `GroupItems=false` lists tracks) and honors `ParentId` in any letter case; the

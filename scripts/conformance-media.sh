@@ -933,4 +933,26 @@ song "$M4/Various Compilers/Album Kappa/01 - Kappa One.mp3" 2 480 -id3v2_version
 song "$M4/Various Compilers/Album Kappa/02 - Kappa Two.mp3" 2 490 -id3v2_version 3 -metadata title="Kappa Two" -metadata artist="Artist Eight" \
   -metadata album="Album Kappa" -metadata album_artist="Various Compilers" -metadata track="2" -metadata date="2007" -metadata genre="Polka"
 
+# Music 5 (own library "Music5", lazy): a loose track at the library root and
+# one inside an artist folder (no album folder of its own) for the "latest"
+# listing, and people tags (composer, conductor, lyricist, performer) on a FLAC
+# and an MP3 track for the People member and /Persons.
+M5="$ROOT/Music5"
+song "$M5/Loose Five.mp3" 2 340 -id3v2_version 3 -metadata title="Loose Five" -metadata artist="Root Five" \
+  -metadata album="Root Five Album" -metadata album_artist="Root Five" -metadata track="1"
+song "$M5/Artist Eleven/Album Mu/01 - Mu One.mp3" 2 350 -id3v2_version 3 -metadata title="Mu One" -metadata artist="Artist Eleven" \
+  -metadata album="Album Mu" -metadata album_artist="Artist Eleven" -metadata track="1" -metadata date="2010" -metadata genre="Folk"
+song "$M5/Artist Eleven/Loose In Eleven.mp3" 2 360 -id3v2_version 3 -metadata title="Loose In Eleven" -metadata artist="Artist Eleven" \
+  -metadata album="Eleven Singles" -metadata album_artist="Artist Eleven" -metadata track="1"
+song "$M5/Artist Twelve/Album Nu/01 - People One.flac" 2 370 -metadata TITLE="People One" -metadata ARTIST="Artist Twelve" \
+  -metadata ALBUM="Album Nu" -metadata ALBUMARTIST="Artist Twelve" -metadata TRACKNUMBER="1" -metadata DATE="2012" \
+  -metadata GENRE="Classical" -metadata COMPOSER="Carl Composer" -metadata CONDUCTOR="Connie Conductor" \
+  -metadata LYRICIST="Lyle Lyricist" -metadata PERFORMER="Percy Performer"
+song "$M5/Artist Twelve/Album Nu/02 - People Two.mp3" 2 380 -id3v2_version 3 -metadata title="People Two" -metadata artist="Artist Twelve" \
+  -metadata album="Album Nu" -metadata album_artist="Artist Twelve" -metadata track="2" -metadata date="2012" \
+  -metadata genre="Classical" -metadata composer="Carl Composer" -metadata performer="Percy Performer"
+song "$M5/Various Five/Album Xi/01 - Guest Turn.mp3" 2 390 -id3v2_version 3 -metadata title="Guest Turn" -metadata artist="Guest Five" \
+  -metadata album="Album Xi" -metadata album_artist="Various Five" -metadata track="1" -metadata date="2014" \
+  -metadata genre="Classical" -metadata composer="Duo One;Duo Two"
+
 echo "media tree ready under $ROOT"

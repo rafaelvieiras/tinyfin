@@ -1,0 +1,2005 @@
+[
+ {
+  "id": "music.latest.loose",
+  "endpoint": "GET /Items/Latest",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.latest.R4",
+   "music.latest.R5",
+   "music.latest.R6"
+  ],
+  "requires": [
+   "library:music5"
+  ],
+  "steps": [
+   {
+    "name": "library, grouped: albums only, loose tracks left out",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "ParentId": "{{library.music5.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Mu"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Nu"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Xi"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Loose Five"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Loose In Eleven"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Mu One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "People One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "People Two"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Guest Turn"
+      }
+     ]
+    }
+   },
+   {
+    "name": "library, grouped, Audio asked for: still albums only",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "ParentId": "{{library.music5.id}}",
+      "IncludeItemTypes": "Audio"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Mu"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Nu"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Xi"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Loose Five"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Loose In Eleven"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Mu One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "People One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "People Two"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Guest Turn"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no parent, grouped, with other kinds of library around: albums and the loose tracks",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "IncludeItemTypes": "Audio",
+      "Limit": "20"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Mu"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Loose Five"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Loose In Eleven"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Mu One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "People One"
+      },
+      {
+       "path": "$[?Name=Loose Five].Type",
+       "op": "eq",
+       "value": "Audio"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no parent, no types: the same",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "Limit": "20"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Nu"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Loose Five"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Mu One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Artist Eleven"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no parent, MusicAlbum asked for: albums only",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "IncludeItemTypes": "MusicAlbum",
+      "Limit": "20"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Nu"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Loose Five"
+      }
+     ]
+    }
+   },
+   {
+    "name": "library, ungrouped: every track",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "ParentId": "{{library.music5.id}}",
+      "GroupItems": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 6
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Loose Five"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Loose In Eleven"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Mu One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "People One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "People Two"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Guest Turn"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Album Mu"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Album Nu"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Album Xi"
+      }
+     ]
+    }
+   },
+   {
+    "name": "artist folder, grouped: its loose track as itself, its album grouped",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "ParentId": "{{item.m5artist11.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Loose In Eleven"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Mu"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Mu One"
+      },
+      {
+       "path": "$[?Name=Loose In Eleven].Type",
+       "op": "eq",
+       "value": "Audio"
+      },
+      {
+       "path": "$[?Name=Album Mu].Type",
+       "op": "eq",
+       "value": "MusicAlbum"
+      }
+     ]
+    }
+   },
+   {
+    "name": "artist folder, grouped, Audio asked for: the same",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "ParentId": "{{item.m5artist11.id}}",
+      "IncludeItemTypes": "Audio"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Loose In Eleven"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Mu"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Mu One"
+      }
+     ]
+    }
+   },
+   {
+    "name": "artist folder, grouped, MusicAlbum asked for: the album only",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "ParentId": "{{item.m5artist11.id}}",
+      "IncludeItemTypes": "MusicAlbum"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Mu"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Loose In Eleven"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Mu One"
+      }
+     ]
+    }
+   },
+   {
+    "name": "artist folder, ungrouped: the tracks",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "ParentId": "{{item.m5artist11.id}}",
+      "GroupItems": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Loose In Eleven"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Mu One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Album Mu"
+      }
+     ]
+    }
+   },
+   {
+    "name": "artist folder without a loose track: its albums",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "ParentId": "{{item.m5artist12.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Nu"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "People One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "People Two"
+      }
+     ]
+    }
+   },
+   {
+    "name": "album folder, grouped: the album itself",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "ParentId": "{{item.m5mu.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Album Mu"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Mu One"
+      }
+     ]
+    }
+   },
+   {
+    "name": "album folder, ungrouped: its tracks",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "ParentId": "{{item.m5mu.id}}",
+      "GroupItems": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Mu One"
+      },
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Album Mu"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "music.people.track",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.people.R1",
+   "music.people.R2"
+  ],
+  "requires": [
+   "library:music5"
+  ],
+  "steps": [
+   {
+    "name": "FLAC track: composer, album artist, artist; conductor, lyricist and performer tags make none",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m5people1.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.People",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.People[0].Name",
+       "op": "eq",
+       "value": "Carl Composer"
+      },
+      {
+       "path": "$.People[0].Type",
+       "op": "eq",
+       "value": "Composer"
+      },
+      {
+       "path": "$.People[0].Role",
+       "op": "eq",
+       "value": ""
+      },
+      {
+       "path": "$.People[0].Id",
+       "op": "hex32"
+      },
+      {
+       "path": "$.People[1].Name",
+       "op": "eq",
+       "value": "Artist Twelve"
+      },
+      {
+       "path": "$.People[1].Type",
+       "op": "eq",
+       "value": "AlbumArtist"
+      },
+      {
+       "path": "$.People[1].Role",
+       "op": "eq",
+       "value": ""
+      },
+      {
+       "path": "$.People[2].Name",
+       "op": "eq",
+       "value": "Artist Twelve"
+      },
+      {
+       "path": "$.People[2].Type",
+       "op": "eq",
+       "value": "Artist"
+      },
+      {
+       "path": "$.People[2].Role",
+       "op": "eq",
+       "value": ""
+      },
+      {
+       "path": "$.People[*].Name",
+       "op": "notcontains",
+       "value": "Connie Conductor"
+      },
+      {
+       "path": "$.People[*].Name",
+       "op": "notcontains",
+       "value": "Lyle Lyricist"
+      },
+      {
+       "path": "$.People[*].Name",
+       "op": "notcontains",
+       "value": "Percy Performer"
+      }
+     ]
+    }
+   },
+   {
+    "name": "MP3 track: the performer tag makes none",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m5people2.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.People",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.People[0].Type",
+       "op": "eq",
+       "value": "Composer"
+      },
+      {
+       "path": "$.People[*].Name",
+       "op": "notcontains",
+       "value": "Percy Performer"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a composer tag is one name (not split on ';'), album artist and artist apart",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m5guest.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.People",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.People[0].Name",
+       "op": "eq",
+       "value": "Duo One;Duo Two"
+      },
+      {
+       "path": "$.People[0].Type",
+       "op": "eq",
+       "value": "Composer"
+      },
+      {
+       "path": "$.People[1].Name",
+       "op": "eq",
+       "value": "Various Five"
+      },
+      {
+       "path": "$.People[1].Type",
+       "op": "eq",
+       "value": "AlbumArtist"
+      },
+      {
+       "path": "$.People[2].Name",
+       "op": "eq",
+       "value": "Guest Five"
+      },
+      {
+       "path": "$.People[2].Type",
+       "op": "eq",
+       "value": "Artist"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a loose track: no composer, album artist then artist",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m5loose.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.People",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.People[0].Type",
+       "op": "eq",
+       "value": "AlbumArtist"
+      },
+      {
+       "path": "$.People[1].Type",
+       "op": "eq",
+       "value": "Artist"
+      },
+      {
+       "path": "$.People[0].Name",
+       "op": "eq",
+       "value": "Root Five"
+      }
+     ]
+    }
+   },
+   {
+    "name": "People in a listing only with Fields=People",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.music5.id}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "Audio",
+      "Fields": "People",
+      "Limit": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[?Name=People One].People",
+       "op": "len",
+       "value": 3
+      }
+     ]
+    }
+   },
+   {
+    "name": "a listing without Fields has no People",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{item.m5nu.id}}",
+      "IncludeItemTypes": "Audio",
+      "Fields": "Genres"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].People",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "music.people.album",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.people.R3"
+  ],
+  "requires": [
+   "library:music5"
+  ],
+  "steps": [
+   {
+    "name": "album: album artist then artists, no composer",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m5xi.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.People",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.People[0].Name",
+       "op": "eq",
+       "value": "Various Five"
+      },
+      {
+       "path": "$.People[0].Type",
+       "op": "eq",
+       "value": "AlbumArtist"
+      },
+      {
+       "path": "$.People[1].Name",
+       "op": "eq",
+       "value": "Guest Five"
+      },
+      {
+       "path": "$.People[1].Type",
+       "op": "eq",
+       "value": "Artist"
+      }
+     ]
+    }
+   },
+   {
+    "name": "album with one artist: the album artist and the artist, both",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.m5nu.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.People",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.People[0].Type",
+       "op": "eq",
+       "value": "AlbumArtist"
+      },
+      {
+       "path": "$.People[1].Type",
+       "op": "eq",
+       "value": "Artist"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "music.people.persons",
+  "endpoint": "GET /Persons",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.people.R4"
+  ],
+  "requires": [
+   "library:music5"
+  ],
+  "steps": [
+   {
+    "name": "every credited name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Persons",
+     "query": {
+      "ParentId": "{{library.music5.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Carl Composer"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Duo One;Duo Two"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Artist Twelve"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Guest Five"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Various Five"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Root Five"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Artist Eleven"
+      },
+      {
+       "path": "$.Items[*].Type",
+       "op": "notcontains",
+       "value": "MusicArtist"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Connie Conductor"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Percy Performer"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Lyle Lyricist"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Album Nu"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "People One"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Composer credits only",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Persons",
+     "query": {
+      "PersonTypes": "Composer"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Carl Composer"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Duo One;Duo Two"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Artist Twelve"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Guest Five"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Artist credits only",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Persons",
+     "query": {
+      "PersonTypes": "Artist"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Guest Five"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Artist Twelve"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Various Five"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Carl Composer"
+      }
+     ]
+    }
+   },
+   {
+    "name": "AlbumArtist credits only",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Persons",
+     "query": {
+      "PersonTypes": "AlbumArtist"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Various Five"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Artist Twelve"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Guest Five"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no conductor credits exist",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Persons",
+     "query": {
+      "PersonTypes": "Conductor,Lyricist,Performer"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Connie Conductor"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Percy Performer"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Carl Composer"
+      }
+     ]
+    }
+   },
+   {
+    "name": "ExcludePersonTypes drops names only credited with those types",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Persons",
+     "query": {
+      "ExcludePersonTypes": "Artist,AlbumArtist",
+      "ParentId": "{{library.music5.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Carl Composer"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Guest Five"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Various Five"
+      }
+     ]
+    }
+   },
+   {
+    "name": "IncludeItemTypes does not narrow the list",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Persons",
+     "query": {
+      "IncludeItemTypes": "MusicAlbum"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Carl Composer"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Guest Five"
+      }
+     ]
+    }
+   },
+   {
+    "name": "IncludeItemTypes=Movie does not narrow it either",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Persons",
+     "query": {
+      "IncludeItemTypes": "Movie"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Carl Composer"
+      }
+     ]
+    }
+   },
+   {
+    "name": "SearchTerm",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Persons",
+     "query": {
+      "SearchTerm": "Duo One"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Duo One;Duo Two"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Carl Composer"
+      }
+     ]
+    }
+   },
+   {
+    "name": "NameStartsWith",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Persons",
+     "query": {
+      "NameStartsWith": "Carl"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Carl Composer"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Guest Five"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Limit and StartIndex",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Persons",
+     "query": {
+      "Limit": "2",
+      "StartIndex": "1",
+      "ParentId": "{{library.music5.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.StartIndex",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Artist Twelve"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a person has its own id, not the artist item's",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Persons/Artist%20Twelve"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "Person"
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Artist Twelve"
+      },
+      {
+       "path": "$.Id",
+       "op": "ne",
+       "value": "{{item.m5artist12.id}}"
+      },
+      {
+       "path": "$.Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "pid": "$.Id"
+    }
+   },
+   {
+    "name": "a name nobody credits is 404",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Persons/Nobody%20Credited"
+    },
+    "expect": {
+     "status": 404
+    }
+   }
+  ]
+ },
+ {
+  "id": "music.people.filter",
+  "endpoint": "GET /Items",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.people.R5"
+  ],
+  "requires": [
+   "library:music5"
+  ],
+  "steps": [
+   {
+    "name": "Person + Artist: tracks and albums by the track artist",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.music5.id}}",
+      "Recursive": "true",
+      "Person": "Guest Five",
+      "PersonTypes": "Artist"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Guest Turn"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Album Xi"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Person + AlbumArtist: not a credit of the track artist",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.music5.id}}",
+      "Recursive": "true",
+      "Person": "Guest Five",
+      "PersonTypes": "AlbumArtist"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "album artist credits the track and the album",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.music5.id}}",
+      "Recursive": "true",
+      "Person": "Various Five",
+      "PersonTypes": "AlbumArtist"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Guest Turn"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Album Xi"
+      }
+     ]
+    }
+   },
+   {
+    "name": "album artist is not an Artist credit",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.music5.id}}",
+      "Recursive": "true",
+      "Person": "Various Five",
+      "PersonTypes": "Artist"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "Person alone, any credit type",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.music5.id}}",
+      "Recursive": "true",
+      "Person": "Various Five"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Guest Turn"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Album Xi"
+      }
+     ]
+    }
+   },
+   {
+    "name": "composer",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.music5.id}}",
+      "Recursive": "true",
+      "Person": "Carl Composer"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "People One"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "People Two"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Album Nu"
+      }
+     ]
+    }
+   },
+   {
+    "name": "composer under another credit type: nothing",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.music5.id}}",
+      "Recursive": "true",
+      "Person": "Carl Composer",
+      "PersonTypes": "Artist"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "the name matches exactly, case included",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.music5.id}}",
+      "Recursive": "true",
+      "Person": "guest five"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "a composer value is not split",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.music5.id}}",
+      "Recursive": "true",
+      "Person": "Duo One"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "PersonTypes alone does not filter",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.music5.id}}",
+      "Recursive": "true",
+      "PersonTypes": "Composer",
+      "IncludeItemTypes": "Audio"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 6
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Loose Five"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Loose In Eleven"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Mu One"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "People One"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "People Two"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Guest Turn"
+      }
+     ]
+    }
+   },
+   {
+    "name": "capture Carl Composer",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Persons/Carl%20Composer"
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "p_comp": "$.Id"
+    }
+   },
+   {
+    "name": "capture Guest Five",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Persons/Guest%20Five"
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "p_guest": "$.Id"
+    }
+   },
+   {
+    "name": "capture Artist Twelve",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Persons/Artist%20Twelve"
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "p_art12": "$.Id"
+    }
+   },
+   {
+    "name": "PersonIds",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.music5.id}}",
+      "Recursive": "true",
+      "PersonIds": "{{capture.p_comp}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "People One"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "People Two"
+      }
+     ]
+    }
+   },
+   {
+    "name": "PersonIds lists are a union",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.music5.id}}",
+      "Recursive": "true",
+      "PersonIds": "{{capture.p_guest}},{{capture.p_comp}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 4
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Guest Turn"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Album Xi"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "People One"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "People Two"
+      }
+     ]
+    }
+   },
+   {
+    "name": "PersonIds + IncludeItemTypes",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.music5.id}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicAlbum",
+      "PersonIds": "{{capture.p_art12}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Album Nu"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an artist item's id stands for the person of its name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.music5.id}}",
+      "Recursive": "true",
+      "PersonIds": "{{item.m5artist12.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "People One"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "People Two"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Album Nu"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "music.mix.required",
+  "endpoint": "GET /Artists/InstantMix",
+  "spec": "music.md",
+  "scope": "modern",
+  "tags": [
+   "music"
+  ],
+  "covers": [
+   "music.mix.R8"
+  ],
+  "requires": [
+   "library:music5"
+  ],
+  "steps": [
+   {
+    "name": "by-ids route: id is required",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists/InstantMix"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.id",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "genre by-ids route: id is required",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MusicGenres/InstantMix"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.id",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "an artist name is not an id (path route)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists/Artist%20Twelve/InstantMix"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.itemId",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "an artist name is not an id (query route)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists/InstantMix",
+     "query": {
+      "id": "Artist Twelve"
+     }
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.id",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "an unknown artist id is 404",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists/ffffffffffffffffffffffffffffffff/InstantMix"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "by-ids route with the artist id: the artist's mix",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists/InstantMix",
+     "query": {
+      "id": "{{item.m5artist12.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "gte",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ]
+ }
+]

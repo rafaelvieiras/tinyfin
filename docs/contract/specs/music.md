@@ -4,7 +4,7 @@ A library with `CollectionType` `music`: the tagged audio files of an `Artist/Al
 
 Scenarios: [`../scenarios/music.json`](../scenarios/music.json). Fixture state: [`../fixtures.json`](../fixtures.json), media from `scripts/conformance-media.sh` (lazy library `Music`). Rule IDs are stable (`music.<topic>.R<n>`).
 
-Slice 1 is the scan, the model, the artist listings, pictures and the direct stream. Slice 4 ([latest](#latest), [contributing artists](#contrib), [similar items](#similar), sort names) was probed through the WebUI comparison of wave 20 on a fourth lazy library `Music4` (scenarios: [`../scenarios/music4.json`](../scenarios/music4.json)). Slice 3 adds [Instant Mix](#mix) and [audio transcoding](#transcode) (`music.mix.*`, `music.transcode.*`). Slice 2 ([genres](#genre), [artist lookup and pictures](#artist2), [nfo](#nfo), [disc folders and loose files](#layout), [lyrics](#lyrics)) was probed the same way, on a second lazy library `Music2` (scenarios: [`../scenarios/music2.json`](../scenarios/music2.json)). What both leave out is listed under [Not covered](#not-covered).
+Slice 1 is the scan, the model, the artist listings, pictures and the direct stream. Slice 4 ([latest](#latest), [contributing artists](#contrib), [similar items](#similar), sort names) was probed through the WebUI comparison of wave 20 on a fourth lazy library `Music4` (scenarios: [`../scenarios/music4.json`](../scenarios/music4.json)). Slice 3 adds [Instant Mix](#mix) and [audio transcoding](#transcode) (`music.mix.*`, `music.transcode.*`). Slice 2 ([genres](#genre), [artist lookup and pictures](#artist2), [nfo](#nfo), [disc folders and loose files](#layout), [lyrics](#lyrics)) was probed the same way, on a second lazy library `Music2` (scenarios: [`../scenarios/music2.json`](../scenarios/music2.json)). Slice 5 ([loose tracks in latest](#latest), [people](#people), the [Instant Mix id parameter](#mix)) was probed on a fifth lazy library `Music5` (scenarios: [`../scenarios/music5.json`](../scenarios/music5.json)). What they leave out is listed under [Not covered](#not-covered).
 
 ## Fixture facts this spec relies on
 
@@ -127,6 +127,8 @@ Probed on the 12.2 reference over the fixture of [Slice 1](#scan) (scenarios: [`
 - **music.mix.R6** A genre seeds by name: `/MusicGenres/{name}/InstantMix` (case-insensitive; a name nothing carries is an empty mix, and so is an id in that position). The id of the genre is taken by `/MusicGenres/InstantMix?id=` and `/Items/{id}/InstantMix`.
 - **music.mix.R7** A playlist seeds with the union of the genres of its entries (`/Playlists/{itemId}/InstantMix` and the generic route answer the same): `[Opening, Untagged Track]` is Jazz only (an entry with no genre adds none), 1 track.
 
+- **music.mix.R8** The by-ids routes `/Artists/InstantMix` and `/MusicGenres/InstantMix` require `id`: absent or empty it is `400` (a validation problem on `id`). A value that is not an id is `400` there and on the `{itemId}` routes, so an artist cannot be seeded by its name (`/Artists/Artist%20Two/InstantMix` is `400` on a validation error for `itemId`); a well-formed id nothing carries is `404`. Genres are the only seeds taken by name (`/MusicGenres/{name}/InstantMix`, [R6](#mix)).
+
 ## <a id="transcode"></a>Audio transcoding
 
 Probed on the reference with the same fixture (scenarios: `music.transcode.*`; the track that forces an encode is the FLAC file under a profile that only lists MP3).
@@ -143,9 +145,15 @@ Probed on the reference with the same fixture (scenarios: `music.transcode.*`; t
 
 Probed with `Music4`: `Artist Six/Album Eta` (2 tracks), `Artist Seven/Album Theta`, `Artist Eight/Album Iota`, and the compilation `Various Compilers/Album Kappa` whose tracks are by `Artist Six` and `Artist Eight`.
 
-- **music.latest.R1** `GET /Items/Latest` groups by default (`GroupItems` true): a track is listed as its album (`Type` `MusicAlbum`), so `IncludeItemTypes=Audio` and no type both list the albums, newest first, and never the tracks. `MusicArtist` items are never part of the default list.
+- **music.latest.R1** `GET /Items/Latest` groups by default (`GroupItems` true): a track is listed as its album (`Type` `MusicAlbum`), so `IncludeItemTypes=Audio` and no type both list the albums, newest first, and never the tracks that sit in an album (the loose ones: [R4](#latest)). `MusicArtist` items are never part of the default list.
 - **music.latest.R2** `GroupItems=false` lists the tracks (`Audio`) and leaves the albums and the artists out of the default list; `IncludeItemTypes=Audio,MusicAlbum&GroupItems=false` lists both. `MusicArtist` is listed only when asked for (`IncludeItemTypes=MusicArtist`, not scoped to a music library). `Limit` cuts the page.
 - **music.latest.R3** With `ParentId` a music library and grouping on, `IncludeItemTypes` is ignored: the albums are listed whatever the types (even `MusicArtist` or `Movie`). With `GroupItems=false` the types apply.
+
+Slice 5 probed the tracks that sit in no album item with `Music5`: `Loose Five.mp3` at the library root, `Artist Eleven/Loose In Eleven.mp3` beside the album `Artist Eleven/Album Mu/`, and `Artist Twelve/Album Nu/`, `Various Five/Album Xi/` (albums only).
+
+- **music.latest.R4** A track that sits in no album item (a loose track, [music.loose.R1](#layout)/[R2](#layout)) is never listed by a grouped request scoped to a music library, nor by a grouped request with no `ParentId` when every library the caller can see is a music one: only the albums are. With no `ParentId` and libraries of other kinds around, the grouped list holds the albums and the loose tracks as themselves (`Type` `Audio`), newest first, whatever `IncludeItemTypes` says as long as it names `Audio` or nothing; `IncludeItemTypes=MusicAlbum` lists the albums only.
+- **music.latest.R5** Scoped to a folder that is not a library (an artist folder), the grouped list holds the albums of the folder (grouped from their tracks) and the loose tracks of the folder as themselves; `IncludeItemTypes=Audio` or no types give that list, `MusicAlbum` the albums only. `GroupItems=false` lists the tracks, loose or not. An artist with albums only lists its albums.
+- **music.latest.R6** Scoped to an album folder, the grouped list is the album itself (not its tracks); ungrouped it is the tracks. Scoped to the library's root folder item (the reference gives a loose root track that id as `ParentId`), the grouped list is the albums and the loose tracks, as in [R5](#latest).
 
 ## <a id="contrib"></a>Contributing artists
 
@@ -158,16 +166,27 @@ Probed with `Music4`: `Artist Six/Album Eta` (2 tracks), `Artist Seven/Album The
 - **music.similar.R3** `GET /Items/{itemId}/Similar` of a track lists the other tracks that share a genre (a track with no genre: every other track). There is no `/Songs/{itemId}/Similar` route (`404` on the reference).
 - **music.similar.R4** The reference computes an artist's genres after the scan has settled: right after a library is created the artist answers a transient superset (every artist), so the scenarios retry (`retryMs`).
 
+## <a id="people"></a>People
+
+Probed with `Music5`: `Artist Twelve/Album Nu/` holds a FLAC track tagged `COMPOSER=Carl Composer`, `CONDUCTOR=Connie Conductor`, `LYRICIST=Lyle Lyricist`, `PERFORMER=Percy Performer` and an MP3 tagged composer and performer; `Various Five/Album Xi/01 - Guest Turn.mp3` has artist `Guest Five`, album artist `Various Five` and composer `Duo One;Duo Two`.
+
+- **music.people.R1** A track's `People` (an item member, sent by the item read and by listings with `Fields=People`) is its credits, in this order: one `Composer` for the composer tag, one `AlbumArtist` for the album artist, one `Artist` for each artist. Each has `Name`, `Id` (a 32 hex person id, the same for every credit of that name and not the id of the `MusicArtist` item of the same name), `Type` and a `Role` that is always sent and always `""`. The composer tag is one name (`Duo One;Duo Two` is not split, as for artists). An album artist who is also the artist is two credits.
+- **music.people.R2** Only the composer tag makes a credit of its own: `conductor`, `lyricist` and `performer` tags (Vorbis comments or ID3) are read by nobody, so no `Conductor`, `Lyricist` or `Performer` person exists. A track with no tags has none.
+- **music.people.R3** An album's `People` are its `AlbumArtist` then its `Artist` credits (no composer); a `MusicArtist` item has none. A track in no album ([R2 of loose files](#layout)) has the same credits as any track.
+- **music.people.R4** `GET /Persons` lists each credited name once, as `Person` items in name order (the people of music are part of the one list, with those of movies and shows). `PersonTypes` keeps names with a credit of one of those types (`Composer`, `Artist`, `AlbumArtist`; a type nothing carries lists nobody), `ExcludePersonTypes`, `SearchTerm`, `NameStartsWith`, `StartIndex` and `Limit` apply as in [browse.persons.R2](browse.md#persons). `IncludeItemTypes` has no effect (`MusicAlbum` and `Movie` list the same names as no filter). `GET /Persons/{name}` answers the person, `404` for a name nobody credits.
+- **music.people.R5** `GET /Items` takes `Person` (the exact name, case-sensitive; with `PersonTypes` the credit must be of one of those types), and `PersonIds` (a list of person ids, a union). `Person=Guest Five&PersonTypes=Artist` lists the tracks and albums credited so; the album artist is not an `Artist` credit and the track artist not an `AlbumArtist` one. `PersonTypes` without a person does not filter. The id of an item stands for the person of its name: `PersonIds=<MusicArtist id>` lists what `Person=<that artist's name>` does (tracks and albums credited with it), while an id that is neither lists nothing.
+
 ## <a id="not-covered"></a>Not covered by either slice
 
 * Music videos.
-* `People` on tracks and albums (the reference lists the artists as `Artist`/`AlbumArtist` people), MusicBrainz ids read from tags (only the nfo ones are), `ReplayGain`, `Folder` items for disc folders (see [slice 2 differences](#lyrics)), lyrics upload/delete/search, `.elrc`/`.srt` lyrics.
+* MusicBrainz ids read from tags (only the nfo ones are), `ReplayGain`, `Folder` items for disc folders (see [slice 2 differences](#lyrics)), lyrics upload/delete/search, `.elrc`/`.srt` lyrics.
 * Multi-valued tags are not split (`;` is part of a name, as on the reference).
 
 ## Known differences
 
 * **Expected (out of scope).** The WebUI against the reference also reaches `GET /SyncPlay/List` and `GET /LiveTv/Programs/Recommended` (Tinyfin: `404`, console noise only), and the reference enriches artists and albums online (photos, biographies, tags, MusicBrainz ids, genres such as `trip hop`, `Person` hits in `/Search/Hints`); Tinyfin has no online providers. Album `RunTimeTicks` is the real duration (the reference uses a tag estimate) and `MediaSources` are listed on albums by Tinyfin only.
-* **Latest of a loose track.** A track with no album (music.loose.R2) is not grouped by Tinyfin's latest list (no album to show), the reference's choice was not probed.
+* **Root folder of a library.** The reference gives a loose track at a library root, and the library's `ParentId`, an item of `Type` `Folder` (the library's root folder, a different id from the library view's); Tinyfin leaves `ParentId` out of the loose root track. `GET /Items/Latest?ParentId=<root folder>` lists as the reference does (music.latest.R6) for the root folder item Tinyfin lists in a recursive listing.
+* **Zero id.** `GET /Artists/00000000000000000000000000000000/InstantMix` is an error `500` on the reference; Tinyfin answers `404` like any unknown id.
 * **First pass.** On a library created and scanned a moment ago the reference's `Similar` of artists is transient (music.similar.R4); Tinyfin is consistent at once.
 * **Track runtime.** ffprobe 4.4 (the one Tinyfin was built against here) reports a slightly longer duration for an MP3 file than the reference's ffprobe (`2.0375 s` vs `2.0 s`).
 * **Path of an artist with no folder.** The reference reports a path under its metadata folder; Tinyfin has none (`Path` absent).
@@ -222,3 +241,9 @@ Probed with `Music4`: `Artist Six/Album Eta` (2 tracks), `Artist Seven/Album The
 | `music.transcode.R1`, `R2` | `music.transcode.stream` |
 | `music.transcode.R3`, `R4` | `music.transcode.universal` |
 | `music.transcode.R5`, `R6`, `R7` | `music.transcode.playbackinfo` |
+| `music.latest.R4`, `R5`, `R6` | `music.latest.loose` |
+| `music.people.R1`, `R2` | `music.people.track` |
+| `music.people.R3` | `music.people.album` |
+| `music.people.R4` | `music.people.persons` |
+| `music.people.R5` | `music.people.filter` |
+| `music.mix.R8` | `music.mix.required` |

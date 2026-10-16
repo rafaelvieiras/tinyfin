@@ -307,6 +307,11 @@ func (s *Server) listNamedIn(w http.ResponseWriter, r *http.Request, kind storag
 			ns = namedScope{music: true}
 		}
 	}
+	if kind == storage.NamedPerson {
+		// The reference lists every credited person whatever item types the
+		// request names (music.people.R5).
+		nr.carriers.ItemTypes = nil
+	}
 	if ns.music && len(nr.carriers.ItemTypes) == 0 {
 		nr.carriers.ItemTypes = musicItemTypes
 	}
@@ -536,6 +541,12 @@ func (s *Server) resolveNamedIDs(ctx context.Context, kind storage.NamedKind, to
 		any = true
 		if ref, found, err := s.store.FindNamed(ctx, storage.ItemID(g)); err == nil && found && ref.Kind == kind {
 			names = append(names, ref.Name)
+		} else if kind == storage.NamedPerson {
+			// An item id stands for the person of its name (music.people.R5):
+			// an artist item filters like the person of the same name.
+			if it, err := s.store.GetItem(ctx, storage.ItemID(g)); err == nil {
+				names = append(names, it.Name)
+			}
 		}
 	}
 	return names, any

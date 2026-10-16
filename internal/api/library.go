@@ -273,10 +273,57 @@ func (s *Server) handleItemsLatest(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	s.applyParentID(r, &filter)
+	// Scoped to a folder (an artist, a library root folder) and grouped, a
+	// track that sits in no album item is listed as itself next to the
+	// albums (music.latest.R4); the tracks of an album still are not.
+	keepLoose := false
+	if musicGrouped && filter.ParentID != nil {
+		// A library's root folder item lists like the library with the
+		// loose tracks kept; an album lists as itself (music.latest.R4).
+		if p, err := s.store.GetItem(ctx, *filter.ParentID); err == nil {
+			switch {
+			case p.Type == storage.ItemTypeMusicAlbum:
+				filter.ParentID = nil
+				filter.ItemTypes, filter.ExcludeItemTypes = []storage.ItemType{storage.ItemTypeMusicAlbum}, nil
+				filter.IDs = []storage.ItemID{p.ID}
+			case p.Type == storage.ItemTypeFolder && p.ParentID == nil:
+				if lib, err := s.store.GetLibrary(ctx, storage.LibraryID(p.LibraryID)); err == nil && lib.CollectionType == storage.CollectionTypeMusic {
+					libID := storage.LibraryID(p.LibraryID)
+					filter.ParentID, filter.LibraryID = nil, &libID
+					keepLoose = true
+				}
+			}
+		}
+	}
 	scope, err := s.callerScope(ctx)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+	// With no parent, a caller whose libraries are not all music gets the
+	// same folder-like list; one with music libraries only gets the library
+	// view (albums only), as when a music library is the parent.
+	mixedScope := false
+	if musicGrouped && filter.ParentID == nil && filter.LibraryID == nil {
+		for id := range scope.libIDs {
+			if lib, err := s.store.GetLibrary(ctx, id); err == nil && lib.CollectionType != storage.CollectionTypeMusic {
+				mixedScope = true
+				break
+			}
+		}
+	}
+	if musicGrouped && (filter.ParentID != nil || keepLoose || mixedScope) {
+		wantsTrack := len(wanted) == 0
+		for _, t := range wanted {
+			wantsTrack = wantsTrack || t == storage.ItemTypeAudio
+		}
+		if wantsTrack && len(filter.ItemTypes) > 0 {
+			keepLoose = true
+			filter.ItemTypes = append(filter.ItemTypes, storage.ItemTypeAudio)
+		} else if wantsTrack && len(wanted) == 0 {
+			keepLoose = true
+			filter.ExcludeItemTypes = removeItemType(filter.ExcludeItemTypes, storage.ItemTypeAudio)
+		}
 	}
 	scope.apply(&filter)
 	if filter.LibraryID != nil && !scope.libIDs[*filter.LibraryID] {
@@ -288,6 +335,11 @@ func (s *Server) handleItemsLatest(w http.ResponseWriter, r *http.Request) {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			filter.Limit = n
 		}
+	}
+	wantLimit := filter.Limit
+	if keepLoose {
+		// Over-fetch: the tracks of albums are dropped below.
+		filter.Limit = wantLimit*5 + 100
 	}
 
 	grouped := !strings.EqualFold(q.Get("groupitems"), "false")
@@ -323,6 +375,21 @@ func (s *Server) handleItemsLatest(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		items = page.Items
+		if keepLoose {
+			kept := make([]storage.Item, 0, len(items))
+			for _, it := range items {
+				if it.Type == storage.ItemTypeAudio && it.ParentID != nil {
+					if p, err := s.store.GetItem(ctx, *it.ParentID); err == nil && p.Type == storage.ItemTypeMusicAlbum {
+						continue
+					}
+				}
+				kept = append(kept, it)
+			}
+			if len(kept) > wantLimit {
+				kept = kept[:wantLimit]
+			}
+			items = kept
+		}
 	}
 
 	dtos := make([]baseItemDto, 0, len(items))
@@ -738,4 +805,14 @@ func (s *Server) seriesReadable(w http.ResponseWriter, r *http.Request, seriesID
 	}
 	sc.apply(filter)
 	return true
+}
+
+func removeItemType(in []storage.ItemType, drop storage.ItemType) []storage.ItemType {
+	out := in[:0:0]
+	for _, t := range in {
+		if t != drop {
+			out = append(out, t)
+		}
+	}
+	return out
 }

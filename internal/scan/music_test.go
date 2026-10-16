@@ -145,3 +145,22 @@ func TestAttachedPictureIsNotAVideoStream(t *testing.T) {
 		t.Fatalf("picture: %+v", art)
 	}
 }
+
+func TestMusicPeopleOrder(t *testing.T) {
+	got := musicPeople(" Carl ", "Various", []string{"Guest", "Other"})
+	want := []storage.Person{
+		{Name: "Carl", Type: "Composer"}, {Name: "Various", Type: "AlbumArtist"},
+		{Name: "Guest", Type: "Artist"}, {Name: "Other", Type: "Artist"},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("person %d: got %v, want %v", i, got[i], want[i])
+		}
+	}
+	if musicPeople("", "", nil) != nil {
+		t.Fatal("untagged track has people")
+	}
+}

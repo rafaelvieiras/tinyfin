@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 733
+    "pass": 739
   },
   "scenarios": {
     "admin.backup.create": "pass",
@@ -258,11 +258,17 @@
     "music.filter.contributing": "pass",
     "music.image.album": "pass",
     "music.latest.albums": "pass",
+    "music.latest.loose": "pass",
     "music.list.artist-filter": "pass",
     "music.mix.album-artist": "pass",
     "music.mix.genre": "pass",
     "music.mix.playlist": "pass",
+    "music.mix.required": "pass",
     "music.mix.song": "pass",
+    "music.people.album": "pass",
+    "music.people.filter": "pass",
+    "music.people.persons": "pass",
+    "music.people.track": "pass",
     "music.playback.info": "pass",
     "music.scan.library": "pass",
     "music.similar.album": "pass",

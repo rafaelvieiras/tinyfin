@@ -176,7 +176,12 @@ func (s *Server) handleInstantMixByIDs(w http.ResponseWriter, r *http.Request) {
 	q := caseInsensitiveQuery(r)
 	var items []storage.Item
 	var names []string
-	for _, tok := range itemsListParam(q, "id") {
+	ids := itemsListParam(q, "id")
+	if len(ids) == 0 {
+		writeValidationProblem(w, "id", "The id field is required.")
+		return
+	}
+	for _, tok := range ids {
 		norm, valid := normalizeGUID(tok)
 		if !valid {
 			writeInvalidID(w, "id", tok)

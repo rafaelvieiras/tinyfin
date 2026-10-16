@@ -565,7 +565,7 @@ func (s *Server) mediaSourcesFor(ctx context.Context, item storage.Item) []media
 type baseItemPersonDto struct {
 	Name string `json:"Name"`
 	ID   string `json:"Id"`
-	Role string `json:"Role,omitempty"`
+	Role string `json:"Role"`
 	Type string `json:"Type"`
 }
 

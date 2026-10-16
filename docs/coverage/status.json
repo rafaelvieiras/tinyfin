@@ -56,6 +56,7 @@
    "web": false,
    "scenarios": [
     "music.mix.album-artist",
+    "music.mix.required",
     "music2.artist.by-name"
    ]
   },
@@ -1409,7 +1410,8 @@
    "verified": true,
    "web": false,
    "scenarios": [
-    "music.mix.album-artist"
+    "music.mix.album-artist",
+    "music.mix.required"
    ]
   },
   {
@@ -1438,7 +1440,8 @@
    "verified": true,
    "web": false,
    "scenarios": [
-    "music.mix.genre"
+    "music.mix.genre",
+    "music.mix.required"
    ]
   },
   {
@@ -1839,6 +1842,8 @@
     "music.artists.list",
     "music.filter.contributing",
     "music.list.artist-filter",
+    "music.people.filter",
+    "music.people.track",
     "music.scan.library",
     "music.track.sortname",
     "music2.disc.folders",
@@ -1895,7 +1900,8 @@
    "scenarios": [
     "collections.list.latest-and-counts",
     "items.rating.other-read-paths",
-    "music.latest.albums"
+    "music.latest.albums",
+    "music.latest.loose"
    ]
   },
   {
@@ -2008,6 +2014,8 @@
     "music.artist.detail",
     "music.artists.list",
     "music.image.album",
+    "music.people.album",
+    "music.people.track",
     "music.track.guest-artist",
     "music.track.id3",
     "music.track.untagged",
@@ -3284,7 +3292,8 @@
    "web": true,
    "scenarios": [
     "browse.item-filters",
-    "browse.persons"
+    "browse.persons",
+    "music.people.persons"
    ]
   },
   {
@@ -3298,7 +3307,9 @@
    "web": true,
    "scenarios": [
     "browse.persons",
-    "browse.persons.hidden"
+    "browse.persons.hidden",
+    "music.people.filter",
+    "music.people.persons"
    ]
   },
   {
@@ -6344,11 +6355,20 @@
    "status": "partial",
    "description": "Scanned: folders with audio files become MusicAlbum, root folders MusicArtist, files Audio items with ID3/Vorbis tags (title, artist, album, album artist, track, disc, year, genre) and folder fallbacks; album picture from cover/folder/poster files or a picture embedded in a track; artist listings and lookup by name, music genres, artist pictures, artist.nfo/album.nfo, disc folders, loose files, lyrics files and direct audio streaming.",
    "reference": "Music library with artists, albums, tracks, lyrics and instant mixes.",
-   "notes": "Third slice added Instant Mix and audio transcoding; the fourth (WebUI comparison) the grouped latest list, ContributingArtistIds, similar artists/albums/tracks and track sort names. Left out: music videos, People on tracks, Folder items for disc folders, lyrics upload/search (specs/music.md, Not covered).",
+   "notes": "Third slice added Instant Mix and audio transcoding; the fourth (WebUI comparison) the grouped latest list, ContributingArtistIds, similar artists/albums/tracks and track sort names; the fifth the latest list of tracks in no album, People (composer, album artist, artist) with the Person/PersonIds filters and /Persons, and the required id of the by-ids Instant Mix routes. Left out: music videos, conductor/lyricist/performer credits (the reference reads none), Folder items for disc folders, lyrics upload/search (specs/music.md, Not covered).",
    "spec_rules": [
     "music.latest.R1",
     "music.latest.R2",
     "music.latest.R3",
+    "music.latest.R4",
+    "music.latest.R5",
+    "music.latest.R6",
+    "music.people.R1",
+    "music.people.R2",
+    "music.people.R3",
+    "music.people.R4",
+    "music.people.R5",
+    "music.mix.R8",
     "music.list.R5",
     "music.similar.R1",
     "music.similar.R2",
@@ -6416,6 +6436,12 @@
    "scenarios": [
     "music.scan.library",
     "music.latest.albums",
+    "music.latest.loose",
+    "music.people.track",
+    "music.people.album",
+    "music.people.persons",
+    "music.people.filter",
+    "music.mix.required",
     "music.filter.contributing",
     "music.similar.artist",
     "music.similar.album",

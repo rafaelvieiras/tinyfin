@@ -63,7 +63,8 @@
     {"key": "trickplayoff", "name": "TrickplayOff", "type": "movies", "path": "TrickplayOff", "lazy": true},
     {"key": "music", "name": "Music", "type": "music", "path": "Music", "lazy": true},
     {"key": "music2", "name": "Music2", "type": "music", "path": "Music2", "lazy": true},
-    {"key": "music4", "name": "Music4", "type": "music", "path": "Music4", "lazy": true}
+    {"key": "music4", "name": "Music4", "type": "music", "path": "Music4", "lazy": true},
+    {"key": "music5", "name": "Music5", "type": "music", "path": "Music5", "lazy": true}
   ],
   "items": [
     {"key": "alpha", "type": "Movie", "path": "Movies/Alpha Movie (2015)/Alpha Movie (2015).mp4"},
@@ -457,6 +458,17 @@
     {"key": "m4artist6", "type": "MusicArtist", "library": "music4", "path": "Music4/Artist Six"},
     {"key": "m4artist7", "type": "MusicArtist", "library": "music4", "path": "Music4/Artist Seven"},
     {"key": "m4artist8", "type": "MusicArtist", "library": "music4", "path": "Music4/Artist Eight"},
-    {"key": "m4compilers", "type": "MusicArtist", "library": "music4", "path": "Music4/Various Compilers"}
+    {"key": "m4compilers", "type": "MusicArtist", "library": "music4", "path": "Music4/Various Compilers"},
+    {"key": "m5loose", "type": "Audio", "library": "music5", "path": "Music5/Loose Five.mp3"},
+    {"key": "m5looseeleven", "type": "Audio", "library": "music5", "path": "Music5/Artist Eleven/Loose In Eleven.mp3"},
+    {"key": "m5mu1", "type": "Audio", "library": "music5", "path": "Music5/Artist Eleven/Album Mu/01 - Mu One.mp3"},
+    {"key": "m5people1", "type": "Audio", "library": "music5", "path": "Music5/Artist Twelve/Album Nu/01 - People One.flac"},
+    {"key": "m5people2", "type": "Audio", "library": "music5", "path": "Music5/Artist Twelve/Album Nu/02 - People Two.mp3"},
+    {"key": "m5guest", "type": "Audio", "library": "music5", "path": "Music5/Various Five/Album Xi/01 - Guest Turn.mp3"},
+    {"key": "m5mu", "type": "MusicAlbum", "library": "music5", "path": "Music5/Artist Eleven/Album Mu"},
+    {"key": "m5nu", "type": "MusicAlbum", "library": "music5", "path": "Music5/Artist Twelve/Album Nu"},
+    {"key": "m5xi", "type": "MusicAlbum", "library": "music5", "path": "Music5/Various Five/Album Xi"},
+    {"key": "m5artist11", "type": "MusicArtist", "library": "music5", "path": "Music5/Artist Eleven"},
+    {"key": "m5artist12", "type": "MusicArtist", "library": "music5", "path": "Music5/Artist Twelve"}
   ]
 }
