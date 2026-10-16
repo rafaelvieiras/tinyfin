@@ -126,7 +126,7 @@ func Create(ctx context.Context, store storage.Store, dataDir string, spec Spec)
 // MediaTypeOf is the media type a playable item type carries.
 func MediaTypeOf(t storage.ItemType) string {
 	switch t {
-	case storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeTrailer, storage.ItemTypeVideo:
+	case storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeTrailer, storage.ItemTypeVideo, storage.ItemTypeMusicVideo:
 		return "Video"
 	case storage.ItemTypePhoto:
 		return "Photo"

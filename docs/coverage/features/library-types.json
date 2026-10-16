@@ -1,274 +1,325 @@
 {
- "area": "library-types",
- "title": "Library types",
- "summary": "Which library content types (CollectionType) Tinyfin can create and scan. Any value is accepted when a library is created; only the types below are scanned, the rest are skipped with a log line.",
- "features": [
-  {
-   "id": "library-types.movies",
-   "title": "Movies",
-   "status": "supported",
-   "description": "Scanned: movie folders, loose files, stacked parts and versions.",
-   "reference": "Movie library: one item per movie, grouped by folder or file name.",
-   "scenarios": [
-    "items.list.shape-recursive-movies",
-    "items.names.file-derived-name-kept"
-   ],
-   "code": [
-    "internal/scan/scan.go",
-    "internal/scan/nameparse.go"
-   ]
-  },
-  {
-   "id": "library-types.tvshows",
-   "title": "TV shows",
-   "status": "supported",
-   "description": "Scanned: series, seasons and episodes from folders and file names, `.nfo` and TMDB.",
-   "reference": "TV library: Series/Season/Episode hierarchy.",
-   "scenarios": [
-    "items.episodes.numbering-forms",
-    "items.names.series-folder-and-season-folder"
-   ],
-   "code": [
-    "internal/scan/scan.go",
-    "internal/scan/episodeparse.go"
-   ]
-  },
-  {
-   "id": "library-types.homevideos",
-   "title": "Home videos and photos",
-   "status": "supported",
-   "description": "Every folder becomes a Folder (PhotoAlbum when it holds pictures), videos become Video items and pictures Photo items; no name parsing or provider lookup.",
-   "reference": "Home videos library with the same folder/photo shapes.",
-   "scenarios": [
-    "items.homevideos.library-view",
-    "items.homevideos.photo-types",
-    "items.homevideos.recursive-listing-and-filters"
-   ],
-   "code": [
-    "internal/scan/scan.go"
-   ]
-  },
-  {
-   "id": "library-types.boxsets",
-   "title": "Collections library",
-   "status": "supported",
-   "description": "The Collections library is created with the first collection and shown as a view only while a collection is visible; its scan step is a no-op.",
-   "reference": "Collections library of BoxSets.",
-   "scenarios": [
-    "collections.list.library-view-appears",
-    "collections.list.library"
-   ],
-   "code": [
-    "internal/scan/scan.go",
-    "internal/api/collections.go"
-   ]
-  },
-  {
-   "id": "library-types.mixed",
-   "title": "Mixed content",
-   "status": "planned",
-   "description": "Accepted as a library type but not scanned: the scan logs `collection type not scanned yet` and skips the path.",
-   "reference": "Mixed (unset) libraries scan movies, series and videos in one tree.",
-   "notes": "Needs a per-folder decision between the movie and series walkers.",
-   "code": [
-    "internal/scan/scan.go"
-   ],
-   "priority": "low"
-  },
-  {
-   "id": "library-types.music",
-   "title": "Music",
-   "status": "partial",
-   "description": "Scanned: folders with audio files become MusicAlbum, root folders MusicArtist, files Audio items with ID3/Vorbis tags (title, artist, album, album artist, track, disc, year, genre) and folder fallbacks; album picture from cover/folder/poster files or a picture embedded in a track; artist listings and lookup by name, music genres, artist pictures, artist.nfo/album.nfo, disc folders, loose files, lyrics files and direct audio streaming.",
-   "reference": "Music library with artists, albums, tracks, lyrics and instant mixes.",
-   "notes": "Third slice added Instant Mix and audio transcoding; the fourth (WebUI comparison) the grouped latest list, ContributingArtistIds, similar artists/albums/tracks and track sort names; the fifth the latest list of tracks in no album, People (composer, album artist, artist) with the Person/PersonIds filters and /Persons, and the required id of the by-ids Instant Mix routes. Left out: music videos, conductor/lyricist/performer credits (the reference reads none), Folder items for disc folders, lyrics upload/search (specs/music.md, Not covered).",
-   "spec_rules": [
-    "music.latest.R1",
-    "music.latest.R2",
-    "music.latest.R3",
-    "music.latest.R4",
-    "music.latest.R5",
-    "music.latest.R6",
-    "music.people.R1",
-    "music.people.R2",
-    "music.people.R3",
-    "music.people.R4",
-    "music.people.R5",
-    "music.mix.R8",
-    "music.list.R5",
-    "music.similar.R1",
-    "music.similar.R2",
-    "music.similar.R3",
-    "music.similar.R4",
-    "music.track.R4",
-    "music.mix.R1",
-    "music.mix.R2",
-    "music.mix.R3",
-    "music.mix.R4",
-    "music.mix.R5",
-    "music.mix.R6",
-    "music.mix.R7",
-    "music.album.R1",
-    "music.album.R2",
-    "music.album.R3",
-    "music.album.R4",
-    "music.artist.R1",
-    "music.artist.R2",
-    "music.artist.R3",
-    "music.image.R1",
-    "music.image.R2",
-    "music.image.R3",
-    "music.list.R1",
-    "music.list.R2",
-    "music.list.R3",
-    "music.list.R4",
-    "music.scan.R1",
-    "music.scan.R2",
-    "music.scan.R3",
-    "music.scan.R4",
-    "music.scan.R5",
-    "music.scan.R6",
-    "music.scan.R7",
-    "music.stream.R1",
-    "music.stream.R2",
-    "music.stream.R3",
-    "music.stream.R4",
-    "music.track.R1",
-    "music.track.R2",
-    "music.track.R3",
-    "music.genre.R1",
-    "music.genre.R2",
-    "music.genre.R3",
-    "music.genre.R4",
-    "music.genre.R5",
-    "music.artist.R4",
-    "music.artist.R5",
-    "music.image.R4",
-    "music.image.R5",
-    "music.nfo.R1",
-    "music.nfo.R2",
-    "music.disc.R1",
-    "music.disc.R2",
-    "music.disc.R3",
-    "music.loose.R1",
-    "music.loose.R2",
-    "music.loose.R3",
-    "music.lyrics.R1",
-    "music.lyrics.R2",
-    "music.lyrics.R3",
-    "music.lyrics.R4",
-    "music.lyrics.R5"
-   ],
-   "scenarios": [
-    "music.scan.library",
-    "music.latest.albums",
-    "music.latest.loose",
-    "music.people.track",
-    "music.people.album",
-    "music.people.persons",
-    "music.people.filter",
-    "music.mix.required",
-    "music.filter.contributing",
-    "music.similar.artist",
-    "music.similar.album",
-    "music.similar.track",
-    "music.track.sortname",
-    "music.track.id3",
-    "music.track.vorbis",
-    "music.track.untagged",
-    "music.track.guest-artist",
-    "music.album.detail",
-    "music.album.tracks",
-    "music.artist.detail",
-    "music.artists.list",
-    "music.list.artist-filter",
-    "music.image.album",
-    "music.stream.direct",
-    "music.stream.unknown",
-    "music.playback.info",
-    "music2.genres.list",
-    "music2.genres.single",
-    "music2.genres.filter",
-    "music2.artist.by-name",
-    "music2.artist.images",
-    "music2.album.nfo",
-    "music2.disc.folders",
-    "music2.loose.files",
-    "music2.lyrics.timed",
-    "music2.lyrics.plain",
-    "music2.lyrics.none",
-    "music.mix.song",
-    "music.mix.album-artist",
-    "music.mix.genre",
-    "music.mix.playlist"
-   ],
-   "code": [
-    "internal/scan/music.go",
-    "internal/api/music.go",
-    "internal/playback/decision.go"
-   ]
-  },
-  {
-   "id": "library-types.musicvideos",
-   "title": "Music videos",
-   "status": "not-planned",
-   "description": "Accepted as a library type but not scanned.",
-   "reference": "MusicVideo items grouped with artists.",
-   "notes": "Not on ROADMAP.md; use homevideos for loose clips.",
-   "code": [
-    "internal/scan/scan.go"
-   ]
-  },
-  {
-   "id": "library-types.books",
-   "title": "Books",
-   "status": "not-planned",
-   "description": "Accepted as a library type but not scanned; there are no Book items.",
-   "reference": "Book/AudioBook libraries.",
-   "notes": "Not on ROADMAP.md.",
-   "code": [
-    "internal/scan/scan.go"
-   ]
-  },
-  {
-   "id": "library-types.photos",
-   "title": "Photos library",
-   "status": "partial",
-   "description": "Pictures are cataloged only inside a homevideos library (Photo, PhotoAlbum); there is no separate `photos` library type.",
-   "reference": "Photos library type with albums.",
-   "notes": "Covered through homevideos; a dedicated type would only add the view name.",
-   "scenarios": [
-    "items.homevideos.photo-types"
-   ],
-   "code": [
-    "internal/scan/scan.go"
-   ],
-   "priority": "low"
-  },
-  {
-   "id": "library-types.playlists",
-   "title": "Playlists library",
-   "status": "not-planned",
-   "description": "A `playlists` library view is listed (empty); playlists themselves do not exist.",
-   "reference": "Playlists library holding user playlists.",
-   "notes": "Depends on the Playlist API (see API: collections-playlists).",
-   "code": [
-    "internal/api/items_query.go"
-   ],
-   "routes": [
-    "POST /Playlists"
-   ]
-  },
-  {
-   "id": "library-types.livetv",
-   "title": "Live TV",
-   "status": "not-planned",
-   "description": "No Live TV library or channels.",
-   "reference": "Live TV view with channels, guide and recordings.",
-   "notes": "Decision D8 (docs/01).",
-   "routes": [
-    "GET /LiveTv/Channels"
-   ]
-  }
- ]
+  "area": "library-types",
+  "title": "Library types",
+  "summary": "Which library content types (CollectionType) Tinyfin can create and scan. Any value is accepted when a library is created; only the types below are scanned, the rest are skipped with a log line.",
+  "features": [
+    {
+      "id": "library-types.movies",
+      "title": "Movies",
+      "status": "supported",
+      "description": "Scanned: movie folders, loose files, stacked parts and versions.",
+      "reference": "Movie library: one item per movie, grouped by folder or file name.",
+      "scenarios": [
+        "items.list.shape-recursive-movies",
+        "items.names.file-derived-name-kept"
+      ],
+      "code": [
+        "internal/scan/scan.go",
+        "internal/scan/nameparse.go"
+      ]
+    },
+    {
+      "id": "library-types.tvshows",
+      "title": "TV shows",
+      "status": "supported",
+      "description": "Scanned: series, seasons and episodes from folders and file names, `.nfo` and TMDB.",
+      "reference": "TV library: Series/Season/Episode hierarchy.",
+      "scenarios": [
+        "items.episodes.numbering-forms",
+        "items.names.series-folder-and-season-folder"
+      ],
+      "code": [
+        "internal/scan/scan.go",
+        "internal/scan/episodeparse.go"
+      ]
+    },
+    {
+      "id": "library-types.homevideos",
+      "title": "Home videos and photos",
+      "status": "supported",
+      "description": "Every folder becomes a Folder (PhotoAlbum when it holds pictures), videos become Video items and pictures Photo items; no name parsing or provider lookup.",
+      "reference": "Home videos library with the same folder/photo shapes.",
+      "scenarios": [
+        "items.homevideos.library-view",
+        "items.homevideos.photo-types",
+        "items.homevideos.recursive-listing-and-filters"
+      ],
+      "code": [
+        "internal/scan/scan.go"
+      ]
+    },
+    {
+      "id": "library-types.boxsets",
+      "title": "Collections library",
+      "status": "supported",
+      "description": "The Collections library is created with the first collection and shown as a view only while a collection is visible; its scan step is a no-op.",
+      "reference": "Collections library of BoxSets.",
+      "scenarios": [
+        "collections.list.library-view-appears",
+        "collections.list.library"
+      ],
+      "code": [
+        "internal/scan/scan.go",
+        "internal/api/collections.go"
+      ]
+    },
+    {
+      "id": "library-types.mixed",
+      "title": "Mixed content",
+      "status": "planned",
+      "description": "Accepted as a library type but not scanned: the scan logs `collection type not scanned yet` and skips the path.",
+      "reference": "Mixed (unset) libraries scan movies, series and videos in one tree.",
+      "notes": "Needs a per-folder decision between the movie and series walkers.",
+      "code": [
+        "internal/scan/scan.go"
+      ],
+      "priority": "low"
+    },
+    {
+      "id": "library-types.music",
+      "title": "Music",
+      "status": "partial",
+      "description": "Scanned: folders with audio files become MusicAlbum, root folders MusicArtist, files Audio items with ID3/Vorbis tags (title, artist, album, album artist, track, disc, year, genre) and folder fallbacks; album picture from cover/folder/poster files or a picture embedded in a track; artist listings and lookup by name, music genres, artist pictures, artist.nfo/album.nfo, disc folders, loose files, lyrics files and direct audio streaming.",
+      "reference": "Music library with artists, albums, tracks, lyrics and instant mixes.",
+      "notes": "Third slice added Instant Mix and audio transcoding; the fourth (WebUI comparison) the grouped latest list, ContributingArtistIds, similar artists/albums/tracks and track sort names; the fifth the latest list of tracks in no album, People (composer, album artist, artist) with the Person/PersonIds filters and /Persons, and the required id of the by-ids Instant Mix routes. Left out: conductor/lyricist/performer credits (the reference reads none), Folder items for disc folders, lyrics upload/search (specs/music.md, Not covered).",
+      "spec_rules": [
+        "music.latest.R1",
+        "music.latest.R2",
+        "music.latest.R3",
+        "music.latest.R4",
+        "music.latest.R5",
+        "music.latest.R6",
+        "music.people.R1",
+        "music.people.R2",
+        "music.people.R3",
+        "music.people.R4",
+        "music.people.R5",
+        "music.mix.R8",
+        "music.list.R5",
+        "music.similar.R1",
+        "music.similar.R2",
+        "music.similar.R3",
+        "music.similar.R4",
+        "music.track.R4",
+        "music.mix.R1",
+        "music.mix.R2",
+        "music.mix.R3",
+        "music.mix.R4",
+        "music.mix.R5",
+        "music.mix.R6",
+        "music.mix.R7",
+        "music.album.R1",
+        "music.album.R2",
+        "music.album.R3",
+        "music.album.R4",
+        "music.artist.R1",
+        "music.artist.R2",
+        "music.artist.R3",
+        "music.image.R1",
+        "music.image.R2",
+        "music.image.R3",
+        "music.list.R1",
+        "music.list.R2",
+        "music.list.R3",
+        "music.list.R4",
+        "music.scan.R1",
+        "music.scan.R2",
+        "music.scan.R3",
+        "music.scan.R4",
+        "music.scan.R5",
+        "music.scan.R6",
+        "music.scan.R7",
+        "music.stream.R1",
+        "music.stream.R2",
+        "music.stream.R3",
+        "music.stream.R4",
+        "music.track.R1",
+        "music.track.R2",
+        "music.track.R3",
+        "music.genre.R1",
+        "music.genre.R2",
+        "music.genre.R3",
+        "music.genre.R4",
+        "music.genre.R5",
+        "music.artist.R4",
+        "music.artist.R5",
+        "music.image.R4",
+        "music.image.R5",
+        "music.nfo.R1",
+        "music.nfo.R2",
+        "music.disc.R1",
+        "music.disc.R2",
+        "music.disc.R3",
+        "music.loose.R1",
+        "music.loose.R2",
+        "music.loose.R3",
+        "music.lyrics.R1",
+        "music.lyrics.R2",
+        "music.lyrics.R3",
+        "music.lyrics.R4",
+        "music.lyrics.R5"
+      ],
+      "scenarios": [
+        "music.scan.library",
+        "music.latest.albums",
+        "music.latest.loose",
+        "music.people.track",
+        "music.people.album",
+        "music.people.persons",
+        "music.people.filter",
+        "music.mix.required",
+        "music.filter.contributing",
+        "music.similar.artist",
+        "music.similar.album",
+        "music.similar.track",
+        "music.track.sortname",
+        "music.track.id3",
+        "music.track.vorbis",
+        "music.track.untagged",
+        "music.track.guest-artist",
+        "music.album.detail",
+        "music.album.tracks",
+        "music.artist.detail",
+        "music.artists.list",
+        "music.list.artist-filter",
+        "music.image.album",
+        "music.stream.direct",
+        "music.stream.unknown",
+        "music.playback.info",
+        "music2.genres.list",
+        "music2.genres.single",
+        "music2.genres.filter",
+        "music2.artist.by-name",
+        "music2.artist.images",
+        "music2.album.nfo",
+        "music2.disc.folders",
+        "music2.loose.files",
+        "music2.lyrics.timed",
+        "music2.lyrics.plain",
+        "music2.lyrics.none",
+        "music.mix.song",
+        "music.mix.album-artist",
+        "music.mix.genre",
+        "music.mix.playlist"
+      ],
+      "code": [
+        "internal/scan/music.go",
+        "internal/api/music.go",
+        "internal/playback/decision.go"
+      ]
+    },
+    {
+      "id": "library-types.musicvideos",
+      "title": "Music videos",
+      "status": "supported",
+      "description": "Scanned: every video file becomes a MusicVideo named after the file (year from a trailing (YYYY)), single-clip folders collapse into the clip, -partN files stack, other folders are Folder items; a <musicvideo> .nfo gives title, artists, album, year, genres and plot; <name>-thumb.jpg is the Thumb, <name>.jpg/-poster.jpg the Primary, folder.jpg the folder's (or the single clip's) Primary. The clips' artists are MusicArtist items (/Artists, ArtistIds, Genres), their genres are music genres, and the clips play, stream and transcode like any video.",
+      "reference": "MusicVideo items with Artists/ArtistItems/Album, listed with their artists as MusicArtist.",
+      "notes": "No frame extraction for clips without a picture file, ItemCount on /Items/Counts, MusicVideoCount in genre ItemCounts and artist hits in search are not implemented (specs/musicvideos.md, Known differences).",
+      "spec_rules": [
+        "musicvideos.artists.R1",
+        "musicvideos.artists.R2",
+        "musicvideos.counts.R1",
+        "musicvideos.filters.R1",
+        "musicvideos.filters.R2",
+        "musicvideos.genres.R1",
+        "musicvideos.images.R1",
+        "musicvideos.images.R2",
+        "musicvideos.images.R3",
+        "musicvideos.latest.R1",
+        "musicvideos.library.R1",
+        "musicvideos.nfo.R1",
+        "musicvideos.nfo.R2",
+        "musicvideos.playback.R1",
+        "musicvideos.playback.R2",
+        "musicvideos.playback.R3",
+        "musicvideos.playstate.R1",
+        "musicvideos.scan.R1",
+        "musicvideos.scan.R2",
+        "musicvideos.scan.R3",
+        "musicvideos.scan.R4",
+        "musicvideos.scan.R5",
+        "musicvideos.scan.R6",
+        "musicvideos.scan.R7",
+        "musicvideos.scan.R8",
+        "musicvideos.scan.R9"
+      ],
+      "scenarios": [
+        "musicvideos.scan.list",
+        "musicvideos.scan.folders",
+        "musicvideos.scan.names",
+        "musicvideos.scan.stack",
+        "musicvideos.nfo.fields",
+        "musicvideos.nfo.none",
+        "musicvideos.images.local",
+        "musicvideos.artists.listing",
+        "musicvideos.filters",
+        "musicvideos.genres",
+        "musicvideos.latest",
+        "musicvideos.counts",
+        "musicvideos.views",
+        "musicvideos.playback.direct",
+        "musicvideos.playback.transcode",
+        "musicvideos.playstate",
+        "musicvideos.scan.incremental"
+      ],
+      "code": [
+        "internal/scan/musicvideos.go",
+        "internal/scan/scan.go",
+        "internal/api/music.go",
+        "internal/api/items_counts.go",
+        "internal/api/named.go"
+      ]
+    },
+    {
+      "id": "library-types.books",
+      "title": "Books",
+      "status": "not-planned",
+      "description": "Accepted as a library type but not scanned; there are no Book items.",
+      "reference": "Book/AudioBook libraries.",
+      "notes": "Not on ROADMAP.md.",
+      "code": [
+        "internal/scan/scan.go"
+      ]
+    },
+    {
+      "id": "library-types.photos",
+      "title": "Photos library",
+      "status": "partial",
+      "description": "Pictures are cataloged only inside a homevideos library (Photo, PhotoAlbum); there is no separate `photos` library type.",
+      "reference": "Photos library type with albums.",
+      "notes": "Covered through homevideos; a dedicated type would only add the view name.",
+      "scenarios": [
+        "items.homevideos.photo-types"
+      ],
+      "code": [
+        "internal/scan/scan.go"
+      ],
+      "priority": "low"
+    },
+    {
+      "id": "library-types.playlists",
+      "title": "Playlists library",
+      "status": "not-planned",
+      "description": "A `playlists` library view is listed (empty); playlists themselves do not exist.",
+      "reference": "Playlists library holding user playlists.",
+      "notes": "Depends on the Playlist API (see API: collections-playlists).",
+      "code": [
+        "internal/api/items_query.go"
+      ],
+      "routes": [
+        "POST /Playlists"
+      ]
+    },
+    {
+      "id": "library-types.livetv",
+      "title": "Live TV",
+      "status": "not-planned",
+      "description": "No Live TV library or channels.",
+      "reference": "Live TV view with channels, guide and recordings.",
+      "notes": "Decision D8 (docs/01).",
+      "routes": [
+        "GET /LiveTv/Channels"
+      ]
+    }
+  ]
 }

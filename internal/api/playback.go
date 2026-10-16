@@ -194,7 +194,7 @@ func baseMediaSourceInfo(item storage.Item, container string) mediaSourceInfoDto
 		MediaStreams:    mediaStreamDtos(item.MediaStreams),
 	}
 	switch item.Type {
-	case storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeVideo, storage.ItemTypeTrailer:
+	case storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeVideo, storage.ItemTypeMusicVideo, storage.ItemTypeTrailer:
 		src.VideoType = "VideoFile"
 	}
 	if item.RemoteURL != "" {

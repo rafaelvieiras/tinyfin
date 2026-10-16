@@ -744,7 +744,7 @@ func isFolderType(t storage.ItemType) bool {
 // covers via omitempty.
 func mediaTypeFor(t storage.ItemType) string {
 	switch t {
-	case storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeTrailer, storage.ItemTypeVideo:
+	case storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeTrailer, storage.ItemTypeVideo, storage.ItemTypeMusicVideo:
 		return "Video"
 	case storage.ItemTypePhoto:
 		return "Photo"
@@ -947,10 +947,11 @@ func (s *Server) parentImageFieldsFor(ctx context.Context, ownTags map[string]st
 // even though mediaTypeFor labels them "Video" for a different purpose
 // (playback-eligibility, not "this item has a resolution").
 var videoFileItemTypes = map[storage.ItemType]bool{
-	storage.ItemTypeMovie:   true,
-	storage.ItemTypeEpisode: true,
-	storage.ItemTypeTrailer: true,
-	storage.ItemTypeVideo:   true,
+	storage.ItemTypeMovie:      true,
+	storage.ItemTypeEpisode:    true,
+	storage.ItemTypeTrailer:    true,
+	storage.ItemTypeVideo:      true,
+	storage.ItemTypeMusicVideo: true,
 }
 
 // primaryVideoStreamFor returns item's own primary video track — the first

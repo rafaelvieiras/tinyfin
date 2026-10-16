@@ -51,7 +51,7 @@ var itemsKnownKinds = func() map[string]storage.ItemType {
 // mediaTypeKinds maps a MediaTypes value to the item kinds that carry it.
 // Types with no kind behind them match nothing.
 var mediaTypeKinds = map[string][]storage.ItemType{
-	"video":   {storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeTrailer, storage.ItemTypeVideo},
+	"video":   {storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeTrailer, storage.ItemTypeVideo, storage.ItemTypeMusicVideo},
 	"audio":   {storage.ItemTypeAudio},
 	"photo":   {storage.ItemTypePhoto},
 	"book":    nil,

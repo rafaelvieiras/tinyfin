@@ -62,10 +62,15 @@ func (s *Server) musicNameRefs(ctx context.Context, libraryID storage.LibraryID,
 
 // decorateMusic completes the DTO of an audio, album or artist item.
 func (s *Server) decorateMusic(ctx context.Context, item storage.Item, dto *baseItemDto) {
-	if (item.Type == storage.ItemTypeAudio || item.Type == storage.ItemTypeMusicAlbum) && dto.Artists == nil {
+	if (item.Type == storage.ItemTypeAudio || item.Type == storage.ItemTypeMusicAlbum || item.Type == storage.ItemTypeMusicVideo) && dto.Artists == nil {
 		dto.Artists = []string{} // always listed on a track and an album
 	}
 	switch item.Type {
+	case storage.ItemTypeMusicVideo:
+		dto.ArtistItems = s.musicNameRefs(ctx, item.LibraryID, item.Artists)
+		if dto.ArtistItems == nil {
+			dto.ArtistItems = []nameIDPairDto{}
+		}
 	case storage.ItemTypeAudio:
 		zero := time.Time{}
 		if dto.PremiereDate == nil {
@@ -132,13 +137,17 @@ func (s *Server) decorateMusic(ctx context.Context, item storage.Item, dto *base
 			LibraryID: &item.LibraryID, Recursive: true, ItemTypes: []storage.ItemType{storage.ItemTypeMusicAlbum},
 			ArtistNames: []string{item.Name}, Limit: 1,
 		})
+		clips, _ := s.store.QueryItems(ctx, storage.ItemFilter{
+			LibraryID: &item.LibraryID, Recursive: true, ItemTypes: []storage.ItemType{storage.ItemTypeMusicVideo},
+			ArtistNames: []string{item.Name}, Limit: 1,
+		})
 		zero := 0
-		songCount, albumCount := songs.TotalCount, albums.TotalCount
-		dto.SongCount, dto.AlbumCount = &songCount, &albumCount
-		child := songCount + albumCount
+		songCount, albumCount, clipCount := songs.TotalCount, albums.TotalCount, clips.TotalCount
+		dto.SongCount, dto.AlbumCount, dto.MusicVideoCount = &songCount, &albumCount, &clipCount
+		child := songCount + albumCount + clipCount
 		dto.ChildCount = &child
 		dto.ArtistCount, dto.MovieCount, dto.SeriesCount, dto.EpisodeCount = &zero, &zero, &zero, &zero
-		dto.TrailerCount, dto.ProgramCount, dto.MusicVideoCount = &zero, &zero, &zero
+		dto.TrailerCount, dto.ProgramCount = &zero, &zero
 		if item.ExtraType == "" {
 			if n, err := s.recursiveItemCountOf(ctx, item); err == nil {
 				dto.RecursiveItemCount = &n
@@ -178,6 +187,10 @@ func (s *Server) decorateMusic(ctx context.Context, item storage.Item, dto *base
 				}
 			}
 			dto.RunTimeTicks = &ticks
+			if len(item.Genres) > 0 {
+				dto.Genres = item.Genres
+				dto.GenreItems = genreItemsFor(item.Genres)
+			}
 		}
 	}
 }

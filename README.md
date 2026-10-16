@@ -130,10 +130,10 @@ Measured against the Jellyfin 12.2.0 OpenAPI document (364 operations): **184 re
 
 | Route status | Count | Non-route features | Count |
 |---|---|---|---|
-| ✅ supported | 156 | ✅ supported | 61 |
+| ✅ supported | 156 | ✅ supported | 62 |
 | 🟡 partial | 12 | 🟡 partial | 19 |
 | 🗓️ planned | 85 | 🗓️ planned | 13 |
-| ⛔ not-planned | 95 | ⛔ not-planned | 17 |
+| ⛔ not-planned | 95 | ⛔ not-planned | 16 |
 | ↔️ divergent-by-design | 16 | ↔️ divergent-by-design | 0 |
 
 Per controller and per subsystem, with what the reference does and what Tinyfin does: **[docs/COVERAGE.md](docs/COVERAGE.md)**.

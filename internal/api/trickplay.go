@@ -41,14 +41,14 @@ func (s *Server) regenerateTrickplay(id storage.ItemID) {
 		return
 	}
 	switch item.Type {
-	case storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeVideo:
+	case storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeVideo, storage.ItemTypeMusicVideo:
 		s.trickplay.EnqueueItem(lib, item, true)
 		return
 	}
 	for off := 0; ; off += 500 {
 		page, err := s.store.QueryItems(ctx, storage.ItemFilter{
 			ParentID: &id, Recursive: true, Limit: 500, Offset: off,
-			ItemTypes: []storage.ItemType{storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeVideo},
+			ItemTypes: []storage.ItemType{storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeVideo, storage.ItemTypeMusicVideo},
 		})
 		if err != nil {
 			return
@@ -77,7 +77,7 @@ type trickplayDto struct {
 // video item, an empty object when it has no sheets; folders carry none.
 func (s *Server) applyTrickplay(ctx context.Context, dto *baseItemDto, item storage.Item) {
 	switch item.Type {
-	case storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeVideo, storage.ItemTypeTrailer:
+	case storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeVideo, storage.ItemTypeMusicVideo, storage.ItemTypeTrailer:
 	default:
 		return
 	}

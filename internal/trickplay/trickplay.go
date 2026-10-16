@@ -274,7 +274,7 @@ func (g *Generator) eachItem(ctx context.Context, lib storage.Library, fn func(s
 	for off := 0; ; off += 500 {
 		page, err := g.store.QueryItems(ctx, storage.ItemFilter{
 			LibraryID: &id, Recursive: true, Limit: 500, Offset: off,
-			ItemTypes: []storage.ItemType{storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeVideo},
+			ItemTypes: []storage.ItemType{storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeVideo, storage.ItemTypeMusicVideo},
 		})
 		if err != nil {
 			log.Printf("trickplay: listing library %q: %v", lib.Name, err)

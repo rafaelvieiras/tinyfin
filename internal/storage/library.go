@@ -22,6 +22,8 @@ const (
 	// CollectionTypeHomeVideos holds loose video files in any folder
 	// structure: no naming scheme, no series or movie identification.
 	CollectionTypeHomeVideos CollectionType = "homevideos"
+	// CollectionTypeMusicVideos holds music clips in any folder structure.
+	CollectionTypeMusicVideos CollectionType = "musicvideos"
 )
 
 // Library is the storage-side counterpart of the reference server's

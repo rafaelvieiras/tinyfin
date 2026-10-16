@@ -409,7 +409,7 @@ func (s *Server) handleItemsLatest(w http.ResponseWriter, r *http.Request) {
 var mediaTypeItemTypes = map[string][]storage.ItemType{
 	"Video": {
 		storage.ItemTypeMovie, storage.ItemTypeSeries, storage.ItemTypeSeason,
-		storage.ItemTypeEpisode, storage.ItemTypeTrailer, storage.ItemTypeVideo,
+		storage.ItemTypeEpisode, storage.ItemTypeTrailer, storage.ItemTypeVideo, storage.ItemTypeMusicVideo,
 	},
 	"Audio": {storage.ItemTypeMusicArtist, storage.ItemTypeMusicAlbum, storage.ItemTypeAudio},
 }

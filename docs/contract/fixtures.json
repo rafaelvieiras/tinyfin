@@ -64,7 +64,8 @@
     {"key": "music", "name": "Music", "type": "music", "path": "Music", "lazy": true},
     {"key": "music2", "name": "Music2", "type": "music", "path": "Music2", "lazy": true},
     {"key": "music4", "name": "Music4", "type": "music", "path": "Music4", "lazy": true},
-    {"key": "music5", "name": "Music5", "type": "music", "path": "Music5", "lazy": true}
+    {"key": "music5", "name": "Music5", "type": "music", "path": "Music5", "lazy": true},
+    {"key": "musicvideos", "name": "MusicVideos", "type": "musicvideos", "path": "MusicVideos", "lazy": true}
   ],
   "items": [
     {"key": "alpha", "type": "Movie", "path": "Movies/Alpha Movie (2015)/Alpha Movie (2015).mp4"},
@@ -469,6 +470,25 @@
     {"key": "m5nu", "type": "MusicAlbum", "library": "music5", "path": "Music5/Artist Twelve/Album Nu"},
     {"key": "m5xi", "type": "MusicAlbum", "library": "music5", "path": "Music5/Various Five/Album Xi"},
     {"key": "m5artist11", "type": "MusicArtist", "library": "music5", "path": "Music5/Artist Eleven"},
-    {"key": "m5artist12", "type": "MusicArtist", "library": "music5", "path": "Music5/Artist Twelve"}
+    {"key": "m5artist12", "type": "MusicArtist", "library": "music5", "path": "Music5/Artist Twelve"},
+    {"key": "mvplain", "type": "MusicVideo", "library": "musicvideos", "path": "MusicVideos/Plain Clip.mp4"},
+    {"key": "mvdua", "type": "MusicVideo", "library": "musicvideos", "path": "MusicVideos/Dua Lipa - Levitating (2020).mp4"},
+    {"key": "mvnine", "type": "MusicVideo", "library": "musicvideos", "path": "MusicVideos/Artist Nine/Nine Song.mp4"},
+    {"key": "mvsecond", "type": "MusicVideo", "library": "musicvideos", "path": "MusicVideos/Artist Nine/Second Song.mkv"},
+    {"key": "mvdeep", "type": "MusicVideo", "library": "musicvideos", "path": "MusicVideos/Tenth Artist/Album One/Deep Clip (2004).mp4"},
+    {"key": "mvsolo", "type": "MusicVideo", "library": "musicvideos", "path": "MusicVideos/Solo Folder (2010)/Solo Clip (2010).mp4"},
+    {"key": "mvone", "type": "MusicVideo", "library": "musicvideos", "path": "MusicVideos/Mixed/One.mp4"},
+    {"key": "mvtwo", "type": "MusicVideo", "library": "musicvideos", "path": "MusicVideos/Mixed/Sub/Two.mp4"},
+    {"key": "mvmain", "type": "MusicVideo", "library": "musicvideos", "path": "MusicVideos/Docs Dir/Main.mp4"},
+    {"key": "mvpart", "type": "MusicVideo", "library": "musicvideos", "path": "MusicVideos/Part Dir/Song - part1.mp4"},
+    {"key": "mvver1", "type": "MusicVideo", "library": "musicvideos", "path": "MusicVideos/Ver Dir/Song.mp4"},
+    {"key": "mvver2", "type": "MusicVideo", "library": "musicvideos", "path": "MusicVideos/Ver Dir/Song - 4K.mp4"},
+    {"key": "mvnestclip", "type": "MusicVideo", "library": "musicvideos", "path": "MusicVideos/Nest/Inner/Deep.mp4"},
+    {"key": "mvartist9", "type": "Folder", "library": "musicvideos", "path": "MusicVideos/Artist Nine"},
+    {"key": "mvtenth", "type": "Folder", "library": "musicvideos", "path": "MusicVideos/Tenth Artist"},
+    {"key": "mvmixed", "type": "Folder", "library": "musicvideos", "path": "MusicVideos/Mixed"},
+    {"key": "mvdocs", "type": "Folder", "library": "musicvideos", "path": "MusicVideos/Docs Dir"},
+    {"key": "mvnest", "type": "Folder", "library": "musicvideos", "path": "MusicVideos/Nest"},
+    {"key": "mvverdir", "type": "Folder", "library": "musicvideos", "path": "MusicVideos/Ver Dir"}
   ]
 }

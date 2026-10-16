@@ -15,6 +15,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   of its name; `/Persons` ignores `IncludeItemTypes`); `GET /Items/Latest` lists tracks that sit
   in no album as themselves under an artist folder or when libraries of other kinds are around,
   and an album folder as the album; the by-ids Instant Mix routes require `id` (`400`).
+- Music videos library (`musicvideos`, `docs/contract/specs/musicvideos.md`, `musicvideos.json`):
+  every video file is a `MusicVideo` named after its file (year from a trailing `(YYYY)`), a
+  folder with a single clip is that clip, `-partN` files stack into one clip (`PartCount`), other
+  folders are `Folder` items; `<musicvideo>` `.nfo` files give title, artists, album, year,
+  genres and plot; `<name>-thumb.jpg` is the Thumb, `<name>.jpg`/`-poster.jpg` and `folder.jpg`
+  the Primary. The clips' artists are `MusicArtist` items (`/Artists`, `ArtistIds`, `Artists`,
+  genre-filtered, with `MusicVideoCount`), their genres are music genres, `/Items/Counts` has
+  `MusicVideoCount`, and the clips list, search, play, stream, transcode and carry play state
+  like any video. 17 new scenarios (`musicvideos.*`) pass on the reference and on Tinyfin.
 - Music, fourth slice (WebUI comparison, `docs/contract/specs/music.md`, `music4.json`):
   `GET /Items/Latest` groups tracks as albums (music library scope ignores the types, artists only
   when asked for, `GroupItems=false` lists tracks) and honors `ParentId` in any letter case; the
