@@ -294,7 +294,7 @@ func (s *Server) listNamed(w http.ResponseWriter, r *http.Request, kind storage.
 // them out (noMusic), unless the request names item types itself.
 type namedScope struct{ music, noMusic bool }
 
-var musicItemTypes = []storage.ItemType{storage.ItemTypeAudio, storage.ItemTypeMusicAlbum, storage.ItemTypeMusicArtist}
+var musicItemTypes = []storage.ItemType{storage.ItemTypeAudio, storage.ItemTypeMusicVideo, storage.ItemTypeMusicAlbum, storage.ItemTypeMusicArtist}
 
 func (s *Server) listNamedIn(w http.ResponseWriter, r *http.Request, kind storage.NamedKind, withUserData bool, ns namedScope) {
 	nr, ok := s.newNamedReq(w, r)

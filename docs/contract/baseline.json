@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 733
+    "pass": 750
   },
   "scenarios": {
     "admin.backup.create": "pass",
@@ -289,6 +289,23 @@
     "music2.lyrics.none": "pass",
     "music2.lyrics.plain": "pass",
     "music2.lyrics.timed": "pass",
+    "musicvideos.artists.listing": "pass",
+    "musicvideos.counts": "pass",
+    "musicvideos.filters": "pass",
+    "musicvideos.genres": "pass",
+    "musicvideos.images.local": "pass",
+    "musicvideos.latest": "pass",
+    "musicvideos.nfo.fields": "pass",
+    "musicvideos.nfo.none": "pass",
+    "musicvideos.playback.direct": "pass",
+    "musicvideos.playback.transcode": "pass",
+    "musicvideos.playstate": "pass",
+    "musicvideos.scan.folders": "pass",
+    "musicvideos.scan.incremental": "pass",
+    "musicvideos.scan.list": "pass",
+    "musicvideos.scan.names": "pass",
+    "musicvideos.scan.stack": "pass",
+    "musicvideos.views": "pass",
     "playback.audio.body": "pass",
     "playback.audio.ignored": "pass",
     "playback.audio.selection": "pass",

@@ -49,7 +49,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
 | ✅ supported *(no scenario)* | `DELETE /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes |  |  |
-| ✅ supported | `GET /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes | 4/4 |  |
+| ✅ supported | `GET /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes | 5/5 |  |
 | ✅ supported | `POST /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes | 2/2 |  |
 | ✅ supported *(no scenario)* | `POST /Library/VirtualFolders/LibraryOptions` | FirstTimeSetupOrElevated | yes |  |  |
 | ✅ supported *(no scenario)* | `POST /Library/VirtualFolders/Name` | FirstTimeSetupOrElevated | yes |  |  |

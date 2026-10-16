@@ -16,14 +16,14 @@ import (
 // "ProgramCount":0,"TrailerCount":0,"SongCount":0,"AlbumCount":0,
 // "MusicVideoCount":0,"BoxSetCount":0,"BookCount":0,"ItemCount":0}.
 //
-// Only MovieCount/SeriesCount/EpisodeCount/BoxSetCount are real numbers
+// Only MovieCount/SeriesCount/EpisodeCount/BoxSetCount/MusicVideoCount are real numbers
 // here: the scanner only produces movies, series, seasons and episodes (its
 // CollectionType switch only walks Movies/TVShows, same gap library.go's
 // package doc comment and localization.go's libraryTypeOptionsByType already
 // document for music/book/program), and collections come from the
 // collections routes and the automatic collections (internal/collection).
 // So ArtistCount/ProgramCount/TrailerCount/SongCount/AlbumCount/
-// MusicVideoCount/BookCount/ItemCount are structural zeros, not
+// BookCount/ItemCount are structural zeros, not
 // placeholders awaiting a query: there is no music/book/program scanning
 // pipeline behind any of them to count, the same "minimal over guessed"
 // boundary this package already draws in library.go and localization.go. ItemCount specifically mirrors the reference server's
@@ -105,11 +105,18 @@ func (s *Server) handleItemsCounts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	musicVideos, err := countItemsByType(ctx, s.store, scope, storage.ItemTypeMusicVideo)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	writeJSON(w, http.StatusOK, itemCounts{
-		MovieCount:   movies,
-		SeriesCount:  series,
-		EpisodeCount: episodes,
-		BoxSetCount:  boxsets,
+		MovieCount:      movies,
+		SeriesCount:     series,
+		EpisodeCount:    episodes,
+		BoxSetCount:     boxsets,
+		MusicVideoCount: musicVideos,
 		// Every other field is a structural zero — see itemCounts' doc
 		// comment.
 	})

@@ -2,10 +2,10 @@
  "reference": "jellyfin/jellyfin:12.2 /api-docs/openapi.json 12.2.0",
  "totals": {
   "features_by_status": {
-   "not-planned": 17,
+   "not-planned": 16,
    "partial": 19,
    "planned": 13,
-   "supported": 61
+   "supported": 62
   },
   "operations": 364,
   "registered": 184,
@@ -29,7 +29,8 @@
    "verified": true,
    "web": true,
    "scenarios": [
-    "music.artists.list"
+    "music.artists.list",
+    "musicvideos.artists.listing"
    ]
   },
   {
@@ -42,7 +43,8 @@
    "verified": true,
    "web": true,
    "scenarios": [
-    "music.artists.list"
+    "music.artists.list",
+    "musicvideos.artists.listing"
    ]
   },
   {
@@ -56,7 +58,8 @@
    "web": false,
    "scenarios": [
     "music.mix.album-artist",
-    "music2.artist.by-name"
+    "music2.artist.by-name",
+    "musicvideos.artists.listing"
    ]
   },
   {
@@ -913,6 +916,7 @@
     "browse.genres.query",
     "browse.item-filters",
     "music2.genres.list",
+    "musicvideos.genres",
     "playlists.item.metadata-refresh"
    ]
   },
@@ -1080,7 +1084,8 @@
    "scenarios": [
     "images.api.index-lookup",
     "music.image.album",
-    "music2.artist.images"
+    "music2.artist.images",
+    "musicvideos.images.local"
    ]
   },
   {
@@ -1095,7 +1100,8 @@
    "scenarios": [
     "images.api.index-lookup",
     "music.image.album",
-    "music2.artist.images"
+    "music2.artist.images",
+    "musicvideos.images.local"
    ]
   },
   {
@@ -1844,6 +1850,15 @@
     "music2.disc.folders",
     "music2.genres.filter",
     "music2.loose.files",
+    "musicvideos.artists.listing",
+    "musicvideos.filters",
+    "musicvideos.playstate",
+    "musicvideos.scan.folders",
+    "musicvideos.scan.incremental",
+    "musicvideos.scan.list",
+    "musicvideos.scan.names",
+    "musicvideos.scan.stack",
+    "musicvideos.views",
     "playlists.acl.matrix",
     "playlists.create.basic",
     "playlists.create.errors",
@@ -1880,7 +1895,8 @@
    "web": true,
    "scenarios": [
     "collections.list.latest-and-counts",
-    "extras.item.hidden-from-listings"
+    "extras.item.hidden-from-listings",
+    "musicvideos.counts"
    ]
   },
   {
@@ -1895,7 +1911,8 @@
    "scenarios": [
     "collections.list.latest-and-counts",
     "items.rating.other-read-paths",
-    "music.latest.albums"
+    "music.latest.albums",
+    "musicvideos.latest"
    ]
   },
   {
@@ -2019,6 +2036,14 @@
     "music2.lyrics.none",
     "music2.lyrics.plain",
     "music2.lyrics.timed",
+    "musicvideos.artists.listing",
+    "musicvideos.images.local",
+    "musicvideos.nfo.fields",
+    "musicvideos.nfo.none",
+    "musicvideos.playstate",
+    "musicvideos.scan.list",
+    "musicvideos.scan.names",
+    "musicvideos.scan.stack",
     "playlists.create.basic",
     "playlists.create.for-user",
     "playlists.create.variants",
@@ -2163,6 +2188,7 @@
    "verified": true,
    "web": false,
    "scenarios": [
+    "musicvideos.playback.direct",
     "policy.download.admin-denied",
     "policy.download.default",
     "policy.download.denied",
@@ -2225,6 +2251,7 @@
    "scenarios": [
     "collections.auto.rescan",
     "collections.item.metadata-on-change",
+    "musicvideos.scan.incremental",
     "scan.forget.file",
     "scan.forget.folder",
     "scan.forget.library-folder",
@@ -2502,7 +2529,8 @@
     "collections.list.by-content-library",
     "collections.list.library",
     "collections.visibility.partial-members",
-    "collections.visibility.restricted-user"
+    "collections.visibility.restricted-user",
+    "musicvideos.views"
    ]
   },
   {
@@ -3186,6 +3214,8 @@
     "items.homevideos.video-media-and-playback",
     "music.playback.info",
     "music.transcode.playbackinfo",
+    "musicvideos.playback.direct",
+    "musicvideos.playback.transcode",
     "playback.audio.body",
     "playback.audio.ignored",
     "playback.audio.selection",
@@ -5672,6 +5702,7 @@
    "verified": true,
    "web": false,
    "scenarios": [
+    "musicvideos.playstate",
     "playstate.mark-unplayed.keeps-favorite"
    ]
   },
@@ -5813,6 +5844,7 @@
     "collections.delete.basic",
     "collections.userdata.leaves",
     "items.legacy.item-alias-path-ids",
+    "musicvideos.playstate",
     "playlists.item.userdata",
     "playstate.auth.anonymous-mark-played",
     "playstate.auth.token-only-header",
@@ -5888,6 +5920,7 @@
     "items.scope.no-libraries-user",
     "items.scope.parent-library-forbidden",
     "items.search.scoped",
+    "musicvideos.views",
     "playlists.view"
    ]
   },
@@ -5951,6 +5984,7 @@
    "verified": true,
    "web": false,
    "scenarios": [
+    "musicvideos.playback.direct",
     "scan.disc.stream",
     "scan.strm.playback"
    ],
@@ -5966,6 +6000,7 @@
    "verified": true,
    "web": false,
    "scenarios": [
+    "musicvideos.playback.direct",
     "scan.disc.stream",
     "scan.strm.playback"
    ],
@@ -6344,7 +6379,7 @@
    "status": "partial",
    "description": "Scanned: folders with audio files become MusicAlbum, root folders MusicArtist, files Audio items with ID3/Vorbis tags (title, artist, album, album artist, track, disc, year, genre) and folder fallbacks; album picture from cover/folder/poster files or a picture embedded in a track; artist listings and lookup by name, music genres, artist pictures, artist.nfo/album.nfo, disc folders, loose files, lyrics files and direct audio streaming.",
    "reference": "Music library with artists, albums, tracks, lyrics and instant mixes.",
-   "notes": "Third slice added Instant Mix and audio transcoding; the fourth (WebUI comparison) the grouped latest list, ContributingArtistIds, similar artists/albums/tracks and track sort names. Left out: music videos, People on tracks, Folder items for disc folders, lyrics upload/search (specs/music.md, Not covered).",
+   "notes": "Third slice added Instant Mix and audio transcoding; the fourth (WebUI comparison) the grouped latest list, ContributingArtistIds, similar artists/albums/tracks and track sort names. Left out: People on tracks, Folder items for disc folders, lyrics upload/search (specs/music.md, Not covered).",
    "spec_rules": [
     "music.latest.R1",
     "music.latest.R2",
@@ -6459,12 +6494,63 @@
   {
    "id": "library-types.musicvideos",
    "title": "Music videos",
-   "status": "not-planned",
-   "description": "Accepted as a library type but not scanned.",
-   "reference": "MusicVideo items grouped with artists.",
-   "notes": "Not on ROADMAP.md; use homevideos for loose clips.",
+   "status": "supported",
+   "description": "Scanned: every video file becomes a MusicVideo named after the file (year from a trailing (YYYY)), single-clip folders collapse into the clip, -partN files stack, other folders are Folder items; a \u003cmusicvideo\u003e .nfo gives title, artists, album, year, genres and plot; \u003cname\u003e-thumb.jpg is the Thumb, \u003cname\u003e.jpg/-poster.jpg the Primary, folder.jpg the folder's (or the single clip's) Primary. The clips' artists are MusicArtist items (/Artists, ArtistIds, Genres), their genres are music genres, and the clips play, stream and transcode like any video.",
+   "reference": "MusicVideo items with Artists/ArtistItems/Album, listed with their artists as MusicArtist.",
+   "notes": "No frame extraction for clips without a picture file, ItemCount on /Items/Counts, MusicVideoCount in genre ItemCounts and artist hits in search are not implemented (specs/musicvideos.md, Known differences).",
+   "spec_rules": [
+    "musicvideos.artists.R1",
+    "musicvideos.artists.R2",
+    "musicvideos.counts.R1",
+    "musicvideos.filters.R1",
+    "musicvideos.filters.R2",
+    "musicvideos.genres.R1",
+    "musicvideos.images.R1",
+    "musicvideos.images.R2",
+    "musicvideos.images.R3",
+    "musicvideos.latest.R1",
+    "musicvideos.library.R1",
+    "musicvideos.nfo.R1",
+    "musicvideos.nfo.R2",
+    "musicvideos.playback.R1",
+    "musicvideos.playback.R2",
+    "musicvideos.playback.R3",
+    "musicvideos.playstate.R1",
+    "musicvideos.scan.R1",
+    "musicvideos.scan.R2",
+    "musicvideos.scan.R3",
+    "musicvideos.scan.R4",
+    "musicvideos.scan.R5",
+    "musicvideos.scan.R6",
+    "musicvideos.scan.R7",
+    "musicvideos.scan.R8",
+    "musicvideos.scan.R9"
+   ],
+   "scenarios": [
+    "musicvideos.scan.list",
+    "musicvideos.scan.folders",
+    "musicvideos.scan.names",
+    "musicvideos.scan.stack",
+    "musicvideos.nfo.fields",
+    "musicvideos.nfo.none",
+    "musicvideos.images.local",
+    "musicvideos.artists.listing",
+    "musicvideos.filters",
+    "musicvideos.genres",
+    "musicvideos.latest",
+    "musicvideos.counts",
+    "musicvideos.views",
+    "musicvideos.playback.direct",
+    "musicvideos.playback.transcode",
+    "musicvideos.playstate",
+    "musicvideos.scan.incremental"
+   ],
    "code": [
-    "internal/scan/scan.go"
+    "internal/scan/musicvideos.go",
+    "internal/scan/scan.go",
+    "internal/api/music.go",
+    "internal/api/items_counts.go",
+    "internal/api/named.go"
    ]
   },
   {

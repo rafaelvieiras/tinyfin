@@ -14,9 +14,9 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ✅ supported | `GET /Artists` *(deprecated)* | DefaultAuthorization | yes | 1/1 |  |
-| ✅ supported | `GET /Artists/AlbumArtists` *(deprecated)* | DefaultAuthorization | yes | 1/1 |  |
-| ✅ supported | `GET /Artists/{name}` *(deprecated)* | DefaultAuthorization |  | 2/2 |  |
+| ✅ supported | `GET /Artists` *(deprecated)* | DefaultAuthorization | yes | 2/2 |  |
+| ✅ supported | `GET /Artists/AlbumArtists` *(deprecated)* | DefaultAuthorization | yes | 2/2 |  |
+| ✅ supported | `GET /Artists/{name}` *(deprecated)* | DefaultAuthorization |  | 3/3 |  |
 
 ## Filter
 
@@ -29,7 +29,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ✅ supported | `GET /Genres` | DefaultAuthorization | yes | 5/5 |  |
+| ✅ supported | `GET /Genres` | DefaultAuthorization | yes | 6/6 |  |
 | ✅ supported | `GET /Genres/{genreName}` | DefaultAuthorization | yes | 1/1 |  |
 
 ## Library
@@ -39,19 +39,19 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `GET /Albums/{itemId}/Similar` | DefaultAuthorization |  | 1/1 |  |
 | ✅ supported | `GET /Artists/{itemId}/Similar` | DefaultAuthorization |  | 1/1 |  |
 | 🗓️ planned | `DELETE /Items` | DefaultAuthorization | yes |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
-| ↔️ divergent-by-design | `GET /Items` | DefaultAuthorization | yes | 170/170 | The library-access restriction also applies when items are requested by Ids (the reference skips it). Recorded as a divergence in the contract scenarios. |
-| ✅ supported | `GET /Items/Counts` | DefaultAuthorization | yes | 2/2 |  |
-| ✅ supported | `GET /Items/Latest` | DefaultAuthorization | yes | 3/3 |  |
+| ↔️ divergent-by-design | `GET /Items` | DefaultAuthorization | yes | 179/179 | The library-access restriction also applies when items are requested by Ids (the reference skips it). Recorded as a divergence in the contract scenarios. |
+| ✅ supported | `GET /Items/Counts` | DefaultAuthorization | yes | 3/3 |  |
+| ✅ supported | `GET /Items/Latest` | DefaultAuthorization | yes | 4/4 |  |
 | ✅ supported *(no scenario)* | `GET /Items/Root` | DefaultAuthorization | yes |  |  |
 | ✅ supported | `DELETE /Items/{itemId}` | DefaultAuthorization | yes | 10/10 |  |
-| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 184/184 |  |
+| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 192/192 |  |
 | ✅ supported | `GET /Items/{itemId}/Ancestors` | DefaultAuthorization | yes | 2/2 |  |
 | ✅ supported | `GET /Items/{itemId}/Collections` | DefaultAuthorization | yes | 1/1 |  |
-| ✅ supported | `GET /Items/{itemId}/Download` | Download |  | 4/4 |  |
+| ✅ supported | `GET /Items/{itemId}/Download` | Download |  | 5/5 |  |
 | 🗓️ planned | `GET /Items/{itemId}/File` | DefaultAuthorization |  |  | Raw file delivery is not implemented. (priority: low) |
 | ✅ supported | `GET /Items/{itemId}/Intros` | DefaultAuthorization | yes | 1/1 |  |
 | ✅ supported | `GET /Items/{itemId}/LocalTrailers` | DefaultAuthorization | yes | 7/7 |  |
-| ✅ supported | `POST /Items/{itemId}/Refresh` | RequiresElevation | yes | 7/7 |  |
+| ✅ supported | `POST /Items/{itemId}/Refresh` | RequiresElevation | yes | 8/8 |  |
 | ✅ supported | `GET /Items/{itemId}/Similar` | DefaultAuthorization | yes | 5/5 |  |
 | ✅ supported | `GET /Items/{itemId}/SpecialFeatures` | DefaultAuthorization | yes | 5/5 |  |
 | ✅ supported | `GET /Items/{itemId}/ThemeMedia` | DefaultAuthorization | yes | 2/2 |  |
@@ -128,7 +128,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ✅ supported | `GET /UserViews` | DefaultAuthorization | yes | 21/21 |  |
+| ✅ supported | `GET /UserViews` | DefaultAuthorization | yes | 22/22 |  |
 | 🗓️ planned | `GET /UserViews/GroupingOptions` | DefaultAuthorization |  |  | Not implemented. (priority: low) |
 
 ## Year

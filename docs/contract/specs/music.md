@@ -160,7 +160,7 @@ Probed with `Music4`: `Artist Six/Album Eta` (2 tracks), `Artist Seven/Album The
 
 ## <a id="not-covered"></a>Not covered by either slice
 
-* Music videos.
+* Music videos: see [musicvideos.md](musicvideos.md).
 * `People` on tracks and albums (the reference lists the artists as `Artist`/`AlbumArtist` people), MusicBrainz ids read from tags (only the nfo ones are), `ReplayGain`, `Folder` items for disc folders (see [slice 2 differences](#lyrics)), lyrics upload/delete/search, `.elrc`/`.srt` lyrics.
 * Multi-valued tags are not split (`;` is part of a name, as on the reference).
 

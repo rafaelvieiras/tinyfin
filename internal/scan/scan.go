@@ -242,7 +242,7 @@ func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, 
 	var live, skipped []string
 	for _, root := range lib.Paths {
 		switch lib.CollectionType {
-		case storage.CollectionTypeMovies, storage.CollectionTypeTVShows, storage.CollectionTypeHomeVideos, storage.CollectionTypeMusic:
+		case storage.CollectionTypeMovies, storage.CollectionTypeTVShows, storage.CollectionTypeHomeVideos, storage.CollectionTypeMusic, storage.CollectionTypeMusicVideos:
 			if entries, err := os.ReadDir(root); err != nil || len(entries) == 0 {
 				log.Printf("scan: library %q: folder %s is inaccessible or empty, skipping", lib.Name, root)
 				skipped = append(skipped, root)
@@ -260,6 +260,9 @@ func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, 
 		case storage.CollectionTypeHomeVideos:
 			s.recordRootFolder(ctx, lib, root)
 			s.walkHomeVideos(ctx, pool, lib, root, nil)
+		case storage.CollectionTypeMusicVideos:
+			s.recordRootFolder(ctx, lib, root)
+			s.walkMusicVideos(ctx, pool, lib, root, nil)
 		case storage.CollectionTypeMusic:
 			s.recordRootFolder(ctx, lib, root)
 			s.walkMusic(ctx, pool, lib, root, nil, 0)
@@ -282,6 +285,9 @@ func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, 
 	stats := pool.wait()
 	if lib.CollectionType == storage.CollectionTypeMusic && pool.failed == 0 && ctx.Err() == nil {
 		s.syncVirtualArtists(ctx, lib)
+	}
+	if lib.CollectionType == storage.CollectionTypeMusicVideos && pool.failed == 0 && ctx.Err() == nil {
+		s.syncMusicVideoArtists(ctx, lib)
 	}
 	if len(live) > 0 && pool.failed == 0 && ctx.Err() == nil {
 		stats.Removed = s.forgetVanished(ctx, lib, forgetScope{roots: live, skipped: skipped})
@@ -1642,6 +1648,16 @@ func (s *Scanner) RefreshItem(ctx context.Context, itemID storage.ItemID, replac
 	// A refresh also re-reads the subtitle files beside the video.
 	refreshSubtitles(ctx, &item)
 
+	if item.Type == storage.ItemTypeMusicVideo {
+		pool := newJobPool(1)
+		item.SortName = item.Name
+		s.seedMovieImages(ctx, item.ID, filepath.Dir(item.Path), filepath.Base(item.Path), false)
+		s.applyMusicVideoNFO(pool, &item, item.Path)
+		if len(pool.stats.Errors) > 0 {
+			return fmt.Errorf("refreshing item %q: %s", item.Name, strings.Join(pool.stats.Errors, "; "))
+		}
+		return s.upsertItem(ctx, item)
+	}
 	if item.Type == storage.ItemTypeVideo {
 		// A home video has no provider lookup: its picture and .nfo only.
 		pool := newJobPool(1)

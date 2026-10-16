@@ -66,6 +66,7 @@ reference source open in the same session.
 | `specs/chapters.md`, `scenarios/chapters.json` | Chapter marks (`Chapters` on the item, `Fields=Chapters`) and `GET /MediaSegments/{itemId}`; lazy library `Chapters` |
 | `specs/trickplay.md`, `scenarios/trickplay.json` | Seek-thumbnail sprite sheets: the `Trickplay` member, the tiles playlist and the JPEG sheets; lazy libraries `Trickplay` (generation on) and `TrickplayOff` |
 | `specs/music.md`, `scenarios/music.json`, `scenarios/music2.json` | Music libraries: scan and model (`Audio`/`MusicAlbum`/`MusicArtist`), artist listings and lookup, genres, pictures, nfo, disc folders, lyrics, direct stream; lazy libraries `Music` and `Music2` |
+| `specs/musicvideos.md`, `scenarios/musicvideos.json` | Music videos library: `MusicVideo` scan (single-clip folders, stacked parts), `<musicvideo>` nfo, local pictures, clip artists as `MusicArtist`, filters, latest, counts, playback; lazy library `MusicVideos` |
 | `specs/admin.md`, `scenarios/admin.json` | Administration: scheduled tasks (list, get, triggers, run/stop), log files, snapshot backups, plugin catalog (empty by design) |
 | `specs/startup.md`, `scenarios/startup.json` | First-run wizard (`/Startup/*`); the scenarios are `fresh-server` ones, see *Fresh-server scenarios* |
 

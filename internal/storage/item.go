@@ -34,7 +34,8 @@ const (
 	ItemTypeMusicGenre            ItemType = "MusicGenre"
 	ItemTypeStudio                ItemType = "Studio"
 	ItemTypeYear                  ItemType = "Year"
-	ItemTypeVideo                 ItemType = "Video" // a video file of a home-videos library
+	ItemTypeVideo                 ItemType = "Video"      // a video file of a home-videos library
+	ItemTypeMusicVideo            ItemType = "MusicVideo" // a clip of a music-videos library
 	ItemTypeFolder                ItemType = "Folder"
 	ItemTypePhoto                 ItemType = "Photo"            // a picture of a home-videos library
 	ItemTypePhotoAlbum            ItemType = "PhotoAlbum"       // a folder that directly holds pictures

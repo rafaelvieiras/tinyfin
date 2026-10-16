@@ -933,4 +933,33 @@ song "$M4/Various Compilers/Album Kappa/01 - Kappa One.mp3" 2 480 -id3v2_version
 song "$M4/Various Compilers/Album Kappa/02 - Kappa Two.mp3" 2 490 -id3v2_version 3 -metadata title="Kappa Two" -metadata artist="Artist Eight" \
   -metadata album="Album Kappa" -metadata album_artist="Various Compilers" -metadata track="2" -metadata date="2007" -metadata genre="Polka"
 
+# Music videos (own library "MusicVideos", lazy): loose files, an artist folder
+# with .nfo (artist/album/title/year), -thumb/.jpg pictures and folder.jpg, folders
+# that hold a single clip (collapsed), stacked parts and separate "versions".
+MV="$ROOT/MusicVideos"
+clip "$MV/Plain Clip.mp4" 3 440 6
+clip "$MV/Dua Lipa - Levitating (2020).mp4" 2 445 6
+clip "$MV/Artist Nine/Nine Song.mp4" 3 450 6
+cover "$MV/Artist Nine/Nine Song-thumb.jpg" 320x180
+clip "$MV/Artist Nine/Second Song.mkv" 3 460 6
+cover "$MV/Artist Nine/Second Song.jpg" 300x300
+cover "$MV/Artist Nine/folder.jpg" 250x250
+if [ ! -f "$MV/Artist Nine/Second Song.nfo" ]; then
+  printf '<musicvideo><title>Second Song Nfo</title><artist>Nfo Artist</artist><artist>Guest Artist</artist><album>Nfo Album</album><year>1999</year><genre>Synthpop</genre><genre>Dance</genre><plot>Described by its nfo.</plot></musicvideo>\n' >"$MV/Artist Nine/Second Song.nfo"
+fi
+clip "$MV/Tenth Artist/Album One/Deep Clip (2004).mp4" 3 470 6
+[ -f "$MV/Tenth Artist/Album One/Deep Clip (2004).nfo" ] || printf '<musicvideo><title>Deep Clip</title><artist>Tenth Artist</artist><year>2004</year></musicvideo>\n' >"$MV/Tenth Artist/Album One/Deep Clip (2004).nfo"
+clip "$MV/Solo Folder (2010)/Solo Clip (2010).mp4" 2 475 6
+clip "$MV/Mixed/One.mp4" 2 480 6
+clip "$MV/Mixed/Sub/Two.mp4" 2 485 6
+clip "$MV/Docs Dir/Main.mp4" 2 490 6
+mkdir -p "$MV/Docs Dir/Notes"
+[ -f "$MV/Docs Dir/Notes/readme.txt" ] || printf 'not a clip\n' >"$MV/Docs Dir/Notes/readme.txt"
+clip "$MV/Part Dir/Song - part1.mp4" 2 495 6
+clip "$MV/Part Dir/Song - part2.mp4" 2 500 6
+clip "$MV/Ver Dir/Song.mp4" 2 505 6
+clip "$MV/Ver Dir/Song - 4K.mp4" 2 510 6
+clip "$MV/Nest/Inner/Deep.mp4" 2 515 6
+cover "$MV/Nest/Inner/folder.jpg" 200x200
+
 echo "media tree ready under $ROOT"

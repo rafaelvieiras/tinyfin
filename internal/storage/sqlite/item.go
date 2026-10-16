@@ -791,7 +791,7 @@ func buildItemParts(filter storage.ItemFilter) (itemParts, bool) {
 	}
 	switch filter.ArtistRole {
 	case "Artist":
-		addWhere(`EXISTS (SELECT 1 FROM items t WHERE t.library_id = items.library_id AND t.type = 'Audio'
+		addWhere(`EXISTS (SELECT 1 FROM items t WHERE t.library_id = items.library_id AND t.type IN ('Audio', 'MusicVideo')
 			AND EXISTS (SELECT 1 FROM json_each(t.artists) WHERE lower(value) = lower(items.name)))`)
 	case "AlbumArtist":
 		addWhere(`EXISTS (SELECT 1 FROM items t WHERE t.library_id = items.library_id AND t.type IN ('Audio', 'MusicAlbum')

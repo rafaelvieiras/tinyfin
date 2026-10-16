@@ -1,0 +1,2468 @@
+[
+ {
+  "id": "musicvideos.scan.list",
+  "endpoint": "GET /Items",
+  "spec": "musicvideos.md",
+  "scope": "modern",
+  "tags": [
+   "musicvideos"
+  ],
+  "covers": [
+   "musicvideos.scan.R1",
+   "musicvideos.scan.R2"
+  ],
+  "requires": [
+   "library:musicvideos",
+   "item:mvsecond"
+  ],
+  "steps": [
+   {
+    "name": "every video file is a music video, in name order",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicVideo",
+      "SortBy": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 13
+      },
+      {
+       "path": "$.Items[*].Type",
+       "op": "allmatch",
+       "value": "^MusicVideo$"
+      },
+      {
+       "path": "$.Items[*].MediaType",
+       "op": "allmatch",
+       "value": "^Video$"
+      },
+      {
+       "path": "$.Items[0].IsFolder",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Deep"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Deep Clip"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Dua Lipa - Levitating (2020)"
+      },
+      {
+       "path": "$.Items[6].Name",
+       "op": "eq",
+       "value": "Plain Clip"
+      },
+      {
+       "path": "$.Items[12].Name",
+       "op": "eq",
+       "value": "Two"
+      }
+     ]
+    }
+   },
+   {
+    "name": "streams and duration come from the file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvsecond.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Container",
+       "op": "eq",
+       "value": "mkv"
+      },
+      {
+       "path": "$.RunTimeTicks",
+       "op": "gte",
+       "value": 29000000
+      },
+      {
+       "path": "$.RunTimeTicks",
+       "op": "lte",
+       "value": 31000000
+      },
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "mkv"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Type",
+       "op": "eq",
+       "value": "Video"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Codec",
+       "op": "eq",
+       "value": "h264"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].Type",
+       "op": "eq",
+       "value": "Audio"
+      },
+      {
+       "path": "$.Path",
+       "op": "contains",
+       "value": "MusicVideos/Artist Nine/Second Song.mkv"
+      },
+      {
+       "path": "$.IsFolder",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaType",
+       "op": "eq",
+       "value": "Video"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "musicvideos.scan.folders",
+  "endpoint": "GET /Items",
+  "spec": "musicvideos.md",
+  "scope": "modern",
+  "tags": [
+   "musicvideos"
+  ],
+  "covers": [
+   "musicvideos.scan.R3",
+   "musicvideos.scan.R4"
+  ],
+  "requires": [
+   "library:musicvideos",
+   "item:mvartist9",
+   "item:mvmixed",
+   "item:mvdocs",
+   "item:mvtenth",
+   "item:mvnest"
+  ],
+  "steps": [
+   {
+    "name": "folders that hold more than one clip, or a clip and folders, are folder items",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Folder",
+      "SortBy": "SortName",
+      "ParentId": "{{library.musicvideos.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 8
+      },
+      {
+       "path": "$.Items[*].Type",
+       "op": "allmatch",
+       "value": "^Folder$"
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Artist Nine"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Docs Dir"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Mixed"
+      },
+      {
+       "path": "$.Items[3].Name",
+       "op": "eq",
+       "value": "MusicVideos"
+      },
+      {
+       "path": "$.Items[4].Name",
+       "op": "eq",
+       "value": "Nest"
+      },
+      {
+       "path": "$.Items[5].Name",
+       "op": "eq",
+       "value": "Notes"
+      },
+      {
+       "path": "$.Items[6].Name",
+       "op": "eq",
+       "value": "Tenth Artist"
+      },
+      {
+       "path": "$.Items[7].Name",
+       "op": "eq",
+       "value": "Ver Dir"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a folder with a single clip is not an item (Album One, Solo Folder, Inner, Part Dir)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Folder",
+      "SearchTerm": "Solo"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "nor is the folder of a stacked clip",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Folder",
+      "SearchTerm": "Part Dir"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "children of a folder with two clips",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{item.mvartist9.id}}",
+      "SortBy": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Nine Song"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Second Song Nfo"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the clip of a single-clip sub folder belongs to the folder above it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{item.mvmixed.id}}",
+      "SortBy": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "One"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Two"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a clip beside a non-clip folder keeps its folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{item.mvdocs.id}}",
+      "SortBy": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Main"
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "MusicVideo"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Notes"
+      },
+      {
+       "path": "$.Items[1].Type",
+       "op": "eq",
+       "value": "Folder"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Album One collapses: the clip hangs off Tenth Artist",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{item.mvtenth.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Deep Clip"
+      }
+     ]
+    }
+   },
+   {
+    "name": "nested single-clip folders collapse one by one",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{item.mvnest.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Deep"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "musicvideos.scan.names",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "musicvideos.md",
+  "scope": "modern",
+  "tags": [
+   "musicvideos"
+  ],
+  "covers": [
+   "musicvideos.scan.R5",
+   "musicvideos.scan.R6"
+  ],
+  "requires": [
+   "library:musicvideos",
+   "item:mvdua",
+   "item:mvsolo",
+   "item:mvplain"
+  ],
+  "steps": [
+   {
+    "name": "named after the file, year read from it and kept in the name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvdua.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Dua Lipa - Levitating (2020)"
+      },
+      {
+       "path": "$.ProductionYear",
+       "op": "eq",
+       "value": 2020
+      },
+      {
+       "path": "$.Artists",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.ArtistItems",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.Album",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a clip alone in its folder is named after its file, not the folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvsolo.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Solo Clip (2010)"
+      },
+      {
+       "path": "$.ProductionYear",
+       "op": "eq",
+       "value": 2010
+      }
+     ]
+    }
+   },
+   {
+    "name": "a loose file has no year",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvplain.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Plain Clip"
+      },
+      {
+       "path": "$.ProductionYear",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "year from a files name is in the year filter",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicVideo",
+      "SortBy": "SortName",
+      "Years": "2010"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Solo Clip (2010)"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "musicvideos.scan.stack",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "musicvideos.md",
+  "scope": "modern",
+  "tags": [
+   "musicvideos"
+  ],
+  "covers": [
+   "musicvideos.scan.R7",
+   "musicvideos.scan.R8"
+  ],
+  "requires": [
+   "library:musicvideos",
+   "item:mvpart",
+   "item:mvverdir",
+   "item:mvver1"
+  ],
+  "steps": [
+   {
+    "name": "the parts of a stacked clip are one clip, the first part",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvpart.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Song - part1"
+      },
+      {
+       "path": "$.PartCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "MusicVideo"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the second part is not cataloged",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "SearchTerm": "part2"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "files that merely share a name stay separate clips",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{item.mvverdir.id}}",
+      "SortBy": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Song"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Song - 4K"
+      },
+      {
+       "path": "$.Items[0].PartCount",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "and have no extra media sources",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvver1.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.PartCount",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "musicvideos.nfo.fields",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "musicvideos.md",
+  "scope": "modern",
+  "tags": [
+   "musicvideos"
+  ],
+  "covers": [
+   "musicvideos.nfo.R1"
+  ],
+  "requires": [
+   "library:musicvideos",
+   "item:mvsecond",
+   "item:mvdeep"
+  ],
+  "steps": [
+   {
+    "name": "the nfo gives title, artists, album, year, genres and plot",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvsecond.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Second Song Nfo"
+      },
+      {
+       "path": "$.Artists",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Artists[0]",
+       "op": "eq",
+       "value": "Nfo Artist"
+      },
+      {
+       "path": "$.Artists[1]",
+       "op": "eq",
+       "value": "Guest Artist"
+      },
+      {
+       "path": "$.ArtistItems",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.ArtistItems[0].Name",
+       "op": "eq",
+       "value": "Nfo Artist"
+      },
+      {
+       "path": "$.ArtistItems[0].Id",
+       "op": "hex32"
+      },
+      {
+       "path": "$.ArtistItems[1].Name",
+       "op": "eq",
+       "value": "Guest Artist"
+      },
+      {
+       "path": "$.Album",
+       "op": "eq",
+       "value": "Nfo Album"
+      },
+      {
+       "path": "$.ProductionYear",
+       "op": "eq",
+       "value": 1999
+      },
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Genres[0]",
+       "op": "eq",
+       "value": "Synthpop"
+      },
+      {
+       "path": "$.Genres[1]",
+       "op": "eq",
+       "value": "Dance"
+      },
+      {
+       "path": "$.GenreItems[0].Name",
+       "op": "eq",
+       "value": "Synthpop"
+      },
+      {
+       "path": "$.Overview",
+       "op": "eq",
+       "value": "Described by its nfo."
+      }
+     ]
+    }
+   },
+   {
+    "name": "an nfo beside a clip of a collapsed folder applies as well",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvdeep.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Deep Clip"
+      },
+      {
+       "path": "$.ProductionYear",
+       "op": "eq",
+       "value": 2004
+      },
+      {
+       "path": "$.Artists",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Artists[0]",
+       "op": "eq",
+       "value": "Tenth Artist"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "musicvideos.nfo.none",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "musicvideos.md",
+  "scope": "modern",
+  "tags": [
+   "musicvideos"
+  ],
+  "covers": [
+   "musicvideos.nfo.R2"
+  ],
+  "requires": [
+   "library:musicvideos",
+   "item:mvplain"
+  ],
+  "steps": [
+   {
+    "name": "without an nfo the artist lists are empty and there is no album",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvplain.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Artists",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.ArtistItems",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.Album",
+       "op": "absent"
+      },
+      {
+       "path": "$.Overview",
+       "op": "absent"
+      },
+      {
+       "path": "$.AlbumArtist",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "musicvideos.images.local",
+  "endpoint": "GET /Items/{itemId}/Images/{imageType}",
+  "spec": "musicvideos.md",
+  "scope": "modern",
+  "tags": [
+   "musicvideos"
+  ],
+  "covers": [
+   "musicvideos.images.R1",
+   "musicvideos.images.R2",
+   "musicvideos.images.R3"
+  ],
+  "requires": [
+   "library:musicvideos",
+   "item:mvnine",
+   "item:mvsecond",
+   "item:mvartist9",
+   "item:mvnestclip"
+  ],
+  "steps": [
+   {
+    "name": "\"<name>-thumb.jpg\" is the Thumb",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvnine.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ImageTags.Thumb",
+       "op": "hex32"
+      }
+     ]
+    }
+   },
+   {
+    "name": "and is served",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvnine.id}}/Images/Thumb"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^image\\/jpeg/"
+     }
+    }
+   },
+   {
+    "name": "\"<name>.jpg\" is the Primary",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvsecond.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ImageTags.Primary",
+       "op": "hex32"
+      },
+      {
+       "path": "$.ImageTags.Thumb",
+       "op": "absent"
+      },
+      {
+       "path": "$.PrimaryImageAspectRatio",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "and is served",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvsecond.id}}/Images/Primary"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^image\\/jpeg/"
+     }
+    }
+   },
+   {
+    "name": "folder.jpg of a folder is its Primary",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvartist9.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ImageTags.Primary",
+       "op": "hex32"
+      },
+      {
+       "path": "$.PrimaryImageAspectRatio",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "folder.jpg of a folder with a single clip is that clip's Primary",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvnestclip.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ImageTags.Primary",
+       "op": "hex32"
+      },
+      {
+       "path": "$.PrimaryImageAspectRatio",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "the clips next to folder.jpg do not take it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvnine.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.PrimaryImageAspectRatio",
+       "op": "ne",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "musicvideos.artists.listing",
+  "endpoint": "GET /Artists",
+  "spec": "musicvideos.md",
+  "scope": "modern",
+  "tags": [
+   "musicvideos"
+  ],
+  "covers": [
+   "musicvideos.artists.R1",
+   "musicvideos.artists.R2"
+  ],
+  "requires": [
+   "library:musicvideos"
+  ],
+  "steps": [
+   {
+    "name": "the artists of the clips are artists, in name order",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists",
+     "query": {
+      "SearchTerm": "Artist"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Type",
+       "op": "allmatch",
+       "value": "^MusicArtist$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "every artist the nfo files name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists",
+     "query": {
+      "ParentId": "{{library.musicvideos.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Guest Artist"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Nfo Artist"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Tenth Artist"
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "hex32"
+      }
+     ]
+    },
+    "capture": {
+     "artist": "$.Items[1].Id"
+    }
+   },
+   {
+    "name": "they are not album artists",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists/AlbumArtists",
+     "query": {
+      "ParentId": "{{library.musicvideos.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "an artist counts its music videos",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.artist}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "MusicArtist"
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Nfo Artist"
+      },
+      {
+       "path": "$.MusicVideoCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SongCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.AlbumCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.ChildCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Genres",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Genres[0]",
+       "op": "eq",
+       "value": "Dance"
+      },
+      {
+       "path": "$.Genres[1]",
+       "op": "eq",
+       "value": "Synthpop"
+      }
+     ]
+    }
+   },
+   {
+    "name": "and is found by name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists/Nfo%20Artist"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Type",
+       "op": "eq",
+       "value": "MusicArtist"
+      },
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Nfo Artist"
+      },
+      {
+       "path": "$.MusicVideoCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "ArtistIds lists the artist's clips",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "ArtistIds": "{{capture.artist}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Second Song Nfo"
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "MusicVideo"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the artists of a genre are the artists of its clips",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Artists",
+     "query": {
+      "Genres": "Dance",
+      "ParentId": "{{library.musicvideos.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Guest Artist"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Nfo Artist"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "musicvideos.filters",
+  "endpoint": "GET /Items",
+  "spec": "musicvideos.md",
+  "scope": "modern",
+  "tags": [
+   "musicvideos"
+  ],
+  "covers": [
+   "musicvideos.filters.R1",
+   "musicvideos.filters.R2"
+  ],
+  "requires": [
+   "library:musicvideos"
+  ],
+  "steps": [
+   {
+    "name": "Artists (a name)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicVideo",
+      "SortBy": "SortName",
+      "Artists": "Nfo Artist"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Second Song Nfo"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a second artist of the same clip",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicVideo",
+      "SortBy": "SortName",
+      "Artists": "Guest Artist"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Second Song Nfo"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Genres",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicVideo",
+      "SortBy": "SortName",
+      "Genres": "Dance"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Second Song Nfo"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Years",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicVideo",
+      "SortBy": "SortName",
+      "Years": "2004"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Deep Clip"
+      }
+     ]
+    }
+   },
+   {
+    "name": "SearchTerm",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicVideo",
+      "SortBy": "SortName",
+      "SearchTerm": "dua lipa"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Dua Lipa - Levitating (2020)"
+      }
+     ]
+    }
+   },
+   {
+    "name": "sort by year, newest first",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicVideo",
+      "SortBy": "ProductionYear,SortName",
+      "SortOrder": "Descending",
+      "Limit": "3"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Dua Lipa - Levitating (2020)"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Solo Clip (2010)"
+      },
+      {
+       "path": "$.Items[2].Name",
+       "op": "eq",
+       "value": "Deep Clip"
+      }
+     ]
+    }
+   },
+   {
+    "name": "they are not plain Video items",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "Video",
+      "ParentId": "{{library.musicvideos.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "MediaTypes Video finds them",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "MediaTypes": "Video",
+      "ParentId": "{{library.musicvideos.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 13
+      }
+     ]
+    }
+   },
+   {
+    "name": "Limit and StartIndex page the list",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicVideo",
+      "SortBy": "SortName",
+      "Limit": "2",
+      "StartIndex": "11"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 13
+      },
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Two"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "musicvideos.genres",
+  "endpoint": "GET /MusicGenres",
+  "spec": "musicvideos.md",
+  "scope": "modern",
+  "tags": [
+   "musicvideos"
+  ],
+  "covers": [
+   "musicvideos.genres.R1"
+  ],
+  "requires": [
+   "library:musicvideos"
+  ],
+  "steps": [
+   {
+    "name": "the genres of clips are music genres",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MusicGenres",
+     "query": {
+      "SearchTerm": "Synthpop"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Type",
+       "op": "eq",
+       "value": "MusicGenre"
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Synthpop"
+      }
+     ]
+    }
+   },
+   {
+    "name": "and are left out of /Genres",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Genres",
+     "query": {
+      "SearchTerm": "Synthpop"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "the library as parent lists its genres",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/MusicGenres",
+     "query": {
+      "ParentId": "{{library.musicvideos.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 2
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Dance"
+      },
+      {
+       "path": "$.Items[1].Name",
+       "op": "eq",
+       "value": "Synthpop"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "musicvideos.latest",
+  "endpoint": "GET /Items/Latest",
+  "spec": "musicvideos.md",
+  "scope": "modern",
+  "tags": [
+   "musicvideos"
+  ],
+  "covers": [
+   "musicvideos.latest.R1"
+  ],
+  "requires": [
+   "library:musicvideos"
+  ],
+  "steps": [
+   {
+    "name": "latest clips of the library",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "ParentId": "{{library.musicvideos.id}}",
+      "Limit": "20"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 13
+      },
+      {
+       "path": "$[*].Type",
+       "op": "allmatch",
+       "value": "^MusicVideo$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Limit cuts the list",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "ParentId": "{{library.musicvideos.id}}",
+      "Limit": "4"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 4
+      }
+     ]
+    }
+   },
+   {
+    "name": "IncludeItemTypes MusicVideo, no parent",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "IncludeItemTypes": "MusicVideo",
+      "Limit": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Type",
+       "op": "allmatch",
+       "value": "^MusicVideo$"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "musicvideos.counts",
+  "endpoint": "GET /Items/Counts",
+  "spec": "musicvideos.md",
+  "scope": "modern",
+  "tags": [
+   "musicvideos"
+  ],
+  "covers": [
+   "musicvideos.counts.R1"
+  ],
+  "requires": [
+   "library:musicvideos"
+  ],
+  "steps": [
+   {
+    "name": "the clips are counted",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Counts"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MusicVideoCount",
+       "op": "eq",
+       "value": 13
+      },
+      {
+       "path": "$.SongCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.ArtistCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "musicvideos.views",
+  "endpoint": "GET /UserViews",
+  "spec": "musicvideos.md",
+  "scope": "modern",
+  "tags": [
+   "musicvideos"
+  ],
+  "covers": [
+   "musicvideos.library.R1"
+  ],
+  "requires": [
+   "library:musicvideos"
+  ],
+  "steps": [
+   {
+    "name": "the library is a view of its type",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[?Name=MusicVideos].CollectionType",
+       "op": "eq",
+       "value": "musicvideos"
+      },
+      {
+       "path": "$.Items[?Name=MusicVideos].Type",
+       "op": "eq",
+       "value": "CollectionFolder"
+      }
+     ]
+    }
+   },
+   {
+    "name": "and a virtual folder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Library/VirtualFolders"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?Name=MusicVideos].CollectionType",
+       "op": "eq",
+       "value": "musicvideos"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the library root lists its first level: clips and folders",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.musicvideos.id}}",
+      "SortBy": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[?Name=Plain Clip].Type",
+       "op": "eq",
+       "value": "MusicVideo"
+      },
+      {
+       "path": "$.Items[?Name=Artist Nine].Type",
+       "op": "eq",
+       "value": "Folder"
+      },
+      {
+       "path": "$.Items[?Name=Tenth Artist].Type",
+       "op": "eq",
+       "value": "Folder"
+      },
+      {
+       "path": "$.Items[?Name=Deep Clip]",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "musicvideos.playback.direct",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "musicvideos.md",
+  "scope": "modern",
+  "tags": [
+   "musicvideos"
+  ],
+  "covers": [
+   "musicvideos.playback.R1",
+   "musicvideos.playback.R2"
+  ],
+  "requires": [
+   "library:musicvideos",
+   "item:mvsecond",
+   "item:mvplain"
+  ],
+  "steps": [
+   {
+    "name": "a mkv clip plays directly",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mvsecond.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mvsecond.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4,mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "mkv"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "and is streamed as the file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.mvsecond.id}}/stream",
+     "query": {
+      "static": "true",
+      "mediaSourceId": "{{item.mvsecond.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/matroska/"
+     }
+    }
+   },
+   {
+    "name": "an mp4 clip too",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.mvplain.id}}/stream",
+     "query": {
+      "static": "true",
+      "mediaSourceId": "{{item.mvplain.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^video\\/mp4/"
+     }
+    }
+   },
+   {
+    "name": "the file downloads",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvsecond.id}}/Download"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/matroska/"
+     }
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "musicvideos.playback.transcode",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "musicvideos.md",
+  "scope": "modern",
+  "tags": [
+   "musicvideos"
+  ],
+  "covers": [
+   "musicvideos.playback.R3"
+  ],
+  "requires": [
+   "library:musicvideos",
+   "item:mvsecond"
+  ],
+  "steps": [
+   {
+    "name": "a profile that cannot play it gets a transcode",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mvsecond.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mvsecond.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "webm",
+         "Type": "Video",
+         "VideoCodec": "vp9",
+         "AudioCodec": "opus"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingSubProtocol",
+       "op": "eq",
+       "value": "hls"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "matches",
+       "value": "(?i)master\\.m3u8"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "musicvideos.playstate",
+  "endpoint": "POST /UserPlayedItems/{itemId}",
+  "spec": "musicvideos.md",
+  "scope": "modern",
+  "tags": [
+   "musicvideos"
+  ],
+  "covers": [
+   "musicvideos.playstate.R1"
+  ],
+  "requires": [
+   "library:musicvideos",
+   "item:mvplain"
+  ],
+  "steps": [
+   {
+    "name": "a clip can be marked played",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/UserPlayedItems/{{item.mvplain.id}}",
+     "query": {
+      "userId": "{{user.admin.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Played",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "and shows it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvplain.id}}",
+     "query": {
+      "userId": "{{user.admin.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.UserData.Played",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "as a favorite",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/UserFavoriteItems/{{item.mvplain.id}}",
+     "query": {
+      "userId": "{{user.admin.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.IsFavorite",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "the favorite filter finds it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicVideo",
+      "SortBy": "SortName",
+      "Filters": "IsFavorite",
+      "userId": "{{user.admin.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Plain Clip"
+      }
+     ]
+    }
+   },
+   {
+    "name": "unplayed filter leaves it out",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicVideo",
+      "SortBy": "SortName",
+      "Filters": "IsUnplayed",
+      "userId": "{{user.admin.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 12
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "unmark played",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.mvplain.id}}",
+     "query": {
+      "userId": "{{user.admin.id}}"
+     }
+    },
+    "expect": {
+     "status": [
+      200,
+      204
+     ]
+    }
+   },
+   {
+    "name": "unfavorite",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserFavoriteItems/{{item.mvplain.id}}",
+     "query": {
+      "userId": "{{user.admin.id}}"
+     }
+    },
+    "expect": {
+     "status": [
+      200,
+      204
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "musicvideos.scan.incremental",
+  "endpoint": "POST /Items/{itemId}/Refresh",
+  "spec": "musicvideos.md",
+  "scope": "modern",
+  "tags": [
+   "musicvideos"
+  ],
+  "covers": [
+   "musicvideos.scan.R9"
+  ],
+  "requires": [
+   "library:musicvideos",
+   "fs:write"
+  ],
+  "steps": [
+   {
+    "name": "a new clip appears",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "copy": "MusicVideos/Plain Clip.mp4",
+     "to": "MusicVideos/Added Clip.mp4"
+    }
+   },
+   {
+    "name": "a refresh of the library",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{library.musicvideos.id}}/Refresh",
+     "query": {
+      "Recursive": "true",
+      "MetadataRefreshMode": "Default",
+      "ImageRefreshMode": "Default"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "it is cataloged",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicVideo",
+      "SortBy": "SortName",
+      "SearchTerm": "Added Clip"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Added Clip"
+      }
+     ]
+    },
+    "retryMs": 20000
+   },
+   {
+    "name": "the others stay",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicVideo",
+      "SortBy": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 14
+      }
+     ]
+    }
+   },
+   {
+    "name": "it goes away again",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "remove": "MusicVideos/Added Clip.mp4"
+    }
+   },
+   {
+    "name": "a second refresh forgets it",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{library.musicvideos.id}}/Refresh",
+     "query": {
+      "Recursive": "true",
+      "MetadataRefreshMode": "Default",
+      "ImageRefreshMode": "Default"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "it is gone",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "IncludeItemTypes": "MusicVideo",
+      "SortBy": "SortName"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 13
+      }
+     ]
+    },
+    "retryMs": 20000
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "remove the added clip",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "remove": "MusicVideos/Added Clip.mp4"
+    }
+   }
+  ]
+ }
+]

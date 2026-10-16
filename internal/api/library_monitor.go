@@ -32,7 +32,7 @@ const (
 // realtimeMonitorOn reports whether lib's options turn the monitor on.
 func realtimeMonitorOn(lib storage.Library) bool {
 	switch lib.CollectionType {
-	case storage.CollectionTypeMovies, storage.CollectionTypeTVShows, storage.CollectionTypeHomeVideos:
+	case storage.CollectionTypeMovies, storage.CollectionTypeTVShows, storage.CollectionTypeHomeVideos, storage.CollectionTypeMusicVideos:
 	default:
 		return false
 	}

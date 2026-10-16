@@ -125,7 +125,7 @@ func refreshSubtitles(ctx context.Context, item *storage.Item) bool {
 		return false
 	}
 	switch item.Type {
-	case storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeVideo, storage.ItemTypeTrailer:
+	case storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeVideo, storage.ItemTypeMusicVideo, storage.ItemTypeTrailer:
 	default:
 		return false
 	}

@@ -171,7 +171,7 @@ func (s *Scanner) RescanFolder(ctx context.Context, itemID storage.ItemID) (bool
 		return true, err
 	}
 	switch lib.CollectionType {
-	case storage.CollectionTypeMovies, storage.CollectionTypeTVShows, storage.CollectionTypeHomeVideos:
+	case storage.CollectionTypeMovies, storage.CollectionTypeTVShows, storage.CollectionTypeHomeVideos, storage.CollectionTypeMusicVideos:
 	default:
 		return true, nil
 	}
@@ -217,6 +217,9 @@ func (s *Scanner) RescanFolder(ctx context.Context, itemID storage.ItemID) (bool
 		case lib.CollectionType == storage.CollectionTypeHomeVideos:
 			noteSeen(ctx, item.ID)
 			s.walkHomeVideos(ctx, pool, lib, dir, &item.ID)
+		case lib.CollectionType == storage.CollectionTypeMusicVideos:
+			noteSeen(ctx, item.ID)
+			s.walkMusicVideos(ctx, pool, lib, dir, &item.ID)
 		default:
 			parent := &item.ID
 			groups, subdirs := movieDirContent(ctx, dir, true)
@@ -250,7 +253,7 @@ func (s *Scanner) RescanFolder(ctx context.Context, itemID storage.ItemID) (bool
 // own files: the whole library is scanned.
 func (s *Scanner) RescanPath(ctx context.Context, lib storage.Library, root, top string) error {
 	switch lib.CollectionType {
-	case storage.CollectionTypeMovies, storage.CollectionTypeTVShows, storage.CollectionTypeHomeVideos:
+	case storage.CollectionTypeMovies, storage.CollectionTypeTVShows, storage.CollectionTypeHomeVideos, storage.CollectionTypeMusicVideos:
 	default:
 		return nil
 	}
@@ -274,6 +277,8 @@ func (s *Scanner) RescanPath(ctx context.Context, lib storage.Library, root, top
 		s.walkSeries(ctx, pool, lib, root)
 	case storage.CollectionTypeHomeVideos:
 		s.walkHomeVideos(ctx, pool, lib, root, nil)
+	case storage.CollectionTypeMusicVideos:
+		s.walkMusicVideos(ctx, pool, lib, root, nil)
 	}
 	pool.wait()
 	if pool.failed > 0 || ctx.Err() != nil {
