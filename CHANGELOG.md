@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Scan probe version (`probeVersion`, migration `0039`): scan signatures record the probe revision that wrote
+  them, so the incremental scan probes items scanned by an older revision again (stream bit rate and frame
+  rate on items scanned before they were kept) without `-scan-force-probe`.
 - PlaybackInfo offer parity (`docs/contract/specs/playback.md#offer`, `playback2.json`, 4 new scenarios): a
   transcoded source is never a direct stream (also for a container-only mismatch); a request without a
   `DeviceProfile` direct plays any container; `.strm` addresses go through the profile; an `http`

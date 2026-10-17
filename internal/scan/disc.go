@@ -313,7 +313,7 @@ func (s *Scanner) probeDisc(ctx context.Context, pool *jobPool, itemID storage.I
 	// Reuse the stored media info of an unchanged disc.
 	sigs, hasSigs := s.store.(signatureStore)
 	if hasSigs && !s.forceProbe && mtime != 0 {
-		if sSize, sMtime, ok, err := sigs.GetScanSignature(ctx, itemID); err == nil && ok && sSize == sigSize && sMtime == mtime {
+		if sSize, sMtime, ok, err := sigs.GetScanSignature(ctx, itemID, probeVersion); err == nil && ok && sSize == sigSize && sMtime == mtime {
 			if old, err := s.store.GetItem(ctx, itemID); err == nil && len(old.MediaStreams) > 0 && old.RunTimeTicks != nil {
 				out.streams, out.ticks, out.container = old.MediaStreams, old.RunTimeTicks, old.Container
 				out.chapters = old.Chapters
