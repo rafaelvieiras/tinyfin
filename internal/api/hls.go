@@ -67,14 +67,12 @@ func (s *Server) resolveHLS(r *http.Request, item storage.Item) hlsRequest {
 	}
 
 	dec := playback.DecideWith(item, profile, playback.Options{AudioStreamIndex: audioIdx, BurnSubtitle: burn})
-	if vc, ac := q.Get("videocodec"), q.Get("audiocodec"); vc != "" || ac != "" {
-		dec = playback.Decision{Mode: playback.ModeTranscode, Container: hlsContainer(profile, q.Get("segmentcontainer")), VideoCodec: strings.ToLower(vc), AudioCodec: strings.ToLower(ac)}
-		if vc == "" || strings.EqualFold(vc, "copy") && !burn {
+	if vcq, acq := q.Get("videocodec"), q.Get("audiocodec"); vcq != "" || acq != "" {
+		vc := pickTargetCodec(vcq, sourceCodec(item, storage.StreamTypeVideo, nil), burn)
+		ac := pickTargetCodec(acq, sourceCodec(item, storage.StreamTypeAudio, audioIdx), false)
+		dec = playback.Decision{Mode: playback.ModeTranscode, Container: hlsContainer(profile, q.Get("segmentcontainer")), VideoCodec: vc, AudioCodec: ac}
+		if vc == "copy" {
 			dec.Mode = playback.ModeDirectStream
-		}
-		if burn && (dec.VideoCodec == "" || dec.VideoCodec == "copy") {
-			// a copied picture cannot be filtered
-			dec.VideoCodec = "h264"
 		}
 	} else if c := q.Get("segmentcontainer"); c != "" && dec.Mode != playback.ModeNone && dec.Mode != playback.ModeDirectPlay {
 		dec.Container = c
@@ -85,7 +83,7 @@ func (s *Server) resolveHLS(r *http.Request, item storage.Item) hlsRequest {
 
 	out := hlsRequest{item: item, decision: dec, key: hlsJobKey(item.ID, q)}
 	out.req = transcode.Request{
-		InputPath:  item.Path,
+		InputPath:  mediaInput(item),
 		VideoCodec: dec.VideoCodec,
 		AudioCodec: dec.AudioCodec,
 		Container:  dec.Container,
@@ -278,4 +276,67 @@ func (s *Server) handleHLSSegment(w http.ResponseWriter, r *http.Request, itemID
 		w.Header().Set("Content-Type", "video/mp2t")
 	}
 	http.ServeFile(w, r, filepath.Join(job.Dir(), file))
+}
+
+// mediaInput is what ffmpeg reads for item: the file, or the address a .strm
+// file holds.
+func mediaInput(item storage.Item) string {
+	if item.RemoteURL != "" {
+		return item.RemoteURL
+	}
+	return item.Path
+}
+
+// sourceCodec is the codec of the stream of type t the request plays (the
+// selected audio track, else the default one of the type); "" when none.
+func sourceCodec(item storage.Item, t storage.StreamType, audioIdx *int) string {
+	var first, def string
+	for _, st := range item.MediaStreams {
+		if st.Type != t {
+			continue
+		}
+		if t == storage.StreamTypeAudio && audioIdx != nil && st.Index == *audioIdx {
+			return strings.ToLower(st.Codec)
+		}
+		if first == "" {
+			first = strings.ToLower(st.Codec)
+		}
+		if st.IsDefault && def == "" {
+			def = strings.ToLower(st.Codec)
+		}
+	}
+	if def != "" {
+		return def
+	}
+	return first
+}
+
+// pickTargetCodec reads a codec list of a TranscodingUrl (VideoCodec,
+// AudioCodec): "copy" when the source codec is on it (the stream passes
+// through as it is; never for a picture that is filtered), else the first
+// codec it names. An empty list copies.
+func pickTargetCodec(list, source string, noCopy bool) string {
+	var first string
+	for _, c := range strings.Split(list, ",") {
+		c = strings.ToLower(strings.TrimSpace(c))
+		if c == "" {
+			continue
+		}
+		if first == "" || c == "h264" {
+			// h264 is the encoder every build has: it wins over the other names
+			if first == "" || first != "h264" {
+				first = c
+			}
+		}
+		if !noCopy && (c == "copy" || c == source) {
+			return "copy"
+		}
+	}
+	if first == "" || first == "copy" {
+		if noCopy {
+			return "h264"
+		}
+		return "copy"
+	}
+	return first
 }

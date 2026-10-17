@@ -293,8 +293,18 @@ func matchDirectStream(profiles []deviceprofile.DirectPlayProfile, videoCodec st
 // as ordered by the matchers above), so Decide doesn't second-guess it with
 // its own ranking heuristic.
 func firstTranscodingProfile(profiles []deviceprofile.TranscodingProfile) (deviceprofile.TranscodingProfile, bool) {
+	return FirstTranscodingProfile(profiles)
+}
+
+// FirstTranscodingProfile is the transcoding profile a video is offered: the
+// first Video entry meant for streaming (an entry for the Static context,
+// downloads and syncs, is skipped, like the reference does).
+func FirstTranscodingProfile(profiles []deviceprofile.TranscodingProfile) (deviceprofile.TranscodingProfile, bool) {
 	for _, tp := range profiles {
 		if tp.Type != "" && tp.Type != "Video" {
+			continue
+		}
+		if strings.EqualFold(tp.Context, "Static") {
 			continue
 		}
 		return tp, true

@@ -119,6 +119,8 @@ type MediaStreamRef struct {
 	Width     *int // video only
 	Height    *int // video only
 	BitRate   *int64
+	// FrameRate is the average frame rate in frames/s (video only).
+	FrameRate *float64
 
 	// Profile is the codec profile ffprobe reports (e.g. "Main 10" for
 	// HEVC video, "LC" for AAC audio) — the reference server's own

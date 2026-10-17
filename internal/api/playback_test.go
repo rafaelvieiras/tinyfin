@@ -113,11 +113,13 @@ func TestPlaybackInfoDirectPlayUnsupportedFallsBackToTranscode(t *testing.T) {
 		},
 	})
 
-	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/Items/"+string(item.ID)+"/PlaybackInfo", nil)
+	// A request without a device profile is direct play (the reference
+	// states no limit then); the conservative deviceprofile.Default()
+	// (mp4/h264/aac only, with a TranscodingProfiles fallback) is sent inline.
+	prof, _ := json.Marshal(map[string]any{"DeviceProfile": deviceprofile.Default()})
+	req, _ := http.NewRequest(http.MethodPost, ts.URL+"/Items/"+string(item.ID)+"/PlaybackInfo", bytes.NewReader(prof))
+	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", `MediaBrowser Token="`+token+`"`)
-	// No Client header this time -> falls through to deviceprofile.Default(),
-	// which is conservative (mp4/h264/aac only) for Direct Play but still
-	// carries a TranscodingProfiles fallback.
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("GET PlaybackInfo: %v", err)

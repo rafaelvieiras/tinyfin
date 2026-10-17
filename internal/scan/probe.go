@@ -42,8 +42,12 @@ type ffprobeStream struct {
 	// with no level concept; 0 is indistinguishable from "field absent"
 	// either way, so mediaStreamsFromProbe below only exposes a Level
 	// pointer for a value outside {0, -99}.
-	Level         int    `json:"level"`
-	FieldOrder    string `json:"field_order"`
+	Level      int    `json:"level"`
+	FieldOrder string `json:"field_order"`
+	// BitRate is ffprobe's bit_rate (a numeric string, absent when the
+	// container does not record one); AvgFrameRate a "num/den" fraction.
+	BitRate       string `json:"bit_rate"`
+	AvgFrameRate  string `json:"avg_frame_rate"`
 	ColorTransfer string `json:"color_transfer"`
 	Disposition   struct {
 		Default  int `json:"default"`
@@ -239,6 +243,12 @@ func mediaStreamsFromProbe(info ffprobeOutput) []storage.MediaStreamRef {
 				lvl := float64(st.Level)
 				ref.Level = &lvl
 			}
+			if fr := parseFrameRate(st.AvgFrameRate); fr > 0 {
+				ref.FrameRate = &fr
+			}
+			if br, err := strconv.ParseInt(st.BitRate, 10, 64); err == nil && br > 0 {
+				ref.BitRate = &br
+			}
 			streams = append(streams, ref)
 			idx++
 		case "audio":
@@ -256,6 +266,9 @@ func mediaStreamsFromProbe(info ffprobeOutput) []storage.MediaStreamRef {
 			}
 			if sr, err := strconv.Atoi(st.SampleRate); err == nil && sr > 0 {
 				ref.SampleRate = &sr
+			}
+			if br, err := strconv.ParseInt(st.BitRate, 10, 64); err == nil && br > 0 {
+				ref.BitRate = &br
 			}
 			streams = append(streams, ref)
 			idx++
@@ -334,4 +347,19 @@ func audioTags(info ffprobeOutput) map[string]string {
 		out[strings.ToLower(k)] = v
 	}
 	return out
+}
+
+// parseFrameRate reads ffprobe's "num/den" frame rate; 0 when it is absent or
+// not a usable rate.
+func parseFrameRate(v string) float64 {
+	num, den, ok := strings.Cut(v, "/")
+	if !ok {
+		return 0
+	}
+	n, err1 := strconv.ParseFloat(num, 64)
+	d, err2 := strconv.ParseFloat(den, 64)
+	if err1 != nil || err2 != nil || d == 0 || n <= 0 {
+		return 0
+	}
+	return n / d
 }

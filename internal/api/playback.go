@@ -48,15 +48,17 @@ import (
 // on the very first call the native player makes, so it blocks Direct
 // Play for every item unconditionally.
 type mediaSourceInfoDto struct {
-	ID                    string `json:"Id"`
-	Protocol              string `json:"Protocol"`
-	Path                  string `json:"Path,omitempty"`
-	Type                  string `json:"Type"`
-	Container             string `json:"Container,omitempty"`
-	Size                  int64  `json:"Size,omitempty"`
-	Name                  string `json:"Name,omitempty"`
-	IsRemote              bool   `json:"IsRemote"`
-	RunTimeTicks          *int64 `json:"RunTimeTicks,omitempty"`
+	ID           string `json:"Id"`
+	Protocol     string `json:"Protocol"`
+	Path         string `json:"Path,omitempty"`
+	Type         string `json:"Type"`
+	Container    string `json:"Container,omitempty"`
+	Size         int64  `json:"Size,omitempty"`
+	Name         string `json:"Name,omitempty"`
+	IsRemote     bool   `json:"IsRemote"`
+	RunTimeTicks *int64 `json:"RunTimeTicks,omitempty"`
+	// Bitrate is the rate of the whole file (its size over its length).
+	Bitrate               *int64 `json:"Bitrate,omitempty"`
 	ReadAtNativeFramerate bool   `json:"ReadAtNativeFramerate"`
 	IgnoreDts             bool   `json:"IgnoreDts"`
 	IgnoreIndex           bool   `json:"IgnoreIndex"`
@@ -196,6 +198,11 @@ func baseMediaSourceInfo(item storage.Item, container string) mediaSourceInfoDto
 	switch item.Type {
 	case storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeVideo, storage.ItemTypeMusicVideo, storage.ItemTypeTrailer:
 		src.VideoType = "VideoFile"
+		if item.RemoteURL == "" && item.VideoType == "" {
+			if br := audioSourceBitrate(item); br > 0 {
+				src.Bitrate = &br
+			}
+		}
 	}
 	if item.RemoteURL != "" {
 		// A .strm file that holds an address: the source is the address.
@@ -267,33 +274,25 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if item.VideoType == storage.VideoTypeDvd || item.VideoType == storage.VideoTypeBluRay || IsStrmItem(item) {
-		// A disc folder or a .strm file is always offered as it is: there is
-		// nothing to negotiate (the reference does the same).
-		container := item.Container
-		if item.RemoteURL != "" && len(item.MediaStreams) == 0 {
-			// What an address holds is probed when it is played, and kept.
-			streams, ticks, c, err := s.scanner.ProbeMedia(r.Context(), item.RemoteURL)
-			if err == nil {
-				item.MediaStreams, item.RunTimeTicks, item.Container = streams, ticks, c
-				container = c
-				if err := s.store.UpsertItem(r.Context(), item); err != nil {
-					log.Printf("api: keeping the probe of %s: %v", item.ID, err)
-				}
+	if item.RemoteURL != "" && len(item.MediaStreams) == 0 {
+		// What an address holds is probed when it is played, and kept.
+		if streams, ticks, c, err := s.scanner.ProbeMedia(r.Context(), item.RemoteURL); err == nil {
+			item.MediaStreams, item.RunTimeTicks, item.Container = streams, ticks, c
+			if err := s.store.UpsertItem(r.Context(), item); err != nil {
+				log.Printf("api: keeping the probe of %s: %v", item.ID, err)
 			}
 		}
-		source := baseMediaSourceInfo(item, container)
+	}
+	if item.VideoType == storage.VideoTypeDvd || item.VideoType == storage.VideoTypeBluRay ||
+		(IsStrmItem(item) && !(item.RemoteURL != "" && len(item.MediaStreams) > 0)) {
+		// A disc folder, or a .strm file with nothing known about what it
+		// points at, is always offered as it is: there is nothing to
+		// negotiate (the reference does the same).
+		source := baseMediaSourceInfo(item, item.Container)
 		source.SupportsDirectPlay, source.SupportsDirectStream, source.SupportsTranscoding = true, true, true
 		source.TranscodingSubProtocol = "http"
-		if ac, _ := AuthFromContext(r.Context()); item.RemoteURL != "" && ac != nil && ac.Authenticated && !ac.IsAPIKey &&
-			storedUserPolicy(ac.User).ForceRemoteSourceTranscoding {
-			// policy.remote.R2: a user who must have remote sources
-			// transcoded is not offered the address, whenever the client
-			// states a profile.
-			if _, inline := s.profileFor(r, readPlaybackBody(r)); inline {
-				s.forceRemoteTranscode(&source, item, ac.Token)
-			}
-		}
+		_, inline := s.profileFor(r, readPlaybackBody(r))
+		s.maybeForceRemote(r, &source, item, inline)
 		writeJSON(w, http.StatusOK, playbackInfoResponse{PlaySessionID: randomID(), MediaSources: []mediaSourceInfoDto{source}})
 		return
 	}
@@ -352,6 +351,11 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	decision := playback.DecideWith(item, profile, opts)
+	if !inline {
+		// A request without a device profile states no limit: the reference
+		// offers the file as it is, whatever its container and codecs.
+		decision = playback.Decision{Mode: playback.ModeDirectPlay, Container: strings.ToLower(item.Container)}
+	}
 	if inline && hasSub && !opts.BurnSubtitle && decision.Mode != playback.ModeDirectPlay && decision.Mode != playback.ModeNone &&
 		playback.DeliverSubtitle(subTrack, profile.SubtitleProfiles, false).Method == "Encode" {
 		// the file is not served as is any more, so an embedded track
@@ -408,7 +412,8 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 			resp.MediaSources = []mediaSourceInfoDto{source}
 			break
 		}
-		source.SupportsDirectStream = decision.Mode != playback.ModeTranscode && !opts.BurnSubtitle && !opts.NoDirectPlay
+		// the reference never offers direct streaming for a source it transcodes
+		source.SupportsDirectStream = false
 		source.SupportsTranscoding = true
 		if ac, _ := AuthFromContext(r.Context()); ac != nil {
 			if f := playbackFlagsFor(ac); !f.video && !f.remux {
@@ -438,34 +443,23 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 		}
-		var token string
+		var token, deviceID string
 		if ac, ok := AuthFromContext(r.Context()); ok && ac != nil {
-			token = ac.Token
+			token, deviceID = ac.Token, ac.DeviceID
 		}
-		container := hlsContainer(profile, decision.Container)
-		q := url.Values{
-			"MediaSourceId":    {source.ID},
-			"VideoCodec":       {decision.VideoCodec},
-			"AudioCodec":       {decision.AudioCodec},
-			"SegmentContainer": {container},
-			"PlaySessionId":    {resp.PlaySessionID},
-		}
-		if audioIdx != nil {
-			q.Set("AudioStreamIndex", strconv.Itoa(*audioIdx))
-		}
+		method := ""
 		if hasSub && (subMethod == "Encode" || subMethod == "Hls") {
-			q.Set("SubtitleStreamIndex", strconv.Itoa(*subIdx))
-			q.Set("SubtitleMethod", subMethod)
+			method = subMethod
 		}
-		if token != "" {
-			q.Set("ApiKey", token)
-		}
-		if len(decision.Reasons) > 0 {
-			q.Set("TranscodeReasons", strings.Join(decision.Reasons, ","))
-		}
-		source.TranscodingUrl = hlsMasterURL(item.ID, q)
-		source.TranscodingContainer = container
-		source.TranscodingSubProtocol = "hls"
+		offer := buildTranscodeOffer(offerInput{
+			item: item, profile: profile, tp: pickTranscodingProfile(profile, decision), reasons: decision.Reasons,
+			deviceID: deviceID, token: token, playSession: resp.PlaySessionID,
+			audioIdx: audioIdx, subIdx: subIdx, subMethod: method,
+			maxBitrate: s.remoteBitrateCap(r, requestedMaxBitrate(r, body, profile)),
+		})
+		source.TranscodingUrl = offer.URL
+		source.TranscodingContainer = offer.Container
+		source.TranscodingSubProtocol = offer.SubProtocol
 		resp.MediaSources = []mediaSourceInfoDto{source}
 
 	default: // playback.ModeNone
@@ -479,7 +473,23 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 		resp.ErrorCode = "NoCompatibleStream"
 	}
 
+	if len(resp.MediaSources) > 0 {
+		s.maybeForceRemote(r, &resp.MediaSources[0], item, inline)
+	}
 	writeJSON(w, http.StatusOK, resp)
+}
+
+// maybeForceRemote applies policy.remote.R2: a user who must have remote
+// sources transcoded is not offered the address, whenever the client states
+// a profile.
+func (s *Server) maybeForceRemote(r *http.Request, source *mediaSourceInfoDto, item storage.Item, inline bool) {
+	ac, _ := AuthFromContext(r.Context())
+	if item.RemoteURL == "" || ac == nil || !ac.Authenticated || ac.IsAPIKey || !storedUserPolicy(ac.User).ForceRemoteSourceTranscoding {
+		return
+	}
+	if inline {
+		s.forceRemoteTranscode(source, item, ac.Token)
+	}
 }
 
 // hlsMasterURL builds the TranscodingUrl a client should fetch to begin

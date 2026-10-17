@@ -58,5 +58,31 @@ func (s *Scanner) ProbeMedia(ctx context.Context, target string) (streams []stor
 	if err != nil {
 		return nil, nil, "", err
 	}
-	return mediaStreamsFromProbe(info), runtimeTicksFromProbe(info), info.Format.FormatName, nil
+	return mediaStreamsFromProbe(info), runtimeTicksFromProbe(info), containerFromFormat(info.Format.FormatName), nil
+}
+
+// containerFromFormat turns ffprobe's format_name list ("mov,mp4,m4a,3gp,3g2,mj2",
+// "matroska,webm") into the container name a file with that extension would
+// carry.
+func containerFromFormat(name string) string {
+	parts := strings.Split(name, ",")
+	has := func(v string) bool {
+		for _, p := range parts {
+			if p == v {
+				return true
+			}
+		}
+		return false
+	}
+	switch {
+	case has("matroska"):
+		return "mkv"
+	case has("mp4"):
+		return "mp4"
+	case has("mpegts"):
+		return "ts"
+	case has("mpeg"):
+		return "mpg"
+	}
+	return parts[0]
 }
