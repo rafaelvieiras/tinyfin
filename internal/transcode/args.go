@@ -32,6 +32,26 @@ const ticksPerSecond = 10_000_000
 // exactly what determines which encode flags are valid to add (stream-copy
 // flags like -b:v have no meaning applied to a copied stream).
 func buildArgs(req Request) []string {
+	args := encodeArgs(req)
+	return append(args, hlsOutputArgs(req)...)
+}
+
+// ProgressiveArgs builds the ffmpeg arguments of a transcode written to
+// stdout as one stream in format (mp4, matroska, mpegts, ...): the same
+// mapping and codecs as an HLS job, then the muxer.
+func ProgressiveArgs(req Request, format string) []string {
+	args := append([]string{"-v", "error", "-nostdin"}, encodeArgs(req)...)
+	args = append(args, "-map_metadata", "-1")
+	if format == "mp4" {
+		// a non-seekable output: fragments instead of a trailing index
+		args = append(args, "-movflags", "frag_keyframe+empty_moov+default_base_moof")
+	}
+	return append(args, "-f", format, "pipe:1")
+}
+
+// encodeArgs is the input, stream mapping and codec part shared by the HLS
+// and the progressive output.
+func encodeArgs(req Request) []string {
 	var args []string
 
 	// -ss before -i is fast (input-side) seek: ffmpeg seeks by demuxing
@@ -120,6 +140,12 @@ func buildArgs(req Request) []string {
 		args = append(args, "-ac", "2")
 	}
 
+	return args
+}
+
+// hlsOutputArgs is the HLS muxer part of an HLS job.
+func hlsOutputArgs(req Request) []string {
+	var args []string
 	segmentSeconds := req.SegmentSeconds
 	if segmentSeconds <= 0 {
 		segmentSeconds = defaultSegmentSeconds

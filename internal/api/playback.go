@@ -587,6 +587,9 @@ func (s *Server) handleVideoStream(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", "0")
 		w.WriteHeader(http.StatusOK)
 		return
+	case wantsProgressiveTranscode(r) && (item.RemoteURL != "" || !IsStrmItem(item)):
+		s.streamVideoTranscode(w, r, item, file)
+		return
 	case item.RemoteURL != "":
 		s.proxyRemote(w, r, item.RemoteURL)
 		return

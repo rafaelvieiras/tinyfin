@@ -88,3 +88,19 @@ func (a *AudioStream) Close() error {
 
 // Stderr is what ffmpeg wrote to its error output so far.
 func (a *AudioStream) Stderr() string { return a.stderr.String() }
+
+// StreamVideo starts the progressive transcode of req in format, written to
+// the returned stream; ctx cancellation kills the process.
+func (m *Manager) StreamVideo(ctx context.Context, req Request, format string) (*AudioStream, error) {
+	cmd := exec.CommandContext(ctx, m.cfg.ffmpegPath(), ProgressiveArgs(req, format)...)
+	out, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("transcode: start ffmpeg: %w", err)
+	}
+	return &AudioStream{cmd: cmd, out: out, stderr: &stderr}, nil
+}

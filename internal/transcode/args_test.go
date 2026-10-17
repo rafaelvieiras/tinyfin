@@ -233,3 +233,15 @@ func TestBuildArgs_AudioStreamAndBurn(t *testing.T) {
 		}
 	}
 }
+
+func TestProgressiveArgs(t *testing.T) {
+	args := strings.Join(ProgressiveArgs(Request{InputPath: "/m/a.mkv", VideoCodec: "copy", AudioCodec: "aac"}, "mp4"), " ")
+	for _, want := range []string{"-i /m/a.mkv", "-c:v copy", "-c:a aac", "-movflags frag_keyframe+empty_moov+default_base_moof", "-f mp4 pipe:1"} {
+		if !strings.Contains(args, want) {
+			t.Errorf("%q missing in %s", want, args)
+		}
+	}
+	if strings.Contains(args, "hls") {
+		t.Errorf("hls muxer in progressive args: %s", args)
+	}
+}
