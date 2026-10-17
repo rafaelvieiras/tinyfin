@@ -14,9 +14,17 @@ import (
 // file was successfully probed. Stores that do not implement it (test fakes)
 // simply get a full probe on every scan, i.e. the previous behavior.
 type signatureStore interface {
-	GetScanSignature(ctx context.Context, id storage.ItemID) (size, mtimeNS int64, ok bool, err error)
-	SetScanSignature(ctx context.Context, id storage.ItemID, size, mtimeNS int64) error
+	GetScanSignature(ctx context.Context, id storage.ItemID, probeVersion int) (size, mtimeNS int64, ok bool, err error)
+	SetScanSignature(ctx context.Context, id storage.ItemID, size, mtimeNS int64, probeVersion int) error
 }
+
+// probeVersion is the revision of what a probe records. Bump it whenever the
+// probe starts keeping something it dropped before (a stream field, a tag):
+// signatures recorded by an older version are stale, so the next incremental
+// scan probes those files again without -scan-force-probe.
+//
+//	1: stream BitRate and frame rate.
+const probeVersion = 1
 
 // probeResult is what the process* functions need from the probe step.
 type probeResult struct {
@@ -73,7 +81,7 @@ func (s *Scanner) probeOrReuse(ctx context.Context, pool *jobPool, itemID storag
 
 	sigs, hasSigs := s.store.(signatureStore)
 	if hasSigs && statErr == nil && !s.forceProbe && !optionsOf(ctx).embeddedTitles {
-		if sSize, sMtime, ok, err := sigs.GetScanSignature(ctx, itemID); err == nil && ok && sSize == size && sMtime == res.mtimeNS {
+		if sSize, sMtime, ok, err := sigs.GetScanSignature(ctx, itemID, probeVersion); err == nil && ok && sSize == size && sMtime == res.mtimeNS {
 			if old, err := s.store.GetItem(ctx, itemID); err == nil && len(old.MediaStreams) > 0 && old.RunTimeTicks != nil {
 				res.streams = withExternalSubtitles(stripExternalSubtitles(old.MediaStreams), external)
 				res.ticks = old.RunTimeTicks
@@ -108,7 +116,7 @@ func (s *Scanner) recordSignature(ctx context.Context, itemID storage.ItemID, re
 		if res.sigSize != 0 {
 			size = res.sigSize
 		}
-		_ = sigs.SetScanSignature(ctx, itemID, size, res.mtimeNS)
+		_ = sigs.SetScanSignature(ctx, itemID, size, res.mtimeNS, probeVersion)
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -51,14 +52,18 @@ func readStrmURL(path string) string {
 // ProbeMedia runs ffprobe against an address or path, with a bound on the
 // time it may take, and returns what the playback layer needs from it. It is
 // what a remote .strm item is described with when it is played.
-func (s *Scanner) ProbeMedia(ctx context.Context, target string) (streams []storage.MediaStreamRef, ticks *int64, container string, err error) {
+func (s *Scanner) ProbeMedia(ctx context.Context, target string) (streams []storage.MediaStreamRef, ticks *int64, container string, bitRate *int64, err error) {
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 	info, err := s.probe(ctx, target)
 	if err != nil {
-		return nil, nil, "", err
+		return nil, nil, "", nil, err
 	}
-	return mediaStreamsFromProbe(info), runtimeTicksFromProbe(info), containerFromFormat(info.Format.FormatName), nil
+	var br *int64
+	if v, perr := strconv.ParseInt(info.Format.BitRate, 10, 64); perr == nil && v > 0 {
+		br = &v
+	}
+	return mediaStreamsFromProbe(info), runtimeTicksFromProbe(info), containerFromFormat(info.Format.FormatName), br, nil
 }
 
 // containerFromFormat turns ffprobe's format_name list ("mov,mp4,m4a,3gp,3g2,mj2",

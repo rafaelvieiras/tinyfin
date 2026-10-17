@@ -97,3 +97,39 @@ func TestScanLibraryFailedProbeIsRetried(t *testing.T) {
 		}
 	}
 }
+
+func TestScanLibraryStaleProbeVersionIsProbedAgain(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "Movie (2001)", "movie.mkv"), "0123456789")
+	script, _ := fakeFFprobe(t)
+	st := newTestStore(t)
+	s := New(st, nil, Config{FFprobePath: script})
+	lib := storage.Library{ID: "lib", Name: "M", CollectionType: storage.CollectionTypeMovies, Paths: []string{root}}
+	ctx := context.Background()
+	if err := st.UpsertLibrary(ctx, lib); err != nil {
+		t.Fatal(err)
+	}
+	if stats, err := s.ScanLibrary(ctx, lib); err != nil || stats.ItemsProbed != 1 {
+		t.Fatalf("first scan: %+v %v", stats, err)
+	}
+	page, _ := st.QueryItems(ctx, storage.ItemFilter{LibraryID: &lib.ID, ItemTypes: []storage.ItemType{storage.ItemTypeMovie}, Limit: 5})
+	if len(page.Items) != 1 {
+		t.Fatalf("items: %+v", page.Items)
+	}
+	id := page.Items[0].ID
+	// Rewind the recorded signature to a version older than the current one,
+	// as a database written before the probe learned a field.
+	size, mtime, ok, err := st.GetScanSignature(ctx, id, probeVersion)
+	if err != nil || !ok {
+		t.Fatalf("signature: ok=%v err=%v", ok, err)
+	}
+	if err := st.SetScanSignature(ctx, id, size, mtime, probeVersion-1); err != nil {
+		t.Fatal(err)
+	}
+	if stats, _ := s.ScanLibrary(ctx, lib); stats.ItemsProbed != 1 || stats.ItemsSkipped != 0 {
+		t.Fatalf("stale version: stats=%+v", stats)
+	}
+	if stats, _ := s.ScanLibrary(ctx, lib); stats.ItemsProbed != 0 || stats.ItemsSkipped != 1 {
+		t.Fatalf("after re-probe: stats=%+v", stats)
+	}
+}

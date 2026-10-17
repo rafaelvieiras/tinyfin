@@ -1056,6 +1056,11 @@
        "path": "$.MediaSources[0].TranscodingUrl",
        "op": "contains",
        "value": "MediaSourceId="
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "matches",
+       "value": "^/videos/[0-9a-f-]{36}/stream\\?DeviceId=[^&]+&MediaSourceId=[0-9a-f]{32}&AudioStreamIndex=\\d+&(SubtitleStreamIndex=\\d+&)?PlaySessionId=[0-9a-f]{32}&ApiKey=[0-9a-f]+&RequireAvc=false&EnableAudioVbrEncoding=false&Tag=[0-9a-f]{32}&(SubtitleMethod=Encode&)?TranscodeReasons=ContainerNotSupported$"
       }
      ]
     },

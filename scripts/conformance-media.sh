@@ -719,9 +719,18 @@ if command -v xorriso >/dev/null 2>&1 && [ ! -f "$DI/Iso Dvd (2329)/Iso Dvd (232
 fi
 
 # .strm files (own libraries "Strm" and "StrmShows", lazy): an address that
-# nothing listens on, a local path, an empty file.
+# nothing listens on, a local path, an empty file, and an address that
+# scripts/conformance-strm-serve.sh serves (STRM_HTTP, default the Docker
+# bridge gateway on port 18999: reachable from the host and, through the
+# gateway, from the reference container).
 SM="$ROOT/Strm"
-mkdir -p "$SM/Strm Url (2341)" "$SM/Strm Local (2342)" "$SM/Strm Empty (2343)"
+mkdir -p "$SM/Strm Url (2341)" "$SM/Strm Local (2342)" "$SM/Strm Empty (2343)" "$SM/Strm Http (2345)" "$ROOT/.strm-http"
+[ -f "$ROOT/.strm-http/strm-src.mp4" ] || cp "$many_src" "$ROOT/.strm-http/strm-src.mp4"
+if [ -z "${STRM_HTTP:-}" ]; then
+  gw="$(docker network inspect bridge -f '{{(index .IPAM.Config 0).Gateway}}' 2>/dev/null || true)"
+  STRM_HTTP="http://${gw:-172.17.0.1}:18999"
+fi
+printf '%s/strm-src.mp4\n' "$STRM_HTTP" >"$SM/Strm Http (2345)/Strm Http (2345).strm"
 printf 'http://127.0.0.1:1/unreachable.mp4\n' >"$SM/Strm Url (2341)/Strm Url (2341).strm"
 printf '/nonexistent/path/video.mp4\n' >"$SM/Strm Local (2342)/Strm Local (2342).strm"
 : >"$SM/Strm Empty (2343)/Strm Empty (2343).strm"

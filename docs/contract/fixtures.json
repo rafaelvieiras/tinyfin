@@ -381,6 +381,7 @@
     {"key": "strm-url", "type": "Movie", "library": "strm", "path": "Strm/Strm Url (2341)/Strm Url (2341).strm"},
     {"key": "strm-local", "type": "Movie", "library": "strm", "path": "Strm/Strm Local (2342)/Strm Local (2342).strm"},
     {"key": "strm-empty", "type": "Movie", "library": "strm", "path": "Strm/Strm Empty (2343)/Strm Empty (2343).strm"},
+    {"key": "strm-http", "type": "Movie", "library": "strm", "path": "Strm/Strm Http (2345)/Strm Http (2345).strm"},
     {"key": "strm-ep", "type": "Episode", "library": "strmshows", "path": "StrmShows/Strm Show (2344)/Season 01/Strm Show S01E01.strm"},
     {"key": "forget-keep", "type": "Movie", "library": "forget", "path": "Forget/Forget Keep (2351)/Forget Keep (2351).mp4"},
     {"key": "forget-gone", "type": "Movie", "library": "forget", "path": "Forget/Forget Gone (2352)/Forget Gone (2352).mp4"},

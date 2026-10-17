@@ -130,9 +130,11 @@ func chaptersFromProbe(info ffprobeOutput) []storage.ChapterRef {
 }
 
 type ffprobeFormat struct {
-	Duration   string            `json:"duration"`
-	FormatName string            `json:"format_name"`
-	Tags       map[string]string `json:"tags"`
+	Duration   string `json:"duration"`
+	FormatName string `json:"format_name"`
+	// BitRate is the bit rate of the whole container (a numeric string).
+	BitRate string            `json:"bit_rate"`
+	Tags    map[string]string `json:"tags"`
 }
 
 // title returns the title tag of the container, whatever the case of its key.
