@@ -8479,6 +8479,7 @@
   "GET /Users/{userId}/Items/{itemId}/Intros",
   "GET /Users/{userId}/Items/{itemId}/LocalTrailers",
   "GET /Users/{userId}/Items/{itemId}/SpecialFeatures",
+  "GET /Videos/{itemId}/hls1/{playlistId}/{segment}",
   "GET /Videos/{itemId}/main.m3u8",
   "GET /Videos/{itemId}/master.m3u8",
   "GET /socket",

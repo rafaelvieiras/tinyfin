@@ -290,7 +290,7 @@ func (s *Server) handleHLSPlaylist(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	target := seg
+	target := 0
 	for _, d := range durations {
 		if c := int(math.Ceil(d)); c > target {
 			target = c

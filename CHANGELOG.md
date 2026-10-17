@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- HLS parity (`docs/contract/specs/playback.md#hls`, `playback3.json`, 5 new scenarios): the master
+  playlist has the reference's variant line (`BANDWIDTH`, `CODECS`, `RESOLUTION`, `FRAME-RATE`) and, for
+  `SubtitleMethod=Hls`, the `#EXT-X-MEDIA:TYPE=SUBTITLES` group pointing at `Subtitles/{n}/subtitles.m3u8`;
+  the media playlist is a VOD list of `hls1/main/<n>.ts` segments with `runtimeTicks` and
+  `actualSegmentLengthTicks`, laid out before the encode starts (key frames forced on the segment grid);
+  `StartTimeTicks` is carried in the links and refused on segments; the failure codes of the three routes
+  match; a direct-playable source is remuxed instead of `404`. The encoder follows the announced
+  `h264-profile`/`h264-level`, `MaxWidth`, `VideoBitrate` and `AudioBitrate`.
 - PlaybackInfo offer parity (`docs/contract/specs/playback.md#offer`, `playback2.json`, 4 new scenarios): a
   transcoded source is never a direct stream (also for a container-only mismatch); a request without a
   `DeviceProfile` direct plays any container; `.strm` addresses go through the profile; an `http`

@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 771
+    "pass": 776
   },
   "scenarios": {
     "admin.backup.create": "pass",
@@ -315,7 +315,12 @@
     "playback.audio.body": "pass",
     "playback.audio.ignored": "pass",
     "playback.audio.selection": "pass",
+    "playback.hls.errors": "pass",
+    "playback.hls.main-shape": "pass",
     "playback.hls.master": "pass",
+    "playback.hls.master-shape": "pass",
+    "playback.hls.master-variant": "pass",
+    "playback.hls.segment": "pass",
     "playback.offer.container-only": "pass",
     "playback.offer.http-profile": "pass",
     "playback.offer.no-profile": "pass",

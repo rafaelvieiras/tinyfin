@@ -1,0 +1,505 @@
+[
+ {
+  "id": "playback.hls.master-shape",
+  "endpoint": "GET /Videos/{itemId}/master.m3u8",
+  "spec": "playback.md#hls",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "transcode"
+  ],
+  "covers": [
+   "playback.hls.R2",
+   "playback.hls.R7"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-multi"
+  ],
+  "steps": [
+   {
+    "name": "copy variant with the subtitle group",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/master.m3u8?MediaSourceId={{item.av-multi.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&AudioStreamIndex=1&SubtitleMethod=Hls&SubtitleStreamIndex=4"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/application\\/vnd\\.apple\\.mpegurl/"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "#EXTM3U\n#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"subs\",NAME=\"English - Default - SUBRIP\",DEFAULT=NO,FORCED=NO,AUTOSELECT=YES,URI=\"{{item.av-multi.id}}/Subtitles/3/subtitles.m3u8?SegmentLength=30&ApiKey="
+      },
+      {
+       "op": "matches",
+       "value": "(?s)\\n#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"subs\",NAME=\"Portuguese - ASS\",DEFAULT=YES,FORCED=NO,AUTOSELECT=YES,URI=\"{{item.av-multi.id}}/Subtitles/4/subtitles.m3u8\\?SegmentLength=30&ApiKey=[0-9a-f]+\",LANGUAGE=\"por\"\\n#EXT-X-STREAM-INF:"
+      },
+      {
+       "op": "matches",
+       "value": "#EXT-X-STREAM-INF:BANDWIDTH=\\d+,AVERAGE-BANDWIDTH=\\d+,VIDEO-RANGE=SDR,CODECS=\"avc1\\.[0-9A-F]{6},mp4a\\.40\\.2\",RESOLUTION=320x240,FRAME-RATE=6,SUBTITLES=\"subs\"\\nmain\\.m3u8\\?"
+      },
+      {
+       "op": "contains",
+       "value": "VideoCodec=h264&AudioCodec=copy&AudioStreamIndex=1&SubtitleMethod=Hls&SubtitleStreamIndex=4\n"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no group for another delivery method",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/master.m3u8?MediaSourceId={{item.av-multi.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&SubtitleMethod=Embed&SubtitleStreamIndex=3"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "EXT-X-MEDIA"
+      },
+      {
+       "op": "notcontains",
+       "value": "SUBTITLES="
+      },
+      {
+       "op": "contains",
+       "value": "#EXT-X-STREAM-INF:"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.hls.master-variant",
+  "endpoint": "GET /Videos/{itemId}/master.m3u8",
+  "spec": "playback.md#hls",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "transcode"
+  ],
+  "covers": [
+   "playback.hls.R2"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-multi"
+  ],
+  "steps": [
+   {
+    "name": "encoded audio, limits that force a re-encode",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/master.m3u8?MediaSourceId={{item.av-multi.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=ac3&AudioStreamIndex=2&MaxWidth=160&VideoBitrate=500000&h264-profile=high&h264-level=40"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "matches",
+       "value": "#EXT-X-STREAM-INF:BANDWIDTH=\\d+,AVERAGE-BANDWIDTH=\\d+,VIDEO-RANGE=SDR,CODECS=\"avc1\\.640028,ac-3\",RESOLUTION=160x120,FRAME-RATE=6\\nmain\\.m3u8\\?"
+      },
+      {
+       "op": "contains",
+       "value": "VideoCodec=h264&AudioCodec=ac3&AudioStreamIndex=2&MaxWidth=160"
+      },
+      {
+       "op": "notcontains",
+       "value": "SUBTITLES="
+      }
+     ]
+    }
+   },
+   {
+    "name": "hevc, default profile and level",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/master.m3u8?MediaSourceId={{item.av-multi.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=hevc&AudioCodec=aac&AudioStreamIndex=1&MaxWidth=200&VideoBitrate=500000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "matches",
+       "value": "CODECS=\"hvc1\\.1\\.4\\.L1[0-9]{2}\\.B0,mp4a\\.40\\.2\",RESOLUTION=200x150,"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the codec list is kept, the audio codec is the one played",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/master.m3u8?MediaSourceId={{item.av-multi.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264,hevc&AudioCodec=opus,aac&AudioStreamIndex=2&MaxWidth=160&VideoBitrate=500000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "VideoCodec=h264,hevc&AudioCodec=opus&AudioStreamIndex=2"
+      },
+      {
+       "op": "matches",
+       "value": "CODECS=\"avc1\\.424029,Opus\",RESOLUTION=160x120,"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.hls.main-shape",
+  "endpoint": "GET /Videos/{itemId}/main.m3u8",
+  "spec": "playback.md#hls",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "transcode"
+  ],
+  "covers": [
+   "playback.hls.R3",
+   "playback.hls.R5"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-multi"
+  ],
+  "steps": [
+   {
+    "name": "VOD playlist of numbered segments",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/main.m3u8?MediaSourceId={{item.av-multi.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/application\\/vnd\\.apple\\.mpegurl/"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "^#EXTM3U\\n#EXT-X-PLAYLIST-TYPE:VOD\\n#EXT-X-VERSION:3\\n#EXT-X-TARGETDURATION:3\\n#EXT-X-MEDIA-SEQUENCE:0\\n#EXTINF:3\\.000000, nodesc\\nhls1/main/0\\.ts\\?[^\\n]*MediaSourceId={{item.av-multi.id}}[^\\n]*&runtimeTicks=0&actualSegmentLengthTicks=30000000\\n#EXTINF:\\d+\\.\\d{6}, nodesc\\nhls1/main/1\\.ts\\?[^\\n]*&runtimeTicks=30000000&actualSegmentLengthTicks=\\d+\\n#EXT-X-ENDLIST\\n$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "StartTimeTicks does not change the playlist",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/main.m3u8?MediaSourceId={{item.av-multi.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000&StartTimeTicks=20000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/application\\/vnd\\.apple\\.mpegurl/"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "^#EXTM3U\\n#EXT-X-PLAYLIST-TYPE:VOD\\n#EXT-X-VERSION:3\\n#EXT-X-TARGETDURATION:3\\n#EXT-X-MEDIA-SEQUENCE:0\\n#EXTINF:3\\.000000, nodesc\\nhls1/main/0\\.ts\\?[^\\n]*MediaSourceId={{item.av-multi.id}}[^\\n]*&runtimeTicks=0&actualSegmentLengthTicks=30000000\\n#EXTINF:\\d+\\.\\d{6}, nodesc\\nhls1/main/1\\.ts\\?[^\\n]*&runtimeTicks=30000000&actualSegmentLengthTicks=\\d+\\n#EXT-X-ENDLIST\\n$"
+      },
+      {
+       "op": "contains",
+       "value": "StartTimeTicks=20000000&runtimeTicks=0"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.hls.segment",
+  "endpoint": "GET /Videos/{itemId}/hls1/{playlistId}/{segmentId}.{container}",
+  "spec": "playback.md#hls",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "transcode"
+  ],
+  "covers": [
+   "playback.hls.R4",
+   "playback.hls.R5"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-multi"
+  ],
+  "steps": [
+   {
+    "name": "first segment",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/hls1/main/0.ts?MediaSourceId={{item.av-multi.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000&runtimeTicks=0&actualSegmentLengthTicks=30000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     }
+    }
+   },
+   {
+    "name": "StartTimeTicks of 0 is accepted",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/hls1/main/0.ts?MediaSourceId={{item.av-multi.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000&runtimeTicks=0&actualSegmentLengthTicks=30000000&StartTimeTicks=0"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     }
+    }
+   },
+   {
+    "name": "another start position is not allowed",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/hls1/main/0.ts?MediaSourceId={{item.av-multi.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000&runtimeTicks=0&actualSegmentLengthTicks=30000000&StartTimeTicks=20000000"
+    },
+    "expect": {
+     "status": 400,
+     "headers": {
+      "Content-Type": "/text\\/plain/"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "Error processing request."
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.hls.errors",
+  "endpoint": "GET /Videos/{itemId}/master.m3u8",
+  "spec": "playback.md#hls",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "transcode"
+  ],
+  "covers": [
+   "playback.hls.R6"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-multi"
+  ],
+  "steps": [
+   {
+    "name": "ticks are required",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/hls1/main/0.ts?MediaSourceId={{item.av-multi.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.runtimeTicks[0]",
+       "op": "eq",
+       "value": "The runtimeTicks field is required."
+      },
+      {
+       "path": "$.errors.actualSegmentLengthTicks[0]",
+       "op": "eq",
+       "value": "The actualSegmentLengthTicks field is required."
+      }
+     ]
+    }
+   },
+   {
+    "name": "the segment number is a number",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/hls1/main/x.ts?MediaSourceId={{item.av-multi.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000&runtimeTicks=0&actualSegmentLengthTicks=30000000"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.segmentId[0]",
+       "op": "eq",
+       "value": "The value 'x' is not valid."
+      }
+     ]
+    }
+   },
+   {
+    "name": "master needs the media source",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/master.m3u8?DeviceId=conf"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.mediaSourceId[0]",
+       "op": "eq",
+       "value": "The mediaSourceId field is required."
+      }
+     ]
+    }
+   },
+   {
+    "name": "segment length is a number",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/master.m3u8?MediaSourceId={{item.av-multi.id}}&SegmentLength=abc"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.segmentLength[0]",
+       "op": "eq",
+       "value": "The value 'abc' is not valid."
+      }
+     ]
+    }
+   },
+   {
+    "name": "start time is a number",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/main.m3u8?MediaSourceId={{item.av-multi.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&StartTimeTicks=abc"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.startTimeTicks[0]",
+       "op": "eq",
+       "value": "The value 'abc' is not valid."
+      }
+     ]
+    }
+   },
+   {
+    "name": "the item id is a GUID",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/not-a-guid/master.m3u8?MediaSourceId={{item.av-multi.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.itemId[0]",
+       "op": "eq",
+       "value": "The value 'not-a-guid' is not valid."
+      }
+     ]
+    }
+   },
+   {
+    "name": "unknown item",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/ffffffffffffffffffffffffffffffff/master.m3u8?MediaSourceId=ffffffffffffffffffffffffffffffff"
+    },
+    "expect": {
+     "status": 404,
+     "headers": {
+      "Content-Type": "/text\\/plain/"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "Error processing request."
+      }
+     ]
+    }
+   },
+   {
+    "name": "zero item",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/00000000000000000000000000000000/master.m3u8?MediaSourceId={{item.av-multi.id}}"
+    },
+    "expect": {
+     "status": 400,
+     "headers": {
+      "Content-Type": "/text\\/plain/"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "Error processing request."
+      }
+     ]
+    }
+   },
+   {
+    "name": "media source of another item",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/master.m3u8?MediaSourceId=ffffffffffffffffffffffffffffffff"
+    },
+    "expect": {
+     "status": 400,
+     "headers": {
+      "Content-Type": "/text\\/plain/"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "Error processing request."
+      }
+     ]
+    }
+   },
+   {
+    "name": "media source that is not an id",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/master.m3u8?MediaSourceId=zzz"
+    },
+    "expect": {
+     "status": 500,
+     "headers": {
+      "Content-Type": "/text\\/plain/"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "Error processing request."
+      }
+     ]
+    }
+   }
+  ]
+ }
+]
