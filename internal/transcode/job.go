@@ -2,6 +2,8 @@ package transcode
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 )
@@ -14,9 +16,11 @@ import (
 // serving the playlist) while the exit state they report is written from
 // the background goroutine Start spawns to wait on the subprocess.
 type Job struct {
-	sessionID string
-	dir       string
-	cancel    context.CancelFunc
+	sessionID   string
+	startNumber int
+	startTicks  int64
+	dir         string
+	cancel      context.CancelFunc
 
 	mu      sync.Mutex
 	done    bool
@@ -48,6 +52,25 @@ func (j *Job) Dir() string {
 // "crashed before writing anything."
 func (j *Job) PlaylistPath() string {
 	return filepath.Join(j.dir, "main.m3u8")
+}
+
+// StartNumber is the number of the first segment the job writes.
+func (j *Job) StartNumber() int { return j.startNumber }
+
+// StartTicks is the position (100 ns ticks) the job started reading at.
+func (j *Job) StartTicks() int64 { return j.startTicks }
+
+// Written is the number of the last segment file the job has started
+// writing (the one ffmpeg is on, maybe not yet complete), or -1 when none
+// exists.
+func (j *Job) Written(ext string) int {
+	last := -1
+	for n := j.startNumber; ; n++ {
+		if _, err := os.Stat(filepath.Join(j.dir, fmt.Sprintf("seg_%05d.%s", n, ext))); err != nil {
+			return last
+		}
+		last = n
+	}
 }
 
 // SessionID returns the session ID this job was started under.

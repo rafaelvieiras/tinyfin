@@ -68,8 +68,10 @@ func encodeArgs(req Request) []string {
 	// every frame before it, which matters for an HLS job where the
 	// client is waiting on the first segment.
 	if req.StartTimeTicks > 0 {
-		seconds := float64(req.StartTimeTicks) / float64(ticksPerSecond)
-		args = append(args, "-ss", strconv.FormatFloat(seconds, 'f', 3, 64))
+		// rounded up to the millisecond: a seek to the time of a key frame must
+		// not land a hair before it, on the key frame before
+		ms := (req.StartTimeTicks + ticksPerSecond/1000 - 1) / (ticksPerSecond / 1000)
+		args = append(args, "-ss", strconv.FormatFloat(float64(ms)/1000, 'f', 3, 64))
 	}
 
 	args = append(args, "-i", req.InputPath)
@@ -147,6 +149,11 @@ func encodeArgs(req Request) []string {
 
 	if audioCopy {
 		args = append(args, "-c:a", "copy")
+		if req.StartTimeTicks > 0 && !videoCopy {
+			// after a seek the copied sound would start at the key frame before
+			// the position, ahead of the re-encoded picture
+			args = append(args, "-copypriorss:a", "0")
+		}
 	} else {
 		args = append(args, "-c:a", req.AudioCodec)
 		if req.AudioBitrate > 0 {
@@ -162,7 +169,21 @@ func encodeArgs(req Request) []string {
 	return args
 }
 
-// hlsOutputArgs is the HLS muxer part of an HLS job.
+// hlsTimestampOffset is the shift (seconds) the segments' timestamps carry
+// against the source's: the reference writes every HLS segment 10 s later than
+// the picture's own time, whatever the position the transcode starts at.
+const hlsTimestampOffset = 10
+
+// segmentTimeMargin is how far before a key frame's time a cut is placed, so
+// the frame itself opens the new segment whatever the rounding of its time.
+const segmentTimeMargin = 0.005
+
+// hlsOutputArgs is the HLS muxer part of an HLS job. A job always numbers its
+// segments from req.StartNumber and shifts the timestamps by the seek offset
+// plus hlsTimestampOffset, so the segment n of a job that starts at the
+// position of segment n looks like the one a transcode from the start of the
+// file writes. A copied picture is cut at req.Cuts (the key frame plan) with
+// the segment muxer; everything else is cut by the HLS muxer on its grid.
 func hlsOutputArgs(req Request) []string {
 	var args []string
 	segmentSeconds := req.SegmentSeconds
@@ -176,6 +197,33 @@ func hlsOutputArgs(req Request) []string {
 		// test) doesn't produce an extension-less segment filename.
 		container = "ts"
 	}
+	seek := float64(req.StartTimeTicks) / ticksPerSecond
+	args = append(args,
+		"-muxdelay", "0", "-muxpreload", "0",
+		"-output_ts_offset", strconv.FormatFloat(seek+hlsTimestampOffset, 'f', 3, 64),
+	)
+
+	if req.Cuts != nil && req.VideoCodec == "copy" {
+		var times []string
+		for _, c := range req.Cuts {
+			if c > req.StartTimeTicks+ticksPerSecond/1000 {
+				times = append(times, strconv.FormatFloat(float64(c)/ticksPerSecond+hlsTimestampOffset-segmentTimeMargin, 'f', 3, 64))
+			}
+		}
+		if len(times) == 0 {
+			times = []string{"1000000"} // one segment to the end
+		}
+		return append(args,
+			"-f", "segment",
+			"-segment_times", strings.Join(times, ","),
+			"-segment_format", "mpegts",
+			"-segment_start_number", strconv.Itoa(req.StartNumber),
+			"-reset_timestamps", "0",
+			"-segment_list", "main.m3u8",
+			"-segment_list_type", "m3u8",
+			"seg_%05d."+container,
+		)
+	}
 
 	args = append(args,
 		"-f", "hls",
@@ -183,18 +231,14 @@ func hlsOutputArgs(req Request) []string {
 		// "event", not "vod": confirmed directly against a real movie file
 		// (not just a short synthetic clip) that ffmpeg's hls muxer holds
 		// "vod"'s playlist entirely in memory and writes main.m3u8 to disk
-		// only once, at the very end of the whole encode — worthless for a
-		// feature-length file, since internal/api's handleHLSPlaylist polls
-		// for exactly that file to appear while the job is still running.
-		// "event" writes the playlist progressively after every segment
-		// (still keeping every segment, unlike the default "live" type's
-		// sliding window) and appends #EXT-X-ENDLIST once the source is
-		// fully consumed — the actual "growing VOD" behavior this package
-		// needs.
+		// only once, at the very end of the whole encode. "event" writes the
+		// playlist progressively after every segment (still keeping every
+		// segment, unlike the default "live" type's sliding window) and
+		// appends #EXT-X-ENDLIST once the source is fully consumed.
 		"-hls_playlist_type", "event",
 		"-hls_segment_type", "mpegts",
 		"-hls_flags", "independent_segments",
-		"-start_number", "0",
+		"-start_number", strconv.Itoa(req.StartNumber),
 		"-hls_segment_filename", "seg_%05d."+container,
 		"main.m3u8",
 	)

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"math"
 	"net/url"
 	"strings"
 	"testing"
@@ -62,5 +63,29 @@ func TestBuildMasterVariantAndSubtitleGroup(t *testing.T) {
 	enc := buildMaster(item, url.Values{"maxwidth": {"300"}, "videobitrate": {"500000"}, "h264-profile": {"main|high"}, "h264-level": {"62"}}, "", "", "h264", "aac", nil, nil)
 	if !strings.Contains(enc, `BANDWIDTH=756000`) || !strings.Contains(enc, `CODECS="avc1.4D4033,mp4a.40.2",RESOLUTION=300x169`) {
 		t.Fatalf("encoded variant:\n%s", enc)
+	}
+}
+
+func TestDefaultAudioBandwidth(t *testing.T) {
+	for _, c := range []struct{ ch, src, want int }{
+		{1, 1, 128000}, {2, 2, 256000}, {3, 3, 256000}, {4, 4, 256000},
+		{5, 5, 768000}, {5, 6, 640000}, {6, 6, 640000}, {8, 8, 640000},
+	} {
+		if got := defaultAudioBandwidth(c.ch, c.src); got != c.want {
+			t.Errorf("defaultAudioBandwidth(%d, %d) = %d, want %d", c.ch, c.src, got, c.want)
+		}
+	}
+}
+
+func TestCutDurations(t *testing.T) {
+	got := cutDurations([]int64{70230000, 130230000}, 1200230000)
+	want := []float64{7.023, 6, 107}
+	if len(got) != len(want) {
+		t.Fatalf("got %v want %v", got, want)
+	}
+	for i := range want {
+		if math.Abs(got[i]-want[i]) > 1e-9 {
+			t.Fatalf("got %v want %v", got, want)
+		}
 	}
 }

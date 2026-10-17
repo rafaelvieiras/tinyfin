@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- HLS seek and segment plan (`docs/contract/specs/playback.md#hls`, `playback5.json`, 3 new scenarios): a
+  segment request starts the transcode at its own `runtimeTicks` (ffmpeg `-ss`, segments numbered from the
+  requested one) instead of waiting for one that runs from the start of the file; a request further on or
+  earlier restarts it, one past the end of the file is the last seconds of it (200, was 404). Segment
+  timestamps are the source's plus 10 s like the reference. A copied picture in a Matroska/WebM file gets
+  the reference's key frame plan in its media playlist (key frames read with ffprobe, cached in memory and
+  on disk) and is cut there with the segment muxer; the playlists no longer start a transcode. A repeated
+  query name reads as its first value on the HLS routes; the master `BANDWIDTH` counts the audio of three
+  to five channels, an mp3 first choice and flac like the reference.
 - HLS parity (`docs/contract/specs/playback.md#hls`, `playback3.json`, 5 new scenarios): the master
   playlist has the reference's variant line (`BANDWIDTH`, `CODECS`, `RESOLUTION`, `FRAME-RATE`) and, for
   `SubtitleMethod=Hls`, the `#EXT-X-MEDIA:TYPE=SUBTITLES` group pointing at `Subtitles/{n}/subtitles.m3u8`;

@@ -56,6 +56,9 @@ type Config struct {
 	// resolves a bare name against $PATH itself, so no separate lookup is
 	// needed here.
 	FFmpegPath string
+	// FFprobePath is the ffprobe binary the key frame scan uses. Empty means
+	// the one next to FFmpegPath, else "ffprobe" on $PATH.
+	FFprobePath string
 	// WorkDir is the parent directory under which each job gets its own
 	// subdirectory for HLS output (playlist + segments). Empty means
 	// os.TempDir().
@@ -110,6 +113,13 @@ type Request struct {
 	H264Level      int
 	StartTimeTicks int64 // seek offset, 100ns ticks (Jellyfin's tick unit), 0 = from start
 	SegmentSeconds int   // HLS segment target duration, 0 = package default (6s)
+	// StartNumber numbers the first segment the job writes (the segment the
+	// request that started it asked for).
+	StartNumber int
+	// Cuts are the places (100 ns ticks of the source's own time) a copied
+	// picture is cut at, the key frame plan of the file (see SegmentCuts).
+	// nil: the HLS muxer cuts at the first key frame after SegmentSeconds.
+	Cuts []int64
 
 	// AudioStreamIndex is the index, within InputPath, of the audio stream
 	// to map (ffmpeg's "0:N"); nil means the file's first audio stream.
@@ -144,6 +154,7 @@ type Manager struct {
 
 	mu   sync.Mutex
 	jobs map[string]*Job
+	kf   kfCache
 }
 
 // New constructs a Manager from cfg. cfg is copied; later mutation of a cfg
@@ -219,9 +230,11 @@ func (m *Manager) Start(ctx context.Context, sessionID string, req Request) (*Jo
 	cmd.Stderr = logFile
 
 	job := &Job{
-		sessionID: sessionID,
-		dir:       jobDir,
-		cancel:    cancel,
+		startNumber: req.StartNumber,
+		startTicks:  req.StartTimeTicks,
+		sessionID:   sessionID,
+		dir:         jobDir,
+		cancel:      cancel,
 	}
 
 	if err := cmd.Start(); err != nil {

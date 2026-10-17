@@ -1,0 +1,256 @@
+[
+ {
+  "id": "playback.hls.keyframe-plan",
+  "endpoint": "GET /Videos/{itemId}/main.m3u8",
+  "spec": "playback.md#hls",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "transcode"
+  ],
+  "covers": [
+   "playback.hls.R3"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-multi",
+   "library:long",
+   "item:long"
+  ],
+  "steps": [
+   {
+    "name": "copied picture in Matroska: cut at its key frames",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/main.m3u8?MediaSourceId={{item.av-multi.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&AudioCodec=aac"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/application\\/vnd\\.apple\\.mpegurl/"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "^#EXTM3U\\n#EXT-X-PLAYLIST-TYPE:VOD\\n#EXT-X-VERSION:3\\n#EXT-X-TARGETDURATION:4\\n#EXT-X-MEDIA-SEQUENCE:0\\n#EXTINF:3\\.525000, nodesc\\nhls1/main/0\\.ts\\?[^\\n]*&runtimeTicks=0&actualSegmentLengthTicks=35250000\\n#EXT-X-ENDLIST\\n$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "encoded picture: the grid of SegmentLength",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/main.m3u8?MediaSourceId={{item.av-multi.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/application\\/vnd\\.apple\\.mpegurl/"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "#EXTINF:3\\.000000, nodesc\\nhls1/main/0\\.ts\\?[^\\n]*&runtimeTicks=0&actualSegmentLengthTicks=30000000\\n#EXTINF:0\\.525000, nodesc\\nhls1/main/1\\.ts\\?[^\\n]*&runtimeTicks=30000000&actualSegmentLengthTicks=5250000\\n#EXT-X-ENDLIST\\n$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "copied picture in another container: the grid",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.long.id}}/main.m3u8?MediaSourceId={{item.long.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/application\\/vnd\\.apple\\.mpegurl/"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "#EXTINF:6\\.000000, nodesc\\nhls1/main/0\\.ts\\?[^\\n]*&runtimeTicks=0&actualSegmentLengthTicks=60000000\\n#EXTINF:6\\.000000, nodesc\\nhls1/main/1\\.ts\\?[^\\n]*&runtimeTicks=60000000&"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.hls.segment-seek",
+  "endpoint": "GET /Videos/{itemId}/hls1/{playlistId}/{segmentId}.{container}",
+  "spec": "playback.md#hls",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "transcode"
+  ],
+  "covers": [
+   "playback.hls.R4",
+   "playback.hls.R8"
+  ],
+  "requires": [
+   "library:long",
+   "item:long"
+  ],
+  "steps": [
+   {
+    "name": "an encoded segment far into the file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.long.id}}/hls1/main/50.ts?MediaSourceId={{item.long.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000&PlaySessionId=seek-{{run.suffix}}-a&runtimeTicks=3000000000&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the next one is the same transcode",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.long.id}}/hls1/main/51.ts?MediaSourceId={{item.long.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000&PlaySessionId=seek-{{run.suffix}}-a&runtimeTicks=3060000000&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a segment past the end of the file is still served",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.long.id}}/hls1/main/70.ts?MediaSourceId={{item.long.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000&PlaySessionId=seek-{{run.suffix}}-b&runtimeTicks=4200000000&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a copied segment far into the file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.long.id}}/hls1/main/30.ts?MediaSourceId={{item.long.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&PlaySessionId=seek-{{run.suffix}}-c&runtimeTicks=1800000000&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "going back is a new transcode too",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.long.id}}/hls1/main/3.ts?MediaSourceId={{item.long.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000&PlaySessionId=seek-{{run.suffix}}-a&runtimeTicks=180000000&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.hls.query-first",
+  "endpoint": "GET /Videos/{itemId}/master.m3u8",
+  "spec": "playback.md#hls",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "transcode"
+  ],
+  "covers": [
+   "playback.hls.R2"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-multi"
+  ],
+  "steps": [
+   {
+    "name": "a repeated name keeps its first value",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/master.m3u8?MediaSourceId={{item.av-multi.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&AudioCodec=mp3&AudioBitrate=64000&audiobitrate=32000&AudioBitrate=16000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "#EXT-X-STREAM-INF:BANDWIDTH=64000,AVERAGE-BANDWIDTH=64000,"
+      }
+     ]
+    }
+   },
+   {
+    "name": "also across letter case, for the codec list",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-multi.id}}/master.m3u8?MediaSourceId={{item.av-multi.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&audiocodec=aac&AudioCodec=mp3"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "mp4a.40.2\""
+      }
+     ]
+    }
+   }
+  ]
+ }
+]

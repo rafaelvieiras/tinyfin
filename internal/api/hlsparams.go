@@ -165,3 +165,22 @@ func fileStreamIndex(item storage.Item, idx int) int {
 	}
 	return idx - external
 }
+
+// hlsQuery is the request's query the way the reference reads it for the HLS
+// routes: names in any letter case (lower-cased here) and, when a name is
+// repeated, its first value.
+func hlsQuery(r *http.Request) url.Values {
+	out := url.Values{}
+	for _, p := range splitRawQuery(r.URL.RawQuery) {
+		k, err1 := url.QueryUnescape(p.key)
+		v, err2 := url.QueryUnescape(p.val)
+		if err1 != nil || err2 != nil {
+			continue
+		}
+		k = strings.ToLower(k)
+		if _, ok := out[k]; !ok {
+			out[k] = []string{v}
+		}
+	}
+	return out
+}

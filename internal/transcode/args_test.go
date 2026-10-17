@@ -20,6 +20,7 @@ func TestBuildArgs_Remux(t *testing.T) {
 		"-map", "0:v:0", "-map", "0:a:0",
 		"-c:v", "copy",
 		"-c:a", "copy",
+		"-muxdelay", "0", "-muxpreload", "0", "-output_ts_offset", "10.000",
 		"-f", "hls",
 		"-hls_time", "6",
 		"-hls_playlist_type", "event",
@@ -55,6 +56,7 @@ func TestBuildArgs_DirectStream_AudioOnlyEncode(t *testing.T) {
 		"-c:a", "aac",
 		"-b:a", "192000",
 		"-ac", "2",
+		"-muxdelay", "0", "-muxpreload", "0", "-output_ts_offset", "10.000",
 		"-f", "hls",
 		"-hls_time", "6",
 		"-hls_playlist_type", "event",
@@ -97,6 +99,7 @@ func TestBuildArgs_FullTranscode(t *testing.T) {
 		"-b:a", "128000",
 		"-ac", "2",
 		"-force_key_frames", "expr:gte(t,n_forced*4)",
+		"-muxdelay", "0", "-muxpreload", "0", "-output_ts_offset", "22.345",
 		"-f", "hls",
 		"-hls_time", "4",
 		"-hls_playlist_type", "event",
@@ -185,6 +188,7 @@ func TestBuildArgs_EmptyVideoAudioCodecTreatedAsCopy(t *testing.T) {
 		"-map", "0:v:0", "-map", "0:a:0",
 		"-c:v", "copy",
 		"-c:a", "copy",
+		"-muxdelay", "0", "-muxpreload", "0", "-output_ts_offset", "10.000",
 		"-f", "hls",
 		"-hls_time", "6",
 		"-hls_playlist_type", "event",
@@ -244,5 +248,53 @@ func TestProgressiveArgs(t *testing.T) {
 	}
 	if strings.Contains(args, "hls") {
 		t.Errorf("hls muxer in progressive args: %s", args)
+	}
+}
+
+func TestBuildArgs_CopiedPictureIsCutAtTheKeyFramePlan(t *testing.T) {
+	req := Request{
+		InputPath: "in.mkv", VideoCodec: "copy", AudioCodec: "copy", Container: "ts",
+		StartTimeTicks: 500_230_000, StartNumber: 6,
+		Cuts: []int64{70230000, 520230000, 624400000, 1004400000},
+	}
+	got := strings.Join(buildArgs(req), " ")
+	if !strings.Contains(got, "-f segment -segment_times ") || !strings.Contains(got, "-segment_start_number 6") {
+		t.Fatalf("expected the segment muxer numbered from 6, got: %s", got)
+	}
+	if !strings.Contains(got, "-segment_times 62.018,72.435,110.435 ") {
+		t.Fatalf("cuts at or before the start must be left out and the rest shifted by 10 s, got: %s", got)
+	}
+	if !strings.Contains(got, "-ss 50.023 ") || !strings.Contains(got, "-output_ts_offset 60.023") {
+		t.Fatalf("seek and timestamp offset expected, got: %s", got)
+	}
+	// an encoded picture is cut by the HLS muxer on its grid, numbered from the start number
+	req.VideoCodec = "h264"
+	got = strings.Join(buildArgs(req), " ")
+	if strings.Contains(got, "-f segment") || !strings.Contains(got, "-f hls") || !strings.Contains(got, "-start_number 6") {
+		t.Fatalf("an encoded picture uses the hls muxer, got: %s", got)
+	}
+}
+
+func TestBuildArgs_SeekRoundsUpToTheMillisecond(t *testing.T) {
+	got := strings.Join(buildArgs(Request{InputPath: "in.mkv", VideoCodec: "copy", AudioCodec: "copy", StartTimeTicks: 300_234_500}), " ")
+	if !strings.HasPrefix(got, "-ss 30.024 ") {
+		t.Fatalf("a seek must not land before the key frame, got: %s", got)
+	}
+}
+
+func TestSegmentCuts(t *testing.T) {
+	// key frames of a file whose picture was cut at 0, 7, 13, 23.4, 31, 41.4, 50, 52, 62.4: the i-th
+	// segment closes at the first key frame at or after (i+1)*6 s that follows the last cut
+	kf := []float64{0.023, 7.023, 13.023, 23.44, 31.023, 41.44, 50.023, 52.023, 62.44}
+	want := []int64{70230000, 130230000, 234400000, 310230000, 414400000, 500230000, 520230000, 624400000}
+	got := SegmentCuts(kf, 6)
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("cuts: got %v want %v", got, want)
+	}
+	// a burst of key frames after a long gap: those before the next grid line are skipped
+	got = SegmentCuts([]float64{0, 10.44, 20.023, 21.023, 22.023, 23.023, 33.44}, 6)
+	want = []int64{104400000, 200230000, 210230000, 334400000}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("cuts: got %v want %v", got, want)
 	}
 }

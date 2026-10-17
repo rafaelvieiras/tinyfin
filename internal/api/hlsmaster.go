@@ -221,13 +221,20 @@ func audioCopyAllowed(a *storage.MediaStreamRef, q url.Values) bool {
 }
 
 // defaultAudioBandwidth is what the reference counts for an audio stream
-// that is not capped: 128 kb/s a channel up to 640 kb/s.
-func defaultAudioBandwidth(ch int) int {
-	b := 128000 * ch
-	if b > 640000 {
-		b = 640000
+// that is not capped: 128 kb/s a channel for one or two channels, two
+// channels' worth for three and four, 640 kb/s for six and more, and for a
+// source with exactly five channels (no LFE) that stays at five, 768 kb/s.
+// ch is the channel count the sound leaves with, src the source's.
+func defaultAudioBandwidth(ch, src int) int {
+	switch {
+	case ch <= 2:
+		return 128000 * ch
+	case ch <= 4:
+		return 256000
+	case ch == 5 && src == 5:
+		return 768000
 	}
-	return b
+	return 640000
 }
 
 // h264CodecString writes the avc1 codec string. A copied picture reports
@@ -393,8 +400,27 @@ func describeHLS(item storage.Item, q url.Values, vc, ac string, audioIdx *int) 
 		vbr = numParam(q, "videobitrate")
 	}
 	ch := audioChannels(a, q)
-	abr := defaultAudioBandwidth(ch)
-	if p := numParam(q, "audiobitrate"); p > 0 && p < abr {
+	src := 0
+	if a != nil && a.Channels != nil {
+		src = *a.Channels
+	}
+	if first, _, _ := strings.Cut(strings.ToLower(strings.ReplaceAll(q.Get("audiocodec"), " ", "")), ","); first == "mp3" {
+		ch = min(ch, 2) // the first codec asked for is stereo at most
+	}
+	abr := defaultAudioBandwidth(ch, src)
+	if m.acodec == "flac" {
+		// flac is counted at the rate of the source's own sound, whatever the
+		// limits (checked against the reference for flac and other sources)
+		if a != nil && a.BitRate != nil && *a.BitRate > 0 {
+			abr = int(*a.BitRate)
+		} else {
+			abr = 192000 * ch
+		}
+		// a flac track that has to be re-encoded writes no audio codec
+		if !m.audioCopy && a != nil && strings.EqualFold(a.Codec, "flac") {
+			m.acodec = ""
+		}
+	} else if p := numParam(q, "audiobitrate"); p > 0 && p < abr {
 		abr = p
 	}
 	m.bandwidth = vbr + abr
