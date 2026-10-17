@@ -6,8 +6,10 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
+	"github.com/rafaelvieiras/tinyfin/internal/deviceprofile"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
 
@@ -126,4 +128,44 @@ func (s *Server) handleItemDownload(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", "attachment; filename=\""+name+"\"; filename*=UTF-8''"+
 		strings.ReplaceAll(url.PathEscape(name), "(", "%28"))
 	http.ServeContent(w, r, "", fi.ModTime(), f)
+}
+
+// playbackFlags are the three transcode permissions of a user. A caller
+// without a user (API key) is not restricted.
+type playbackFlags struct{ video, remux, audio bool }
+
+func playbackFlagsFor(ac *AuthContext) playbackFlags {
+	if ac == nil || !ac.Authenticated || ac.IsAPIKey {
+		return playbackFlags{true, true, true}
+	}
+	p := storedUserPolicy(ac.User)
+	return playbackFlags{p.EnableVideoPlaybackTranscoding, p.EnablePlaybackRemuxing, p.EnableAudioPlaybackTranscoding}
+}
+
+// remoteBitrateCap applies the caller's RemoteClientBitrateLimit to the
+// bitrate the client asked for (0 = no limit asked): a remote caller never
+// gets more than the limit (policy.remote.R1). Local callers, API keys and a
+// limit of 0 leave it alone.
+func (s *Server) remoteBitrateCap(r *http.Request, requested int64) int64 {
+	ac, _ := AuthFromContext(r.Context())
+	if ac == nil || !ac.Authenticated || ac.IsAPIKey || s.fromLocalNetwork(r) {
+		return requested
+	}
+	limit := int64(storedUserPolicy(ac.User).RemoteClientBitrateLimit)
+	if limit > 0 && (requested <= 0 || limit < requested) {
+		return limit
+	}
+	return requested
+}
+
+// requestedMaxBitrate is the bitrate ceiling a PlaybackInfo request states:
+// the body member, else the query parameter, else the device profile's.
+func requestedMaxBitrate(r *http.Request, body playbackInfoRequestBody, profile deviceprofile.DeviceProfile) int64 {
+	if body.MaxStreamingBitrate != nil {
+		return *body.MaxStreamingBitrate
+	}
+	if n, err := strconv.ParseInt(caseInsensitiveQuery(r).Get("maxstreamingbitrate"), 10, 64); err == nil {
+		return n
+	}
+	return profile.MaxStreamingBitrate
 }

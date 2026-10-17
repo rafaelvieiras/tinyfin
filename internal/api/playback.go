@@ -285,6 +285,15 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 		source := baseMediaSourceInfo(item, container)
 		source.SupportsDirectPlay, source.SupportsDirectStream, source.SupportsTranscoding = true, true, true
 		source.TranscodingSubProtocol = "http"
+		if ac, _ := AuthFromContext(r.Context()); item.RemoteURL != "" && ac != nil && ac.Authenticated && !ac.IsAPIKey &&
+			storedUserPolicy(ac.User).ForceRemoteSourceTranscoding {
+			// policy.remote.R2: a user who must have remote sources
+			// transcoded is not offered the address, whenever the client
+			// states a profile.
+			if _, inline := s.profileFor(r, readPlaybackBody(r)); inline {
+				s.forceRemoteTranscode(&source, item, ac.Token)
+			}
+		}
 		writeJSON(w, http.StatusOK, playbackInfoResponse{PlaySessionID: randomID(), MediaSources: []mediaSourceInfoDto{source}})
 		return
 	}
@@ -331,6 +340,17 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 			opts.NoDirectPlay = true
 		}
 	}
+	// A bitrate ceiling (the request's or profile's, capped by the caller's
+	// RemoteClientBitrateLimit when remote) that the file's own rate
+	// exceeds ends Direct Play; the picture may still be copied.
+	overBitrate, bitrateOnly := false, false
+	if inline {
+		if maxBR := s.remoteBitrateCap(r, requestedMaxBitrate(r, body, profile)); maxBR > 0 && audioSourceBitrate(item) > maxBR {
+			// only the rate keeps it from Direct Play: it is the one reason
+			bitrateOnly = playback.DecideWith(item, profile, opts).Mode == playback.ModeDirectPlay
+			overBitrate, opts.NoDirectPlay = true, true
+		}
+	}
 	decision := playback.DecideWith(item, profile, opts)
 	if inline && hasSub && !opts.BurnSubtitle && decision.Mode != playback.ModeDirectPlay && decision.Mode != playback.ModeNone &&
 		playback.DeliverSubtitle(subTrack, profile.SubtitleProfiles, false).Method == "Encode" {
@@ -341,6 +361,12 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	if hasSub && inline {
 		subMethod = playback.DeliverSubtitle(subTrack, profile.SubtitleProfiles, decision.Mode == playback.ModeDirectPlay).Method
+	}
+	if overBitrate && decision.Mode != playback.ModeDirectPlay {
+		if bitrateOnly {
+			decision.Reasons = nil
+		}
+		decision.Reasons = append(decision.Reasons, "ContainerBitrateExceedsLimit")
 	}
 	resp := playbackInfoResponse{PlaySessionID: randomID()}
 
@@ -359,6 +385,19 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 			source.SupportsDirectStream = true
 		}
 		source.TranscodingSubProtocol = "http"
+		if item.Type != storage.ItemTypeAudio {
+			// policy.playback.R5: a video the profile plays as it is also
+			// lists what the flags leave on the table.
+			ac, _ := AuthFromContext(r.Context())
+			f := playbackFlagsFor(ac)
+			if inline {
+				source.SupportsDirectStream = true
+				source.SupportsTranscoding = f.video || f.remux || f.audio
+			} else {
+				source.SupportsDirectStream = f.remux
+				source.SupportsTranscoding = f.video
+			}
+		}
 		resp.MediaSources = append([]mediaSourceInfoDto{source}, s.versionSources(r.Context(), item)...)
 
 	case playback.ModeRemux, playback.ModeDirectStream, playback.ModeTranscode:
@@ -371,6 +410,34 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 		}
 		source.SupportsDirectStream = decision.Mode != playback.ModeTranscode && !opts.BurnSubtitle && !opts.NoDirectPlay
 		source.SupportsTranscoding = true
+		if ac, _ := AuthFromContext(r.Context()); ac != nil {
+			if f := playbackFlagsFor(ac); !f.video && !f.remux {
+				// policy.playback.R6: only audio transcoding is allowed, so
+				// the offer is the progressive stream, not HLS.
+				source.SupportsDirectStream = false
+				q := url.Values{
+					"MediaSourceId": {source.ID},
+					"PlaySessionId": {resp.PlaySessionID},
+				}
+				if audioIdx != nil {
+					q.Set("AudioStreamIndex", strconv.Itoa(*audioIdx))
+				}
+				if subIdx != nil && *subIdx >= 0 {
+					q.Set("SubtitleStreamIndex", strconv.Itoa(*subIdx))
+					q.Set("SubtitleMethod", "Encode")
+				}
+				if ac.Token != "" {
+					q.Set("ApiKey", ac.Token)
+				}
+				if len(decision.Reasons) > 0 {
+					q.Set("TranscodeReasons", strings.Join(decision.Reasons, ","))
+				}
+				source.TranscodingUrl = fmt.Sprintf("/Videos/%s/stream?%s", url.PathEscape(string(item.ID)), strings.ReplaceAll(q.Encode(), "%2C", ","))
+				source.TranscodingSubProtocol = "http"
+				resp.MediaSources = []mediaSourceInfoDto{source}
+				break
+			}
+		}
 		var token string
 		if ac, ok := AuthFromContext(r.Context()); ok && ac != nil {
 			token = ac.Token
@@ -485,7 +552,7 @@ func (s *Server) handleVideoStream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	item, err := s.store.GetItem(r.Context(), itemID)
-	if err != nil || !s.itemReadableByCaller(r, item) {
+	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -754,4 +821,28 @@ func (s *Server) applySubtitleDelivery(r *http.Request, src *mediaSourceInfoDto,
 			d.IsExternalURL = &f
 		}
 	}
+}
+
+// forceRemoteTranscode turns the offer for a remote (.strm address) source
+// into the progressive transcode the reference gives a user with
+// ForceRemoteSourceTranscoding.
+func (s *Server) forceRemoteTranscode(src *mediaSourceInfoDto, item storage.Item, token string) {
+	src.SupportsDirectPlay, src.SupportsDirectStream, src.SupportsTranscoding = false, false, true
+	q := url.Values{"MediaSourceId": {src.ID}, "Static": {"true"}}
+	for _, st := range item.MediaStreams {
+		switch {
+		case st.Type == storage.StreamTypeVideo && q.Get("VideoCodec") == "":
+			q.Set("VideoCodec", strings.ToLower(st.Codec))
+		case st.Type == storage.StreamTypeAudio && q.Get("AudioCodec") == "":
+			q.Set("AudioCodec", strings.ToLower(st.Codec))
+			q.Set("AudioStreamIndex", strconv.Itoa(st.Index))
+		}
+	}
+	q.Set("PlaySessionId", randomID())
+	if token != "" {
+		q.Set("ApiKey", token)
+	}
+	src.TranscodingUrl = fmt.Sprintf("/Videos/%s/stream.mp4?%s", url.PathEscape(string(item.ID)), q.Encode())
+	src.TranscodingContainer = "mp4"
+	src.TranscodingSubProtocol = "http"
 }

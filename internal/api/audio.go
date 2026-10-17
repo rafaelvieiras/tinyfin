@@ -86,10 +86,12 @@ func firstToken(list string) string {
 	return strings.ToLower(strings.TrimSpace(strings.Split(list, ",")[0]))
 }
 
-// loadStreamableTrack resolves {itemId} of an /Audio route.
-func (s *Server) loadStreamableTrack(w http.ResponseWriter, r *http.Request) (storage.Item, bool) {
+// loadStreamableTrack resolves {itemId} of an /Audio route. gate applies the
+// caller's library, tag and rating rules (policy.stream.R1: only the
+// universal route does; the stream and HLS routes serve any known track).
+func (s *Server) loadStreamableTrack(w http.ResponseWriter, r *http.Request, gate bool) (storage.Item, bool) {
 	item, err := s.store.GetItem(r.Context(), storage.ItemID(r.PathValue("itemId")))
-	if err != nil || !s.itemReadableByCaller(r, item) {
+	if err != nil || (gate && !s.itemReadableByCaller(r, item)) {
 		w.WriteHeader(http.StatusNotFound)
 		return storage.Item{}, false
 	}
@@ -168,7 +170,7 @@ func (s *Server) handleAudioStream(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	item, ok := s.loadStreamableTrack(w, r)
+	item, ok := s.loadStreamableTrack(w, r, false)
 	if !ok {
 		return
 	}
@@ -206,7 +208,7 @@ func universalBitrate(q url.Values) int {
 // is when its container is one of Container (and fits MaxStreamingBitrate),
 // else an encode to TranscodingContainer, over http or as an HLS playlist.
 func (s *Server) handleAudioUniversal(w http.ResponseWriter, r *http.Request) {
-	item, ok := s.loadStreamableTrack(w, r)
+	item, ok := s.loadStreamableTrack(w, r, true)
 	if !ok {
 		return
 	}
@@ -306,7 +308,7 @@ func (s *Server) ensureAudioJob(r *http.Request, item storage.Item, t audioTarge
 // handleAudioHLSMaster is GET /Audio/{itemId}/master.m3u8, the TranscodingUrl
 // PlaybackInfo gives for an HLS profile.
 func (s *Server) handleAudioHLSMaster(w http.ResponseWriter, r *http.Request) {
-	item, ok := s.loadStreamableTrack(w, r)
+	item, ok := s.loadStreamableTrack(w, r, false)
 	if !ok {
 		return
 	}
@@ -316,7 +318,7 @@ func (s *Server) handleAudioHLSMaster(w http.ResponseWriter, r *http.Request) {
 
 // handleAudioHLSPlaylist is GET /Audio/{itemId}/main.m3u8.
 func (s *Server) handleAudioHLSPlaylist(w http.ResponseWriter, r *http.Request) {
-	item, ok := s.loadStreamableTrack(w, r)
+	item, ok := s.loadStreamableTrack(w, r, false)
 	if !ok {
 		return
 	}
@@ -358,14 +360,7 @@ func (s *Server) audioPlaybackInfo(w http.ResponseWriter, r *http.Request, item 
 		return
 	}
 
-	maxBR := int64(0)
-	if body.MaxStreamingBitrate != nil {
-		maxBR = *body.MaxStreamingBitrate
-	} else if n, err := strconv.ParseInt(caseInsensitiveQuery(r).Get("maxstreamingbitrate"), 10, 64); err == nil {
-		maxBR = n
-	} else {
-		maxBR = profile.MaxStreamingBitrate
-	}
+	maxBR := s.remoteBitrateCap(r, requestedMaxBitrate(r, body, profile))
 	codec := ""
 	for _, st := range item.MediaStreams {
 		if st.Type == storage.StreamTypeAudio {

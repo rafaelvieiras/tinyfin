@@ -140,7 +140,7 @@ func (s *Server) ensureTranscodeJob(r *http.Request, h hlsRequest) (*transcode.J
 func (s *Server) handleHLSMaster(w http.ResponseWriter, r *http.Request) {
 	itemID := storage.ItemID(r.PathValue("itemId"))
 	item, err := s.store.GetItem(r.Context(), itemID)
-	if err != nil || !s.itemReadableByCaller(r, item) {
+	if err != nil { // policy.stream.R1: no library/tag/rating gate
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -176,7 +176,7 @@ func (s *Server) handleHLSMaster(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleHLSPlaylist(w http.ResponseWriter, r *http.Request) {
 	itemID := storage.ItemID(r.PathValue("itemId"))
 	item, err := s.store.GetItem(r.Context(), itemID)
-	if err != nil || !s.itemReadableByCaller(r, item) {
+	if err != nil { // policy.stream.R1: no library/tag/rating gate
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}

@@ -222,10 +222,6 @@ func (s *Server) itemsScopeFor(ctx context.Context, u storage.User) (itemsScope,
 	for _, id := range p.EnabledFolders {
 		enabled[strings.ToLower(id)] = true
 	}
-	blocked := map[string]bool{}
-	for _, id := range p.BlockedMediaFolders {
-		blocked[strings.ToLower(id)] = true
-	}
 	var plLib *storage.Library
 	for i, lib := range libs {
 		id := strings.ToLower(string(lib.ID))
@@ -238,7 +234,8 @@ func (s *Server) itemsScopeFor(ctx context.Context, u storage.User) (itemsScope,
 			continue
 		}
 		if p.EnableAllFolders {
-			allowed = !blocked[id]
+			// BlockedMediaFolders is stored but has no effect (policy.folders.R2)
+			allowed = true
 		} else {
 			allowed = enabled[id]
 		}
