@@ -739,6 +739,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /Videos/{itemId}/Trickplay/{width}/tiles.m3u8", requireAuth(s.handleTrickplayTiles))
 	s.mux.HandleFunc("GET /Videos/{itemId}/Trickplay/{width}/{file}", requireAuth(s.handleTrickplaySheet))
 	s.mux.HandleFunc("GET /Videos/{itemId}/master.m3u8", requireAuth(s.handleHLSMaster))
+	s.mux.HandleFunc("GET /Videos/{itemId}/hls1/{playlistId}/{segment}", requireAuth(s.handleHLSNumberedSegment))
 	s.mux.HandleFunc("GET /Videos/{itemId}/main.m3u8", requireAuth(s.handleHLSPlaylist))
 	// http.ServeMux wildcards must occupy a whole path segment — "stream.
 	// {container}" mixes a literal suffix with a wildcard in one segment,

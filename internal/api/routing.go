@@ -192,6 +192,8 @@ var routePaths = []string{
 	"/Videos/{itemId}/Trickplay/{width}/tiles.m3u8",
 	"/Videos/{itemId}/Trickplay/{width}/{file}",
 	"/Videos/{itemId}/master.m3u8",
+	// 6 segments like the Trickplay routes above; "hls1" is the literal.
+	"/Videos/{itemId}/hls1/{playlistId}/{segment}",
 	"/Videos/{itemId}/main.m3u8",
 	// Subtitle routes: 7 and 8 segments (including the leading empty split
 	// element), 4 for the upload/remote routes; the literal "Subtitles"

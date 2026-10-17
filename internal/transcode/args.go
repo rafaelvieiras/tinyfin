@@ -33,6 +33,15 @@ const ticksPerSecond = 10_000_000
 // flags like -b:v have no meaning applied to a copied stream).
 func buildArgs(req Request) []string {
 	args := encodeArgs(req)
+	if v := req.VideoCodec; v != "" && v != "copy" && v != "none" {
+		// cut on the segment grid, so the media playlist can be laid out
+		// before the first segment exists
+		seg := req.SegmentSeconds
+		if seg <= 0 {
+			seg = defaultSegmentSeconds
+		}
+		args = append(args, "-force_key_frames", fmt.Sprintf("expr:gte(t,n_forced*%d)", seg))
+	}
 	return append(args, hlsOutputArgs(req)...)
 }
 
@@ -109,7 +118,17 @@ func encodeArgs(req Request) []string {
 		// this flag set and is left to its own codec-specific defaults —
 		// out of scope until a broader hardware-accelerated ladder lands.
 		if req.VideoCodec == "h264" {
-			args = append(args, "-preset", "veryfast", "-profile:v", "high", "-level", "4.1")
+			profile, level := "high", "4.1"
+			switch req.H264Profile {
+			case "baseline", "constrainedbaseline":
+				profile = "baseline"
+			case "main", "high":
+				profile = req.H264Profile
+			}
+			if req.H264Level > 0 {
+				level = fmt.Sprintf("%.1f", float64(min(req.H264Level, 51))/10)
+			}
+			args = append(args, "-preset", "veryfast", "-profile:v", profile, "-level", level)
 		}
 		if req.VideoBitrate > 0 {
 			bitrate := strconv.Itoa(req.VideoBitrate)
@@ -208,6 +227,9 @@ func videoFilter(req Request, burn bool) string {
 		if seek {
 			chain = append(chain, "setpts=PTS-STARTPTS")
 		}
+	}
+	if req.MaxWidth > 0 && !(burn && req.Subtitle.Bitmap) {
+		chain = append(chain, fmt.Sprintf("scale='min(iw,%d)':-2", req.MaxWidth))
 	}
 	if req.MaxHeight > 0 && !(burn && req.Subtitle.Bitmap) {
 		chain = append(chain, fmt.Sprintf("scale=-2:%d", req.MaxHeight))

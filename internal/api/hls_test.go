@@ -76,7 +76,7 @@ func TestHLSTranscodeEndToEnd(t *testing.T) {
 		return resp
 	}
 
-	masterResp := authedGet("/Videos/" + string(item.ID) + "/master.m3u8")
+	masterResp := authedGet("/Videos/" + string(item.ID) + "/master.m3u8?MediaSourceId=" + string(item.ID))
 	defer masterResp.Body.Close()
 	if masterResp.StatusCode != http.StatusOK {
 		t.Fatalf("master.m3u8 status = %d, want 200", masterResp.StatusCode)
@@ -109,7 +109,7 @@ func TestHLSTranscodeEndToEnd(t *testing.T) {
 	scanner := bufio.NewScanner(playlistResp.Body)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if strings.HasSuffix(line, ".ts") {
+		if strings.HasPrefix(line, "hls1/main/") {
 			segmentName = line
 			break
 		}
@@ -121,8 +121,8 @@ func TestHLSTranscodeEndToEnd(t *testing.T) {
 	// not an absolute filesystem path — see internal/transcode's
 	// buildArgs doc comment for why this matters: a real HLS client
 	// resolves segment URIs relative to main.m3u8's own URL.
-	if strings.Contains(segmentName, "/") {
-		t.Fatalf("segment reference %q is not a plain relative filename", segmentName)
+	if !strings.HasPrefix(segmentName, "hls1/main/0.ts?") || !strings.Contains(segmentName, "runtimeTicks=0&actualSegmentLengthTicks=") {
+		t.Fatalf("segment reference %q is not hls1/main/0.ts with its tick parameters", segmentName)
 	}
 
 	segResp := authedGet("/Videos/" + string(item.ID) + "/" + segmentName)
@@ -203,7 +203,7 @@ func TestHLSTranscodeQueryOnlyAuth(t *testing.T) {
 		return resp
 	}
 
-	masterResp := get(ts.URL + "/Videos/" + string(item.ID) + "/master.m3u8?ApiKey=" + token)
+	masterResp := get(ts.URL + "/Videos/" + string(item.ID) + "/master.m3u8?MediaSourceId=" + string(item.ID) + "&ApiKey=" + token)
 	defer masterResp.Body.Close()
 	if masterResp.StatusCode != http.StatusOK {
 		t.Fatalf("master.m3u8 status = %d, want 200", masterResp.StatusCode)
@@ -241,7 +241,7 @@ func TestHLSTranscodeQueryOnlyAuth(t *testing.T) {
 	scanner = bufio.NewScanner(strings.NewReader(string(playlistBody)))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if strings.Contains(line, ".ts") {
+		if strings.HasPrefix(line, "hls1/main/") {
 			segmentLine = line
 			break
 		}
@@ -260,11 +260,10 @@ func TestHLSTranscodeQueryOnlyAuth(t *testing.T) {
 	}
 }
 
-// TestHLSMasterNotFoundForDirectPlayableItem confirms master.m3u8 refuses
-// to start a transcode job for an item Decide would send through Direct
-// Play instead — the HLS routes exist only for the other three modes
-// (playback.go's handleVideoStream serves Direct Play directly).
-func TestHLSMasterNotFoundForDirectPlayableItem(t *testing.T) {
+// TestHLSMasterRemuxesDirectPlayableItem confirms master.m3u8 answers for an
+// item Decide would send through Direct Play: the playlists then carry the
+// streams as they are (both copied), as the reference does.
+func TestHLSMasterRemuxesDirectPlayableItem(t *testing.T) {
 	ts, st := newTestServer(t)
 	user := createTestUser(t, st, "kian", "kianpass")
 	token := loginToken(t, ts.URL, user.Name, "kianpass")
@@ -282,14 +281,18 @@ func TestHLSMasterNotFoundForDirectPlayableItem(t *testing.T) {
 		},
 	})
 
-	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/Videos/"+string(item.ID)+"/master.m3u8", nil)
+	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/Videos/"+string(item.ID)+"/master.m3u8?MediaSourceId="+string(item.ID), nil)
 	req.Header.Set("Authorization", `MediaBrowser Token="`+token+`"`)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("GET master.m3u8: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusNotFound {
-		t.Fatalf("status = %d, want 404", resp.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	if !strings.Contains(string(body), "AudioCodec=copy") {
+		t.Fatalf("variant link does not copy the audio:\n%s", body)
 	}
 }

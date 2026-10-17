@@ -95,15 +95,21 @@ func (c Config) baseDir() string {
 // copy only → Direct Stream; neither copy → Transcode), matching how
 // buildArgs actually has to branch to build a correct command line anyway.
 type Request struct {
-	InputPath      string // source media file, read-only
-	VideoCodec     string // target video codec, or "copy" for Direct Stream/Remux
-	AudioCodec     string // target audio codec, or "copy" for Remux
-	Container      string // target segment container, e.g. "ts"
-	VideoBitrate   int    // bits/sec, 0 = unset/unbounded
-	AudioBitrate   int    // bits/sec, 0 = unset/unbounded
-	MaxHeight      int    // 0 = no scaling
-	StartTimeTicks int64  // seek offset, 100ns ticks (Jellyfin's tick unit), 0 = from start
-	SegmentSeconds int    // HLS segment target duration, 0 = package default (6s)
+	InputPath    string // source media file, read-only
+	VideoCodec   string // target video codec, or "copy" for Direct Stream/Remux
+	AudioCodec   string // target audio codec, or "copy" for Remux
+	Container    string // target segment container, e.g. "ts"
+	VideoBitrate int    // bits/sec, 0 = unset/unbounded
+	AudioBitrate int    // bits/sec, 0 = unset/unbounded
+	MaxHeight    int    // 0 = no scaling
+	MaxWidth     int    // 0 = no width limit (the picture is scaled down to it)
+	// H264Profile ("baseline", "constrainedbaseline", "main", "high") and
+	// H264Level (the level times ten, 41 = 4.1) pin the encoder to what the
+	// playlists announce; empty/0 keeps the default (high, 4.1).
+	H264Profile    string
+	H264Level      int
+	StartTimeTicks int64 // seek offset, 100ns ticks (Jellyfin's tick unit), 0 = from start
+	SegmentSeconds int   // HLS segment target duration, 0 = package default (6s)
 
 	// AudioStreamIndex is the index, within InputPath, of the audio stream
 	// to map (ffmpeg's "0:N"); nil means the file's first audio stream.

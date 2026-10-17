@@ -9,10 +9,14 @@ package api
 import (
 	"context"
 	"fmt"
+	"io"
+	"math"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -68,13 +72,17 @@ func (s *Server) resolveHLS(r *http.Request, item storage.Item) hlsRequest {
 
 	dec := playback.DecideWith(item, profile, playback.Options{AudioStreamIndex: audioIdx, BurnSubtitle: burn})
 	if vcq, acq := q.Get("videocodec"), q.Get("audiocodec"); vcq != "" || acq != "" {
-		vc := pickTargetCodec(vcq, sourceCodec(item, storage.StreamTypeVideo, nil), burn)
-		ac := pickTargetCodec(acq, sourceCodec(item, storage.StreamTypeAudio, audioIdx), false)
+		video, audio := streamsFor(item, audioIdx)
+		vc := planVideoCodec(vcq, video, q, burn)
+		ac := planAudioCodec(acq, audio, q)
 		dec = playback.Decision{Mode: playback.ModeTranscode, Container: hlsContainer(profile, q.Get("segmentcontainer")), VideoCodec: vc, AudioCodec: ac}
 		if vc == "copy" {
 			dec.Mode = playback.ModeDirectStream
 		}
-	} else if c := q.Get("segmentcontainer"); c != "" && dec.Mode != playback.ModeNone && dec.Mode != playback.ModeDirectPlay {
+	} else if dec.Mode == playback.ModeNone || dec.Mode == playback.ModeDirectPlay {
+		// Nothing asks for a conversion: the playlists carry the streams as they are.
+		dec = playback.Decision{Mode: playback.ModeRemux, Container: hlsContainer(profile, q.Get("segmentcontainer")), VideoCodec: "copy", AudioCodec: "copy"}
+	} else if c := q.Get("segmentcontainer"); c != "" {
 		dec.Container = c
 	}
 	if dec.Mode != playback.ModeNone && dec.Mode != playback.ModeDirectPlay {
@@ -87,6 +95,24 @@ func (s *Server) resolveHLS(r *http.Request, item storage.Item) hlsRequest {
 		VideoCodec: dec.VideoCodec,
 		AudioCodec: dec.AudioCodec,
 		Container:  dec.Container,
+
+		VideoBitrate: numParam(q, "videobitrate"),
+		AudioBitrate: numParam(q, "audiobitrate"),
+
+		SegmentSeconds: hlsSegmentSeconds(q),
+	}
+	if dec.VideoCodec != "copy" && dec.VideoCodec != "none" {
+		out.req.MaxWidth = effectiveMaxWidth(q)
+	}
+	if dec.VideoCodec == "h264" {
+		out.req.H264Profile = firstKnownProfile(q.Get("h264-profile"), "baseline", "constrainedbaseline", "main", "high")
+		if out.req.H264Profile == "" {
+			out.req.H264Profile = "constrainedbaseline"
+		}
+		out.req.H264Level = numParam(q, "h264-level")
+		if out.req.H264Level == 0 {
+			out.req.H264Level = 41
+		}
 	}
 	if audioIdx != nil && streamOfType(item.MediaStreams, *audioIdx, storage.StreamTypeAudio) {
 		f := fileStreamIndex(item, *audioIdx)
@@ -123,90 +149,288 @@ func (s *Server) ensureTranscodeJob(r *http.Request, h hlsRequest) (*transcode.J
 	return s.transcode.Start(context.Background(), h.key, h.req)
 }
 
-// handleHLSMaster is GET /Videos/{itemId}/master.m3u8 — the entry point a
-// real client fetches first to begin HLS playback (docs/04's Playback
-// negotiation contract; route shape confirmed against the published
-// @jellyfin/sdk client per docs/04's secondary-verification allowance,
-// since the OpenAPI schema itself omits the DynamicHls routes — a known
-// upstream gap, not something this project's own testing missed). This is
-// also where the transcode job actually starts — see ensureTranscodeJob.
-//
-// Tinyfin produces exactly one rendition per item (no ABR ladder — out of
-// scope for this slice, see ROADMAP.md), so the master playlist always
-// points at a single variant (main.m3u8) rather than the multiple
-// BANDWIDTH-tiered entries a real ABR-capable server would offer.
-func (s *Server) handleHLSMaster(w http.ResponseWriter, r *http.Request) {
-	itemID := storage.ItemID(r.PathValue("itemId"))
-	item, err := s.store.GetItem(r.Context(), itemID)
-	if err != nil { // policy.stream.R1: no library/tag/rating gate
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
+// writeHLSFailure is the opaque plain-text failure the reference answers an
+// HLS request it cannot serve with.
+func writeHLSFailure(w http.ResponseWriter, status int) {
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(status)
+	_, _ = w.Write([]byte("Error processing request."))
+}
 
-	h := s.resolveHLS(r, item)
-	if h.decision.Mode == playback.ModeNone || h.decision.Mode == playback.ModeDirectPlay {
-		// Direct Play never reaches HLS at all (handleVideoStream serves
-		// it instead); ModeNone has no compatible source to transcode
-		// either.
-		w.WriteHeader(http.StatusNotFound)
+// hlsSegmentSeconds is the segment length a request asks for (default 6).
+func hlsSegmentSeconds(q url.Values) int {
+	if n := numParam(q, "segmentlength"); n > 0 {
+		return n
+	}
+	return 6
+}
+
+// hlsPreflight validates what the master and media playlists share
+// (playback.hls.R6): the item id, the numeric query values and, for the
+// master, the media source. It writes the failure and returns false when
+// the request cannot be served.
+func (s *Server) hlsPreflight(w http.ResponseWriter, r *http.Request, needSource bool) (storage.Item, bool) {
+	rawID := r.PathValue("itemId")
+	id, ok := normalizeGUID(rawID)
+	if !ok {
+		writeInvalidID(w, "itemId", rawID)
+		return storage.Item{}, false
+	}
+	q := caseInsensitiveQuery(r)
+	errs := map[string][]string{}
+	for _, f := range [][2]string{{"segmentlength", "segmentLength"}, {"starttimeticks", "startTimeTicks"}, {"audiostreamindex", "audioStreamIndex"}, {"subtitlestreamindex", "subtitleStreamIndex"}} {
+		if v := q.Get(f[0]); v != "" {
+			if _, err := strconv.ParseInt(strings.TrimSpace(v), 10, 64); err != nil {
+				errs[f[1]] = []string{"The value '" + v + "' is not valid."}
+			}
+		}
+	}
+	if needSource && q.Get("mediasourceid") == "" {
+		errs["mediaSourceId"] = []string{"The mediaSourceId field is required."}
+	}
+	if len(errs) > 0 {
+		writeValidationErrors(w, errs)
+		return storage.Item{}, false
+	}
+	if id == "00000000000000000000000000000000" {
+		writeHLSFailure(w, http.StatusBadRequest)
+		return storage.Item{}, false
+	}
+	item, err := s.store.GetItem(r.Context(), storage.ItemID(id))
+	if err != nil { // policy.stream.R1: no library/tag/rating gate
+		writeHLSFailure(w, http.StatusNotFound)
+		return storage.Item{}, false
+	}
+	if raw := q.Get("mediasourceid"); raw != "" {
+		norm, ok := normalizeGUID(raw)
+		if !ok {
+			writeHLSFailure(w, http.StatusInternalServerError)
+			return storage.Item{}, false
+		}
+		if norm != string(item.ID) {
+			if _, ok := s.versionFor(r.Context(), r, item); !ok {
+				writeHLSFailure(w, http.StatusBadRequest)
+				return storage.Item{}, false
+			}
+		}
+	}
+	if !item.HasMediaFile() {
+		writeHLSFailure(w, http.StatusBadRequest)
+		return storage.Item{}, false
+	}
+	return item, true
+}
+
+// requestAPIKey is the token the follow-up links of a playlist carry: the
+// request's own ApiKey, else the token it was authenticated with.
+func requestAPIKey(r *http.Request, q url.Values) string {
+	if k := q.Get("apikey"); k != "" {
+		return k
+	}
+	if ac, ok := AuthFromContext(r.Context()); ok && ac != nil {
+		return ac.Token
+	}
+	return ""
+}
+
+// handleHLSMaster is GET /Videos/{itemId}/master.m3u8 — the entry point a
+// real client fetches first to begin HLS playback. It is also where the
+// transcode job starts (ensureTranscodeJob). Tinyfin produces one rendition
+// per item, so the playlist has a single variant (playback.hls.R2): the
+// subtitle group when the request's SubtitleMethod is Hls, then the variant
+// with its bandwidth, codecs, resolution and frame rate.
+func (s *Server) handleHLSMaster(w http.ResponseWriter, r *http.Request) {
+	item, ok := s.hlsPreflight(w, r, true)
+	if !ok {
 		return
 	}
+	q := caseInsensitiveQuery(r)
+	h := s.resolveHLS(r, item)
 	if _, err := s.ensureTranscodeJob(r, h); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
+	audioIdx, subIdx := atoiPtr(q.Get("audiostreamindex")), atoiPtr(q.Get("subtitlestreamindex"))
 	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
-	// BANDWIDTH is a required EXT-X-STREAM-INF attribute; this project
-	// does not compute a real per-item estimate (no MaxStreamingBitrate
-	// negotiation — see playbackInfoRequestBody's doc comment in
-	// playback.go) so a fixed, conservative-high placeholder is reported
-	// instead of omitting the attribute outright, which would make the
-	// playlist invalid.
-	fmt.Fprintf(w, "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=8000000\nmain.m3u8?%s\n", r.URL.RawQuery)
+	_, _ = io.WriteString(w, buildMaster(h.item, q, r.URL.RawQuery, requestAPIKey(r, q), h.decision.VideoCodec, h.decision.AudioCodec, audioIdx, subIdx))
 }
 
-// handleHLSPlaylist is GET /Videos/{itemId}/main.m3u8 — the media playlist
-// jellyfin-ffmpeg writes progressively as it produces segments
-// (internal/transcode.Job.PlaylistPath). Also calls ensureTranscodeJob
-// itself (not just handleHLSMaster) so a client that requests this
-// directly still works — see resolveTranscodeDecision's doc comment.
+// handleHLSPlaylist is GET /Videos/{itemId}/main.m3u8 — the VOD media
+// playlist (playback.hls.R3). The segment list is laid out on the grid of
+// SegmentLength seconds over the run time; a picture that is copied has its
+// cuts at key frames, so its list is the one ffmpeg wrote once it finished.
+// Also starts the job, so a client that requests this directly still works.
 func (s *Server) handleHLSPlaylist(w http.ResponseWriter, r *http.Request) {
-	itemID := storage.ItemID(r.PathValue("itemId"))
-	item, err := s.store.GetItem(r.Context(), itemID)
-	if err != nil { // policy.stream.R1: no library/tag/rating gate
-		w.WriteHeader(http.StatusNotFound)
+	item, ok := s.hlsPreflight(w, r, false)
+	if !ok {
 		return
 	}
-
+	q := caseInsensitiveQuery(r)
 	h := s.resolveHLS(r, item)
-	if h.decision.Mode == playback.ModeNone || h.decision.Mode == playback.ModeDirectPlay {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
 	job, err := s.ensureTranscodeJob(r, h)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	if !waitForPlaylist(job, hlsPlaylistWaitTimeout) {
-		// Either ffmpeg crashed before writing anything (job.Err() != nil)
-		// or it's simply still starting up past the wait budget — either
-		// way there is nothing servable yet, and a real client backs off
-		// and retries on a non-2xx response rather than hanging itself.
-		w.WriteHeader(http.StatusServiceUnavailable)
-		return
+	seg := hlsSegmentSeconds(q)
+	var durations []float64
+	if h.item.RunTimeTicks != nil {
+		durations = gridDurations(*h.item.RunTimeTicks, seg)
 	}
-
-	playlist, err := os.ReadFile(job.PlaylistPath())
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	if h.decision.VideoCodec == "copy" || len(durations) == 0 {
+		if !waitForFinished(job, 2*hlsPlaylistWaitTimeout) {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		if data, err := os.ReadFile(job.PlaylistPath()); err == nil {
+			durations = playlistDurations(data)
+		}
+		if len(durations) == 0 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
 	}
-
+	target := seg
+	for _, d := range durations {
+		if c := int(math.Ceil(d)); c > target {
+			target = c
+		}
+	}
 	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
-	w.Write(rewritePlaylistSegmentQueries(playlist, r.URL.RawQuery))
+	_, _ = io.WriteString(w, buildMediaPlaylist(durations, target, h.decision.Container, r.URL.RawQuery))
+}
+
+// waitForFinished blocks until the job's playlist is complete (ffmpeg exited
+// and wrote it), the job fails or timeout elapses.
+func waitForFinished(job *transcode.Job, timeout time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+	for {
+		if job.Done() {
+			if job.Err() != nil {
+				return false
+			}
+			_, err := os.Stat(job.PlaylistPath())
+			return err == nil
+		}
+		if time.Now().After(deadline) {
+			return false
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
+// hlsSegmentWaitTimeout bounds how long a segment request waits for ffmpeg
+// to reach it.
+const hlsSegmentWaitTimeout = 60 * time.Second
+
+// handleHLSNumberedSegment is GET /Videos/{itemId}/hls1/{playlistId}/{N}.{ext},
+// the segments the media playlist names (playback.hls.R4). The transcode runs
+// from the start of the file: a segment is served once ffmpeg has finished
+// writing it, and a request for one further on waits for it.
+func (s *Server) handleHLSNumberedSegment(w http.ResponseWriter, r *http.Request) {
+	rawID := r.PathValue("itemId")
+	id, ok := normalizeGUID(rawID)
+	if !ok {
+		writeInvalidID(w, "itemId", rawID)
+		return
+	}
+	q := caseInsensitiveQuery(r)
+	errs := map[string][]string{}
+	for _, f := range [][2]string{{"runtimeticks", "runtimeTicks"}, {"actualsegmentlengthticks", "actualSegmentLengthTicks"}} {
+		v := q.Get(f[0])
+		if v == "" {
+			errs[f[1]] = []string{"The " + f[1] + " field is required."}
+		} else if _, err := strconv.ParseInt(v, 10, 64); err != nil {
+			errs[f[1]] = []string{"The value '" + v + "' is not valid."}
+		}
+	}
+	name := r.PathValue("segment")
+	num, _, _ := strings.Cut(name, ".")
+	n, err := strconv.Atoi(num)
+	if err != nil {
+		errs["segmentId"] = []string{"The value '" + num + "' is not valid."}
+	}
+	if len(errs) > 0 {
+		writeValidationErrors(w, errs)
+		return
+	}
+	if v := q.Get("starttimeticks"); v != "" && v != "0" {
+		writeHLSFailure(w, http.StatusBadRequest)
+		return
+	}
+	item, err := s.store.GetItem(r.Context(), storage.ItemID(id))
+	if err != nil || n < 0 {
+		writeHLSFailure(w, http.StatusNotFound)
+		return
+	}
+	h := s.resolveHLS(r, item)
+	job, err := s.ensureTranscodeJob(r, h)
+	if err != nil {
+		writeHLSFailure(w, http.StatusInternalServerError)
+		return
+	}
+	file := filepath.Join(job.Dir(), fmt.Sprintf("seg_%05d.%s", n, h.decision.Container))
+	next := filepath.Join(job.Dir(), fmt.Sprintf("seg_%05d.%s", n+1, h.decision.Container))
+	deadline := time.Now().Add(hlsSegmentWaitTimeout)
+	for {
+		_, errF := os.Stat(file)
+		_, errN := os.Stat(next)
+		if errF == nil && (errN == nil || job.Done()) {
+			break
+		}
+		if job.Done() && (job.Err() != nil || errF != nil) {
+			if errF == nil {
+				break
+			}
+			status := http.StatusNotFound
+			if job.Err() != nil {
+				status = http.StatusInternalServerError
+			}
+			writeHLSFailure(w, status)
+			return
+		}
+		if time.Now().After(deadline) || r.Context().Err() != nil {
+			writeHLSFailure(w, http.StatusServiceUnavailable)
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if strings.HasSuffix(name, ".ts") {
+		w.Header().Set("Content-Type", "video/mp2t")
+	}
+	http.ServeFile(w, r, file)
+}
+
+// planVideoCodec is the codec a TranscodingUrl's VideoCodec list resolves to:
+// "copy" when the picture can pass through (its codec is on the list and it
+// fits every limit the request names), else the first codec on the list
+// ("h264" when it is there or the list names none).
+func planVideoCodec(list string, v *storage.MediaStreamRef, q url.Values, noCopy bool) string {
+	if !noCopy && v != nil && (strings.TrimSpace(list) == "" || listHas(list, strings.ToLower(v.Codec))) && videoCopyAllowed(v, q) {
+		return "copy"
+	}
+	c := pickTargetCodec(list, "", true)
+	if c != "h264" && strings.Contains(","+strings.ToLower(strings.ReplaceAll(list, " ", ""))+",", ",vp9,") {
+		c = "vp9"
+	}
+	if c == "copy" {
+		return "h264"
+	}
+	return c
+}
+
+// planAudioCodec is planVideoCodec for the sound: copied when the codec is on
+// the list, the channel count and the bit rate fit.
+func planAudioCodec(list string, a *storage.MediaStreamRef, q url.Values) string {
+	if a != nil && (strings.TrimSpace(list) == "" || listHas(list, strings.ToLower(a.Codec))) && audioCopyAllowed(a, q) {
+		return "copy"
+	}
+	for _, c := range strings.Split(list, ",") {
+		if c = strings.ToLower(strings.TrimSpace(c)); c != "" && c != "copy" {
+			return c
+		}
+	}
+	return "aac"
 }
 
 // rewritePlaylistSegmentQueries appends rawQuery (this request's own

@@ -96,6 +96,7 @@ func TestBuildArgs_FullTranscode(t *testing.T) {
 		"-c:a", "aac",
 		"-b:a", "128000",
 		"-ac", "2",
+		"-force_key_frames", "expr:gte(t,n_forced*4)",
 		"-f", "hls",
 		"-hls_time", "4",
 		"-hls_playlist_type", "event",
