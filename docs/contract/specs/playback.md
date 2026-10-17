@@ -2,7 +2,7 @@
 
 What a client sees when it asks for a particular audio track or a subtitle that has to be rendered into the picture: what PlaybackInfo says (direct play or not, the `TranscodingUrl` and the parameters in it), and what the HLS routes of that URL answer. Probed on the 12.2 reference with online metadata off.
 
-Scenarios: [`../scenarios/playback.json`](../scenarios/playback.json). Fixture state: [`../fixtures.json`](../fixtures.json), media from `scripts/conformance-media.sh` (lazy library `AvTrack`).
+Scenarios: [`../scenarios/playback.json`](../scenarios/playback.json), [`../scenarios/playback2.json`](../scenarios/playback2.json) (the offer). Fixture state: [`../fixtures.json`](../fixtures.json), media from `scripts/conformance-media.sh` (lazy library `AvTrack`).
 
 ## Fixture facts this spec relies on
 
@@ -25,14 +25,25 @@ Scenarios: [`../scenarios/playback.json`](../scenarios/playback.json). Fixture s
 - **playback.subtitle.R4** When the source is transcoded for another reason (an audio track the profile cannot take), an embedded track whose delivery was `Embed` becomes `Encode` and the URL asks for it (`SubtitleMethod=Encode`, `SubtitleStreamIndex`). A `SubtitleStreamIndex` that names no stream is reported as sent in `DefaultSubtitleStreamIndex` and has no other effect.
 - **playback.subtitle.R5** A delivery of `Hls` for the selected track also ends direct play, with `SubtitleMethod=Hls`, `SubtitleStreamIndex` and `SubtitleCodecNotSupported`.
 
+## <a id="offer"></a>The offer: direct play or transcode
+
+What `POST /Items/{id}/PlaybackInfo` says about a video, from the device profile. Probed with a matrix of profiles (hls and http transcoding entries) against mp4, mkv, avi and hevc files, plus multi-audio and `.strm` sources.
+
+- **playback.offer.R1** A source the profile does not play as it is is never offered as direct stream: `SupportsDirectPlay` and `SupportsDirectStream` false, `SupportsTranscoding` true, also when only the container does not fit (codecs the profile takes) or only an audio track does not. `TranscodeReasons` lists what the profile cannot take (`ContainerNotSupported` alone for a container-only mismatch). The URL names the transcoding entry's codecs (`VideoCodec=h264`, never `copy`); what the transcode copies is decided when it runs (a codec the source already has is copied).
+- **playback.offer.R2** The transcoding entry is the first `Video` entry whose `Context` is not `Static`. Its `Protocol` (case-insensitive) `hls` gives `TranscodingSubProtocol` `hls`, `TranscodingContainer` the entry's container and `TranscodingUrl` `/videos/{id}/master.m3u8?...` (with `SegmentContainer`); anything else, a missing protocol included, gives `TranscodingSubProtocol` `http`, `TranscodingContainer` the entry's container and `/videos/{id}/stream.<container>?...` (no `SegmentContainer`).
+- **playback.offer.R3** A request without a `DeviceProfile` states no limit: direct play (`SupportsDirectPlay`, `SupportsDirectStream`, `SupportsTranscoding` true, no `TranscodingUrl`) for any container and codec, an audio track selection included. (The policy flags of `policy.md#playback` still apply.)
+- **playback.offer.R4** `.strm` files holding an address are offered through the profile like a file with the container and codecs the address holds (probed): direct play when the profile takes them, else the transcode offer, whose input is the address. A `.strm` with a local path, an empty one or an address that cannot be probed is offered as it is.
+- **playback.offer.R5** The members of the `TranscodingUrl` and their order: `DeviceId`, `MediaSourceId`, `VideoCodec` (the entry's list, commas kept), `AudioCodec` (the source's codec when the entry lists it, else the entry's list), `AudioStreamIndex`, `SubtitleStreamIndex` (when a subtitle is burned in or delivered through the playlist), `VideoBitrate` (the bit rate ceiling minus the audio rate), `AudioBitrate` (the track's, else 192000), `AudioSampleRate` (only when the audio codec is kept), `MaxFramerate`, `SegmentContainer`, `SegmentLength`, `MinSegments` (hls entries), `PlaySessionId`, `ApiKey`, `TranscodingMaxAudioChannels`, `EnableSubtitlesInManifest`, `EnableMpegtsM2TsMode`, `CopyTimestamps` (the entry's, `True` when set), `RequireAvc=false`, `EnableAudioVbrEncoding=true`, `Tag`, `SubtitleMethod`, then `<videocodec>-level`, `-videobitdepth`, `-profile`, `-audiochannels` (the last when the audio codec is kept) of the source, `<audiocodec>-profile` and `-audiochannels` (a `VideoAudio` codec profile's `AudioChannels` limit) when the audio codec is kept, and `TranscodeReasons`. The path is lower case with the dashed id. Values that vary (`PlaySessionId`, `Tag`, `ApiKey`, `DeviceId`) are only checked for presence.
+- **playback.offer.R6** `GET` of an `http` offer (and of any `Videos/{id}/stream` request that carries `TranscodeReasons` and no `Static=true`) answers `200` with the source transcoded as one progressive stream in the URL's container (`video/mp4`, `video/x-matroska`, ...), no range support.
+- Every video media source carries `Bitrate`, the rate of the file (`playback.offer.R5` scenario).
+
 ## Known differences
 
 Observed on the reference and deliberately not reproduced (not asserted by a scenario that runs against both):
 
+* **Offer values.** `AudioBitrate`, `MaxFramerate`, `<codec>-level` and `AudioSampleRate` come from what the scanner probed (an item scanned before this was kept has no frame rate or stream bit rate: the member is left out, the audio rate falls back to 192000). `Bitrate` of a `.strm` source is left out (the reference reports the probed rate of the address). `allowVideoStreamCopy`/`allowAudioStreamCopy` and `BreakOnNonKeyFrames` are not written.
 * **Playlist shape.** The reference writes a VOD playlist of `hls1/main/<n>.ts` segments with `runtimeTicks`/`actualSegmentLengthTicks` in their query; Tinyfin writes the playlist ffmpeg produces (`seg_00000.ts`, event type, `#EXT-X-ENDLIST` at the end).
-* **Parameters of the URL.** The reference's `TranscodingUrl` also carries bitrates, `h264-*`/`aac-*` limits, `Tag`, `DeviceId`, `RequireAvc` and similar; Tinyfin writes only `MediaSourceId`, `VideoCodec`, `AudioCodec`, `SegmentContainer`, `PlaySessionId`, `ApiKey`, `AudioStreamIndex`, `SubtitleStreamIndex`, `SubtitleMethod` and `TranscodeReasons`. The path is `/Videos/<id>/master.m3u8`, not lower case with dashes.
 * **Rendering.** The burn-in is `libass` through ffmpeg's `subtitles` filter for text tracks (embedded or sidecar files, rendered at the source resolution before the scale) and the `overlay` filter for bitmap tracks (PGS, DVD, DVB). Text uses fontconfig's system fonts, or `-fonts-dir` / `TINYFIN_FONTS_DIR` when set; the reference's server-wide fallback font setting is not used. The rendering is checked by Go tests with a real ffmpeg (text only), not by a scenario; bitmap tracks are covered by argument tests only.
-* **Direct stream.** A selected track whose audio only is unsupported is served by Tinyfin with the picture copied and `SupportsDirectStream` true; the reference reports `false` there.
 * **Subtitles inside the playlist.** Delivery `Hls` ends direct play but the playlists carry no subtitle group; the client gets the picture without that track.
 
 ## Rule → scenarios
@@ -46,3 +57,8 @@ Observed on the reference and deliberately not reproduced (not asserted by a sce
 | `playback.subtitle.R3`, `R4` | `playback.subtitle.no-transcode` |
 | `playback.subtitle.R5` | `playback.subtitle.hls` |
 | `playback.hls.R1` | `playback.hls.master` |
+| `playback.offer.R1` | `playback.offer.container-only` |
+| `playback.offer.R2`, `R6` | `playback.offer.http-profile` |
+| `playback.offer.R3` | `playback.offer.no-profile` |
+| `playback.offer.R4` | [untestable: needs a reachable HTTP media address; checked by hand against both servers] |
+| `playback.offer.R5` | `playback.offer.url-params` |

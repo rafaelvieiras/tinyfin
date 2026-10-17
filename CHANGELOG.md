@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- PlaybackInfo offer parity (`docs/contract/specs/playback.md#offer`, `playback2.json`, 4 new scenarios): a
+  transcoded source is never a direct stream (also for a container-only mismatch); a request without a
+  `DeviceProfile` direct plays any container; `.strm` addresses go through the profile; an `http`
+  transcoding entry gives a progressive `/videos/{id}/stream.<container>` that is served by a transcode;
+  `TranscodingUrl` carries the reference's members in its order (lower case dashed path, `DeviceId`, bit
+  rates, `Tag`, per-codec source limits, ...); video sources carry `Bitrate`. The scanner now records the
+  stream bit rate and frame rate.
 - Policy, second pass (`docs/contract/specs/policy.md`, `policy2.json`, 7 new scenarios): with only audio
   transcoding allowed a video gets a progressive `/Videos/{id}/stream` offer instead of HLS; a video the
   profile plays is also `SupportsDirectStream`, and without a profile `SupportsDirectStream` follows

@@ -3248,6 +3248,10 @@
     "playback.audio.ignored",
     "playback.audio.selection",
     "playback.hls.master",
+    "playback.offer.container-only",
+    "playback.offer.http-profile",
+    "playback.offer.no-profile",
+    "playback.offer.url-params",
     "playback.subtitle.encode",
     "playback.subtitle.hls",
     "playback.subtitle.no-transcode",
@@ -6979,9 +6983,9 @@
    "id": "playback.negotiation",
    "title": "PlaybackInfo negotiation",
    "status": "partial",
-   "description": "Picks Direct Play, Remux, Direct Stream or Transcode from the device profile by container and codec lists; honors `AudioStreamIndex`/`SubtitleStreamIndex` (query or body, with `MediaSourceId`) and a subtitle delivered by `Encode`/`Hls` ends direct play; `TranscodingUrl` carries the codecs, the tracks, `SubtitleMethod` and `TranscodeReasons`.",
+   "description": "Picks Direct Play or a transcode from the device profile by container and codec lists (no profile: direct play; a transcode is never a direct stream; `.strm` addresses go through the profile); honors `AudioStreamIndex`/`SubtitleStreamIndex` (query or body, with `MediaSourceId`) and a subtitle delivered by `Encode`/`Hls` ends direct play; the `hls` or `http` transcoding entry gives `master.m3u8` or a progressive `stream.\u003ccontainer\u003e`, and `TranscodingUrl` carries the reference's members in its order (codecs, bit rates, tracks, `SubtitleMethod`, source limits, `TranscodeReasons`); video sources carry `Bitrate`.",
    "reference": "Evaluates codec profiles, bitrate, level, audio channels, subtitle and HDR conditions.",
-   "notes": "`CodecProfile`/`ContainerProfile` conditions and MaxStreamingBitrate are not evaluated (docs/07 documented simplification); the URL has fewer parameters than the reference's (playback.md, known differences).",
+   "notes": "`CodecProfile`/`ContainerProfile` conditions and MaxStreamingBitrate are not evaluated (docs/07 documented simplification); `allowVideoStreamCopy`/`BreakOnNonKeyFrames` are not written (playback.md, known differences).",
    "spec_rules": [
     "playback.audio.R1",
     "playback.audio.R2",
@@ -6991,7 +6995,13 @@
     "playback.subtitle.R2",
     "playback.subtitle.R3",
     "playback.subtitle.R4",
-    "playback.subtitle.R5"
+    "playback.subtitle.R5",
+    "playback.offer.R1",
+    "playback.offer.R2",
+    "playback.offer.R3",
+    "playback.offer.R4",
+    "playback.offer.R5",
+    "playback.offer.R6"
    ],
    "scenarios": [
     "playback.audio.selection",
@@ -6999,12 +7009,18 @@
     "playback.audio.body",
     "playback.subtitle.encode",
     "playback.subtitle.no-transcode",
-    "playback.subtitle.hls"
+    "playback.subtitle.hls",
+    "playback.offer.container-only",
+    "playback.offer.http-profile",
+    "playback.offer.no-profile",
+    "playback.offer.url-params"
    ],
    "code": [
     "internal/playback/decision.go",
     "internal/api/playback.go",
-    "internal/deviceprofile/deviceprofile.go"
+    "internal/deviceprofile/deviceprofile.go",
+    "internal/api/playback_offer.go",
+    "internal/api/stream_progressive.go"
    ],
    "routes": [
     "POST /Items/{itemId}/PlaybackInfo"
