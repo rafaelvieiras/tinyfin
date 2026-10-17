@@ -92,19 +92,34 @@ func (s *Server) streamVideoTranscode(w http.ResponseWriter, r *http.Request, it
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	vs, err := s.transcode.StreamVideo(r.Context(), req, format)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	start := func() (*transcode.AudioStream, *bufio.Reader, bool) {
+		vs, err := s.transcode.StreamVideo(r.Context(), req, format)
+		if err != nil {
+			return nil, nil, false
+		}
+		br := bufio.NewReader(vs)
+		if _, err := br.Peek(1); err != nil {
+			vs.Close()
+			return nil, nil, false
+		}
+		return vs, br, true
 	}
-	defer vs.Close()
-	br := bufio.NewReader(vs)
-	if _, err := br.Peek(1); err != nil {
-		// nothing came out: the encode failed before it produced a byte
+	vs, br, ok := start()
+	if !ok && req.Subtitle != nil {
+		// an ffmpeg that cannot render the track (no libass): the picture
+		// without it is better than no answer
+		req.Subtitle = nil
+		if req.VideoCodec == "h264" {
+			req.VideoCodec = pickTargetCodec(q.Get("videocodec"), sourceCodec(item, storage.StreamTypeVideo, nil), false)
+		}
+		vs, br, ok = start()
+	}
+	if !ok {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	defer vs.Close()
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Accept-Ranges", "none")
 	w.WriteHeader(http.StatusOK)
