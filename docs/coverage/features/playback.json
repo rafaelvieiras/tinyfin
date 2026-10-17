@@ -75,7 +75,7 @@
    "status": "partial",
    "description": "One rendition: master playlist, growing media playlist, MPEG-TS segments through `jellyfin-ffmpeg`; the audio track and the burned-in subtitle chosen by the URL (`AudioStreamIndex`, `SubtitleStreamIndex` + `SubtitleMethod=Encode`), one transcode job per selection, replaced when a play session changes track; scale by MaxHeight.",
    "reference": "Adaptive ladders, fMP4, hardware acceleration, tone mapping, VOD-shaped playlists.",
-   "notes": "H.264/HEVC targets only; no VAAPI/NVENC/QSV flags; burn-in is libass (text) or overlay (bitmap, argument-tested only) with system fonts or `-fonts-dir`; no subtitle group in the playlist; StartTimeTicks of the URL is not applied. The transcoded content (track mapping, rendering) is checked by Go tests with a real ffmpeg, not by the contract runner.",
+   "notes": "H.264/HEVC targets only; no VAAPI/NVENC/QSV flags; burn-in is libass (text) or overlay (bitmap, pixel-tested with real PGS and DVD tracks) with system fonts or `-fonts-dir`; no subtitle group in the playlist; StartTimeTicks of the URL is not applied. The transcoded content (track mapping, rendering) is checked by Go tests with a real ffmpeg, not by the contract runner.",
    "code": [
     "internal/api/hls.go",
     "internal/api/hlsparams.go",
@@ -112,7 +112,7 @@
    "status": "partial",
    "description": "`Stream.{format}` (and with a start position) serves external SubRip/WebVTT/ASS/SSA/SAMI files and embedded text tracks as srt, vtt, ass, ssa, json and ttml with the reference's offsets (`startPositionTicks`, `endPositionTicks`, `copyTimestamps`, `addVttTimeMap`); `subtitles.m3u8` lists the WebVTT windows; PlaybackInfo sets `DeliveryMethod`/`DeliveryUrl` per stream from the device profile's `SubtitleProfiles`.",
    "reference": "The same, plus subtitle groups in HLS manifests and anonymous access to the stream routes.",
-   "notes": "No subtitle rendition in HLS (delivery `Hls` ends direct play but the playlists have no subtitle group); burn-in is described in playback.hls. Bitmap tracks (PGS, DVD) are never converted. Stream routes need a token (divergence subtitles.stream.R9).",
+   "notes": "No subtitle rendition in HLS (delivery `Hls` ends direct play but the playlists have no subtitle group); burn-in is described in playback.hls. Bitmap tracks (PGS, DVD, DVB) are never converted to text (see playback.subtitles.bitmap). Stream routes need a token (divergence subtitles.stream.R9).",
    "spec_rules": [
     "subtitles.stream.R1",
     "subtitles.stream.R2",
@@ -155,6 +155,56 @@
     "GET /Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/Stream.{routeFormat}",
     "GET /Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/{routeStartPositionTicks}/Stream.{routeFormat}",
     "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/subtitles.m3u8"
+   ],
+   "priority": "medium"
+  },
+  {
+   "id": "playback.subtitles.bitmap",
+   "title": "Picture subtitles (PGS, DVD, DVB)",
+   "status": "supported",
+   "description": "Picture tracks appear as `PGSSUB`/`DVDSUB`/`DVBSUB` streams with the subtitle canvas size and the reference's `Score`/`SupportsExternalStream`; PlaybackInfo burns them in (`Encode`), keeps them in the container (`Embed`, entry naming the codec) or offers them as a file (`External`, entry naming the codec); `Stream.{format}` serves a PGS track as a `.sup` stream and a DVD track as a Matroska file; the master playlist lists no picture track and the burn-in overlays the cue pictures on the video (checked on real PGS and DVD tracks).",
+   "reference": "The same.",
+   "notes": "Burn-in is verified by a Go test with a real ffmpeg (pixel difference against the plain transcode) and by hand against the reference's transcode; the scenarios cover the metadata, delivery, route and playlist. Unknown or unnamed profile formats for text tracks differ (docs/contract/specs/bitmap.md, known differences).",
+   "spec_rules": [
+    "bitmap.streams.R1",
+    "bitmap.streams.R2",
+    "bitmap.streams.R3",
+    "bitmap.delivery.R1",
+    "bitmap.delivery.R2",
+    "bitmap.delivery.R3",
+    "bitmap.delivery.R4",
+    "bitmap.delivery.R5",
+    "bitmap.delivery.R6",
+    "bitmap.route.R1",
+    "bitmap.route.R2",
+    "bitmap.route.R3",
+    "bitmap.hls.R1",
+    "bitmap.hls.R2",
+    "bitmap.burnin.R1"
+   ],
+   "scenarios": [
+    "bitmap.streams.pgs",
+    "bitmap.streams.dvd",
+    "bitmap.streams.dvb",
+    "bitmap.streams.mixed",
+    "bitmap.delivery.encode",
+    "bitmap.delivery.embed",
+    "bitmap.delivery.external",
+    "bitmap.route.pgs",
+    "bitmap.route.dvd",
+    "bitmap.route.dvb",
+    "bitmap.hls.master"
+   ],
+   "code": [
+    "internal/api/subtitles.go",
+    "internal/playback/subtitles.go",
+    "internal/transcode/args.go",
+    "internal/subtitle/names.go",
+    "internal/scan/probe.go",
+    "internal/api/dto.go"
+   ],
+   "routes": [
+    "GET /Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/Stream.{routeFormat}"
    ],
    "priority": "medium"
   },

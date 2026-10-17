@@ -111,12 +111,14 @@
    "id": "metadata.chapters",
    "title": "Chapters",
    "status": "partial",
-   "description": "Chapter marks are read by the scan (ffprobe) and returned as `Chapters` on a single read and with `Fields=Chapters`; an untitled chapter is named `Chapter N`.",
+   "description": "Chapter marks are read by the scan (ffprobe) and returned as `Chapters` on a single read and with `Fields=Chapters`; an untitled chapter is named `Chapter N`. With `EnableChapterImageExtraction` on a library a still is taken at each chapter (during the scan with `ExtractChapterImagesDuringLibraryScan`, else by the `Extract Chapter Images` task), set as `ImageTag` and served at `/Items/{id}/Images/Chapter/{index}`.",
    "reference": "Chapters from the container or from sidecar files, with generated thumbnails.",
-   "notes": "No chapter pictures: `ImageTag` is never set and the chapter image route answers 404. No sidecar chapter files.",
+   "notes": "Chapter pictures are served as extracted (the reference's resize parameters are ignored) and `ImagePath` is never exposed. No sidecar chapter files.",
    "code": [
     "internal/scan/probe.go",
-    "internal/api/dto.go"
+    "internal/api/dto.go",
+    "internal/chapterimg/chapterimg.go",
+    "internal/api/chapter_images.go"
    ],
    "spec_rules": [
     "chapters.dto.R1",
@@ -124,12 +126,21 @@
     "chapters.dto.R3",
     "chapters.dto.R4",
     "chapters.fields.R1",
-    "chapters.fields.R2"
+    "chapters.fields.R2",
+    "chapters.images.R1",
+    "chapters.images.R2",
+    "chapters.images.R3",
+    "chapters.images.R4",
+    "chapters.images.R5"
    ],
    "scenarios": [
     "chapters.item.detail",
     "chapters.item.listing",
-    "chapters.item.none"
+    "chapters.item.none",
+    "chapters.images.generate",
+    "chapters.images.short",
+    "chapters.images.task",
+    "chapters.images.off"
    ],
    "priority": "low"
   },

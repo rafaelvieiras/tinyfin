@@ -1,0 +1,62 @@
+# Picture subtitles (PGS, DVD, DVB)
+
+The subtitle tracks that are pictures, not text: how a media file's PGS (Blu-ray), DVD and DVB tracks appear in the streams of an item, how they are offered to a player (burned into the video, kept in the container, or as a file), the route that serves them as files, and the burn-in itself. Probed on the 12.2 reference with online metadata off. Text tracks are in [`subtitles.md`](subtitles.md).
+
+Scenarios: [`../scenarios/bitmap.json`](../scenarios/bitmap.json). Fixture state: [`../fixtures.json`](../fixtures.json), media from `scripts/conformance-media.sh` (lazy library `Bitmap`; the PGS stream is written by `scripts/conformance-pgs.py` because ffmpeg has no PGS encoder, the DVD and DVB tracks are ffmpeg re-encodes of it). Rule IDs are stable (`bitmap.<topic>.R<n>`).
+
+## Fixture facts this spec relies on
+
+* All four are 4 s MKV files, 320x240, with an AAC track (index 1) and picture cues showing the words BURN IN as white block letters at the bottom, from 0.5 s to 3.5 s.
+* `Bmp Pgs (2650)`: one PGS track "eng" at index 2. `Bmp Dvd (2651)`: one DVD track "eng". `Bmp Dvb (2652)`: one DVB track "eng" (a cue with no end time). All three are flagged default.
+* `Bmp Mixed (2653)`: SubRip "eng" (2, default), PGS "por" (3), DVD "spa" (4); only the first is flagged default.
+
+## <a id="streams"></a>The streams of an item
+
+- **bitmap.streams.R1** A picture track is a `Subtitle` stream with `Codec` `PGSSUB` (Blu-ray PGS), `DVDSUB` or `DVBSUB`, `IsTextSubtitleStream` false and `IsExternal` false; `IsDefault`/`IsForced`/`Language` come from the container, and `DisplayTitle` is `<Language> [- Default] [- Forced] - <CODEC>` (`English - Default - PGSSUB`, `Portuguese - PGSSUB`).
+- **bitmap.streams.R2** A PGS or DVD track has `SupportsExternalStream` true and the `Width`/`Height` of the picture it draws on (the file's own subtitle size, here 320 and 240). `Score` is present only for a track that is default or forced (`subtitles.discover.R10`): a default picture track scores 112211, the default text track beside it 112221; a picture track that is neither default nor forced has none.
+- **bitmap.streams.R3** A DVB track has `SupportsExternalStream` false, no `Width`/`Height`, and a score one hundred lower than the same track in another codec (a default DVB track is 112111).
+
+## <a id="delivery"></a>How PlaybackInfo offers them
+
+- **bitmap.delivery.R1** A picture track is never converted to text: an `Hls` or `External` entry for a text format (`vtt`, `srt`, ...) does not take it, so it is `Encode` (burned into the video) while the text track beside it keeps its method. It has no `DeliveryUrl`.
+- **bitmap.delivery.R2** When the selected track (`SubtitleStreamIndex`) is delivered by `Encode`, the source is transcoded: `SupportsDirectPlay` false and `TranscodingUrl` carrying `SubtitleMethod=Encode`, the `SubtitleStreamIndex` and `TranscodeReasons=SubtitleCodecNotSupported`.
+- **bitmap.delivery.R3** An `Embed` entry whose `Format` is the track's codec name (`pgssub`, `dvdsub`, `dvbsub`, in any case) keeps the track in the container: the track is `Embed`, and when it is the selected one the source can still be direct played. A track whose codec no entry names is `Encode`.
+- **bitmap.delivery.R4** When the selected track is not `Embed`, nothing is embedded (`subtitles.delivery.R4`): every track is `Encode` and the source is transcoded. A container that cannot hold the track (the profile's direct play container does not match the file) transcodes and burns it as well.
+- **bitmap.delivery.R5** An `External` entry whose `Format` is the track's codec name (case-insensitive, `pgssub` for PGS, `dvdsub` for DVD, `dvbsub` for DVB) delivers the track as a file: `External`, `DeliveryUrl` `/Videos/{item id, dashed}/{media source id}/Subtitles/{index}/0/Stream.{format}?ApiKey={token}` with the format spelled as the entry spells it (`.PGSSUB`), `IsExternalUrl` false.
+- **bitmap.delivery.R6** Other names do not match: `sup`, `pgs`, `hdmv_pgs_subtitle`, `vobsub` for a PGS or DVD track are `Encode`. A DVB track is delivered `External` by an entry named `dvbsub` although the route does not serve it (`bitmap.route.R3`).
+
+## <a id="route"></a>The track as a file
+
+- **bitmap.route.R1** `GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/Stream.{format}` for a PGS track answers `200` `application/octet-stream`, the track as a `.sup` stream (it starts with `PG`); for a DVD track `200` `video/x-matroska`, a Matroska file that holds only that track. A `.sup` sidecar file is served as it is. Start position, end position and `copyTimestamps` are accepted and ignored.
+- **bitmap.route.R2** The formats that name a picture track are `pgssub`, `sup`, `pgs`, `hdmv_pgs_subtitle`, `dvdsub` and `vobsub` (any case), all meaning "the track as stored"; for a DVD track the container extension `mks` is one as well. Anything else (`srt`, `vtt`, `ass`, `dvbsub` on a PGS or DVD track, `dvd_subtitle`, `mks` on a PGS track, unknown names) is a `400`: picture tracks are not converted.
+- **bitmap.route.R3** A DVB track has no file: `404` for every format.
+
+## <a id="hls"></a>HLS
+
+- **bitmap.hls.R1** A picture track is never listed in the master playlist's `#EXT-X-MEDIA:TYPE=SUBTITLES` group (`playback.hls.R7`): with the text track selected and `Hls` delivery the group has that one track and no `Subtitles/3/`, `Subtitles/4/` URI.
+- **bitmap.hls.R2** With a picture track selected the master has no subtitle group at all and its variants carry `SubtitleMethod=Encode`: the picture is in the video.
+
+## <a id="burnin"></a>The burn-in
+
+- **bitmap.burnin.R1** [untestable: a property of the picture's pixels; covered by a Go test with a real ffmpeg] A burned-in picture track is decoded to frames and overlaid on the video at the position its cues give (the cue canvas is the picture's size), shown from the cue's start and removed at its end; a track whose cues carry no end (DVD and DVB from the fixtures) stays on screen. Tinyfin uses ffmpeg's `overlay` filter (`[0:v:0][0:<stream>]overlay`) before any scale; the reference does the same. Not asserted by a scenario (it is a property of the pixels): `go test ./internal/transcode -run BitmapBurnIn` builds a PGS and a DVD track, transcodes with `Subtitle.Bitmap`, and checks by pixel difference against the plain transcode that nothing differs before the cue, the cue's pixels are there inside its window and (PGS) gone after it. The same frames were checked on both servers through `master.m3u8` / `main.m3u8` of a real transcode (cue from 0.5 s to 3.5 s: the difference with the plain transcode starts at the first sample inside the window, PGS ends with it, DVD/DVB persist).
+
+## Known differences
+
+* **Text tracks and unnamed formats.** The reference also delivers an embedded text track as `Embed`/`External` when the profile entry's format is one it does not know (`xyz`, `pgssub` as an `Embed` entry for a SubRip track, `ttml`) and refuses only `ass`/`ssa` for a SubRip track (and `sub`); Tinyfin converts text only to `srt`/`vtt` (`subtitles.delivery.R2`) and embeds only the format that matches. Not asserted.
+* **Canvas.** The reference passes `-canvas_size <video size>` before the input of a picture burn-in; Tinyfin does not (the overlay is identical for these fixtures; a track whose canvas differs from the video would be placed by the track's own size).
+* **Seeking.** A burn-in does not start at an offset (see `playback.md` known differences), so the PGS state at a seek position is not carried over.
+* **Existing databases.** Picture tracks gain `Width`/`Height` when the file is probed again; an item scanned before only gets them with its next probe.
+
+## Rule → scenarios
+
+| Rule | Scenarios |
+|---|---|
+| `bitmap.streams.R1`, `R2` | `bitmap.streams.pgs`, `bitmap.streams.dvd`, `bitmap.streams.mixed` |
+| `bitmap.streams.R1`, `R3` | `bitmap.streams.dvb` |
+| `bitmap.delivery.R1`, `R2` | `bitmap.delivery.encode` |
+| `bitmap.delivery.R3`, `R4` | `bitmap.delivery.embed` |
+| `bitmap.delivery.R5`, `R6` | `bitmap.delivery.external` |
+| `bitmap.route.R1`, `R2` | `bitmap.route.pgs`, `bitmap.route.dvd` |
+| `bitmap.route.R3` | `bitmap.route.dvb` |
+| `bitmap.hls.R1`, `R2` | `bitmap.hls.master` |
+| `bitmap.burnin.R1` | none: Go test `TestBitmapBurnIn_RealFFmpeg` |
