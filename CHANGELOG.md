@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Offer and stream parity, third pass (`playback.md#offer` R9-R12, `playback6.json`, 5 new scenarios): a stream bit rate the
+  container does not state comes from the Matroska statistics tags (`BPS`, `NUMBER_OF_BYTES` over `DURATION`) or, for audio, the
+  reference's per-codec estimate (AAC 192000/320000, lossless 480000 per channel, ...); media streams carry `BitDepth`,
+  `VideoRange`/`VideoRangeType` (SDR, HDR10, HLG), `IsAnamorphic`, `AverageFrameRate`/`RealFrameRate`/`ReferenceFrameRate`,
+  `ColorPrimaries`/`ColorSpace`/`ColorTransfer`, `IsAVC`/`NalLengthSize`, `CodecTag`, `AudioSpatialFormat` and the `Localized*`
+  labels of audio; MP4-family sources carry the probe's format name (or the one the profile lists) and a Matroska `.strm` is
+  always `mkv`; a `.strm` that cannot be probed is transcoded for a user with `ForceRemoteSourceTranscoding`. `probeVersion` is
+  2, so the next incremental scan probes files again. The conformance media has a `Matrix` library (Matroska, HDR, 10-bit,
+  anamorphic, a served Matroska `.strm`).
 - HLS parity (`docs/contract/specs/playback.md#hls`, `playback3.json`, 5 new scenarios): the master
   playlist has the reference's variant line (`BANDWIDTH`, `CODECS`, `RESOLUTION`, `FRAME-RATE`) and, for
   `SubtitleMethod=Hls`, the `#EXT-X-MEDIA:TYPE=SUBTITLES` group pointing at `Subtitles/{n}/subtitles.m3u8`;

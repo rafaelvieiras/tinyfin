@@ -23,7 +23,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `GET /QuickConnect/Connect` | Anonymous |  | 8/8 |  |
 | ✅ supported | `GET /QuickConnect/Enabled` | Anonymous | yes | 3/3 |  |
 | ✅ supported | `POST /QuickConnect/Initiate` | Anonymous | yes | 21/21 |  |
-| ✅ supported | `POST /Users/AuthenticateByName` | Anonymous | yes | 131/134 |  |
+| ✅ supported | `POST /Users/AuthenticateByName` | Anonymous | yes | 132/135 |  |
 | ↔️ divergent-by-design | `POST /Users/AuthenticateWithQuickConnect` | Anonymous |  | 13/13 | A secret is single use and a disabled account is refused (the reference replays secrets and logs disabled accounts in). Recorded as a divergence in the contract scenarios. |
 | ↔️ divergent-by-design | `POST /Users/ForgotPassword` | Anonymous |  | 7/7 | PinFile carries the bare file name, not the absolute server path. Recorded as a divergence in the contract scenarios. |
 | ↔️ divergent-by-design | `POST /Users/ForgotPassword/Pin` | Anonymous |  | 4/4 | Redeem attempts are rate limited (the reference does not throttle). Recorded as a divergence in the contract scenarios. |
@@ -58,12 +58,12 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ↔️ divergent-by-design | `POST /Users` | DefaultAuthorization | yes | 15/15 | An explicit null Configuration resets preferences (the reference answers 500). Recorded as a divergence in the contract scenarios. |
 | ✅ supported | `POST /Users/Configuration` | DefaultAuthorization |  | 16/16 |  |
 | ✅ supported | `GET /Users/Me` | DefaultAuthorization | yes | 35/36 |  |
-| ✅ supported | `POST /Users/New` | RequiresElevation | yes | 179/181 |  |
+| ✅ supported | `POST /Users/New` | RequiresElevation | yes | 180/182 |  |
 | ✅ supported | `POST /Users/Password` | DefaultAuthorization |  | 20/20 |  |
 | ✅ supported | `GET /Users/Public` | Anonymous | yes | 8/10 |  |
 | ↔️ divergent-by-design | `DELETE /Users/{userId}` | RequiresElevation | yes | 11/11 | A refused deletion of the last administrator revokes nothing (the reference logs them out first). Recorded as a divergence in the contract scenarios. |
 | ↔️ divergent-by-design | `GET /Users/{userId}` | IgnoreParentalControl | yes | 107/107 | HasPassword reflects whether a password is set (the reference reports true for everyone). Recorded as a divergence in the contract scenarios. |
-| ✅ supported | `POST /Users/{userId}/Policy` | RequiresElevation |  | 77/77 |  |
+| ✅ supported | `POST /Users/{userId}/Policy` | RequiresElevation |  | 78/78 |  |
 
 ## Related features
 

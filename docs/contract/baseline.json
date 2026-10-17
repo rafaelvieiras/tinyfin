@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 779
+    "pass": 784
   },
   "scenarios": {
     "admin.backup.create": "pass",
@@ -323,8 +323,12 @@
     "playback.hls.segment": "pass",
     "playback.offer.container-only": "pass",
     "playback.offer.http-profile": "pass",
+    "playback.offer.mp4-container-names": "pass",
     "playback.offer.no-profile": "pass",
+    "playback.offer.stream-bitrate": "pass",
+    "playback.offer.stream-members": "pass",
     "playback.offer.strm-http": "pass",
+    "playback.offer.strm-mkv": "pass",
     "playback.offer.url-flags": "pass",
     "playback.offer.url-params": "pass",
     "playback.subtitle.encode": "pass",
@@ -478,6 +482,7 @@
     "policy.playback.unrelated-flags": "pass",
     "policy.remote.bitrate-limit": "pass",
     "policy.remote.force-source-transcoding": "pass",
+    "policy.remote.force-source-transcoding-unprobed": "pass",
     "policy.stream.folders-off": "pass",
     "policy.stream.rating-tags": "pass",
     "quickconnect.authorize.already-authorized": "pass",

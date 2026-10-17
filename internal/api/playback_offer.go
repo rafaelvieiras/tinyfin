@@ -3,6 +3,7 @@ package api
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -326,4 +327,54 @@ func buildProgressiveOffer(in offerInput) string {
 		q.add("allowAudioStreamCopy", "false")
 	}
 	return "/videos/" + guid.Dashed(string(in.item.ID)) + "/stream?" + q.encode()
+}
+
+// offerForcedStrm answers PlaybackInfo for a .strm file with nothing known
+// about what it points at (an address that cannot be probed, a local path, an
+// empty file) when the caller has ForceRemoteSourceTranscoding and states a
+// device profile (playback.offer.R10): the file is run through the profile as
+// a container named "strm" with no streams, so it is never played as it is.
+// The transcode offer lists ContainerNotSupported (unless a Video direct play
+// entry lists "strm") and VideoCodecNotSupported. It reports false, leaving the
+// as-is offer, when the policy does not apply or the profile has no entry to
+// transcode with.
+func (s *Server) offerForcedStrm(w http.ResponseWriter, r *http.Request, item storage.Item) bool {
+	ac, _ := AuthFromContext(r.Context())
+	if ac == nil || !ac.Authenticated || ac.IsAPIKey || !storedUserPolicy(ac.User).ForceRemoteSourceTranscoding {
+		return false
+	}
+	body := readPlaybackBody(r)
+	profile, inline := s.profileFor(r, body)
+	if !inline {
+		return false
+	}
+	tp, ok := playback.FirstTranscodingProfile(profile.TranscodingProfiles)
+	if !ok {
+		return false
+	}
+	var reasons []string
+	listed := false
+	for _, dp := range profile.DirectPlayProfiles {
+		if (dp.Type == "" || strings.EqualFold(dp.Type, "Video")) && inList(splitCodecs(dp.Container), "strm") {
+			listed = true
+		}
+	}
+	if !listed {
+		reasons = append(reasons, "ContainerNotSupported")
+	}
+	reasons = append(reasons, "VideoCodecNotSupported")
+
+	source := baseMediaSourceInfo(item, item.Container)
+	source.SupportsDirectPlay, source.SupportsDirectStream, source.SupportsTranscoding = false, false, true
+	playSession := randomID()
+	offer := buildTranscodeOffer(offerInput{
+		item: item, profile: profile, tp: tp, reasons: reasons,
+		deviceID: ac.DeviceID, token: ac.Token, playSession: playSession,
+		maxBitrate:  s.remoteBitrateCap(r, requestedMaxBitrate(r, body, profile)),
+		noVideoCopy: !allowedByRequest(r, "allowvideostreamcopy", body.AllowVideoStreamCopy) || forcesRemoteTranscoding(r, item),
+		noAudioCopy: !allowedByRequest(r, "allowaudiostreamcopy", body.AllowAudioStreamCopy) || forcesRemoteTranscoding(r, item),
+	})
+	source.TranscodingUrl, source.TranscodingContainer, source.TranscodingSubProtocol = offer.URL, offer.Container, offer.SubProtocol
+	writeJSON(w, http.StatusOK, playbackInfoResponse{PlaySessionID: playSession, MediaSources: []mediaSourceInfoDto{source}})
+	return true
 }

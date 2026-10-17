@@ -1001,4 +1001,29 @@ clip "$MV/Ver Dir/Song - 4K.mp4" 2 510 6
 clip "$MV/Nest/Inner/Deep.mp4" 2 515 6
 cover "$MV/Nest/Inner/folder.jpg" 200x200
 
+# Stream-property matrix (own library "Matrix", lazy; 320x240, 3 s): Matroska
+# files whose per-stream bit rates are only recorded as muxer statistics tags
+# (BPS / NUMBER_OF_BYTES; needs mkvmerge) or not at all, 10-bit H.264, HDR10 HEVC, anamorphic
+# video, and an MKV that a .strm points at (served as .strm-http/strm-src.mkv).
+MX="$ROOT/Matrix"
+mx() { # <out> <video args...> (audio: one AAC track)
+  local out="$1"; shift
+  [ -f "$out" ] && return 0
+  mkdir -p "$(dirname "$out")"
+  "$FFMPEG" -v error -y -f lavfi -i "testsrc=duration=3:size=320x240:rate=12" \
+    -f lavfi -i "sine=frequency=440:duration=3" "$@" -c:a aac -shortest "$out"
+}
+mx "$MX/Mx Mkv (2500)/Mx Mkv (2500).mkv" -c:v libx264 -preset ultrafast -pix_fmt yuv420p
+# remuxed with mkvmerge, which (unlike ffmpeg) writes BPS / NUMBER_OF_BYTES / NUMBER_OF_FRAMES statistics tags
+if [ ! -f "$MX/Mx Mkv Stats (2501)/Mx Mkv Stats (2501).mkv" ]; then
+  mkdir -p "$MX/Mx Mkv Stats (2501)"
+  mkvmerge -q -o "$MX/Mx Mkv Stats (2501)/Mx Mkv Stats (2501).mkv" "$MX/Mx Mkv (2500)/Mx Mkv (2500).mkv" >/dev/null
+fi
+mx "$MX/Mx Hdr (2502)/Mx Hdr (2502).mkv" -c:v libx265 -preset ultrafast -pix_fmt yuv420p10le -x265-params "log-level=error:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc:hdr10=1:repeat-headers=1"
+mx "$MX/Mx Ten Bit (2503)/Mx Ten Bit (2503).mkv" -c:v libx264 -preset ultrafast -pix_fmt yuv420p10le
+mx "$MX/Mx Anamorphic (2504)/Mx Anamorphic (2504).mkv" -vf "setsar=4/3" -c:v libx264 -preset ultrafast -pix_fmt yuv420p
+mkdir -p "$ROOT/.strm-http" "$MX/Mx Strm Mkv (2505)"
+[ -f "$ROOT/.strm-http/strm-src.mkv" ] || cp "$MX/Mx Mkv (2500)/Mx Mkv (2500).mkv" "$ROOT/.strm-http/strm-src.mkv"
+printf '%s/strm-src.mkv\n' "${STRM_HTTP:-http://172.17.0.1:18999}" >"$MX/Mx Strm Mkv (2505)/Mx Strm Mkv (2505).strm"
+
 echo "media tree ready under $ROOT"

@@ -49,7 +49,18 @@ type ffprobeStream struct {
 	BitRate       string `json:"bit_rate"`
 	AvgFrameRate  string `json:"avg_frame_rate"`
 	ColorTransfer string `json:"color_transfer"`
-	Disposition   struct {
+	// ColorPrimaries/ColorSpace, the raw frame rate, the sample aspect ratio,
+	// the bit depth of lossless audio and the H.264 NAL framing are ffprobe's
+	// own -show_streams members, passed through to the stream listings.
+	ColorPrimaries    string `json:"color_primaries"`
+	ColorSpace        string `json:"color_space"`
+	RFrameRate        string `json:"r_frame_rate"`
+	SampleAspectRatio string `json:"sample_aspect_ratio"`
+	BitsPerRawSample  string `json:"bits_per_raw_sample"`
+	CodecTagString    string `json:"codec_tag_string"`
+	IsAVC             string `json:"is_avc"`
+	NalLengthSize     string `json:"nal_length_size"`
+	Disposition       struct {
 		Default  int `json:"default"`
 		Forced   int `json:"forced"`
 		Original int `json:"original"`
@@ -221,19 +232,31 @@ func mediaStreamsFromProbe(info ffprobeOutput) []storage.MediaStreamRef {
 			w, h := st.Width, st.Height
 			ref := storage.MediaStreamRef{
 				Index: idx, Type: storage.StreamTypeVideo, Codec: st.CodecName,
-				IsDefault:     st.Disposition.Default == 1,
-				IsForced:      st.Disposition.Forced == 1,
-				Width:         &w,
-				Height:        &h,
-				Title:         st.Tags.Title,
-				Language:      st.Tags.Language,
-				Profile:       st.Profile,
-				IsOriginal:    st.Disposition.Original != 0,
-				IsInterlaced:  isInterlacedFieldOrder(st.FieldOrder),
-				TimeBase:      st.TimeBase,
-				AspectRatio:   st.DisplayAspectRatio,
-				PixelFormat:   st.PixFmt,
-				ColorTransfer: st.ColorTransfer,
+				IsDefault:         st.Disposition.Default == 1,
+				IsForced:          st.Disposition.Forced == 1,
+				Width:             &w,
+				Height:            &h,
+				Title:             st.Tags.Title,
+				Language:          st.Tags.Language,
+				Profile:           st.Profile,
+				IsOriginal:        st.Disposition.Original != 0,
+				IsInterlaced:      isInterlacedFieldOrder(st.FieldOrder),
+				TimeBase:          st.TimeBase,
+				AspectRatio:       st.DisplayAspectRatio,
+				PixelFormat:       st.PixFmt,
+				ColorTransfer:     st.ColorTransfer,
+				ColorPrimaries:    knownColor(st.ColorPrimaries),
+				ColorSpace:        knownColor(st.ColorSpace),
+				SampleAspectRatio: st.SampleAspectRatio,
+				CodecTag:          codecTagOf(st.CodecTagString),
+				IsAVC:             st.IsAVC == "true",
+				NalLengthSize:     st.NalLengthSize,
+			}
+			if d := bitDepthOfPixFmt(st.PixFmt); d > 0 {
+				ref.BitDepth = &d
+			}
+			if rr := parseFrameRate(st.RFrameRate); rr > 0 {
+				ref.RealFrameRate = &rr
 			}
 			if st.RefFrames > 0 {
 				rf := st.RefFrames
@@ -248,9 +271,7 @@ func mediaStreamsFromProbe(info ffprobeOutput) []storage.MediaStreamRef {
 			if fr := parseFrameRate(st.AvgFrameRate); fr > 0 {
 				ref.FrameRate = &fr
 			}
-			if br, err := strconv.ParseInt(st.BitRate, 10, 64); err == nil && br > 0 {
-				ref.BitRate = &br
-			}
+			ref.BitRate = streamBitRate(st, info.Format)
 			streams = append(streams, ref)
 			idx++
 		case "audio":
@@ -265,12 +286,18 @@ func mediaStreamsFromProbe(info ffprobeOutput) []storage.MediaStreamRef {
 				Profile:       st.Profile,
 				ChannelLayout: st.ChannelLayout,
 				IsOriginal:    st.Disposition.Original != 0,
+				TimeBase:      st.TimeBase,
+				CodecTag:      codecTagOf(st.CodecTagString),
 			}
 			if sr, err := strconv.Atoi(st.SampleRate); err == nil && sr > 0 {
 				ref.SampleRate = &sr
 			}
-			if br, err := strconv.ParseInt(st.BitRate, 10, 64); err == nil && br > 0 {
-				ref.BitRate = &br
+			if d, err := strconv.Atoi(st.BitsPerRawSample); err == nil && d > 0 {
+				ref.BitDepth = &d
+			}
+			ref.BitRate = streamBitRate(st, info.Format)
+			if ref.BitRate == nil {
+				ref.BitRate = estimatedAudioBitRate(st.CodecName, ch)
 			}
 			streams = append(streams, ref)
 			idx++
@@ -364,4 +391,110 @@ func parseFrameRate(v string) float64 {
 		return 0
 	}
 	return n / d
+}
+
+// knownColor is an ffprobe color value, "" for the "unknown" it prints when
+// the stream does not say.
+func knownColor(v string) string {
+	if v == "unknown" || v == "reserved" {
+		return ""
+	}
+	return v
+}
+
+// codecTagOf is the container's codec tag ("avc1"), "" when there is none
+// (ffprobe prints "[0][0][0][0]").
+func codecTagOf(v string) string {
+	if strings.HasPrefix(v, "[") || strings.HasPrefix(v, "0x") {
+		return ""
+	}
+	return v
+}
+
+// bitDepthOfPixFmt reads the bit depth of an ffprobe pixel format name
+// (yuv420p10le -> 10, yuv420p -> 8); 0 for no format.
+func bitDepthOfPixFmt(pixFmt string) int {
+	switch {
+	case pixFmt == "":
+		return 0
+	case strings.Contains(pixFmt, "12le"), strings.Contains(pixFmt, "12be"):
+		return 12
+	case strings.Contains(pixFmt, "10le"), strings.Contains(pixFmt, "10be"), strings.Contains(pixFmt, "p010"):
+		return 10
+	}
+	return 8
+}
+
+// streamBitRate is the bit rate of one stream: ffprobe's own, else the
+// muxer's statistics tags that Matroska files carry (BPS, else
+// NUMBER_OF_BYTES over DURATION, the stream's, else the container's), the way
+// the reference derives a stream rate the container does not state.
+func streamBitRate(st ffprobeStream, f ffprobeFormat) *int64 {
+	if br, err := strconv.ParseInt(st.BitRate, 10, 64); err == nil && br > 0 {
+		return &br
+	}
+	if br, err := strconv.ParseInt(strings.TrimSpace(st.Tags.All["bps"]), 10, 64); err == nil && br > 0 {
+		return &br
+	}
+	bytes, err := strconv.ParseInt(strings.TrimSpace(st.Tags.All["number_of_bytes"]), 10, 64)
+	if err != nil || bytes <= 0 {
+		return nil
+	}
+	secs := parseTagDuration(st.Tags.All["duration"])
+	if secs <= 0 {
+		secs, _ = strconv.ParseFloat(f.Duration, 64)
+	}
+	if secs <= 0 {
+		return nil
+	}
+	br := int64(float64(bytes) * 8 / secs)
+	if br <= 0 {
+		return nil
+	}
+	return &br
+}
+
+// parseTagDuration reads a Matroska DURATION tag ("00:00:03.023000000").
+func parseTagDuration(v string) float64 {
+	parts := strings.Split(strings.TrimSpace(v), ":")
+	if len(parts) != 3 {
+		return 0
+	}
+	var total float64
+	for _, p := range parts {
+		f, err := strconv.ParseFloat(p, 64)
+		if err != nil {
+			return 0
+		}
+		total = total*60 + f
+	}
+	return total
+}
+
+// estimatedAudioBitRate is the rate the reference assigns an audio stream
+// whose container states none and carries no statistics tags, from the codec
+// and the channel count; nil for a codec it assigns nothing to.
+func estimatedAudioBitRate(codec string, channels int) *int64 {
+	var br int64
+	switch strings.ToLower(codec) {
+	case "aac":
+		br = 192000
+		if channels > 2 {
+			br = 320000
+		}
+	case "flac", "alac":
+		br = 480000 * int64(channels)
+	case "opus":
+		br = 128000
+	case "vorbis":
+		br = 160000
+	case "truehd":
+		br = 700000 * int64(channels)
+	default:
+		return nil
+	}
+	if br <= 0 {
+		return nil
+	}
+	return &br
 }

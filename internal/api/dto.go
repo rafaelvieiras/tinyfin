@@ -663,6 +663,53 @@ type mediaStreamDto struct {
 	PixelFormat    string   `json:"PixelFormat,omitempty"`
 	Level          *float64 `json:"Level,omitempty"`
 	SampleRate     *int     `json:"SampleRate,omitempty"`
+	// The members every video / audio stream carries in the reference's
+	// listing (playback.offer.R9).
+	BitDepth           *int     `json:"BitDepth,omitempty"`
+	AverageFrameRate   *float64 `json:"AverageFrameRate,omitempty"`
+	RealFrameRate      *float64 `json:"RealFrameRate,omitempty"`
+	ReferenceFrameRate *float64 `json:"ReferenceFrameRate,omitempty"`
+	IsAnamorphic       *bool    `json:"IsAnamorphic,omitempty"`
+	IsAVC              *bool    `json:"IsAVC,omitempty"`
+	NalLengthSize      string   `json:"NalLengthSize,omitempty"`
+	CodecTag           string   `json:"CodecTag,omitempty"`
+	ColorPrimaries     string   `json:"ColorPrimaries,omitempty"`
+	ColorSpace         string   `json:"ColorSpace,omitempty"`
+	ColorTransfer      string   `json:"ColorTransfer,omitempty"`
+	VideoRange         string   `json:"VideoRange"`
+	VideoRangeType     string   `json:"VideoRangeType"`
+	AudioSpatialFormat string   `json:"AudioSpatialFormat"`
+	LocalizedOriginal  string   `json:"LocalizedOriginal,omitempty"`
+}
+
+// isAnamorphicSAR reports whether a sample aspect ratio ("4:3") is not square.
+func isAnamorphicSAR(sar string) bool {
+	switch sar {
+	case "", "1:1", "0:1", "N/A":
+		return false
+	}
+	return true
+}
+
+// videoRangeOf is the VideoRange and VideoRangeType of a color transfer
+// function (PQ is HDR10, HLG is HLG, anything else SDR).
+func videoRangeOf(transfer string) (string, string) {
+	switch strings.ToLower(transfer) {
+	case "smpte2084":
+		return "HDR", "HDR10"
+	case "arib-std-b67":
+		return "HDR", "HLG"
+	}
+	return "SDR", "SDR"
+}
+
+// knownColorValue drops the "unknown" ffprobe prints for an undeclared color
+// description.
+func knownColorValue(v string) string {
+	if v == "unknown" || v == "reserved" {
+		return ""
+	}
+	return v
 }
 
 func mediaStreamDtos(streams []storage.MediaStreamRef) []mediaStreamDto {
@@ -672,30 +719,54 @@ func mediaStreamDtos(streams []storage.MediaStreamRef) []mediaStreamDto {
 	dtos := make([]mediaStreamDto, 0, len(streams))
 	for _, s := range streams {
 		d := mediaStreamDto{
-			Codec:             s.Codec,
-			Language:          s.Language,
-			Title:             s.Title,
-			DisplayTitle:      displayTitleFor(s),
-			Type:              string(s.Type),
-			Index:             s.Index,
-			IsDefault:         s.IsDefault,
-			IsForced:          s.IsForced,
-			IsInterlaced:      s.IsInterlaced,
-			IsOriginal:        s.IsOriginal,
-			IsExternal:        s.IsExternal,
-			IsHearingImpaired: s.IsHearingImpaired,
-			Channels:          s.Channels,
-			Width:             s.Width,
-			Height:            s.Height,
-			BitRate:           s.BitRate,
-			Profile:           s.Profile,
-			ChannelLayout:     s.ChannelLayout,
-			TimeBase:          s.TimeBase,
-			AspectRatio:       s.AspectRatio,
-			RefFrames:         s.RefFrames,
-			PixelFormat:       s.PixelFormat,
-			Level:             s.Level,
-			SampleRate:        s.SampleRate,
+			Codec:              s.Codec,
+			Language:           s.Language,
+			Title:              s.Title,
+			DisplayTitle:       displayTitleFor(s),
+			Type:               string(s.Type),
+			Index:              s.Index,
+			IsDefault:          s.IsDefault,
+			IsForced:           s.IsForced,
+			IsInterlaced:       s.IsInterlaced,
+			IsOriginal:         s.IsOriginal,
+			IsExternal:         s.IsExternal,
+			IsHearingImpaired:  s.IsHearingImpaired,
+			Channels:           s.Channels,
+			Width:              s.Width,
+			Height:             s.Height,
+			BitRate:            s.BitRate,
+			Profile:            s.Profile,
+			ChannelLayout:      s.ChannelLayout,
+			TimeBase:           s.TimeBase,
+			AspectRatio:        s.AspectRatio,
+			RefFrames:          s.RefFrames,
+			PixelFormat:        s.PixelFormat,
+			Level:              s.Level,
+			SampleRate:         s.SampleRate,
+			BitDepth:           s.BitDepth,
+			CodecTag:           s.CodecTag,
+			VideoRange:         "Unknown",
+			VideoRangeType:     "Unknown",
+			AudioSpatialFormat: "None",
+		}
+		switch s.Type {
+		case storage.StreamTypeVideo:
+			anamorphic := isAnamorphicSAR(s.SampleAspectRatio)
+			d.IsAnamorphic = &anamorphic
+			d.AverageFrameRate, d.RealFrameRate, d.ReferenceFrameRate = s.FrameRate, s.RealFrameRate, s.RealFrameRate
+			d.VideoRange, d.VideoRangeType = videoRangeOf(s.ColorTransfer)
+			d.ColorPrimaries, d.ColorSpace, d.ColorTransfer = s.ColorPrimaries, s.ColorSpace, knownColorValue(s.ColorTransfer)
+			if s.IsAVC {
+				avc := true
+				d.IsAVC, d.NalLengthSize = &avc, s.NalLengthSize
+			}
+		case storage.StreamTypeAudio:
+			d.LocalizedDefault, d.LocalizedExternal, d.LocalizedOriginal = "Default", "External", "Original"
+			if lang := strings.ToLower(s.Language); lang == "und" {
+				d.LocalizedLanguage = "Undetermined"
+			} else if isUsableLanguage(s.Language) {
+				d.LocalizedLanguage = subtitle.DisplayName(s.Language)
+			}
 		}
 		if s.Type == storage.StreamTypeSubtitle {
 			d.SupportsExternalStream = true

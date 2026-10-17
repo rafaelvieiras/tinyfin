@@ -307,7 +307,11 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 		(IsStrmItem(item) && !(item.RemoteURL != "" && len(item.MediaStreams) > 0)) {
 		// A disc folder, or a .strm file with nothing known about what it
 		// points at, is always offered as it is: there is nothing to
-		// negotiate (the reference does the same).
+		// negotiate (the reference does the same), unless the caller must
+		// have remote sources transcoded.
+		if IsStrmItem(item) && item.VideoType == "" && s.offerForcedStrm(w, r, item) {
+			return
+		}
 		source := baseMediaSourceInfo(item, item.Container)
 		source.SupportsDirectPlay, source.SupportsDirectStream, source.SupportsTranscoding = true, true, true
 		source.TranscodingSubProtocol = "http"
@@ -348,6 +352,12 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	opts := playback.Options{AudioStreamIndex: audioIdx}
+	if item.Type != storage.ItemTypeAudio && isMP4Family(item.Container) {
+		// the container of an MP4-family file is the format name of the probe;
+		// a profile that lists any of its names gets that one (any of them
+		// matches a direct play entry)
+		item.Container = mp4SourceName(item.Container, profile, inline)
+	}
 	subMethod := ""
 	subTrack, hasSub := subtitleStream(item.MediaStreams, subIdx)
 	if inline && hasSub {
@@ -435,7 +445,7 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 		// the reference never offers direct streaming for a source it transcodes
 		// and keeps naming the container the source has
 		if item.Type != storage.ItemTypeAudio {
-			source.Container = sourceContainerName(item, profile)
+			source.Container = strings.ToLower(item.Container)
 		}
 		source.SupportsDirectStream = false
 		source.SupportsTranscoding = true
@@ -895,30 +905,42 @@ func (s *Server) forceRemoteTranscode(src *mediaSourceInfoDto, item storage.Item
 	src.TranscodingSubProtocol = "http"
 }
 
-// sourceContainerName is the Container of a video source that is not played as
-// it is: the container of the file; for an address the probe's format name
-// ("mov,mp4,m4a,3gp,3g2,mj2"), or the one of its names that a direct play entry
-// of the profile lists.
-func sourceContainerName(item storage.Item, profile deviceprofile.DeviceProfile) string {
-	c := strings.ToLower(item.Container)
-	if item.RemoteURL == "" {
-		return c
+// mp4FormatName is the name ffprobe gives the MP4 family of containers.
+const mp4FormatName = "mov,mp4,m4a,3gp,3g2,mj2"
+
+func isMP4Family(container string) bool {
+	switch strings.ToLower(container) {
+	case "mp4", "m4v", "mov":
+		return true
 	}
-	var names []string
-	switch c {
-	case "mp4":
-		names = []string{"mov", "mp4", "m4a", "3gp", "3g2", "mj2"}
-	case "mkv":
-		names = []string{"matroska", "webm"}
-	default:
-		return c
+	return false
+}
+
+// mp4SourceName is the Container of an MP4-family video source: the one of the
+// format names that a Video direct play entry of the profile lists, else the
+// whole format name (also when the request states no profile).
+func mp4SourceName(container string, profile deviceprofile.DeviceProfile, inline bool) string {
+	if inline {
+		if n := remoteMP4Name(profile); n != "" {
+			return n
+		}
 	}
+	return mp4FormatName
+}
+
+// remoteMP4Name is the one of the format names of an MP4 address
+// ("mov,mp4,m4a,3gp,3g2,mj2") that a direct play entry of the profile lists.
+func remoteMP4Name(profile deviceprofile.DeviceProfile) string {
+	names := []string{"mov", "mp4", "m4a", "3gp", "3g2", "mj2"}
 	for _, dp := range profile.DirectPlayProfiles {
+		if dp.Type != "" && !strings.EqualFold(dp.Type, "Video") {
+			continue
+		}
 		for _, n := range splitCodecs(dp.Container) {
 			if inList(names, n) {
 				return n
 			}
 		}
 	}
-	return strings.Join(names, ",")
+	return ""
 }

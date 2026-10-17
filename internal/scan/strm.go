@@ -63,7 +63,12 @@ func (s *Scanner) ProbeMedia(ctx context.Context, target string) (streams []stor
 	if v, perr := strconv.ParseInt(info.Format.BitRate, 10, 64); perr == nil && v > 0 {
 		br = &v
 	}
-	return mediaStreamsFromProbe(info), runtimeTicksFromProbe(info), containerFromFormat(info.Format.FormatName), br, nil
+	streams = mediaStreamsFromProbe(info)
+	for i := range streams {
+		// the reference lists no reference frame count for an address
+		streams[i].RefFrames = nil
+	}
+	return streams, runtimeTicksFromProbe(info), containerFromFormat(info.Format.FormatName), br, nil
 }
 
 // containerFromFormat turns ffprobe's format_name list ("mov,mp4,m4a,3gp,3g2,mj2",

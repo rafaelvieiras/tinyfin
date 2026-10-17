@@ -177,6 +177,22 @@ type MediaStreamRef struct {
 	// classified and stored here, same "recompute, don't persist a
 	// derived value" convention as DisplayTitle itself.
 	ColorTransfer string
+
+	// ColorPrimaries/ColorSpace are ffprobe's raw values (video only, "" when
+	// unknown). BitDepth is the sample depth: from the pixel format for video,
+	// from bits_per_raw_sample for lossless audio. RealFrameRate is ffprobe's
+	// r_frame_rate. SampleAspectRatio is ffprobe's sample_aspect_ratio ("4:3");
+	// anything but 1:1 makes a video anamorphic. CodecTag is the container's
+	// four-character tag ("avc1", "mp4a"; "" when there is none). IsAVC and
+	// NalLengthSize are ffprobe's is_avc / nal_length_size (H.264 only).
+	ColorPrimaries    string
+	ColorSpace        string
+	BitDepth          *int
+	RealFrameRate     *float64
+	SampleAspectRatio string
+	CodecTag          string
+	IsAVC             bool
+	NalLengthSize     string
 }
 
 // Person is one cast/crew credit on an Item — the storage-side counterpart
