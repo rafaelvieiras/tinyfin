@@ -169,3 +169,15 @@ func requestedMaxBitrate(r *http.Request, body playbackInfoRequestBody, profile 
 	}
 	return profile.MaxStreamingBitrate
 }
+
+// allowedByRequest reads a boolean the PlaybackInfo request may carry in its
+// body or its query (the body first) and that defaults to true.
+func allowedByRequest(r *http.Request, query string, body *bool) bool {
+	if body != nil {
+		return *body
+	}
+	if v, err := strconv.ParseBool(caseInsensitiveQuery(r).Get(query)); err == nil {
+		return v
+	}
+	return true
+}

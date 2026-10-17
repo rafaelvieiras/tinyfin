@@ -47,7 +47,10 @@
     "playback.offer.container-only",
     "playback.offer.http-profile",
     "playback.offer.no-profile",
-    "playback.offer.url-params"
+    "playback.offer.url-params",
+    "playback.offer.strm-http",
+    "playback.offer.url-flags",
+    "policy.remote.force-source-transcoding"
    ]
   },
   {

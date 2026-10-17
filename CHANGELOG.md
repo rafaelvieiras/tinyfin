@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Offer parity, second pass (`playback.md#offer`, `policy.md`, `playback4.json`, 3 new scenarios): a `.strm` whose address is
+  reachable goes through the profile (`Bitrate` is the probed rate of the address, `Container` the probe's format name);
+  `TranscodingUrl` writes `EstimateContentLength`, `TranscodeSeekInfo=Bytes`, the entry's `EnableAudioVbrEncoding` (default
+  true) and ends with `allowVideoStreamCopy=false` / `allowAudioStreamCopy=false` when the request forbids copying (also for
+  `ForceRemoteSourceTranscoding`, whose progressive offer now has the reference's members and order); the progressive offer
+  of a user limited to audio transcoding has the reference's members and order too; a transcoded source keeps its container;
+  media sources always carry `MediaAttachments`, `Formats`, `RequiredHttpHeaders` and `UseMostCompatibleTranscodingProfile`.
+  `BreakOnNonKeyFrames` is no longer written (the reference never writes it). The conformance media has a served `.strm`
+  (`scripts/conformance-strm-serve.sh`).
 - Scan probe version (`probeVersion`, migration `0039`): scan signatures record the probe revision that wrote
   them, so the incremental scan probes items scanned by an older revision again (stream bit rate and frame
   rate on items scanned before they were kept) without `-scan-force-probe`.

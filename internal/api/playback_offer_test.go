@@ -51,3 +51,44 @@ func TestBuildTranscodeOfferProgressive(t *testing.T) {
 		t.Fatalf("offer = %+v", o)
 	}
 }
+
+func TestBuildTranscodeOfferProfileFlagsAndCopyLimits(t *testing.T) {
+	off := false
+	o := buildTranscodeOffer(offerInput{
+		item: offerItem(), playSession: "ps", noVideoCopy: true, noAudioCopy: true,
+		tp: deviceprofile.TranscodingProfile{Container: "ts", Protocol: "hls", BreakOnNonKeyFrames: true, EstimateContentLength: true,
+			TranscodeSeekInfo: "Bytes", CopyTimestamps: true, EnableAudioVbrEncoding: &off},
+		reasons: []string{"ContainerNotSupported"},
+	})
+	want := []string{"SegmentContainer=ts", "EstimateContentLength=True", "TranscodeSeekInfo=Bytes", "CopyTimestamps=True", "RequireAvc=false",
+		"EnableAudioVbrEncoding=false", "TranscodeReasons=ContainerNotSupported", "allowVideoStreamCopy=false", "allowAudioStreamCopy=false"}
+	pos := 0
+	for _, w := range want {
+		i := strings.Index(o.URL[pos:], w)
+		if i < 0 {
+			t.Fatalf("%q missing or out of order after %d in %s", w, pos, o.URL)
+		}
+		pos += i + len(w)
+	}
+	if strings.Contains(o.URL, "BreakOnNonKeyFrames") {
+		t.Errorf("the reference never writes BreakOnNonKeyFrames: %s", o.URL)
+	}
+	o = buildTranscodeOffer(offerInput{item: offerItem(), playSession: "ps", tp: deviceprofile.TranscodingProfile{Container: "ts", Protocol: "hls", TranscodeSeekInfo: "Auto"}})
+	if strings.Contains(o.URL, "TranscodeSeekInfo") || strings.Contains(o.URL, "allow") || !strings.Contains(o.URL, "EnableAudioVbrEncoding=true") {
+		t.Errorf("defaults: %s", o.URL)
+	}
+}
+
+func TestSourceContainerNameOfAnAddress(t *testing.T) {
+	prof := deviceprofile.DeviceProfile{DirectPlayProfiles: []deviceprofile.DirectPlayProfile{{Container: "mkv", Type: "Video"}}}
+	if got := sourceContainerName(storage.Item{Container: "mp4", RemoteURL: "http://h/x.mp4"}, prof); got != "mov,mp4,m4a,3gp,3g2,mj2" {
+		t.Errorf("no match: %q", got)
+	}
+	prof.DirectPlayProfiles[0].Container = "mp4,m4v"
+	if got := sourceContainerName(storage.Item{Container: "mp4", RemoteURL: "http://h/x.mp4"}, prof); got != "mp4" {
+		t.Errorf("match: %q", got)
+	}
+	if got := sourceContainerName(storage.Item{Container: "MKV"}, prof); got != "mkv" {
+		t.Errorf("file: %q", got)
+	}
+}

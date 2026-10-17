@@ -62,6 +62,9 @@ type offerInput struct {
 	subIdx      *int
 	subMethod   string // "Encode", "Hls" or "" (not asked for in the URL)
 	maxBitrate  int64
+	// noVideoCopy / noAudioCopy: the request forbids copying the video /
+	// audio stream (allowVideoStreamCopy=false / allowAudioStreamCopy=false).
+	noVideoCopy, noAudioCopy bool
 }
 
 // splitCodecs lowercases a comma separated codec list.
@@ -208,9 +211,6 @@ func buildTranscodeOffer(in offerInput) transcodeOffer {
 	if in.token != "" {
 		q.add("ApiKey", in.token)
 	}
-	if hls && in.tp.BreakOnNonKeyFrames {
-		q.add("BreakOnNonKeyFrames", "True")
-	}
 	if in.tp.MaxAudioChannels != "" {
 		q.add("TranscodingMaxAudioChannels", in.tp.MaxAudioChannels)
 	}
@@ -220,13 +220,18 @@ func buildTranscodeOffer(in offerInput) transcodeOffer {
 	if in.tp.EnableMpegtsM2TsMode {
 		q.add("EnableMpegtsM2TsMode", "True")
 	}
+	if in.tp.EstimateContentLength {
+		q.add("EstimateContentLength", "True")
+	}
+	if strings.EqualFold(in.tp.TranscodeSeekInfo, "Bytes") {
+		q.add("TranscodeSeekInfo", "Bytes")
+	}
 	if in.tp.CopyTimestamps {
 		q.add("CopyTimestamps", "True")
 	}
 	q.add("RequireAvc", "false")
-	q.add("EnableAudioVbrEncoding", "true")
-	sum := md5.Sum([]byte(id + "|" + in.item.Path + "|" + strconv.FormatInt(in.item.Size, 10)))
-	q.add("Tag", hex.EncodeToString(sum[:]))
+	q.add("EnableAudioVbrEncoding", strconv.FormatBool(in.tp.EnableAudioVbrEncoding == nil || *in.tp.EnableAudioVbrEncoding))
+	q.add("Tag", offerTag(in.item))
 	if in.subIdx != nil && (in.subMethod == "Encode" || in.subMethod == "Hls") {
 		q.add("SubtitleMethod", in.subMethod)
 	}
@@ -255,6 +260,12 @@ func buildTranscodeOffer(in offerInput) transcodeOffer {
 	if len(in.reasons) > 0 {
 		q.add("TranscodeReasons", strings.Join(in.reasons, ","))
 	}
+	if in.noVideoCopy {
+		q.add("allowVideoStreamCopy", "false")
+	}
+	if in.noAudioCopy {
+		q.add("allowAudioStreamCopy", "false")
+	}
 
 	path := "/videos/" + guid.Dashed(id)
 	if hls {
@@ -270,4 +281,49 @@ func pickTranscodingProfile(profile deviceprofile.DeviceProfile, d playback.Deci
 		return tp
 	}
 	return deviceprofile.TranscodingProfile{Container: d.Container, Type: "Video", Protocol: "hls"}
+}
+
+// offerTag is the opaque Tag member of an offer URL.
+func offerTag(item storage.Item) string {
+	sum := md5.Sum([]byte(string(item.ID) + "|" + item.Path + "|" + strconv.FormatInt(item.Size, 10)))
+	return hex.EncodeToString(sum[:])
+}
+
+// buildProgressiveOffer is the URL of a user who may only have audio
+// transcoded (policy.playback.R7): the progressive /videos/{id}/stream, with
+// no codec, container or rate parameters because no transcoding profile
+// applies, and its members in the reference's order.
+func buildProgressiveOffer(in offerInput) string {
+	q := &orderedQuery{}
+	if in.deviceID != "" {
+		q.add("DeviceId", in.deviceID)
+	}
+	q.add("MediaSourceId", string(in.item.ID))
+	if in.audioIdx != nil {
+		q.add("AudioStreamIndex", strconv.Itoa(*in.audioIdx))
+	}
+	burn := in.subIdx != nil && *in.subIdx >= 0
+	if burn {
+		q.add("SubtitleStreamIndex", strconv.Itoa(*in.subIdx))
+	}
+	q.add("PlaySessionId", in.playSession)
+	if in.token != "" {
+		q.add("ApiKey", in.token)
+	}
+	q.add("RequireAvc", "false")
+	q.add("EnableAudioVbrEncoding", "false")
+	q.add("Tag", offerTag(in.item))
+	if burn {
+		q.add("SubtitleMethod", "Encode")
+	}
+	if len(in.reasons) > 0 {
+		q.add("TranscodeReasons", strings.Join(in.reasons, ","))
+	}
+	if in.noVideoCopy {
+		q.add("allowVideoStreamCopy", "false")
+	}
+	if in.noAudioCopy {
+		q.add("allowAudioStreamCopy", "false")
+	}
+	return "/videos/" + guid.Dashed(string(in.item.ID)) + "/stream?" + q.encode()
 }

@@ -234,7 +234,8 @@
    "playback"
   ],
   "covers": [
-   "playback.offer.R2"
+   "playback.offer.R2",
+   "playback.offer.R6"
   ],
   "requires": [
    "library:avtrack",

@@ -286,6 +286,10 @@ type Item struct {
 	Path      string
 	Container string
 	Size      int64
+	// BitRate is the container bit rate ffprobe reported for the address of
+	// a .strm item (nil when none was probed); a file's own rate is its size
+	// over its length.
+	BitRate *int64
 
 	// SetName is the collection ("set") a movie declares in its metadata
 	// file (<set><name>X</name></set> or <set>X</set>), kept as written. It

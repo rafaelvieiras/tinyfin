@@ -100,7 +100,8 @@ type TranscodingProfile struct {
 	SegmentLength             int                `json:"SegmentLength,omitempty"`
 	BreakOnNonKeyFrames       bool               `json:"BreakOnNonKeyFrames"`
 	Conditions                []ProfileCondition `json:"Conditions,omitempty"`
-	EnableAudioVbrEncoding    bool               `json:"EnableAudioVbrEncoding"`
+	// EnableAudioVbrEncoding defaults to true when the profile omits it.
+	EnableAudioVbrEncoding *bool `json:"EnableAudioVbrEncoding,omitempty"`
 }
 
 // ContainerProfile mirrors the OpenAPI ContainerProfile schema. Not yet

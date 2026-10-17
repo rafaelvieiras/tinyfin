@@ -93,6 +93,20 @@ type mediaSourceInfoDto struct {
 	MediaStreams               []mediaStreamDto `json:"MediaStreams,omitempty"`
 }
 
+// MarshalJSON adds the members the reference always writes and Tinyfin has no
+// data for: no attachments, no formats, no request headers, and
+// UseMostCompatibleTranscodingProfile false.
+func (m mediaSourceInfoDto) MarshalJSON() ([]byte, error) {
+	type plain mediaSourceInfoDto
+	return json.Marshal(struct {
+		plain
+		MediaAttachments                    []struct{}        `json:"MediaAttachments"`
+		Formats                             []string          `json:"Formats"`
+		RequiredHttpHeaders                 map[string]string `json:"RequiredHttpHeaders"`
+		UseMostCompatibleTranscodingProfile bool              `json:"UseMostCompatibleTranscodingProfile"`
+	}{plain: plain(m), MediaAttachments: []struct{}{}, Formats: []string{}, RequiredHttpHeaders: map[string]string{}})
+}
+
 // playbackInfoResponse mirrors the OpenAPI schema's PlaybackInfoResponse.
 // PlaySessionId is a fresh opaque id per request — Tinyfin has no
 // session/realtime state tracking a play session's lifecycle yet (docs/06
@@ -119,6 +133,10 @@ type playbackInfoRequestBody struct {
 	// MaxStreamingBitrate bounds the rate of what the client takes (audio:
 	// direct play above it becomes a transcode).
 	MaxStreamingBitrate *int64 `json:"MaxStreamingBitrate,omitempty"`
+	// AllowVideoStreamCopy / AllowAudioStreamCopy, when false, are written
+	// to the end of the TranscodingUrl (they default to true).
+	AllowVideoStreamCopy *bool `json:"AllowVideoStreamCopy,omitempty"`
+	AllowAudioStreamCopy *bool `json:"AllowAudioStreamCopy,omitempty"`
 }
 
 // resolveDeviceProfile implements docs/07 O2's negotiation order: a
@@ -202,6 +220,8 @@ func baseMediaSourceInfo(item storage.Item, container string) mediaSourceInfoDto
 			if br := audioSourceBitrate(item); br > 0 {
 				src.Bitrate = &br
 			}
+		} else if item.RemoteURL != "" && item.BitRate != nil {
+			src.Bitrate = item.BitRate
 		}
 	}
 	if item.RemoteURL != "" {
@@ -276,8 +296,8 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 
 	if item.RemoteURL != "" && len(item.MediaStreams) == 0 {
 		// What an address holds is probed when it is played, and kept.
-		if streams, ticks, c, err := s.scanner.ProbeMedia(r.Context(), item.RemoteURL); err == nil {
-			item.MediaStreams, item.RunTimeTicks, item.Container = streams, ticks, c
+		if streams, ticks, c, br, err := s.scanner.ProbeMedia(r.Context(), item.RemoteURL); err == nil {
+			item.MediaStreams, item.RunTimeTicks, item.Container, item.BitRate = streams, ticks, c, br
 			if err := s.store.UpsertItem(r.Context(), item); err != nil {
 				log.Printf("api: keeping the probe of %s: %v", item.ID, err)
 			}
@@ -413,6 +433,10 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		// the reference never offers direct streaming for a source it transcodes
+		// and keeps naming the container the source has
+		if item.Type != storage.ItemTypeAudio {
+			source.Container = sourceContainerName(item, profile)
+		}
 		source.SupportsDirectStream = false
 		source.SupportsTranscoding = true
 		if ac, _ := AuthFromContext(r.Context()); ac != nil {
@@ -420,24 +444,12 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 				// policy.playback.R6: only audio transcoding is allowed, so
 				// the offer is the progressive stream, not HLS.
 				source.SupportsDirectStream = false
-				q := url.Values{
-					"MediaSourceId": {source.ID},
-					"PlaySessionId": {resp.PlaySessionID},
-				}
-				if audioIdx != nil {
-					q.Set("AudioStreamIndex", strconv.Itoa(*audioIdx))
-				}
-				if subIdx != nil && *subIdx >= 0 {
-					q.Set("SubtitleStreamIndex", strconv.Itoa(*subIdx))
-					q.Set("SubtitleMethod", "Encode")
-				}
-				if ac.Token != "" {
-					q.Set("ApiKey", ac.Token)
-				}
-				if len(decision.Reasons) > 0 {
-					q.Set("TranscodeReasons", strings.Join(decision.Reasons, ","))
-				}
-				source.TranscodingUrl = fmt.Sprintf("/Videos/%s/stream?%s", url.PathEscape(string(item.ID)), strings.ReplaceAll(q.Encode(), "%2C", ","))
+				source.TranscodingUrl = buildProgressiveOffer(offerInput{
+					item: item, reasons: decision.Reasons, deviceID: ac.DeviceID, token: ac.Token, playSession: resp.PlaySessionID,
+					audioIdx: audioIdx, subIdx: subIdx,
+					noVideoCopy: !allowedByRequest(r, "allowvideostreamcopy", body.AllowVideoStreamCopy),
+					noAudioCopy: !allowedByRequest(r, "allowaudiostreamcopy", body.AllowAudioStreamCopy),
+				})
 				source.TranscodingSubProtocol = "http"
 				resp.MediaSources = []mediaSourceInfoDto{source}
 				break
@@ -455,7 +467,9 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 			item: item, profile: profile, tp: pickTranscodingProfile(profile, decision), reasons: decision.Reasons,
 			deviceID: deviceID, token: token, playSession: resp.PlaySessionID,
 			audioIdx: audioIdx, subIdx: subIdx, subMethod: method,
-			maxBitrate: s.remoteBitrateCap(r, requestedMaxBitrate(r, body, profile)),
+			maxBitrate:  s.remoteBitrateCap(r, requestedMaxBitrate(r, body, profile)),
+			noVideoCopy: !allowedByRequest(r, "allowvideostreamcopy", body.AllowVideoStreamCopy) || forcesRemoteTranscoding(r, item),
+			noAudioCopy: !allowedByRequest(r, "allowaudiostreamcopy", body.AllowAudioStreamCopy) || forcesRemoteTranscoding(r, item),
 		})
 		source.TranscodingUrl = offer.URL
 		source.TranscodingContainer = offer.Container
@@ -479,17 +493,23 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// forcesRemoteTranscoding reports whether the caller must have the remote
+// (.strm address) source item transcoded.
+func forcesRemoteTranscoding(r *http.Request, item storage.Item) bool {
+	ac, _ := AuthFromContext(r.Context())
+	return item.RemoteURL != "" && ac != nil && ac.Authenticated && !ac.IsAPIKey && storedUserPolicy(ac.User).ForceRemoteSourceTranscoding
+}
+
 // maybeForceRemote applies policy.remote.R2: a user who must have remote
 // sources transcoded is not offered the address, whenever the client states
-// a profile.
+// a profile. A source that is transcoded anyway keeps its offer (which then
+// forbids copying, see handlePlaybackInfo).
 func (s *Server) maybeForceRemote(r *http.Request, source *mediaSourceInfoDto, item storage.Item, inline bool) {
-	ac, _ := AuthFromContext(r.Context())
-	if item.RemoteURL == "" || ac == nil || !ac.Authenticated || ac.IsAPIKey || !storedUserPolicy(ac.User).ForceRemoteSourceTranscoding {
+	if !forcesRemoteTranscoding(r, item) || !inline || !source.SupportsDirectPlay {
 		return
 	}
-	if inline {
-		s.forceRemoteTranscode(source, item, ac.Token)
-	}
+	ac, _ := AuthFromContext(r.Context())
+	s.forceRemoteTranscode(source, item, ac.Token, ac.DeviceID)
 }
 
 // hlsMasterURL builds the TranscodingUrl a client should fetch to begin
@@ -839,23 +859,66 @@ func (s *Server) applySubtitleDelivery(r *http.Request, src *mediaSourceInfoDto,
 // forceRemoteTranscode turns the offer for a remote (.strm address) source
 // into the progressive transcode the reference gives a user with
 // ForceRemoteSourceTranscoding.
-func (s *Server) forceRemoteTranscode(src *mediaSourceInfoDto, item storage.Item, token string) {
+func (s *Server) forceRemoteTranscode(src *mediaSourceInfoDto, item storage.Item, token, deviceID string) {
 	src.SupportsDirectPlay, src.SupportsDirectStream, src.SupportsTranscoding = false, false, true
-	q := url.Values{"MediaSourceId": {src.ID}, "Static": {"true"}}
+	q := &orderedQuery{}
+	if deviceID != "" {
+		q.add("DeviceId", deviceID)
+	}
+	q.add("MediaSourceId", src.ID)
+	q.add("Static", "true")
+	var vc, ac, aidx string
 	for _, st := range item.MediaStreams {
 		switch {
-		case st.Type == storage.StreamTypeVideo && q.Get("VideoCodec") == "":
-			q.Set("VideoCodec", strings.ToLower(st.Codec))
-		case st.Type == storage.StreamTypeAudio && q.Get("AudioCodec") == "":
-			q.Set("AudioCodec", strings.ToLower(st.Codec))
-			q.Set("AudioStreamIndex", strconv.Itoa(st.Index))
+		case st.Type == storage.StreamTypeVideo && vc == "":
+			vc = strings.ToLower(st.Codec)
+		case st.Type == storage.StreamTypeAudio && ac == "":
+			ac, aidx = strings.ToLower(st.Codec), strconv.Itoa(st.Index)
 		}
 	}
-	q.Set("PlaySessionId", randomID())
-	if token != "" {
-		q.Set("ApiKey", token)
+	if vc != "" {
+		q.add("VideoCodec", vc)
 	}
-	src.TranscodingUrl = fmt.Sprintf("/Videos/%s/stream.mp4?%s", url.PathEscape(string(item.ID)), q.Encode())
+	if ac != "" {
+		q.add("AudioCodec", ac)
+		q.add("AudioStreamIndex", aidx)
+	}
+	q.add("PlaySessionId", randomID())
+	if token != "" {
+		q.add("ApiKey", token)
+	}
+	q.add("Tag", offerTag(item))
+	q.add("allowVideoStreamCopy", "false")
+	q.add("allowAudioStreamCopy", "false")
+	src.TranscodingUrl = "/videos/" + guid.Dashed(string(item.ID)) + "/stream.mp4?" + q.encode()
 	src.TranscodingContainer = "mp4"
 	src.TranscodingSubProtocol = "http"
+}
+
+// sourceContainerName is the Container of a video source that is not played as
+// it is: the container of the file; for an address the probe's format name
+// ("mov,mp4,m4a,3gp,3g2,mj2"), or the one of its names that a direct play entry
+// of the profile lists.
+func sourceContainerName(item storage.Item, profile deviceprofile.DeviceProfile) string {
+	c := strings.ToLower(item.Container)
+	if item.RemoteURL == "" {
+		return c
+	}
+	var names []string
+	switch c {
+	case "mp4":
+		names = []string{"mov", "mp4", "m4a", "3gp", "3g2", "mj2"}
+	case "mkv":
+		names = []string{"matroska", "webm"}
+	default:
+		return c
+	}
+	for _, dp := range profile.DirectPlayProfiles {
+		for _, n := range splitCodecs(dp.Container) {
+			if inList(names, n) {
+				return n
+			}
+		}
+	}
+	return strings.Join(names, ",")
 }

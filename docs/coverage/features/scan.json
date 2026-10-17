@@ -380,7 +380,7 @@
    "id": "scan.incremental",
    "title": "Incremental scan",
    "status": "supported",
-   "description": "Files whose size and mtime match their stored signature reuse the stored media info instead of running `ffprobe`; `-scan-force-probe` re-probes everything.",
+   "description": "Files whose size and mtime match their stored signature reuse the stored media info instead of running `ffprobe`; `-scan-force-probe` re-probes everything; a probe version recorded with each signature makes items probed by an older revision (before a probed field existed) be probed again without it.",
    "reference": "Re-probes on a schedule or when the file changes.",
    "code": [
     "internal/scan/incremental.go",
