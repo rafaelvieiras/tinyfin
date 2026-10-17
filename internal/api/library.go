@@ -716,6 +716,10 @@ func (s *Server) handleLiveTvPrograms(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleItemImage(w http.ResponseWriter, r *http.Request) {
 	itemID := storage.ItemID(r.PathValue("itemId"))
 	kind := storage.ImageKind(r.PathValue("imageType"))
+	if isChapterImageType(string(kind)) {
+		s.handleChapterImage(w, r, itemID)
+		return
+	}
 
 	refs, err := s.store.GetImageRefs(r.Context(), itemID, kind)
 	if err != nil {

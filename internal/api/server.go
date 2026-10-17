@@ -22,6 +22,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/rafaelvieiras/tinyfin/internal/chapterimg"
 	"github.com/rafaelvieiras/tinyfin/internal/guid"
 	"github.com/rafaelvieiras/tinyfin/internal/metadata"
 	"github.com/rafaelvieiras/tinyfin/internal/scan"
@@ -164,6 +165,7 @@ type Server struct {
 	hlsSessions map[string]string
 	scanner     *scan.Scanner
 	trickplay   *trickplay.Generator
+	chapterimg  *chapterimg.Generator
 	scanState   *scanTracker
 	taskRTOnce  sync.Once
 	taskRTv     *taskRuntime
@@ -231,6 +233,7 @@ func NewServer(store storage.Store, cfg Config) *Server {
 		pinLimit:   newPinThrottle(),
 	}
 	s.trickplay = trickplay.New(store, cfg.TranscodeFFmpegPath, cfg.DataDir, cfg.TrickplayConcurrency)
+	s.chapterimg = chapterimg.New(store, cfg.TranscodeFFmpegPath, cfg.DataDir)
 	s.loadRuntimeSettings()
 	s.monitorKick = make(chan struct{}, 1)
 	s.loadLocalNetwork()
@@ -382,6 +385,7 @@ func (s *Server) runScanCtx(ctx context.Context, lib storage.Library) {
 		lib = fresh
 	}
 	s.trickplay.EnqueueLibrary(lib, forceTrickplay(ctx))
+	s.chapterimg.EnqueueLibrary(lib)
 	log.Printf("api: scanned library %q: %d items cataloged (%d probed, %d unchanged) in %s, %d enriched, %d warnings",
 		lib.Name, stats.ItemsScanned, stats.ItemsProbed, stats.ItemsSkipped, stats.Duration.Round(time.Millisecond), stats.ItemsEnriched, len(stats.Errors))
 }

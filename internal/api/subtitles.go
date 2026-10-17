@@ -326,10 +326,11 @@ func (s *Server) handleSubtitleStream(w http.ResponseWriter, r *http.Request) {
 
 // bitmapCopyFormat reports whether name is a format a picture track can be
 // asked for: the names of its own codecs, which all mean "the track as it is
-// stored" (the container extension of a DVD track, mks, is checked per track).
+// stored" (the container extension of a DVD track, mks, and dvbsub, which no
+// track but a DVB one answers, are checked per track).
 func bitmapCopyFormat(name string) bool {
 	switch strings.ToLower(name) {
-	case "pgssub", "sup", "pgs", "hdmv_pgs_subtitle", "dvdsub", "vobsub", "mks":
+	case "pgssub", "sup", "pgs", "hdmv_pgs_subtitle", "dvdsub", "vobsub", "mks", "dvbsub":
 		return true
 	}
 	return false
@@ -342,7 +343,7 @@ func bitmapCopyFormat(name string) bool {
 // .sup file as it is. Any other format (srt, vtt, ...) is a 400.
 func (s *Server) serveBitmapSubtitle(w http.ResponseWriter, r *http.Request, src storage.Item, st storage.MediaStreamRef, format string) {
 	dvd := strings.EqualFold(st.Codec, "DVDSUB")
-	if format == "" || (format == "mks" && !dvd) {
+	if format == "" || format == "dvbsub" || (format == "mks" && !dvd) {
 		writeSubtitleError(w, http.StatusBadRequest)
 		return
 	}

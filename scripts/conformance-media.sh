@@ -859,6 +859,42 @@ bitmapsub "$BM/Bmp Dvd (2651)/Bmp Dvd (2651).mkv" dvd
 bitmapsub "$BM/Bmp Dvb (2652)/Bmp Dvb (2652).mkv" dvb
 bitmapsub "$BM/Bmp Mixed (2653)/Bmp Mixed (2653).mkv" mixed
 
+# Chapter pictures (own libraries "ChapterImg" with extraction on during the
+# scan, "ChapterImgTask" with it on but not during the scan, "ChapterImgOff"
+# with it off, all lazy): 640x360 videos whose picture brightens with time
+# (luma = 8 x seconds) so the moment a still was taken from can be read off it.
+# "Chapter Pics" is 30 s with chapters at 0 s ("One"), 10 s ("Two") and 20 s
+# (no title); "Chapter Short" is 10 s with chapters at 0 s and 5 s (the
+# reference takes the picture of a chapter that starts at 0 at 15 s, past the
+# end, so it makes none for the file).
+CI="$ROOT/ChapterImg"
+chapterramp() { # <out> <seconds> <chapter starts in ms, "|title" optional>...
+  [ -f "$1" ] && return 0
+  mkdir -p "$(dirname "$1")"
+  local out="$1" secs="$2"; shift 2
+  local t; t="$(mktemp -d)"
+  python3 - "$t/m.txt" "$secs" "$@" <<'PY'
+import sys
+out, secs, specs = sys.argv[1], int(sys.argv[2]), sys.argv[3:]
+starts = [(int(s.split("|")[0]), (s.split("|") + [""])[1]) for s in specs]
+ends = [s for s, _ in starts[1:]] + [secs * 1000]
+with open(out, "w") as f:
+    f.write(";FFMETADATA1\n")
+    for (s, title), e in zip(starts, ends):
+        f.write("[CHAPTER]\nTIMEBASE=1/1000\nSTART=%d\nEND=%d\n" % (s, e))
+        if title:
+            f.write("title=%s\n" % title)
+PY
+  "$FFMPEG" -v error -y -f lavfi -i "color=c=black:s=640x360:r=5:d=$secs,geq=lum='min(255,T*8)':cb=128:cr=128" \
+    -f lavfi -i "sine=frequency=500:duration=$secs" -i "$t/m.txt" -map 0 -map 1 -map_metadata 2 \
+    -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "$out"
+  rm -rf "$t"
+}
+chapterramp "$CI/Chapter Pics (2660)/Chapter Pics (2660).mkv" 30 "0|One" "10000|Two" "20000"
+chapterramp "$CI/Chapter Short (2661)/Chapter Short (2661).mkv" 10 "0|Start" "5000|Middle"
+chapterramp "$ROOT/ChapterImgTask/Chapter Task (2662)/Chapter Task (2662).mkv" 30 "0|One" "10000|Two" "20000"
+chapterramp "$ROOT/ChapterImgOff/Chapter Off (2663)/Chapter Off (2663).mkv" 30 "0|One" "10000|Two" "20000"
+
 # Trickplay (own libraries "Trickplay", with the sheets switched on, and
 # "TrickplayOff", lazy): a 25.5 s clip (3 thumbnails, one sheet), a 1500 s
 # one at 1 fps (150 thumbnails, two sheets) and a 160x90 one that is narrower
