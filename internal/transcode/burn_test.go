@@ -136,3 +136,89 @@ func TestAudioSelectionAndBurnIn_RealFFmpeg(t *testing.T) {
 		}
 	})
 }
+
+// bitmapSource builds a 4 s MKV whose subtitle track is a picture stream
+// (codec "pgs" or "dvd") showing white block letters from 0.5 s to 3.5 s. The
+// PGS stream comes from scripts/conformance-pgs.py (ffmpeg has no PGS
+// encoder); the DVD track is an ffmpeg re-encode of it.
+func bitmapSource(t *testing.T, ff, codec string) string {
+	t.Helper()
+	py, err := exec.LookPath("python3")
+	if err != nil {
+		t.Skip("python3 unavailable")
+	}
+	dir := t.TempDir()
+	sup := filepath.Join(dir, "a.sup")
+	if out, err := exec.Command(py, "../../scripts/conformance-pgs.py", sup, "320", "240", "BURN IN", "0.5", "3.5").CombinedOutput(); err != nil {
+		t.Skipf("cannot write the PGS stream: %v\n%s", err, out)
+	}
+	pgs := filepath.Join(dir, "pgs.mkv")
+	gen := exec.Command(ff, "-v", "error", "-y",
+		"-f", "lavfi", "-i", "testsrc=duration=4:size=320x240:rate=6",
+		"-f", "lavfi", "-i", "sine=frequency=440:duration=4", "-i", sup,
+		"-map", "0", "-map", "1", "-map", "2", "-c:v", "libx264", "-preset", "ultrafast",
+		"-pix_fmt", "yuv420p", "-c:a", "aac", "-c:s", "copy", "-t", "4", pgs)
+	if out, err := gen.CombinedOutput(); err != nil {
+		t.Skipf("cannot generate the input: %v\n%s", err, out)
+	}
+	if codec == "pgs" {
+		return pgs
+	}
+	dvd := filepath.Join(dir, "dvd.mkv")
+	conv := exec.Command(ff, "-v", "error", "-y", "-i", pgs, "-map", "0", "-c:v", "copy", "-c:a", "copy", "-c:s", "dvdsub", dvd)
+	if out, err := conv.CombinedOutput(); err != nil {
+		t.Skipf("cannot encode DVD subtitles: %v\n%s", err, out)
+	}
+	return dvd
+}
+
+// bandDiff counts the pixels of the bottom band (where the cue is drawn) that
+// differ strongly between the frames of a and b at the given time.
+func bandDiff(t *testing.T, ffmpeg, a, b, at string) int {
+	t.Helper()
+	raw := func(f string) []byte {
+		out, err := exec.Command(ffmpeg, "-v", "error", "-i", f, "-ss", at, "-frames:v", "1",
+			"-vf", "crop=320:50:0:190", "-f", "rawvideo", "-pix_fmt", "gray", "-").Output()
+		if err != nil || len(out) == 0 {
+			t.Fatalf("frame of %s at %s: %v", f, at, err)
+		}
+		return out
+	}
+	x, y := raw(a), raw(b)
+	n := 0
+	for i := range x {
+		if i < len(y) && (int(x[i])-int(y[i]) > 60 || int(y[i])-int(x[i]) > 60) {
+			n++
+		}
+	}
+	return n
+}
+
+// TestBitmapBurnIn_RealFFmpeg checks the picture-subtitle burn-in end to end:
+// the cue is on screen inside its window and gone after it (PGS clears the
+// picture; a DVD cue that carries no end time stays).
+func TestBitmapBurnIn_RealFFmpeg(t *testing.T) {
+	ff := realFFmpeg(t)
+	for _, codec := range []string{"pgs", "dvd"} {
+		t.Run(codec, func(t *testing.T) {
+			in := bitmapSource(t, ff, codec)
+			base := Request{InputPath: in, VideoCodec: "h264", AudioCodec: "copy", Container: "ts", SegmentSeconds: 6}
+			root := t.TempDir()
+			plain := runArgs(t, ff, filepath.Join(root, "p"), base)
+			r := base
+			r.Subtitle = &Subtitle{Path: in, Bitmap: true, StreamIndex: 2}
+			burnt := runArgs(t, ff, filepath.Join(root, "b"), r)
+			if got := bandDiff(t, ff, plain, burnt, "0.1"); got > 50 {
+				t.Errorf("%d pixels differ before the cue starts", got)
+			}
+			if got := bandDiff(t, ff, plain, burnt, "2"); got < 500 {
+				t.Errorf("only %d pixels differ inside the cue: not burned in", got)
+			}
+			if codec == "pgs" {
+				if got := bandDiff(t, ff, plain, burnt, "3.8"); got > 50 {
+					t.Errorf("%d pixels differ after the PGS cue ended", got)
+				}
+			}
+		})
+	}
+}

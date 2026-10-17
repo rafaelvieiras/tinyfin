@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/collection"
@@ -698,11 +697,12 @@ func mediaStreamDtos(streams []storage.MediaStreamRef) []mediaStreamDto {
 			SampleRate:        s.SampleRate,
 		}
 		if s.Type == storage.StreamTypeSubtitle {
-			d.SupportsExternalStream = true
+			d.SupportsExternalStream = subtitle.SupportsExternal(s.Codec)
 			d.IsTextSubtitleStream = subtitle.IsTextCodec(s.Codec)
 			d.Path = s.Path
-			// An embedded ASS/SSA stream carries no score.
-			if codec := strings.ToLower(s.Codec); s.IsExternal || (codec != "ass" && codec != "ssa") {
+			// An embedded stream that is neither default nor forced carries
+			// no score.
+			if s.IsExternal || s.IsDefault || s.IsForced {
 				score := playback.SubtitleScore(s)
 				d.Score = &score
 			}

@@ -50,7 +50,8 @@ func convertible(src, dst string) bool {
 // entry whose Language filter admits the stream (when set) and, by method,
 //
 //   - External: the stream is a text stream and its format is the entry's
-//     format or convertible to it (the URL ends in the entry's format);
+//     format or convertible to it (the URL ends in the entry's format), or a
+//     picture stream and the entry names its codec (PGSSUB, DVDSUB, DVBSUB);
 //   - Hls: the same test, delivered through the HLS manifest;
 //   - Embed: the stream is embedded in the media file and its format is
 //     the entry's format;
@@ -74,6 +75,12 @@ func DeliverSubtitle(s storage.MediaStreamRef, profiles []deviceprofile.Subtitle
 		case "external":
 			if text && convertible(src, format) {
 				return SubtitleDelivery{Method: "External", Format: format}
+			}
+			// A picture track is served as it is, and only to an entry that
+			// names its own codec (case-insensitive); the URL ends in the
+			// entry's spelling.
+			if !text && strings.EqualFold(strings.TrimSpace(p.Format), s.Codec) {
+				return SubtitleDelivery{Method: "External", Format: strings.TrimSpace(p.Format)}
 			}
 		case "hls":
 			if text && convertible(src, format) {
@@ -105,7 +112,10 @@ func sameLanguage(a, b string) bool {
 
 // SubtitleScore is the Score the reference reports for a subtitle stream.
 func SubtitleScore(s storage.MediaStreamRef) int {
-	score := 100000 + 200
+	score := 100000 + 100
+	if subtitle.SupportsExternal(s.Codec) {
+		score += 100
+	}
 	score += 10000
 	if s.IsForced {
 		score += 10000

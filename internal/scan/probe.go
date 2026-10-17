@@ -297,6 +297,11 @@ func mediaStreamsFromProbe(info ffprobeOutput) []storage.MediaStreamRef {
 				IsOriginal:        st.Disposition.Original != 0,
 				TimeBase:          st.TimeBase,
 			}
+			if st.Width > 0 && st.Height > 0 {
+				// picture subtitles carry the size of the canvas they draw on
+				w, h := st.Width, st.Height
+				ref.Width, ref.Height = &w, &h
+			}
 			streams = append(streams, ref)
 			idx++
 		}
