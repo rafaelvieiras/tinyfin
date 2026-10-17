@@ -44,10 +44,10 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `GET /Items/Latest` | DefaultAuthorization | yes | 5/5 |  |
 | ✅ supported *(no scenario)* | `GET /Items/Root` | DefaultAuthorization | yes |  |  |
 | ✅ supported | `DELETE /Items/{itemId}` | DefaultAuthorization | yes | 10/10 |  |
-| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 194/194 |  |
+| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 197/197 |  |
 | ✅ supported | `GET /Items/{itemId}/Ancestors` | DefaultAuthorization | yes | 2/2 |  |
 | ✅ supported | `GET /Items/{itemId}/Collections` | DefaultAuthorization | yes | 1/1 |  |
-| ✅ supported | `GET /Items/{itemId}/Download` | Download |  | 5/5 |  |
+| ✅ supported | `GET /Items/{itemId}/Download` | Download |  | 7/7 |  |
 | 🗓️ planned | `GET /Items/{itemId}/File` | DefaultAuthorization |  |  | Raw file delivery is not implemented. (priority: low) |
 | ✅ supported | `GET /Items/{itemId}/Intros` | DefaultAuthorization | yes | 1/1 |  |
 | ✅ supported | `GET /Items/{itemId}/LocalTrailers` | DefaultAuthorization | yes | 7/7 |  |

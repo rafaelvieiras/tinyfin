@@ -195,7 +195,8 @@
   ],
   "covers": [
    "policy.playback.R2",
-   "policy.playback.R4"
+   "policy.playback.R4",
+   "policy.playback.R5"
   ],
   "requires": [
    "library:avtrack",
@@ -308,6 +309,11 @@
      "json": [
       {
        "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
        "op": "eq",
        "value": true
       },
@@ -882,6 +888,2446 @@
   "cleanup": [
    {
     "name": "delete tmp-pol2-audio",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u}}"
+    },
+    "expect": {}
+   }
+  ]
+ },
+ {
+  "id": "policy.playback.audio-only-transcoding",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "policy.md",
+  "scope": "modern",
+  "tags": [
+   "policy",
+   "playback"
+  ],
+  "covers": [
+   "policy.playback.R7"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-multi",
+   "item:av-plain"
+  ],
+  "steps": [
+   {
+    "name": "create tmp-pol2-audioonly",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-pol2-audioonly",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u": "$.Id",
+     "apu": "$.Policy.AuthenticationProviderId",
+     "rpu": "$.Policy.PasswordResetProviderId"
+    }
+   },
+   {
+    "name": "set policy of tmp-pol2-audioonly",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.apu}}",
+      "PasswordResetProviderId": "{{capture.rpu}}",
+      "EnableAllFolders": true,
+      "EnableVideoPlaybackTranscoding": false,
+      "EnablePlaybackRemuxing": false,
+      "EnableAudioPlaybackTranscoding": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "login tmp-pol2-audioonly",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-pol2-audioonly",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-pol2-audioonly{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tok": "$.AccessToken"
+    }
+   },
+   {
+    "name": "a container the profile cannot take is offered as a progressive stream",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-plain.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-plain.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingSubProtocol",
+       "op": "eq",
+       "value": "http"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "matches",
+       "value": "(?i)^/videos/[0-9a-f-]+/stream\\?"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "notcontains",
+       "value": "master.m3u8"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "TranscodeReasons=ContainerNotSupported"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "MediaSourceId="
+      }
+     ]
+    },
+    "capture": {
+     "url": "$.MediaSources[0].TranscodingUrl"
+    }
+   },
+   {
+    "name": "the URL is served",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "{{capture.url}}"
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "an audio track the profile cannot take is progressive too",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}",
+      "AudioStreamIndex": "2"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingSubProtocol",
+       "op": "eq",
+       "value": "http"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "matches",
+       "value": "(?i)^/videos/[0-9a-f-]+/stream\\?"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "AudioCodecNotSupported"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "AudioStreamIndex=2"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete u",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u}}"
+    },
+    "expect": {}
+   }
+  ]
+ },
+ {
+  "id": "policy.playback.direct-play-flags",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "policy.md",
+  "scope": "modern",
+  "tags": [
+   "policy",
+   "playback"
+  ],
+  "covers": [
+   "policy.playback.R5",
+   "policy.playback.R6"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-multi",
+   "item:av-plain"
+  ],
+  "steps": [
+   {
+    "name": "create tmp-pol2-dpflags",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-pol2-dpflags",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u": "$.Id",
+     "apu": "$.Policy.AuthenticationProviderId",
+     "rpu": "$.Policy.PasswordResetProviderId"
+    }
+   },
+   {
+    "name": "set policy of tmp-pol2-dpflags",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.apu}}",
+      "PasswordResetProviderId": "{{capture.rpu}}",
+      "EnableAllFolders": true,
+      "EnableVideoPlaybackTranscoding": false,
+      "EnablePlaybackRemuxing": false,
+      "EnableAudioPlaybackTranscoding": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "login tmp-pol2-dpflags",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-pol2-dpflags",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-pol2-dpflags{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tok": "$.AccessToken"
+    }
+   },
+   {
+    "name": "a source the profile plays can be streamed and, with audio transcoding, transcoded",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "without a profile it is direct play, no stream copy, no transcode",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-plain.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-plain.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "create tmp-pol2-dpflags2",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-pol2-dpflags2",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u2": "$.Id",
+     "apu2": "$.Policy.AuthenticationProviderId",
+     "rpu2": "$.Policy.PasswordResetProviderId"
+    }
+   },
+   {
+    "name": "set policy of tmp-pol2-dpflags2",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u2}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.apu2}}",
+      "PasswordResetProviderId": "{{capture.rpu2}}",
+      "EnableAllFolders": true,
+      "EnableVideoPlaybackTranscoding": true,
+      "EnablePlaybackRemuxing": true,
+      "EnableAudioPlaybackTranscoding": false
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "login tmp-pol2-dpflags2",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-pol2-dpflags2",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-pol2-dpflags2{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tok2": "$.AccessToken"
+    }
+   },
+   {
+    "name": "without a profile: remuxing allows the stream copy, video transcoding the transcode",
+    "as": "token:{{capture.tok2}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-plain.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-plain.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "create tmp-pol2-dpflags3",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-pol2-dpflags3",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u3": "$.Id",
+     "apu3": "$.Policy.AuthenticationProviderId",
+     "rpu3": "$.Policy.PasswordResetProviderId"
+    }
+   },
+   {
+    "name": "set policy of tmp-pol2-dpflags3",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u3}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.apu3}}",
+      "PasswordResetProviderId": "{{capture.rpu3}}",
+      "EnableAllFolders": true,
+      "EnableVideoPlaybackTranscoding": false,
+      "EnablePlaybackRemuxing": true,
+      "EnableAudioPlaybackTranscoding": false
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "login tmp-pol2-dpflags3",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-pol2-dpflags3",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-pol2-dpflags3{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tok3": "$.AccessToken"
+    }
+   },
+   {
+    "name": "without a profile: remuxing alone",
+    "as": "token:{{capture.tok3}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-plain.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-plain.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete u",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u}}"
+    },
+    "expect": {}
+   },
+   {
+    "name": "delete u2",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u2}}"
+    },
+    "expect": {}
+   },
+   {
+    "name": "delete u3",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u3}}"
+    },
+    "expect": {}
+   }
+  ]
+ },
+ {
+  "id": "policy.playback.unrelated-flags",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "policy.md",
+  "scope": "modern",
+  "tags": [
+   "policy",
+   "playback"
+  ],
+  "covers": [
+   "policy.playback.R8",
+   "policy.remote.R1"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-multi"
+  ],
+  "steps": [
+   {
+    "name": "create tmp-pol2-noeffect",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-pol2-noeffect",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u": "$.Id",
+     "apu": "$.Policy.AuthenticationProviderId",
+     "rpu": "$.Policy.PasswordResetProviderId"
+    }
+   },
+   {
+    "name": "set policy of tmp-pol2-noeffect",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.apu}}",
+      "PasswordResetProviderId": "{{capture.rpu}}",
+      "EnableAllFolders": true,
+      "EnableSyncTranscoding": false,
+      "ForceRemoteSourceTranscoding": true,
+      "RemoteClientBitrateLimit": 1000,
+      "EnableAllChannels": false,
+      "EnabledChannels": [],
+      "BlockedChannels": [
+       "00000000000000000000000000000001"
+      ]
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "login tmp-pol2-noeffect",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-pol2-noeffect",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-pol2-noeffect{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tok": "$.AccessToken"
+    }
+   },
+   {
+    "name": "these flags do not change what is offered for a local client",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a profile ceiling under the file's rate ends direct play",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 30000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingSubProtocol",
+       "op": "eq",
+       "value": "hls"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "TranscodeReasons=ContainerBitrateExceedsLimit"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete u",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u}}"
+    },
+    "expect": {}
+   }
+  ]
+ },
+ {
+  "id": "policy.remote.bitrate-limit",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "policy.md",
+  "scope": "modern",
+  "tags": [
+   "policy",
+   "playback"
+  ],
+  "covers": [
+   "policy.remote.R1"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-multi",
+   "origin:non-loopback",
+   "item:av-plain"
+  ],
+  "steps": [
+   {
+    "name": "create tmp-pol2-remote",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-pol2-remote",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u": "$.Id",
+     "apu": "$.Policy.AuthenticationProviderId",
+     "rpu": "$.Policy.PasswordResetProviderId"
+    }
+   },
+   {
+    "name": "set policy of tmp-pol2-remote",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.apu}}",
+      "PasswordResetProviderId": "{{capture.rpu}}",
+      "EnableAllFolders": true,
+      "RemoteClientBitrateLimit": 10000
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "login tmp-pol2-remote",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-pol2-remote",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-pol2-remote{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tok": "$.AccessToken"
+    }
+   },
+   {
+    "name": "the runner's address is not in the local network",
+    "config": {
+     "section": "network",
+     "set": {
+      "LocalNetworkSubnets": [
+       "192.0.2.0/24"
+      ]
+     }
+    },
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {}
+   },
+   {
+    "name": "a remote client is held to its limit",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingSubProtocol",
+       "op": "eq",
+       "value": "hls"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "TranscodeReasons=ContainerBitrateExceedsLimit"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a request without a profile is not limited",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-plain.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-plain.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the runner's address is back in the local network",
+    "config": {
+     "section": "network",
+     "set": {
+      "LocalNetworkSubnets": []
+     }
+    },
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {}
+   },
+   {
+    "name": "a local client is not limited",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "create tmp-pol2-remote2",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-pol2-remote2",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u2": "$.Id",
+     "apu2": "$.Policy.AuthenticationProviderId",
+     "rpu2": "$.Policy.PasswordResetProviderId"
+    }
+   },
+   {
+    "name": "set policy of tmp-pol2-remote2",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u2}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.apu2}}",
+      "PasswordResetProviderId": "{{capture.rpu2}}",
+      "EnableAllFolders": true,
+      "RemoteClientBitrateLimit": 1000000000
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "login tmp-pol2-remote2",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-pol2-remote2",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-pol2-remote2{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tok2": "$.AccessToken"
+    }
+   },
+   {
+    "name": "the runner's address is not in the local network again",
+    "config": {
+     "section": "network",
+     "set": {
+      "LocalNetworkSubnets": [
+       "192.0.2.0/24"
+      ]
+     }
+    },
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {}
+   },
+   {
+    "name": "a limit above the file's rate changes nothing",
+    "as": "token:{{capture.tok2}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the runner's address is back in the local network again",
+    "config": {
+     "section": "network",
+     "set": {
+      "LocalNetworkSubnets": []
+     }
+    },
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {}
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "restore the local network",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/network"
+    },
+    "config": {
+     "section": "network",
+     "set": {
+      "LocalNetworkSubnets": []
+     }
+    },
+    "expect": {}
+   },
+   {
+    "name": "delete u",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u}}"
+    },
+    "expect": {}
+   },
+   {
+    "name": "delete u2",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u2}}"
+    },
+    "expect": {}
+   }
+  ]
+ },
+ {
+  "id": "policy.stream.folders-off",
+  "endpoint": "GET /Videos/{itemId}/stream",
+  "spec": "policy.md",
+  "scope": "modern",
+  "tags": [
+   "policy",
+   "stream"
+  ],
+  "covers": [
+   "policy.stream.R1",
+   "policy.folders.R1"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-plain",
+   "library:music",
+   "item:mfirst"
+  ],
+  "steps": [
+   {
+    "name": "create tmp-pol2-nofolders",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-pol2-nofolders",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u": "$.Id",
+     "apu": "$.Policy.AuthenticationProviderId",
+     "rpu": "$.Policy.PasswordResetProviderId"
+    }
+   },
+   {
+    "name": "set policy of tmp-pol2-nofolders",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.apu}}",
+      "PasswordResetProviderId": "{{capture.rpu}}",
+      "EnableAllFolders": false,
+      "EnabledFolders": [],
+      "EnableContentDownloading": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "login tmp-pol2-nofolders",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-pol2-nofolders",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-pol2-nofolders{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tok": "$.AccessToken"
+    }
+   },
+   {
+    "name": "PlaybackInfo of av-plain is not found",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-plain.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-plain.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "item av-plain is not found",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.av-plain.id}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "download of av-plain is not found",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.av-plain.id}}/Download"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "static stream (av-plain)",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-plain.id}}/stream",
+     "query": {
+      "static": "true",
+      "MediaSourceId": "{{item.av-plain.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "stream without static (av-plain)",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-plain.id}}/stream",
+     "query": {
+      "MediaSourceId": "{{item.av-plain.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "HLS master (av-plain)",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-plain.id}}/master.m3u8",
+     "query": {
+      "MediaSourceId": "{{item.av-plain.id}}",
+      "VideoCodec": "h264",
+      "AudioCodec": "aac",
+      "SegmentContainer": "ts"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "HLS main (av-plain)",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-plain.id}}/main.m3u8",
+     "query": {
+      "MediaSourceId": "{{item.av-plain.id}}",
+      "VideoCodec": "h264",
+      "AudioCodec": "aac",
+      "SegmentContainer": "ts"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "an audio track streams",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.mfirst.id}}/stream",
+     "query": {
+      "static": "true"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "the universal route still answers 404",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.mfirst.id}}/universal",
+     "query": {
+      "UserId": "{{capture.u}}",
+      "DeviceId": "sc-pol2-nofolders{{run.suffix}}",
+      "Container": "mp3"
+     }
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "an unknown id is 404",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/00000000000000000000000000000abc/stream",
+     "query": {
+      "static": "true"
+     }
+    },
+    "expect": {
+     "status": 404
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete u",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u}}"
+    },
+    "expect": {}
+   }
+  ]
+ },
+ {
+  "id": "policy.stream.rating-tags",
+  "endpoint": "GET /Videos/{itemId}/stream",
+  "spec": "policy.md",
+  "scope": "modern",
+  "tags": [
+   "policy",
+   "stream"
+  ],
+  "covers": [
+   "policy.stream.R1"
+  ],
+  "requires": [
+   "library:rated",
+   "item:rated-r",
+   "library:tagged",
+   "item:tag-bad",
+   "item:tag-good"
+  ],
+  "steps": [
+   {
+    "name": "create tmp-pol2-rating",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-pol2-rating",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u": "$.Id",
+     "apu": "$.Policy.AuthenticationProviderId",
+     "rpu": "$.Policy.PasswordResetProviderId"
+    }
+   },
+   {
+    "name": "set policy of tmp-pol2-rating",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.apu}}",
+      "PasswordResetProviderId": "{{capture.rpu}}",
+      "EnableAllFolders": true,
+      "MaxParentalRating": 5
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "login tmp-pol2-rating",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-pol2-rating",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-pol2-rating{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tok": "$.AccessToken"
+    }
+   },
+   {
+    "name": "PlaybackInfo of rated-r is not found",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.rated-r.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.rated-r.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "item rated-r is not found",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.rated-r.id}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "download of rated-r is not found",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.rated-r.id}}/Download"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "static stream (rated-r)",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.rated-r.id}}/stream",
+     "query": {
+      "static": "true",
+      "MediaSourceId": "{{item.rated-r.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "stream without static (rated-r)",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.rated-r.id}}/stream",
+     "query": {
+      "MediaSourceId": "{{item.rated-r.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "HLS master (rated-r)",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.rated-r.id}}/master.m3u8",
+     "query": {
+      "MediaSourceId": "{{item.rated-r.id}}",
+      "VideoCodec": "h264",
+      "AudioCodec": "aac",
+      "SegmentContainer": "ts"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "HLS main (rated-r)",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.rated-r.id}}/main.m3u8",
+     "query": {
+      "MediaSourceId": "{{item.rated-r.id}}",
+      "VideoCodec": "h264",
+      "AudioCodec": "aac",
+      "SegmentContainer": "ts"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "create tmp-pol2-tags",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-pol2-tags",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u2": "$.Id",
+     "apu2": "$.Policy.AuthenticationProviderId",
+     "rpu2": "$.Policy.PasswordResetProviderId"
+    }
+   },
+   {
+    "name": "set policy of tmp-pol2-tags",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u2}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.apu2}}",
+      "PasswordResetProviderId": "{{capture.rpu2}}",
+      "EnableAllFolders": true,
+      "BlockedTags": [
+       "polbad"
+      ]
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "login tmp-pol2-tags",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-pol2-tags",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-pol2-tags{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tok2": "$.AccessToken"
+    }
+   },
+   {
+    "name": "PlaybackInfo of tag-bad is not found",
+    "as": "token:{{capture.tok2}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.tag-bad.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.tag-bad.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "item tag-bad is not found",
+    "as": "token:{{capture.tok2}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.tag-bad.id}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "download of tag-bad is not found",
+    "as": "token:{{capture.tok2}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.tag-bad.id}}/Download"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "static stream (tag-bad)",
+    "as": "token:{{capture.tok2}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tag-bad.id}}/stream",
+     "query": {
+      "static": "true",
+      "MediaSourceId": "{{item.tag-bad.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "stream without static (tag-bad)",
+    "as": "token:{{capture.tok2}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tag-bad.id}}/stream",
+     "query": {
+      "MediaSourceId": "{{item.tag-bad.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "HLS master (tag-bad)",
+    "as": "token:{{capture.tok2}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tag-bad.id}}/master.m3u8",
+     "query": {
+      "MediaSourceId": "{{item.tag-bad.id}}",
+      "VideoCodec": "h264",
+      "AudioCodec": "aac",
+      "SegmentContainer": "ts"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "HLS main (tag-bad)",
+    "as": "token:{{capture.tok2}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tag-bad.id}}/main.m3u8",
+     "query": {
+      "MediaSourceId": "{{item.tag-bad.id}}",
+      "VideoCodec": "h264",
+      "AudioCodec": "aac",
+      "SegmentContainer": "ts"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "an untagged item is visible",
+    "as": "token:{{capture.tok2}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.tag-good.id}}"
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "create tmp-pol2-allowed",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-pol2-allowed",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u3": "$.Id",
+     "apu3": "$.Policy.AuthenticationProviderId",
+     "rpu3": "$.Policy.PasswordResetProviderId"
+    }
+   },
+   {
+    "name": "set policy of tmp-pol2-allowed",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u3}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.apu3}}",
+      "PasswordResetProviderId": "{{capture.rpu3}}",
+      "EnableAllFolders": true,
+      "AllowedTags": [
+       "polbad"
+      ]
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "login tmp-pol2-allowed",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-pol2-allowed",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-pol2-allowed{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tok3": "$.AccessToken"
+    }
+   },
+   {
+    "name": "PlaybackInfo of tag-good is not found",
+    "as": "token:{{capture.tok3}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.tag-good.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.tag-good.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "item tag-good is not found",
+    "as": "token:{{capture.tok3}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.tag-good.id}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "download of tag-good is not found",
+    "as": "token:{{capture.tok3}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.tag-good.id}}/Download"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "static stream (tag-good)",
+    "as": "token:{{capture.tok3}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tag-good.id}}/stream",
+     "query": {
+      "static": "true",
+      "MediaSourceId": "{{item.tag-good.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "stream without static (tag-good)",
+    "as": "token:{{capture.tok3}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tag-good.id}}/stream",
+     "query": {
+      "MediaSourceId": "{{item.tag-good.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "HLS master (tag-good)",
+    "as": "token:{{capture.tok3}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tag-good.id}}/master.m3u8",
+     "query": {
+      "MediaSourceId": "{{item.tag-good.id}}",
+      "VideoCodec": "h264",
+      "AudioCodec": "aac",
+      "SegmentContainer": "ts"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "HLS main (tag-good)",
+    "as": "token:{{capture.tok3}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tag-good.id}}/main.m3u8",
+     "query": {
+      "MediaSourceId": "{{item.tag-good.id}}",
+      "VideoCodec": "h264",
+      "AudioCodec": "aac",
+      "SegmentContainer": "ts"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "a tagged item is visible",
+    "as": "token:{{capture.tok3}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.tag-bad.id}}"
+    },
+    "expect": {
+     "status": 200
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete u",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u}}"
+    },
+    "expect": {}
+   },
+   {
+    "name": "delete u2",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u2}}"
+    },
+    "expect": {}
+   },
+   {
+    "name": "delete u3",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u3}}"
+    },
+    "expect": {}
+   }
+  ]
+ },
+ {
+  "id": "policy.folders.blocked-media-folders",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "policy.md",
+  "scope": "modern",
+  "tags": [
+   "policy",
+   "stream"
+  ],
+  "covers": [
+   "policy.folders.R2"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-plain"
+  ],
+  "steps": [
+   {
+    "name": "create tmp-pol2-blockedmedia",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-pol2-blockedmedia",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u": "$.Id",
+     "apu": "$.Policy.AuthenticationProviderId",
+     "rpu": "$.Policy.PasswordResetProviderId"
+    }
+   },
+   {
+    "name": "set policy of tmp-pol2-blockedmedia",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.apu}}",
+      "PasswordResetProviderId": "{{capture.rpu}}",
+      "EnableAllFolders": true,
+      "BlockedMediaFolders": [
+       "{{library.avtrack.id}}"
+      ]
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "login tmp-pol2-blockedmedia",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-pol2-blockedmedia",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-pol2-blockedmedia{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tok": "$.AccessToken"
+    }
+   },
+   {
+    "name": "the item is still readable",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.av-plain.id}}"
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "PlaybackInfo still answers",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-plain.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-plain.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "static stream (av-plain)",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-plain.id}}/stream",
+     "query": {
+      "static": "true",
+      "MediaSourceId": "{{item.av-plain.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "stream without static (av-plain)",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-plain.id}}/stream",
+     "query": {
+      "MediaSourceId": "{{item.av-plain.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "HLS master (av-plain)",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-plain.id}}/master.m3u8",
+     "query": {
+      "MediaSourceId": "{{item.av-plain.id}}",
+      "VideoCodec": "h264",
+      "AudioCodec": "aac",
+      "SegmentContainer": "ts"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "HLS main (av-plain)",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.av-plain.id}}/main.m3u8",
+     "query": {
+      "MediaSourceId": "{{item.av-plain.id}}",
+      "VideoCodec": "h264",
+      "AudioCodec": "aac",
+      "SegmentContainer": "ts"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete u",
     "as": "admin",
     "request": {
      "method": "DELETE",

@@ -132,7 +132,7 @@
    "status": "supported",
    "description": "Administrator, disabled, library access (`EnabledFolders`), parental rating, tags, collection management, device restriction, lockout threshold and access schedules.",
    "reference": "Same.",
-   "notes": "Not enforced: `EnableContentDeletion`, `EnableMediaConversion`, `MaxActiveSessions`, `RemoteClientBitrateLimit`, download permission (stored, ignored).",
+   "notes": "Not enforced: `EnableContentDeletion`, `EnableMediaConversion` (stored, ignored); live TV, remote control and shared-device flags are out of scope. Playback flags, stream routes and remote limits: see `users.policy.playback`.",
    "spec_rules": [
     "users.policy.R1",
     "users.schedule.R1"
@@ -145,6 +145,33 @@
    ],
    "code": [
     "internal/api/users.go"
+   ]
+  },
+  {
+   "id": "users.policy.playback",
+   "title": "Playback policy",
+   "status": "supported",
+   "description": "`EnableVideoPlaybackTranscoding`, `EnableAudioPlaybackTranscoding`, `EnablePlaybackRemuxing` (HLS vs progressive vs no offer), `RemoteClientBitrateLimit` and the profile bitrate ceiling, `ForceRemoteSourceTranscoding`; stream routes ignore item visibility; `BlockedMediaFolders` has no effect.",
+   "reference": "Same, except that the progressive offer is served as the original file and offer URLs carry fewer parameters.",
+   "notes": "`EnableMediaPlayback`, `EnableSyncTranscoding` and the channel lists are stored with no effect, as on the reference. `ForceRemoteSourceTranscoding` has no scenario (needs a reachable address).",
+   "spec_rules": [
+    "policy.playback.R5",
+    "policy.playback.R7",
+    "policy.stream.R1",
+    "policy.remote.R1"
+   ],
+   "scenarios": [
+    "policy.playback.audio-only-transcoding",
+    "policy.playback.direct-play-flags",
+    "policy.playback.unrelated-flags",
+    "policy.remote.bitrate-limit",
+    "policy.stream.folders-off",
+    "policy.stream.rating-tags",
+    "policy.folders.blocked-media-folders"
+   ],
+   "code": [
+    "internal/api/policy_enforce.go",
+    "internal/api/playback.go"
    ]
   },
   {

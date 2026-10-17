@@ -43,6 +43,15 @@ rated "Rated TV14" 2007 "TV-14"
 rated "Rated Twelve" 2008 "12"
 rated "Rated Unknown" 2009 "ZZ-99"
 rated "Rated None" 2010 ""
+# Tagged movies (own library "Tagged", lazy): one carries the tag "polbad", the
+# other "polgood" (policy: BlockedTags / AllowedTags on the stream routes).
+tagged() { # <title> <year> <tag>
+  local dir="$ROOT/Tagged/$1 ($2)"
+  clip "$dir/$1 ($2).mp4" 2 230 6
+  printf '<movie><title>%s</title><year>%s</year><tag>%s</tag></movie>\n' "$1" "$2" "$3" >"$dir/$1 ($2).nfo"
+}
+tagged "Tag Bad" 2300 polbad
+tagged "Tag Good" 2301 polgood
 # A rated series (own library "RatedShows", lazy): the show carries TV-MA, the
 # first episode no rating of its own, the second one TV-Y.
 RS="$ROOT/RatedShows/Rated Show (2020)"

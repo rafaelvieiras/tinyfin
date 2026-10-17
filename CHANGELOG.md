@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Policy, second pass (`docs/contract/specs/policy.md`, `policy2.json`, 7 new scenarios): with only audio
+  transcoding allowed a video gets a progressive `/Videos/{id}/stream` offer instead of HLS; a video the
+  profile plays is also `SupportsDirectStream`, and without a profile `SupportsDirectStream` follows
+  remuxing and `SupportsTranscoding` video transcoding; `RemoteClientBitrateLimit` caps remote callers
+  and a profile/request `MaxStreamingBitrate` now ends direct play of a video (`ContainerBitrateExceedsLimit`);
+  `ForceRemoteSourceTranscoding` for remote `.strm` sources. The stream and HLS routes no longer apply
+  folder, tag or rating rules (as the reference), and `BlockedMediaFolders` has no effect. New `Tagged` fixture library.
 - Playback flags of `UserPolicy` (`docs/contract/specs/policy.md`, `policy2.json`): PlaybackInfo offers no
   transcode (`SupportsTranscoding` false, no `TranscodingUrl`) to a user with video transcoding, audio
   transcoding and remuxing all off, and a track is offered as it is when `EnableAudioPlaybackTranscoding`

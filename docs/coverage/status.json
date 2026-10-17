@@ -5,7 +5,7 @@
    "not-planned": 16,
    "partial": 19,
    "planned": 13,
-   "supported": 62
+   "supported": 63
   },
   "operations": 364,
   "registered": 184,
@@ -75,7 +75,8 @@
    "scenarios": [
     "music.stream.direct",
     "music.stream.unknown",
-    "music.transcode.stream"
+    "music.transcode.stream",
+    "policy.stream.folders-off"
    ],
    "notes": "Music is not cataloged or streamed (video-first scope, docs/01).",
    "priority": "low"
@@ -92,7 +93,8 @@
    "scenarios": [
     "music.stream.direct",
     "music.stream.unknown",
-    "music.transcode.stream"
+    "music.transcode.stream",
+    "policy.stream.folders-off"
    ],
    "notes": "Music is not cataloged or streamed (video-first scope, docs/01).",
    "priority": "low"
@@ -131,7 +133,8 @@
    "verified": true,
    "web": false,
    "scenarios": [
-    "music.transcode.universal"
+    "music.transcode.universal",
+    "policy.stream.folders-off"
    ]
   },
   {
@@ -144,7 +147,8 @@
    "verified": true,
    "web": false,
    "scenarios": [
-    "music.transcode.universal"
+    "music.transcode.universal",
+    "policy.stream.folders-off"
    ]
   },
   {
@@ -335,10 +339,17 @@
     "policy.delete.admin-without-flag",
     "policy.delete.folders-not-matching",
     "policy.download.admin-denied",
+    "policy.folders.blocked-media-folders",
+    "policy.playback.audio-only-transcoding",
     "policy.playback.audio-transcoding-off",
+    "policy.playback.direct-play-flags",
     "policy.playback.media-playback-off",
     "policy.playback.transcoding-off",
     "policy.playback.transcoding-partial",
+    "policy.playback.unrelated-flags",
+    "policy.remote.bitrate-limit",
+    "policy.stream.folders-off",
+    "policy.stream.rating-tags",
     "quickconnect.authorize.already-authorized",
     "quickconnect.authorize.non-admin-other-user-forbidden",
     "quickconnect.connect.date-added-advances",
@@ -2125,7 +2136,10 @@
     "playstate.user.nonadmin-other-user-forbidden-unmark",
     "policy.delete.admin-without-flag",
     "policy.delete.folders-not-matching",
+    "policy.folders.blocked-media-folders",
     "policy.item.can-flags",
+    "policy.stream.folders-off",
+    "policy.stream.rating-tags",
     "scan.disc.dvd-media",
     "scan.disc.dvd-title-set",
     "scan.disc.exclusive",
@@ -2204,7 +2218,9 @@
     "policy.download.admin-denied",
     "policy.download.default",
     "policy.download.denied",
-    "policy.download.errors"
+    "policy.download.errors",
+    "policy.stream.folders-off",
+    "policy.stream.rating-tags"
    ]
   },
   {
@@ -3235,10 +3251,17 @@
     "playback.subtitle.encode",
     "playback.subtitle.hls",
     "playback.subtitle.no-transcode",
+    "policy.folders.blocked-media-folders",
+    "policy.playback.audio-only-transcoding",
     "policy.playback.audio-transcoding-off",
+    "policy.playback.direct-play-flags",
     "policy.playback.media-playback-off",
     "policy.playback.transcoding-off",
     "policy.playback.transcoding-partial",
+    "policy.playback.unrelated-flags",
+    "policy.remote.bitrate-limit",
+    "policy.stream.folders-off",
+    "policy.stream.rating-tags",
     "subtitles.delivery.embedded",
     "subtitles.delivery.external",
     "subtitles.delivery.no-profile"
@@ -5261,10 +5284,17 @@
     "policy.delete.admin-without-flag",
     "policy.delete.folders-not-matching",
     "policy.download.admin-denied",
+    "policy.folders.blocked-media-folders",
+    "policy.playback.audio-only-transcoding",
     "policy.playback.audio-transcoding-off",
+    "policy.playback.direct-play-flags",
     "policy.playback.media-playback-off",
     "policy.playback.transcoding-off",
     "policy.playback.transcoding-partial",
+    "policy.playback.unrelated-flags",
+    "policy.remote.bitrate-limit",
+    "policy.stream.folders-off",
+    "policy.stream.rating-tags",
     "quickconnect.authorize.already-authorized",
     "quickconnect.authorize.non-admin-other-user-forbidden",
     "quickconnect.connect.date-added-advances",
@@ -5644,10 +5674,17 @@
     "policy.delete.admin-without-flag",
     "policy.delete.folders-not-matching",
     "policy.download.admin-denied",
+    "policy.folders.blocked-media-folders",
+    "policy.playback.audio-only-transcoding",
     "policy.playback.audio-transcoding-off",
+    "policy.playback.direct-play-flags",
     "policy.playback.media-playback-off",
     "policy.playback.transcoding-off",
     "policy.playback.transcoding-partial",
+    "policy.playback.unrelated-flags",
+    "policy.remote.bitrate-limit",
+    "policy.stream.folders-off",
+    "policy.stream.rating-tags",
     "quickconnect.exchange.disabled-account",
     "users.auth.access-schedule",
     "users.auth.activity-lockout-entry",
@@ -6012,7 +6049,10 @@
    "web": false,
    "scenarios": [
     "musicvideos.playback.direct",
+    "policy.folders.blocked-media-folders",
     "policy.playback.media-playback-off",
+    "policy.stream.folders-off",
+    "policy.stream.rating-tags",
     "scan.disc.stream",
     "scan.strm.playback"
    ],
@@ -6029,7 +6069,10 @@
    "web": false,
    "scenarios": [
     "musicvideos.playback.direct",
+    "policy.folders.blocked-media-folders",
     "policy.playback.media-playback-off",
+    "policy.stream.folders-off",
+    "policy.stream.rating-tags",
     "scan.disc.stream",
     "scan.strm.playback"
    ],
@@ -8278,7 +8321,7 @@
    "status": "supported",
    "description": "Administrator, disabled, library access (`EnabledFolders`), parental rating, tags, collection management, device restriction, lockout threshold and access schedules.",
    "reference": "Same.",
-   "notes": "Not enforced: `EnableContentDeletion`, `EnableMediaConversion`, `MaxActiveSessions`, `RemoteClientBitrateLimit`, download permission (stored, ignored).",
+   "notes": "Not enforced: `EnableContentDeletion`, `EnableMediaConversion` (stored, ignored); live TV, remote control and shared-device flags are out of scope. Playback flags, stream routes and remote limits: see `users.policy.playback`.",
    "spec_rules": [
     "users.policy.R1",
     "users.schedule.R1"
@@ -8291,6 +8334,33 @@
    ],
    "code": [
     "internal/api/users.go"
+   ]
+  },
+  {
+   "id": "users.policy.playback",
+   "title": "Playback policy",
+   "status": "supported",
+   "description": "`EnableVideoPlaybackTranscoding`, `EnableAudioPlaybackTranscoding`, `EnablePlaybackRemuxing` (HLS vs progressive vs no offer), `RemoteClientBitrateLimit` and the profile bitrate ceiling, `ForceRemoteSourceTranscoding`; stream routes ignore item visibility; `BlockedMediaFolders` has no effect.",
+   "reference": "Same, except that the progressive offer is served as the original file and offer URLs carry fewer parameters.",
+   "notes": "`EnableMediaPlayback`, `EnableSyncTranscoding` and the channel lists are stored with no effect, as on the reference. `ForceRemoteSourceTranscoding` has no scenario (needs a reachable address).",
+   "spec_rules": [
+    "policy.playback.R5",
+    "policy.playback.R7",
+    "policy.stream.R1",
+    "policy.remote.R1"
+   ],
+   "scenarios": [
+    "policy.playback.audio-only-transcoding",
+    "policy.playback.direct-play-flags",
+    "policy.playback.unrelated-flags",
+    "policy.remote.bitrate-limit",
+    "policy.stream.folders-off",
+    "policy.stream.rating-tags",
+    "policy.folders.blocked-media-folders"
+   ],
+   "code": [
+    "internal/api/policy_enforce.go",
+    "internal/api/playback.go"
    ]
   },
   {

@@ -23,7 +23,7 @@ How to read and edit this: [`docs/coverage/README.md`](coverage/README.md). Mach
 | Registered **and** a passing contract scenario | **142** (39%) |
 | Called by the official web client (docs/11) and registered | 121 of 164 (74%) |
 | Routes Tinyfin serves that the OpenAPI document lacks | 21 (legacy aliases the web client needs, `/socket`, HLS) |
-| Non-route features tracked | 110 (✅ 62 · 🟡 19 · 🗓️ 13 · ⛔ 16) |
+| Non-route features tracked | 111 (✅ 63 · 🟡 19 · 🗓️ 13 · ⛔ 16) |
 
 ### Routes by status
 
@@ -40,11 +40,11 @@ pie showData title Reference operations by status
 
 ### Non-route features by status
 
-✅✅✅✅✅✅✅✅✅✅✅🟡🟡🟡🟡🗓️🗓️⛔⛔⛔ ✅ 62 · 🟡 19 · 🗓️ 13 · ⛔ 16
+✅✅✅✅✅✅✅✅✅✅✅🟡🟡🟡🟡🗓️🗓️⛔⛔⛔ ✅ 63 · 🟡 19 · 🗓️ 13 · ⛔ 16
 
 ```mermaid
 pie showData title Features by status
-    "supported" : 62
+    "supported" : 63
     "partial" : 19
     "planned" : 13
     "not-planned" : 16
@@ -131,7 +131,7 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | [Sessions, WebSocket and play reporting](coverage/realtime.md) | 6 | ✅✅✅🟡🟡🟡🟡🟡🟡🟡🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔⛔ | ✅ 1 · 🟡 2 · 🗓️ 2 · ⛔ 1 |
 | [Library scanning](coverage/scan.md) | 24 | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🟡🟡🗓️⛔⛔ | ✅ 18 · 🟡 2 · 🗓️ 1 · ⛔ 3 |
 | [System, configuration and operations](coverage/system.md) | 12 | ✅✅✅✅✅✅✅🟡🟡🟡🟡🟡🟡🟡🟡🗓️🗓️🗓️⛔⛔ | ✅ 4 · 🟡 5 · 🗓️ 2 · ⛔ 1 |
-| [Users, authentication and parental controls](coverage/users.md) | 11 | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅🟡🟡🗓️🗓️⛔⛔ | ✅ 8 · 🟡 1 · 🗓️ 1 · ⛔ 1 |
+| [Users, authentication and parental controls](coverage/users.md) | 12 | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🟡🟡🗓️🗓️⛔ | ✅ 9 · 🟡 1 · 🗓️ 1 · ⛔ 1 |
 
 ## Behavior contract (derived)
 
@@ -152,7 +152,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [playback](contract/specs/playback.md) | 10 | 10 | 7 | 7 |
 | [playlists](contract/specs/playlists.md) | 33 | 33 | 23 | 23 |
 | [playstate](contract/specs/playstate.md) | 91 | 89 | 107 | 107 |
-| [policy](contract/specs/policy.md) | 10 | 9 | 8 | 8 |
+| [policy](contract/specs/policy.md) | 19 | 17 | 8 | 8 |
 | [quickconnect](contract/specs/quickconnect.md) | 26 | 26 | 23 | 23 |
 | [scan](contract/specs/scan.md) | 28 | 28 | 23 | 23 |
 | [search](contract/specs/search.md) | 16 | 16 | 14 | 14 |
@@ -161,7 +161,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [trickplay](contract/specs/trickplay.md) | 11 | 11 | 10 | 10 |
 | [users](contract/specs/users.md) | 188 | 188 | 195 | 195 |
 | [wire](contract/specs/wire.md) | 15 | 14 | 14 | 14 |
-| **total** | 916 | 910 | 729 | 726 |
+| **total** | 925 | 918 | 729 | 726 |
 
 ## Biggest gaps (planned or not planned, web-client facing)
 

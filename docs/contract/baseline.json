@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 760
+    "pass": 767
   },
   "scenarios": {
     "admin.backup.create": "pass",
@@ -456,11 +456,18 @@
     "policy.download.default": "pass",
     "policy.download.denied": "pass",
     "policy.download.errors": "pass",
+    "policy.folders.blocked-media-folders": "pass",
     "policy.item.can-flags": "pass",
+    "policy.playback.audio-only-transcoding": "pass",
     "policy.playback.audio-transcoding-off": "pass",
+    "policy.playback.direct-play-flags": "pass",
     "policy.playback.media-playback-off": "pass",
     "policy.playback.transcoding-off": "pass",
     "policy.playback.transcoding-partial": "pass",
+    "policy.playback.unrelated-flags": "pass",
+    "policy.remote.bitrate-limit": "pass",
+    "policy.stream.folders-off": "pass",
+    "policy.stream.rating-tags": "pass",
     "quickconnect.authorize.already-authorized": "pass",
     "quickconnect.authorize.anonymous-refused": "pass",
     "quickconnect.authorize.invalid-user-id": "pass",

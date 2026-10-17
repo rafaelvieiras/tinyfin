@@ -130,7 +130,7 @@ Measured against the Jellyfin 12.2.0 OpenAPI document (364 operations): **184 re
 
 | Route status | Count | Non-route features | Count |
 |---|---|---|---|
-| ✅ supported | 156 | ✅ supported | 62 |
+| ✅ supported | 156 | ✅ supported | 63 |
 | 🟡 partial | 12 | 🟡 partial | 19 |
 | 🗓️ planned | 85 | 🗓️ planned | 13 |
 | ⛔ not-planned | 95 | ⛔ not-planned | 16 |
