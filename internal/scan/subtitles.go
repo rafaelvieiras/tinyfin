@@ -110,8 +110,19 @@ func (s *Scanner) sidecarStreams(ctx context.Context, base, name, path string, s
 	sc, _ := subtitle.ParseSidecar(base, name)
 	var subs []storage.MediaStreamRef
 	if info, err := s.probe(ctx, path); err == nil {
+		// the language tags as the file spells them: a sidecar keeps "und",
+		// which an embedded track does not
+		var tags []string
+		for _, st := range info.Streams {
+			if st.CodecType == "subtitle" {
+				tags = append(tags, st.Tags.Language)
+			}
+		}
 		for _, st := range mediaStreamsFromProbe(info) {
 			if st.Type == storage.StreamTypeSubtitle {
+				if n := len(subs); n < len(tags) {
+					st.Language = tags[n]
+				}
 				subs = append(subs, st)
 			}
 		}
