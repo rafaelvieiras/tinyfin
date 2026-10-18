@@ -33,6 +33,12 @@ var taskRegistry = []taskDef{
 		defaults:    []taskTriggerInfo{{Type: "DailyTrigger", TimeOfDayTicks: ticks(3 * ticksPerHour)}},
 	},
 	{
+		key: "RefreshChapterImages", id: "4e6637c832ed644d1af3370a2506e80a",
+		name: "Extract Chapter Images", category: "Library",
+		description: "Creates thumbnails for videos that have chapters.",
+		defaults:    []taskTriggerInfo{{Type: "DailyTrigger", TimeOfDayTicks: ticks(2 * ticksPerHour)}},
+	},
+	{
 		key: "RefreshLibrary", id: "7738148ffcd07979c7ceb148e06b3aed",
 		name: "Scan Media Library", category: "Library",
 		description: "Scans your media library for new files and refreshes metadata.",
@@ -128,6 +134,19 @@ func (s *Server) taskStatus(def taskDef) (state string, pct float64, last *taskL
 			status = "Failed"
 		}
 		return "Idle", 0, &taskLastRun{start: start, end: end, status: status}
+	case "RefreshChapterImages":
+		if s.chapterimg.TaskRunning() {
+			return "Running", 0, nil
+		}
+		r := s.chapterimg.TaskLast()
+		if r.Start.IsZero() {
+			return "Idle", 0, nil
+		}
+		status := "Completed"
+		if r.Cancelled {
+			status = "Cancelled"
+		}
+		return "Idle", 0, &taskLastRun{start: r.Start, end: r.End, status: status}
 	case "RefreshTrickplayImages":
 		if s.trickplay.TaskRunning() {
 			return "Running", 0, nil
@@ -159,6 +178,20 @@ func (s *Server) startTask(ctx context.Context, def taskDef) error {
 			return nil
 		}
 		return s.refreshAllLibraries(ctx)
+	case "RefreshChapterImages":
+		libs, err := s.store.QueryLibraries(ctx)
+		if err != nil {
+			return err
+		}
+		s.chapterimg.RunTask(libs)
+		s.notifyScheduledTasks(context.Background(), true)
+		go func() {
+			for s.chapterimg.TaskRunning() {
+				time.Sleep(200 * time.Millisecond)
+			}
+			s.notifyScheduledTasks(context.Background(), true)
+		}()
+		return nil
 	case "RefreshTrickplayImages":
 		libs, err := s.store.QueryLibraries(ctx)
 		if err != nil {
@@ -207,6 +240,8 @@ func (s *Server) stopTask(def taskDef) {
 	switch def.key {
 	case "RefreshLibrary":
 		s.scanState.cancelAll()
+	case "RefreshChapterImages":
+		s.chapterimg.CancelTask()
 	case "RefreshTrickplayImages":
 		s.trickplay.CancelTask()
 	}

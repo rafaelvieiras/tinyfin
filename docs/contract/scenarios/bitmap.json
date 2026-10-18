@@ -1,0 +1,1801 @@
+[
+ {
+  "id": "bitmap.streams.pgs",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "bitmap.md",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "bitmap"
+  ],
+  "covers": [
+   "bitmap.streams.R1",
+   "bitmap.streams.R2"
+  ],
+  "requires": [
+   "library:bitmap",
+   "item:bmp-pgs"
+  ],
+  "steps": [
+   {
+    "name": "an embedded PGS track",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.bmp-pgs.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Codec",
+       "op": "eq",
+       "value": "PGSSUB"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Language",
+       "op": "eq",
+       "value": "eng"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsDefault",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsExternal",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsTextSubtitleStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Score",
+       "op": "eq",
+       "value": 112211
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Width",
+       "op": "eq",
+       "value": 320
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Height",
+       "op": "eq",
+       "value": 240
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DisplayTitle",
+       "op": "eq",
+       "value": "English - Default - PGSSUB"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "bitmap.streams.dvd",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "bitmap.md",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "bitmap"
+  ],
+  "covers": [
+   "bitmap.streams.R1",
+   "bitmap.streams.R2"
+  ],
+  "requires": [
+   "library:bitmap",
+   "item:bmp-dvd"
+  ],
+  "steps": [
+   {
+    "name": "an embedded DVD track",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.bmp-dvd.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Codec",
+       "op": "eq",
+       "value": "DVDSUB"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Language",
+       "op": "eq",
+       "value": "eng"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsDefault",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsExternal",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsTextSubtitleStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Score",
+       "op": "eq",
+       "value": 112211
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Width",
+       "op": "eq",
+       "value": 320
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Height",
+       "op": "eq",
+       "value": 240
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DisplayTitle",
+       "op": "eq",
+       "value": "English - Default - DVDSUB"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "bitmap.streams.dvb",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "bitmap.md",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "bitmap"
+  ],
+  "covers": [
+   "bitmap.streams.R1",
+   "bitmap.streams.R3"
+  ],
+  "requires": [
+   "library:bitmap",
+   "item:bmp-dvb"
+  ],
+  "steps": [
+   {
+    "name": "an embedded DVB track",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.bmp-dvb.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Codec",
+       "op": "eq",
+       "value": "DVBSUB"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Language",
+       "op": "eq",
+       "value": "eng"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsDefault",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsExternal",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsTextSubtitleStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].SupportsExternalStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Score",
+       "op": "eq",
+       "value": 112111
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Width",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Height",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DisplayTitle",
+       "op": "eq",
+       "value": "English - Default - DVBSUB"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "bitmap.streams.mixed",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "bitmap.md",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "bitmap"
+  ],
+  "covers": [
+   "bitmap.streams.R1",
+   "bitmap.streams.R2"
+  ],
+  "requires": [
+   "library:bitmap",
+   "item:bmp-mixed"
+  ],
+  "steps": [
+   {
+    "name": "text, PGS and DVD tracks in one file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.bmp-mixed.id}}",
+     "query": {
+      "Fields": "MediaSources"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams",
+       "op": "len",
+       "value": 5
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Codec",
+       "op": "eq",
+       "value": "subrip"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].Score",
+       "op": "eq",
+       "value": 112221
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].IsTextSubtitleStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Codec",
+       "op": "eq",
+       "value": "PGSSUB"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Language",
+       "op": "eq",
+       "value": "por"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].IsDefault",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].IsExternal",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].IsTextSubtitleStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Score",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Width",
+       "op": "eq",
+       "value": 320
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].Height",
+       "op": "eq",
+       "value": 240
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DisplayTitle",
+       "op": "eq",
+       "value": "Portuguese - PGSSUB"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Type",
+       "op": "eq",
+       "value": "Subtitle"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Codec",
+       "op": "eq",
+       "value": "DVDSUB"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Language",
+       "op": "eq",
+       "value": "spa"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].IsDefault",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].IsForced",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].IsExternal",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].IsTextSubtitleStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].SupportsExternalStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Score",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Width",
+       "op": "eq",
+       "value": 320
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].Height",
+       "op": "eq",
+       "value": 240
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DisplayTitle",
+       "op": "eq",
+       "value": "Spanish - DVDSUB"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "bitmap.delivery.encode",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "bitmap.md",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "bitmap"
+  ],
+  "covers": [
+   "bitmap.delivery.R1",
+   "bitmap.delivery.R2"
+  ],
+  "requires": [
+   "library:bitmap",
+   "item:bmp-mixed"
+  ],
+  "steps": [
+   {
+    "name": "text via Hls and files: picture tracks are burned in",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.bmp-mixed.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.bmp-mixed.id}}",
+      "SubtitleStreamIndex": "3"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "Hls"
+        },
+        {
+         "Format": "srt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryMethod",
+       "op": "eq",
+       "value": "Hls"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "SubtitleMethod=Encode"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "SubtitleStreamIndex=3"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "TranscodeReasons=SubtitleCodecNotSupported"
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "an Encode entry is the same",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.bmp-mixed.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.bmp-mixed.id}}",
+      "SubtitleStreamIndex": "3"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "srt",
+         "Method": "External"
+        },
+        {
+         "Format": "srt",
+         "Method": "Encode"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "SubtitleMethod=Encode"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "SubtitleStreamIndex=3"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "TranscodeReasons=SubtitleCodecNotSupported"
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "bitmap.delivery.embed",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "bitmap.md",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "bitmap"
+  ],
+  "covers": [
+   "bitmap.delivery.R3",
+   "bitmap.delivery.R4"
+  ],
+  "requires": [
+   "library:bitmap",
+   "item:bmp-mixed"
+  ],
+  "steps": [
+   {
+    "name": "the codecs named as Embed entries stay in the container",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.bmp-mixed.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.bmp-mixed.id}}",
+      "SubtitleStreamIndex": "3"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "pgssub",
+         "Method": "Embed"
+        },
+        {
+         "Format": "dvdsub",
+         "Method": "Embed"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "Embed"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DeliveryMethod",
+       "op": "eq",
+       "value": "Embed"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "only the selected codec named: the other track is burned",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.bmp-mixed.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.bmp-mixed.id}}",
+      "SubtitleStreamIndex": "3"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "PGSSUB",
+         "Method": "Embed"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "Embed"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the selected track's codec not named: everything is transcoded",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.bmp-mixed.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.bmp-mixed.id}}",
+      "SubtitleStreamIndex": "3"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "dvdsub",
+         "Method": "Embed"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "SubtitleMethod=Encode"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "SubtitleStreamIndex=3"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "TranscodeReasons=SubtitleCodecNotSupported"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a container that cannot hold the track: transcoded and burned",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.bmp-pgs.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.bmp-pgs.id}}",
+      "SubtitleStreamIndex": "2"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "pgssub",
+         "Method": "Embed"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "bitmap.delivery.external",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "bitmap.md",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "bitmap"
+  ],
+  "covers": [
+   "bitmap.delivery.R5",
+   "bitmap.delivery.R6"
+  ],
+  "requires": [
+   "library:bitmap",
+   "item:bmp-mixed",
+   "item:bmp-dvb"
+  ],
+  "steps": [
+   {
+    "name": "an entry naming the PGS codec: the track as a file",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.bmp-mixed.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.bmp-mixed.id}}",
+      "SubtitleStreamIndex": "3"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "pgssub",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryUrl",
+       "op": "matches",
+       "value": "^/Videos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{32}/Subtitles/3/0/Stream\\.pgssub\\?ApiKey="
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].IsExternalUrl",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the entry's spelling ends the URL",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.bmp-mixed.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.bmp-mixed.id}}",
+      "SubtitleStreamIndex": "3"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "PGSSUB",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryUrl",
+       "op": "matches",
+       "value": "^/Videos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{32}/Subtitles/3/0/Stream\\.PGSSUB\\?ApiKey="
+      }
+     ]
+    }
+   },
+   {
+    "name": "DVD track",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.bmp-mixed.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.bmp-mixed.id}}",
+      "SubtitleStreamIndex": "4"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "dvdsub",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DeliveryMethod",
+       "op": "eq",
+       "value": "External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DeliveryUrl",
+       "op": "matches",
+       "value": "^/Videos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{32}/Subtitles/4/0/Stream\\.dvdsub\\?ApiKey="
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      }
+     ]
+    }
+   },
+   {
+    "name": "other names do not match the codec (sup, hdmv_pgs_subtitle)",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.bmp-mixed.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.bmp-mixed.id}}",
+      "SubtitleStreamIndex": "3"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "sup",
+         "Method": "External"
+        },
+        {
+         "Format": "hdmv_pgs_subtitle",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      }
+     ]
+    }
+   },
+   {
+    "name": "DVB track",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.bmp-dvb.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.bmp-dvb.id}}",
+      "SubtitleStreamIndex": "2"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "dvbsub",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryMethod",
+       "op": "eq",
+       "value": "External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryUrl",
+       "op": "matches",
+       "value": "^/Videos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{32}/Subtitles/2/0/Stream\\.dvbsub\\?ApiKey="
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "bitmap.route.pgs",
+  "endpoint": "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/Stream.{format}",
+  "spec": "bitmap.md",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "bitmap"
+  ],
+  "covers": [
+   "bitmap.route.R1",
+   "bitmap.route.R2"
+  ],
+  "requires": [
+   "library:bitmap",
+   "item:bmp-pgs"
+  ],
+  "steps": [
+   {
+    "name": "sup: the track as a PGS stream",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-pgs.id}}/{{item.bmp-pgs.id}}/Subtitles/2/0/Stream.sup"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "application/octet-stream"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "PG"
+      }
+     ]
+    }
+   },
+   {
+    "name": "pgssub: the track as a PGS stream",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-pgs.id}}/{{item.bmp-pgs.id}}/Subtitles/2/0/Stream.pgssub"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "application/octet-stream"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "PG"
+      }
+     ]
+    }
+   },
+   {
+    "name": "dvdsub: the track as a PGS stream",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-pgs.id}}/{{item.bmp-pgs.id}}/Subtitles/2/0/Stream.dvdsub"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "application/octet-stream"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "PG"
+      }
+     ]
+    }
+   },
+   {
+    "name": "SUP: the track as a PGS stream",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-pgs.id}}/{{item.bmp-pgs.id}}/Subtitles/2/0/Stream.SUP"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "application/octet-stream"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "PG"
+      }
+     ]
+    }
+   },
+   {
+    "name": "srt: no conversion",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-pgs.id}}/{{item.bmp-pgs.id}}/Subtitles/2/0/Stream.srt"
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "vtt: no conversion",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-pgs.id}}/{{item.bmp-pgs.id}}/Subtitles/2/0/Stream.vtt"
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "ass: no conversion",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-pgs.id}}/{{item.bmp-pgs.id}}/Subtitles/2/0/Stream.ass"
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "dvbsub: no conversion",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-pgs.id}}/{{item.bmp-pgs.id}}/Subtitles/2/0/Stream.dvbsub"
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "mks: no conversion",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-pgs.id}}/{{item.bmp-pgs.id}}/Subtitles/2/0/Stream.mks"
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "xyz: no conversion",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-pgs.id}}/{{item.bmp-pgs.id}}/Subtitles/2/0/Stream.xyz"
+    },
+    "expect": {
+     "status": 400
+    }
+   }
+  ]
+ },
+ {
+  "id": "bitmap.route.dvd",
+  "endpoint": "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/Stream.{format}",
+  "spec": "bitmap.md",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "bitmap"
+  ],
+  "covers": [
+   "bitmap.route.R1",
+   "bitmap.route.R2"
+  ],
+  "requires": [
+   "library:bitmap",
+   "item:bmp-dvd"
+  ],
+  "steps": [
+   {
+    "name": "sup: a Matroska file holding the track",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-dvd.id}}/{{item.bmp-dvd.id}}/Subtitles/2/0/Stream.sup"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/x-matroska"
+     }
+    }
+   },
+   {
+    "name": "dvdsub: a Matroska file holding the track",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-dvd.id}}/{{item.bmp-dvd.id}}/Subtitles/2/0/Stream.dvdsub"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/x-matroska"
+     }
+    }
+   },
+   {
+    "name": "mks: a Matroska file holding the track",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-dvd.id}}/{{item.bmp-dvd.id}}/Subtitles/2/0/Stream.mks"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/x-matroska"
+     }
+    }
+   },
+   {
+    "name": "srt: no conversion",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-dvd.id}}/{{item.bmp-dvd.id}}/Subtitles/2/0/Stream.srt"
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "vtt: no conversion",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-dvd.id}}/{{item.bmp-dvd.id}}/Subtitles/2/0/Stream.vtt"
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "dvbsub: no conversion",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-dvd.id}}/{{item.bmp-dvd.id}}/Subtitles/2/0/Stream.dvbsub"
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "dvd_subtitle: no conversion",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-dvd.id}}/{{item.bmp-dvd.id}}/Subtitles/2/0/Stream.dvd_subtitle"
+    },
+    "expect": {
+     "status": 400
+    }
+   }
+  ]
+ },
+ {
+  "id": "bitmap.route.dvb",
+  "endpoint": "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/Stream.{format}",
+  "spec": "bitmap.md",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "bitmap"
+  ],
+  "covers": [
+   "bitmap.route.R3"
+  ],
+  "requires": [
+   "library:bitmap",
+   "item:bmp-dvb"
+  ],
+  "steps": [
+   {
+    "name": "sup: not served",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-dvb.id}}/{{item.bmp-dvb.id}}/Subtitles/2/0/Stream.sup"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "dvbsub: not served",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-dvb.id}}/{{item.bmp-dvb.id}}/Subtitles/2/0/Stream.dvbsub"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "srt: not served",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-dvb.id}}/{{item.bmp-dvb.id}}/Subtitles/2/0/Stream.srt"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "vtt: not served",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.bmp-dvb.id}}/{{item.bmp-dvb.id}}/Subtitles/2/0/Stream.vtt"
+    },
+    "expect": {
+     "status": 404
+    }
+   }
+  ]
+ },
+ {
+  "id": "bitmap.hls.master",
+  "endpoint": "GET /Videos/{itemId}/master.m3u8",
+  "spec": "bitmap.md",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "bitmap"
+  ],
+  "covers": [
+   "bitmap.hls.R1",
+   "bitmap.hls.R2"
+  ],
+  "requires": [
+   "library:bitmap",
+   "item:bmp-mixed"
+  ],
+  "steps": [
+   {
+    "name": "playback info of a picture track burned in",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.bmp-mixed.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.bmp-mixed.id}}",
+      "SubtitleStreamIndex": "3"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "Hls"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    },
+    "capture": {
+     "url": "$.MediaSources[0].TranscodingUrl"
+    }
+   },
+   {
+    "name": "the master playlist",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "{{capture.url}}"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "prefix",
+       "value": "#EXTM3U"
+      },
+      {
+       "op": "contains",
+       "value": "#EXT-X-STREAM-INF"
+      },
+      {
+       "op": "contains",
+       "value": "SubtitleMethod=Encode"
+      },
+      {
+       "op": "notcontains",
+       "value": "TYPE=SUBTITLES"
+      }
+     ]
+    }
+   },
+   {
+    "name": "playback info of the text track as the Hls selection",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.bmp-mixed.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.bmp-mixed.id}}",
+      "SubtitleStreamIndex": "2"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "Hls"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    },
+    "capture": {
+     "url": "$.MediaSources[0].TranscodingUrl"
+    }
+   },
+   {
+    "name": "the master playlist",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "{{capture.url}}"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "prefix",
+       "value": "#EXTM3U"
+      },
+      {
+       "op": "contains",
+       "value": "SubtitleMethod=Hls"
+      },
+      {
+       "op": "contains",
+       "value": "Subtitles/2/subtitles.m3u8"
+      },
+      {
+       "op": "notcontains",
+       "value": "Subtitles/3/"
+      },
+      {
+       "op": "notcontains",
+       "value": "Subtitles/4/"
+      }
+     ]
+    }
+   }
+  ]
+ }
+]

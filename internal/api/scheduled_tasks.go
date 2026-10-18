@@ -6,7 +6,8 @@
 // Tinyfin exposes only tasks that exist for real (scheduled_tasks_engine.go
 // holds the registry, the trigger persistence and the small scheduler):
 // "Scan Media Library" (RefreshLibrary), "Generate Trickplay Images"
-// (RefreshTrickplayImages) and "Clean Activity Log" (CleanActivityLog). The
+// (RefreshTrickplayImages), "Extract Chapter Images" (RefreshChapterImages)
+// and "Clean Activity Log" (CleanActivityLog). The
 // reference's other entries (plugin updates, subtitle/lyric downloads,
 // audio normalization, ...) belong to subsystems this project does not have
 // and are not fabricated. Ids are the reference's: a 32-hex id distinct

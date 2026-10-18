@@ -35,6 +35,17 @@ func IsTextCodec(codec string) bool {
 	return true
 }
 
+// SupportsExternal reports whether a subtitle stream of this codec can be
+// fetched on its own (SupportsExternalStream): every track but DVB pictures,
+// which the reference leaves inside the container.
+func SupportsExternal(codec string) bool {
+	switch strings.ToLower(codec) {
+	case "dvbsub", "dvb_subtitle":
+		return false
+	}
+	return true
+}
+
 // NormalizeCodec maps an ffprobe subtitle codec name to the name the
 // reference server reports (bitmap codecs get their upper-case names).
 func NormalizeCodec(codec string) string {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"strconv"
 	"strings"
 	"time"
 
@@ -769,11 +768,12 @@ func mediaStreamDtos(streams []storage.MediaStreamRef) []mediaStreamDto {
 			}
 		}
 		if s.Type == storage.StreamTypeSubtitle {
-			d.SupportsExternalStream = true
+			d.SupportsExternalStream = subtitle.SupportsExternal(s.Codec)
 			d.IsTextSubtitleStream = subtitle.IsTextCodec(s.Codec)
 			d.Path = s.Path
-			// An embedded ASS/SSA stream carries no score.
-			if codec := strings.ToLower(s.Codec); s.IsExternal || (codec != "ass" && codec != "ssa") {
+			// An embedded stream that is neither default nor forced carries
+			// no score.
+			if s.IsExternal || s.IsDefault || s.IsForced {
 				score := playback.SubtitleScore(s)
 				d.Score = &score
 			}
@@ -1175,7 +1175,7 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		CollectionType:          string(item.CollectionType),
 		MediaType:               mediaTypeFor(item.Type),
 		MediaStreams:            mediaStreamDtos(item.MediaStreams),
-		Chapters:                chapterDtos(item.Chapters),
+		Chapters:                s.chapterDtos(item),
 		ImageTags:               orEmptyMap(imageTags),
 		BackdropImageTags:       orEmptySlice(backdropImageTags),
 		ImageBlurHashes:         orEmptyNested(imageBlurHashes),
@@ -1308,26 +1308,11 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 	return dto
 }
 
-// chapterInfoDto is one entry of BaseItemDto.Chapters. ImageTag is never
-// set: chapter pictures are not extracted, so the member is omitted.
+// chapterInfoDto is one entry of BaseItemDto.Chapters. ImageTag is set only
+// for a chapter that has a picture (chapter_images.go).
 type chapterInfoDto struct {
 	StartPositionTicks int64    `json:"StartPositionTicks"`
 	Name               string   `json:"Name"`
 	ImageTag           string   `json:"ImageTag,omitempty"`
 	ImageDateModified  wireTime `json:"ImageDateModified"`
-}
-
-// chapterDtos lists an item's chapters; a chapter without a title is named
-// "Chapter N" after its 1-based position. The result is never nil: a read of
-// an item without chapters carries an empty list.
-func chapterDtos(refs []storage.ChapterRef) []chapterInfoDto {
-	out := make([]chapterInfoDto, 0, len(refs))
-	for i, c := range refs {
-		name := c.Name
-		if name == "" {
-			name = "Chapter " + strconv.Itoa(i+1)
-		}
-		out = append(out, chapterInfoDto{StartPositionTicks: c.StartTicks, Name: name})
-	}
-	return out
 }

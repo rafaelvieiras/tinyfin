@@ -27,6 +27,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   always `mkv`; a `.strm` that cannot be probed is transcoded for a user with `ForceRemoteSourceTranscoding`. `probeVersion` is
   2, so the next incremental scan probes files again. The conformance media has a `Matrix` library (Matroska, HDR, 10-bit,
   anamorphic, a served Matroska `.strm`).
+- Picture subtitles (`docs/contract/specs/bitmap.md`, `bitmap.json`, 11 new scenarios, real PGS/DVD/DVB fixtures
+  from `scripts/conformance-media.sh` and `scripts/conformance-pgs.py`): picture tracks carry the subtitle
+  canvas `Width`/`Height`, `SupportsExternalStream` is false for DVB and `Score` follows the reference (none for an
+  embedded track that is neither default nor forced; one hundred lower without external support); an `External` profile
+  entry naming the track's codec (`pgssub`, `dvdsub`, `dvbsub`) delivers it as a file and `Stream.{format}` serves a PGS
+  track as a `.sup` stream and a DVD track as a Matroska file (DVB: `404`; text formats: `400`). The overlay burn-in is
+  now verified with real tracks (`TestBitmapBurnIn_RealFFmpeg`) and against the reference's transcode.
+- Chapter pictures (`chapters.md#images`, `chapters2.json`, 4 new scenarios): with
+  `EnableChapterImageExtraction` on a library a still is taken at each chapter (15 s for a chapter that starts at 0)
+  during the scan (`ExtractChapterImagesDuringLibraryScan`) or by the new `Extract Chapter Images` task, set as `ImageTag`
+  on `Chapters` and served at `/Items/{id}/Images/Chapter/{index}`.
 - HLS parity (`docs/contract/specs/playback.md#hls`, `playback3.json`, 5 new scenarios): the master
   playlist has the reference's variant line (`BANDWIDTH`, `CODECS`, `RESOLUTION`, `FRAME-RATE`) and, for
   `SubtitleMethod=Hls`, the `#EXT-X-MEDIA:TYPE=SUBTITLES` group pointing at `Subtitles/{n}/subtitles.m3u8`;

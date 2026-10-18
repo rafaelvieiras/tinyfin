@@ -234,11 +234,15 @@ func (s *Server) handleSubtitleStream(w http.ResponseWriter, r *http.Request) {
 
 	var format subtitle.Format
 	var alias bool
+	var copyFormat string // a picture-track format name, see bitmapCopyFormat
 	if !isPlaylist {
 		f, isAlias, ok := subtitle.ParseFormat(file[len("stream."):])
 		if !ok {
-			writeSubtitleError(w, http.StatusBadRequest)
-			return
+			if !bitmapCopyFormat(file[len("stream."):]) {
+				writeSubtitleError(w, http.StatusBadRequest)
+				return
+			}
+			copyFormat = strings.ToLower(file[len("stream."):])
 		}
 		format, alias = f, isAlias
 	}
@@ -264,7 +268,15 @@ func (s *Server) handleSubtitleStream(w http.ResponseWriter, r *http.Request) {
 		writeSubtitleError(w, http.StatusInternalServerError)
 		return
 	}
+	if !subtitle.SupportsExternal(st.Codec) {
+		writeSubtitleError(w, http.StatusNotFound)
+		return
+	}
 	if !subtitle.IsTextCodec(st.Codec) {
+		s.serveBitmapSubtitle(w, r, src, st, copyFormat)
+		return
+	}
+	if copyFormat != "" {
 		writeSubtitleError(w, http.StatusBadRequest)
 		return
 	}
@@ -309,6 +321,84 @@ func (s *Server) handleSubtitleStream(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	if r.Method != http.MethodHead {
 		_, _ = w.Write(out)
+	}
+}
+
+// bitmapCopyFormat reports whether name is a format a picture track can be
+// asked for: the names of its own codecs, which all mean "the track as it is
+// stored" (the container extension of a DVD track, mks, and dvbsub, which no
+// track but a DVB one answers, are checked per track).
+func bitmapCopyFormat(name string) bool {
+	switch strings.ToLower(name) {
+	case "pgssub", "sup", "pgs", "hdmv_pgs_subtitle", "dvdsub", "vobsub", "mks", "dvbsub":
+		return true
+	}
+	return false
+}
+
+// serveBitmapSubtitle answers a request for a picture track (PGS or DVD),
+// which is not converted: a PGS track comes out as a .sup stream
+// (application/octet-stream), a DVD track as a Matroska file holding only that
+// track (video/x-matroska, the one format "mks" is accepted for), a sidecar
+// .sup file as it is. Any other format (srt, vtt, ...) is a 400.
+func (s *Server) serveBitmapSubtitle(w http.ResponseWriter, r *http.Request, src storage.Item, st storage.MediaStreamRef, format string) {
+	dvd := strings.EqualFold(st.Codec, "DVDSUB")
+	if format == "" || format == "dvbsub" || (format == "mks" && !dvd) {
+		writeSubtitleError(w, http.StatusBadRequest)
+		return
+	}
+	var data []byte
+	if st.IsExternal {
+		raw, err := os.ReadFile(st.Path)
+		if err != nil {
+			writeSubtitleError(w, http.StatusInternalServerError)
+			return
+		}
+		data = raw
+	} else {
+		ordinal := 0
+		for _, o := range src.MediaStreams {
+			if o.Type == storage.StreamTypeSubtitle && !o.IsExternal && o.Index < st.Index {
+				ordinal++
+			}
+		}
+		ffmpeg := s.cfg.TranscodeFFmpegPath
+		if ffmpeg == "" {
+			ffmpeg = "ffmpeg"
+		}
+		muxer, ext := "sup", ".sup"
+		if dvd {
+			muxer, ext = "matroska", ".mks"
+		}
+		dir, err := os.MkdirTemp("", "tinyfin-sub-")
+		if err != nil {
+			writeSubtitleError(w, http.StatusInternalServerError)
+			return
+		}
+		defer os.RemoveAll(dir)
+		out := filepath.Join(dir, "track"+ext)
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Minute)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, ffmpeg, "-v", "error", "-nostdin", "-i", src.Path,
+			"-map", fmt.Sprintf("0:s:%d", ordinal), "-an", "-vn", "-c:s", "copy", "-f", muxer, out)
+		if err := cmd.Run(); err != nil {
+			writeSubtitleError(w, http.StatusInternalServerError)
+			return
+		}
+		if data, err = os.ReadFile(out); err != nil {
+			writeSubtitleError(w, http.StatusInternalServerError)
+			return
+		}
+	}
+	contentType := "application/octet-stream"
+	if dvd && !st.IsExternal {
+		contentType = "video/x-matroska"
+	}
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	w.WriteHeader(http.StatusOK)
+	if r.Method != http.MethodHead {
+		_, _ = w.Write(data)
 	}
 }
 

@@ -823,6 +823,78 @@ chaptered "$CH/Chaptered Movie (2500)/Chaptered Movie (2500).mkv"
 clip "$CH/Plain Chapterless (2501)/Plain Chapterless (2501).mp4" 4 520 6
 
 
+# Bitmap subtitles (own library "Bitmap", lazy): MKVs with picture subtitle
+# tracks carrying real cues (the words BURN IN as white block letters from 0.5 s
+# to 3.5 s of a 4 s clip). The PGS stream is assembled by scripts/conformance-pgs.py
+# (ffmpeg has no PGS encoder); the DVD and DVB tracks are ffmpeg re-encodes of
+# it. 320x240, a 440 Hz AAC track. "Bmp Mixed" holds a SubRip "eng" (default),
+# a PGS "por" and a DVD "spa" track in that order.
+BM="$ROOT/Bitmap"
+bitmapsub() { # <out> <bitmap codec: pgs|dvd|dvb|mixed>
+  [ -f "$1" ] && return 0
+  mkdir -p "$(dirname "$1")"
+  local t; t="$(mktemp -d)"
+  python3 "$(dirname "$0")/conformance-pgs.py" "$t/a.sup" 320 240 "BURN IN" 0.5 3.5
+  "$FFMPEG" -v error -y -f lavfi -i "testsrc=duration=4:size=320x240:rate=6" -f lavfi -i "sine=frequency=440:duration=4" \
+    -i "$t/a.sup" -map 0 -map 1 -map 2 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -c:s copy \
+    -metadata:s:s:0 language=eng -t 4 "$t/pgs.mkv"
+  case "$2" in
+    pgs) mv "$t/pgs.mkv" "$1" ;;
+    dvd) "$FFMPEG" -v error -y -i "$t/pgs.mkv" -map 0 -c:v copy -c:a copy -c:s dvdsub "$1" ;;
+    dvb) # the encoder ends the cue at the 32-bit time limit; a copy cut at 4 s drops that packet
+      "$FFMPEG" -v error -y -i "$t/pgs.mkv" -map 0 -c:v copy -c:a copy -c:s dvbsub "$t/dvb.mkv"
+      "$FFMPEG" -v error -y -i "$t/dvb.mkv" -map 0 -c copy -t 4 "$1" ;;
+    mixed)
+      printf '1\n00:00:00,500 --> 00:00:03,500\nBURN IN TEXT\n' >"$t/a.srt"
+      "$FFMPEG" -v error -y -i "$t/pgs.mkv" -map 0 -c:v copy -c:a copy -c:s dvdsub "$t/dvd.mkv"
+      "$FFMPEG" -v error -y -i "$t/pgs.mkv" -i "$t/dvd.mkv" -i "$t/a.srt" -map 0:v -map 0:a -map 2 -map 0:s -map 1:s \
+        -c:v copy -c:a copy -c:s:0 srt -c:s:1 copy -c:s:2 copy \
+        -metadata:s:s:0 language=eng -metadata:s:s:1 language=por -metadata:s:s:2 language=spa \
+        -disposition:s:0 default -disposition:s:1 0 -disposition:s:2 0 "$1" ;;
+  esac
+  rm -rf "$t"
+}
+bitmapsub "$BM/Bmp Pgs (2650)/Bmp Pgs (2650).mkv" pgs
+bitmapsub "$BM/Bmp Dvd (2651)/Bmp Dvd (2651).mkv" dvd
+bitmapsub "$BM/Bmp Dvb (2652)/Bmp Dvb (2652).mkv" dvb
+bitmapsub "$BM/Bmp Mixed (2653)/Bmp Mixed (2653).mkv" mixed
+
+# Chapter pictures (own libraries "ChapterImg" with extraction on during the
+# scan, "ChapterImgTask" with it on but not during the scan, "ChapterImgOff"
+# with it off, all lazy): 640x360 videos whose picture brightens with time
+# (luma = 8 x seconds) so the moment a still was taken from can be read off it.
+# "Chapter Pics" is 30 s with chapters at 0 s ("One"), 10 s ("Two") and 20 s
+# (no title); "Chapter Short" is 10 s with chapters at 0 s and 5 s (the
+# reference takes the picture of a chapter that starts at 0 at 15 s, past the
+# end, so it makes none for the file).
+CI="$ROOT/ChapterImg"
+chapterramp() { # <out> <seconds> <chapter starts in ms, "|title" optional>...
+  [ -f "$1" ] && return 0
+  mkdir -p "$(dirname "$1")"
+  local out="$1" secs="$2"; shift 2
+  local t; t="$(mktemp -d)"
+  python3 - "$t/m.txt" "$secs" "$@" <<'PY'
+import sys
+out, secs, specs = sys.argv[1], int(sys.argv[2]), sys.argv[3:]
+starts = [(int(s.split("|")[0]), (s.split("|") + [""])[1]) for s in specs]
+ends = [s for s, _ in starts[1:]] + [secs * 1000]
+with open(out, "w") as f:
+    f.write(";FFMETADATA1\n")
+    for (s, title), e in zip(starts, ends):
+        f.write("[CHAPTER]\nTIMEBASE=1/1000\nSTART=%d\nEND=%d\n" % (s, e))
+        if title:
+            f.write("title=%s\n" % title)
+PY
+  "$FFMPEG" -v error -y -f lavfi -i "color=c=black:s=640x360:r=5:d=$secs,geq=lum='min(255,T*8)':cb=128:cr=128" \
+    -f lavfi -i "sine=frequency=500:duration=$secs" -i "$t/m.txt" -map 0 -map 1 -map_metadata 2 \
+    -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "$out"
+  rm -rf "$t"
+}
+chapterramp "$CI/Chapter Pics (2660)/Chapter Pics (2660).mkv" 30 "0|One" "10000|Two" "20000"
+chapterramp "$CI/Chapter Short (2661)/Chapter Short (2661).mkv" 10 "0|Start" "5000|Middle"
+chapterramp "$ROOT/ChapterImgTask/Chapter Task (2662)/Chapter Task (2662).mkv" 30 "0|One" "10000|Two" "20000"
+chapterramp "$ROOT/ChapterImgOff/Chapter Off (2663)/Chapter Off (2663).mkv" 30 "0|One" "10000|Two" "20000"
+
 # Trickplay (own libraries "Trickplay", with the sheets switched on, and
 # "TrickplayOff", lazy): a 25.5 s clip (3 thumbnails, one sheet), a 1500 s
 # one at 1 fps (150 thumbnails, two sheets) and a 160x90 one that is narrower

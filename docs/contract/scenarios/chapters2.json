@@ -1,0 +1,553 @@
+[
+ {
+  "id": "chapters.images.generate",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "chapters.md#images",
+  "scope": "modern",
+  "tags": [
+   "chapters",
+   "chapter-images"
+  ],
+  "covers": [
+   "chapters.images.R1",
+   "chapters.images.R2",
+   "chapters.images.R3"
+  ],
+  "requires": [
+   "library:chapterimg",
+   "item:chapter-pics"
+  ],
+  "steps": [
+   {
+    "name": "pictures appear after the scan",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-pics.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Chapters",
+       "op": "len",
+       "value": 3
+      },
+      {
+       "path": "$.Chapters[0].Name",
+       "op": "eq",
+       "value": "One"
+      },
+      {
+       "path": "$.Chapters[2].Name",
+       "op": "eq",
+       "value": "Chapter 3"
+      },
+      {
+       "path": "$.Chapters[0].ImageTag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      },
+      {
+       "path": "$.Chapters[0].ImageDateModified",
+       "op": "matches",
+       "value": "^20[0-9]{2}-"
+      },
+      {
+       "path": "$.Chapters[1].ImageTag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      },
+      {
+       "path": "$.Chapters[1].ImageDateModified",
+       "op": "matches",
+       "value": "^20[0-9]{2}-"
+      },
+      {
+       "path": "$.Chapters[2].ImageTag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      },
+      {
+       "path": "$.Chapters[2].ImageDateModified",
+       "op": "matches",
+       "value": "^20[0-9]{2}-"
+      }
+     ]
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "a listing carries them with Fields=Chapters",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "Recursive": "true",
+      "Fields": "Chapters",
+      "SearchTerm": "Chapter Pics"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Chapters[1].ImageTag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "first picture",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-pics.id}}/Images/Chapter/0"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Cache-Control": "public"
+     }
+    }
+   },
+   {
+    "name": "second",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-pics.id}}/Images/Chapter/1"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     }
+    }
+   },
+   {
+    "name": "last",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-pics.id}}/Images/Chapter/2"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     }
+    }
+   },
+   {
+    "name": "without an index it is the first",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-pics.id}}/Images/Chapter"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     }
+    }
+   },
+   {
+    "name": "the type is case-insensitive",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-pics.id}}/Images/chapter/1"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     }
+    }
+   },
+   {
+    "name": "a tag makes it cacheable for good, whatever the tag",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-pics.id}}/Images/Chapter/0",
+     "query": {
+      "tag": "anything"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Cache-Control": "/immutable/",
+      "ETag": "\"anything\""
+     }
+    }
+   },
+   {
+    "name": "pictures are public",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-pics.id}}/Images/Chapter/0",
+     "noAuth": true
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     }
+    }
+   },
+   {
+    "name": "past the last chapter",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-pics.id}}/Images/Chapter/3"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "negative index",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-pics.id}}/Images/Chapter/-1"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "not a number",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-pics.id}}/Images/Chapter/abc"
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   }
+  ]
+ },
+ {
+  "id": "chapters.images.short",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "chapters.md#images",
+  "scope": "modern",
+  "tags": [
+   "chapters",
+   "chapter-images"
+  ],
+  "covers": [
+   "chapters.images.R4"
+  ],
+  "requires": [
+   "library:chapterimg",
+   "item:chapter-short"
+  ],
+  "steps": [
+   {
+    "name": "give the scan time to have made them",
+    "sleepMs": 4000
+   },
+   {
+    "name": "a video too short for the first picture has none",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-short.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Chapters",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Chapters[0].ImageTag",
+       "op": "absent"
+      },
+      {
+       "path": "$.Chapters[0].ImageDateModified",
+       "op": "eq",
+       "value": "0001-01-01T00:00:00.0000000Z"
+      },
+      {
+       "path": "$.Chapters[1].ImageTag",
+       "op": "absent"
+      },
+      {
+       "path": "$.Chapters[1].ImageDateModified",
+       "op": "eq",
+       "value": "0001-01-01T00:00:00.0000000Z"
+      }
+     ]
+    }
+   },
+   {
+    "name": "so the route has nothing",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-short.id}}/Images/Chapter/0"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "not for the second chapter either",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-short.id}}/Images/Chapter/1"
+    },
+    "expect": {
+     "status": 404
+    }
+   }
+  ]
+ },
+ {
+  "id": "chapters.images.task",
+  "endpoint": "POST /ScheduledTasks/Running/{taskId}",
+  "spec": "chapters.md#images",
+  "scope": "modern",
+  "tags": [
+   "chapters",
+   "chapter-images"
+  ],
+  "covers": [
+   "chapters.images.R5"
+  ],
+  "requires": [
+   "library:chapterimgtask",
+   "item:chapter-task"
+  ],
+  "steps": [
+   {
+    "name": "give the scan time to have made them",
+    "sleepMs": 3000
+   },
+   {
+    "name": "not made by the scan of a library that only enables extraction",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-task.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Chapters[0].ImageTag",
+       "op": "absent"
+      },
+      {
+       "path": "$.Chapters[0].ImageDateModified",
+       "op": "eq",
+       "value": "0001-01-01T00:00:00.0000000Z"
+      },
+      {
+       "path": "$.Chapters[1].ImageTag",
+       "op": "absent"
+      },
+      {
+       "path": "$.Chapters[1].ImageDateModified",
+       "op": "eq",
+       "value": "0001-01-01T00:00:00.0000000Z"
+      },
+      {
+       "path": "$.Chapters[2].ImageTag",
+       "op": "absent"
+      },
+      {
+       "path": "$.Chapters[2].ImageDateModified",
+       "op": "eq",
+       "value": "0001-01-01T00:00:00.0000000Z"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no picture yet",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-task.id}}/Images/Chapter/1"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "the Extract Chapter Images task",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/ScheduledTasks/Running/4e6637c832ed644d1af3370a2506e80a"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "makes them",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-task.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Chapters[0].ImageTag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      },
+      {
+       "path": "$.Chapters[0].ImageDateModified",
+       "op": "matches",
+       "value": "^20[0-9]{2}-"
+      },
+      {
+       "path": "$.Chapters[1].ImageTag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      },
+      {
+       "path": "$.Chapters[1].ImageDateModified",
+       "op": "matches",
+       "value": "^20[0-9]{2}-"
+      },
+      {
+       "path": "$.Chapters[2].ImageTag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      },
+      {
+       "path": "$.Chapters[2].ImageDateModified",
+       "op": "matches",
+       "value": "^20[0-9]{2}-"
+      }
+     ]
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "and they are served",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-task.id}}/Images/Chapter/2"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "id": "chapters.images.off",
+  "endpoint": "POST /ScheduledTasks/Running/{taskId}",
+  "spec": "chapters.md#images",
+  "scope": "modern",
+  "tags": [
+   "chapters",
+   "chapter-images"
+  ],
+  "covers": [
+   "chapters.images.R1",
+   "chapters.images.R5"
+  ],
+  "requires": [
+   "library:chapterimgoff",
+   "item:chapter-off"
+  ],
+  "steps": [
+   {
+    "name": "the task",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/ScheduledTasks/Running/4e6637c832ed644d1af3370a2506e80a"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "give it time",
+    "sleepMs": 3000
+   },
+   {
+    "name": "a library that does not enable extraction gets none",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-off.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Chapters[0].ImageTag",
+       "op": "absent"
+      },
+      {
+       "path": "$.Chapters[0].ImageDateModified",
+       "op": "eq",
+       "value": "0001-01-01T00:00:00.0000000Z"
+      },
+      {
+       "path": "$.Chapters[1].ImageTag",
+       "op": "absent"
+      },
+      {
+       "path": "$.Chapters[1].ImageDateModified",
+       "op": "eq",
+       "value": "0001-01-01T00:00:00.0000000Z"
+      },
+      {
+       "path": "$.Chapters[2].ImageTag",
+       "op": "absent"
+      },
+      {
+       "path": "$.Chapters[2].ImageDateModified",
+       "op": "eq",
+       "value": "0001-01-01T00:00:00.0000000Z"
+      }
+     ]
+    }
+   },
+   {
+    "name": "so the route has nothing",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-off.id}}/Images/Chapter/0"
+    },
+    "expect": {
+     "status": 404
+    }
+   }
+  ]
+ }
+]

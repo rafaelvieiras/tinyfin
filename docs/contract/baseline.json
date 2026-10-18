@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 787
+    "pass": 802
   },
   "scenarios": {
     "admin.backup.create": "pass",
@@ -14,6 +14,17 @@
     "admin.tasks.run": "pass",
     "admin.tasks.stop-idle": "pass",
     "admin.tasks.triggers": "pass",
+    "bitmap.delivery.embed": "pass",
+    "bitmap.delivery.encode": "pass",
+    "bitmap.delivery.external": "pass",
+    "bitmap.hls.master": "pass",
+    "bitmap.route.dvb": "pass",
+    "bitmap.route.dvd": "pass",
+    "bitmap.route.pgs": "pass",
+    "bitmap.streams.dvb": "pass",
+    "bitmap.streams.dvd": "pass",
+    "bitmap.streams.mixed": "pass",
+    "bitmap.streams.pgs": "pass",
     "browse.facets": "pass",
     "browse.genres.list": "pass",
     "browse.genres.query": "pass",
@@ -29,6 +40,10 @@
     "browse.suggestions": "pass",
     "browse.years": "pass",
     "browse.years.total": "pass",
+    "chapters.images.generate": "pass",
+    "chapters.images.off": "pass",
+    "chapters.images.short": "pass",
+    "chapters.images.task": "pass",
     "chapters.item.detail": "pass",
     "chapters.item.listing": "pass",
     "chapters.item.none": "pass",
