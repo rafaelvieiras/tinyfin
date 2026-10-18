@@ -2,11 +2,15 @@ package chapterimg
 
 import (
 	"context"
+	"image"
+	_ "image/jpeg"
+	_ "image/png"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
@@ -120,5 +124,128 @@ func TestProcessKeepsNothingWhenAPositionIsPastTheEnd(t *testing.T) {
 		if _, _, ok := g.Picture(item.ID, c); ok {
 			t.Errorf("chapter %d has a picture", i)
 		}
+	}
+}
+
+func intp(v int) *int { return &v }
+
+func TestPlanFor(t *testing.T) {
+	cases := []struct {
+		name         string
+		p            Params
+		sw, sh       int
+		pass         bool
+		w, h         int
+		png          bool
+		quality      int
+		qualityCheck bool
+	}{
+		{name: "nothing", sw: 640, sh: 360, pass: true},
+		{name: "maxWidth", p: Params{MaxWidth: intp(100)}, sw: 640, sh: 360, w: 100, h: 56},
+		{name: "maxHeight", p: Params{MaxHeight: intp(40)}, sw: 640, sh: 360, w: 71, h: 40},
+		{name: "tie goes down", p: Params{MaxWidth: intp(40)}, sw: 640, sh: 360, w: 40, h: 22},
+		{name: "width", p: Params{Width: intp(100)}, sw: 640, sh: 360, w: 100, h: 56},
+		{name: "width and height", p: Params{Width: intp(100), Height: intp(50)}, sw: 640, sh: 360, w: 100, h: 50},
+		{name: "tighter maximum", p: Params{MaxWidth: intp(100), MaxHeight: intp(30)}, sw: 640, sh: 360, w: 53, h: 30},
+		{name: "odd source", p: Params{MaxWidth: intp(200), MaxHeight: intp(64)}, sw: 650, sh: 366, w: 114, h: 64},
+		{name: "width then maximum", p: Params{Width: intp(111), MaxHeight: intp(40)}, sw: 650, sh: 366, w: 70, h: 40},
+		{name: "maximum above the size", p: Params{MaxWidth: intp(2000)}, sw: 120, sh: 68, pass: true},
+		{name: "maximum equal to the size", p: Params{MaxWidth: intp(120), MaxHeight: intp(68)}, sw: 120, sh: 68, pass: true},
+		{name: "width above the size", p: Params{Width: intp(2000)}, sw: 120, sh: 68, w: 120, h: 68},
+		{name: "pair above the size", p: Params{Width: intp(200), Height: intp(200)}, sw: 120, sh: 68, w: 68, h: 68},
+		{name: "height then maximum", p: Params{Height: intp(111), MaxWidth: intp(40)}, sw: 120, sh: 68, w: 40, h: 23},
+		{name: "zero maximum", p: Params{MaxWidth: intp(0)}, sw: 640, sh: 360, w: 640, h: 360},
+		{name: "fill width", p: Params{FillWidth: intp(100), Quality: intp(50)}, sw: 640, sh: 360, w: 100, h: 57},
+		{name: "fill alone", p: Params{FillWidth: intp(100)}, sw: 640, sh: 360, pass: true},
+		{name: "fill covers", p: Params{FillWidth: intp(300), FillHeight: intp(300), Quality: intp(50)}, sw: 640, sh: 360, w: 534, h: 300},
+		{name: "fill above the size", p: Params{FillWidth: intp(900), FillHeight: intp(900), Quality: intp(50)}, sw: 640, sh: 360, w: 640, h: 360},
+		{name: "maximum wins over fill", p: Params{FillWidth: intp(300), FillHeight: intp(300), MaxWidth: intp(100)}, sw: 640, sh: 360, w: 100, h: 56},
+		{name: "quality 90", p: Params{Quality: intp(90)}, sw: 640, sh: 360, pass: true},
+		{name: "quality 89", p: Params{Quality: intp(89)}, sw: 640, sh: 360, w: 640, h: 360, quality: 89, qualityCheck: true},
+		{name: "quality 0", p: Params{Quality: intp(0)}, sw: 640, sh: 360, w: 640, h: 360, quality: 1, qualityCheck: true},
+		{name: "default quality", p: Params{MaxWidth: intp(100)}, sw: 640, sh: 360, w: 100, h: 56, quality: 100, qualityCheck: true},
+		{name: "png", p: Params{Format: "Png"}, sw: 640, sh: 360, w: 640, h: 360, png: true},
+		{name: "jpg", p: Params{Format: "jpg"}, sw: 640, sh: 360, pass: true},
+		{name: "unknown format", p: Params{Format: "xyz"}, sw: 640, sh: 360, pass: true},
+		{name: "gif is a jpeg", p: Params{Format: "gif"}, sw: 640, sh: 360, w: 640, h: 360},
+		{name: "svg is never processed", p: Params{Format: "Svg", MaxWidth: intp(100)}, sw: 640, sh: 360, pass: true},
+		{name: "format by number", p: Params{Format: "3", MaxWidth: intp(100)}, sw: 640, sh: 360, w: 100, h: 56, png: true},
+	}
+	for _, c := range cases {
+		got := PlanFor(c.p, c.sw, c.sh)
+		if got.Passthrough != c.pass {
+			t.Errorf("%s: passthrough %v, want %v", c.name, got.Passthrough, c.pass)
+			continue
+		}
+		if c.pass {
+			continue
+		}
+		if got.W != c.w || got.H != c.h || got.PNG != c.png {
+			t.Errorf("%s: %dx%d png=%v, want %dx%d png=%v", c.name, got.W, got.H, got.PNG, c.w, c.h, c.png)
+		}
+		if c.qualityCheck && got.Quality != c.quality {
+			t.Errorf("%s: quality %d, want %d", c.name, got.Quality, c.quality)
+		}
+	}
+}
+
+func TestValidFormat(t *testing.T) {
+	for _, s := range []string{"", "png", "xyz", "0", "5", " 3 "} {
+		if !ValidFormat(s) {
+			t.Errorf("%q should be accepted", s)
+		}
+	}
+	for _, s := range []string{"6", "-1", "99"} {
+		if ValidFormat(s) {
+			t.Errorf("%q should be rejected", s)
+		}
+	}
+}
+
+func TestRender(t *testing.T) {
+	dir := t.TempDir()
+	still := filepath.Join(dir, "still.jpg")
+	cmd := exec.Command("ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=320x180:d=1:r=1", "-frames:v", "1", still)
+	if b, err := cmd.CombinedOutput(); err != nil {
+		t.Skipf("cannot generate the picture: %v\n%s", err, b)
+	}
+	g := New(nil, "", dir)
+	mod := time.Unix(1700000000, 0).UTC()
+	size := func(file string) (int, int) {
+		f, err := os.Open(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer f.Close()
+		cfg, _, err := image.DecodeConfig(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return cfg.Width, cfg.Height
+	}
+	file, ct, err := g.Render("item", still, mod, Params{})
+	if err != nil || file != still || ct != "image/jpeg" {
+		t.Fatalf("untouched: %q %q %v", file, ct, err)
+	}
+	file, ct, err = g.Render("item", still, mod, Params{MaxWidth: intp(100)})
+	if err != nil || ct != "image/jpeg" || file == still {
+		t.Fatalf("resized: %q %q %v", file, ct, err)
+	}
+	if w, h := size(file); w != 100 || h != 56 {
+		t.Errorf("resized to %dx%d, want 100x56", w, h)
+	}
+	if st, err := os.Stat(file); err != nil || !st.ModTime().Equal(mod) {
+		t.Errorf("the copy must carry the still's date: %v %v", st, err)
+	}
+	again, _, err := g.Render("item", still, mod, Params{MaxWidth: intp(100)})
+	if err != nil || again != file {
+		t.Errorf("the same request must find the same copy: %q vs %q (%v)", again, file, err)
+	}
+	file, ct, err = g.Render("item", still, mod, Params{Format: "png", MaxHeight: intp(45)})
+	if err != nil || ct != "image/png" {
+		t.Fatalf("png: %q %q %v", file, ct, err)
+	}
+	if w, h := size(file); w != 80 || h != 45 {
+		t.Errorf("png is %dx%d, want 80x45", w, h)
 	}
 }

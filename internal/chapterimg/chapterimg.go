@@ -29,6 +29,9 @@ import (
 
 const (
 	stampName = ".stamp"
+	// partialName marks an item whose extraction stopped at a picture that
+	// could not be taken; the pictures before it are kept.
+	partialName = ".partial"
 	// firstChapterSeconds is where the picture of a chapter that starts at
 	// time zero is taken (a black opening is not worth a picture).
 	firstChapterSeconds = 15
@@ -224,8 +227,10 @@ func stampOf(fi os.FileInfo) string {
 }
 
 // process extracts the pictures of one item unless they are up to date. A
-// picture that cannot be taken (the position lies past the end of the video)
-// stops the item: no picture is kept for it, like the reference.
+// picture that cannot be taken (the position lies past the end of the video,
+// or too close to its end for a frame) stops the item there, like the
+// reference: the pictures before it are kept, the ones after it are not made.
+// Such an item is not tried again until its file changes.
 func (g *Generator) process(ctx context.Context, item storage.Item) {
 	if len(item.Chapters) == 0 || item.Path == "" || !item.HasMediaFile() {
 		return
@@ -238,10 +243,12 @@ func (g *Generator) process(ctx context.Context, item storage.Item) {
 	stamp := stampOf(fi)
 	if b, err := os.ReadFile(filepath.Join(dir, stampName)); err == nil && string(b) == stamp {
 		complete := true
-		for _, c := range item.Chapters {
-			if _, _, ok := g.Picture(item.ID, c); !ok {
-				complete = false
-				break
+		if _, err := os.Stat(filepath.Join(dir, partialName)); err != nil {
+			for _, c := range item.Chapters {
+				if _, _, ok := g.Picture(item.ID, c); !ok {
+					complete = false
+					break
+				}
 			}
 		}
 		if complete {
@@ -259,8 +266,10 @@ func (g *Generator) process(ctx context.Context, item storage.Item) {
 		log.Printf("chapterimg: %v", err)
 		return
 	}
+	partial := false
 	for _, c := range item.Chapters {
 		if ctx.Err() != nil {
+			_ = os.RemoveAll(dir)
 			return
 		}
 		out := g.Path(item.ID, c.StartTicks)
@@ -269,20 +278,29 @@ func (g *Generator) process(ctx context.Context, item storage.Item) {
 		args := []string{"-v", "error", "-nostdin", "-threads", "1", "-ss", secs, "-i", item.Path,
 			"-an", "-sn", "-frames:v", "1", "-q:v", "4", "-y", tmp}
 		if b, err := exec.CommandContext(ctx, g.ffmpeg, args...).CombinedOutput(); err != nil {
+			if ctx.Err() != nil {
+				_ = os.RemoveAll(dir)
+				return
+			}
 			log.Printf("chapterimg: %s at %ss: %v: %s", filepath.Base(item.Path), secs, err, strings.TrimSpace(string(b)))
-			_ = os.RemoveAll(dir)
-			return
+			partial = true
+			break
 		}
 		if st, err := os.Stat(tmp); err != nil || st.Size() == 0 {
 			// ffmpeg exits cleanly when the position is past the end, with
 			// no frame written
-			_ = os.RemoveAll(dir)
-			return
+			_ = os.Remove(tmp)
+			partial = true
+			break
 		}
 		if err := os.Rename(tmp, out); err != nil {
-			_ = os.RemoveAll(dir)
-			return
+			_ = os.Remove(tmp)
+			partial = true
+			break
 		}
+	}
+	if partial {
+		_ = os.WriteFile(filepath.Join(dir, partialName), nil, 0o644)
 	}
 	_ = os.WriteFile(filepath.Join(dir, stampName), []byte(stamp), 0o644)
 }
