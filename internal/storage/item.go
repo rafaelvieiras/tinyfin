@@ -147,6 +147,13 @@ type MediaStreamRef struct {
 	Path              string
 	IsHearingImpaired bool
 
+	// FileSize and FileMTimeNS are the size and modification time (Unix
+	// nanoseconds) of the external subtitle file when it was probed; a scan
+	// that finds both unchanged keeps the stored stream instead of probing
+	// the file again.
+	FileSize    int64
+	FileMTimeNS int64
+
 	// IsOriginal marks the stream flagged as the original-language track
 	// — ffprobe's disposition.original, when the installed ffmpeg reports
 	// it (an older ffmpeg build simply omits the key, read as false).

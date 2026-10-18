@@ -40,7 +40,9 @@ func TestParseSidecar(t *testing.T) {
 		{"Movie-en.srt", false, "", "", "", false, false, false},
 		{"Other.srt", false, "", "", "", false, false, false},
 		{"Movie.en.txt", false, "", "", "", false, false, false},
-		{"Movie.en.sub", false, "", "", "", false, false, false},
+		{"Movie.en.sub", true, "eng", "", "DVDSUB", false, false, false},
+		{"Movie.fr.forced.idx", true, "fra", "", "DVDSUB", true, false, false},
+		{"Movie.en.mks", true, "eng", "", "", false, false, false},
 	}
 	for _, c := range cases {
 		sc, ok := ParseSidecar("Movie", c.file)
@@ -184,5 +186,31 @@ func TestDisplayName(t *testing.T) {
 		if got := DisplayName(in); got != want {
 			t.Errorf("DisplayName(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+func TestParseIDXAndVTTHeader(t *testing.T) {
+	idx := "size: 720x480\nid: en, index: 0\ntimestamp: 00:00:01:500, filepos: 000000000\ntimestamp: 00:00:03:000, filepos: 000000800\n"
+	tr := Parse(KindIDX, []byte(idx))
+	if len(tr.Cues) != 2 {
+		t.Fatalf("idx cues = %d, want 2", len(tr.Cues))
+	}
+	if tr.Cues[0].Start != 1500*ticksPerMs {
+		t.Errorf("first idx cue start = %d", tr.Cues[0].Start)
+	}
+	if got := Parse(KindVTT, []byte("1\n00:00:01.000 --> 00:00:02.000\nhi\n")); len(got.Cues) != 0 {
+		t.Errorf("vtt without header parsed %d cues, want 0", len(got.Cues))
+	}
+}
+
+func TestReplaceArialStyle(t *testing.T) {
+	in := "[V4+ Styles]\nStyle: Default,Arial,20,&H00FFFFFF\nStyle: Alt,Arial Black,20,&H00FFFFFF\nDialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Arial\n"
+	out, ok := ReplaceArialStyle([]byte(in))
+	want := "[V4+ Styles]\nStyle: Default,Arial Unicode MS,20,&H00FFFFFF\nStyle: Alt,Arial Black,20,&H00FFFFFF\nDialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Arial\n"
+	if !ok || string(out) != want {
+		t.Errorf("got %q (%v)", out, ok)
+	}
+	if _, ok := ReplaceArialStyle([]byte("Style: A,Verdana,1\n")); ok {
+		t.Error("changed a style without Arial")
 	}
 }

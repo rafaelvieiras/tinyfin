@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 807
+    "pass": 817
   },
   "scenarios": {
     "admin.backup.create": "pass",
@@ -584,6 +584,16 @@
     "subtitles.stream.offsets": "pass",
     "subtitles.stream.route-forms": "pass",
     "subtitles.stream.text-edge": "pass",
+    "subtitles2.delivery.bitmap-matrix": "pass",
+    "subtitles2.delivery.embedded-matrix": "pass",
+    "subtitles2.delivery.external-matrix": "pass",
+    "subtitles2.embedded.route": "pass",
+    "subtitles2.mks.route": "pass",
+    "subtitles2.mks.scan": "pass",
+    "subtitles2.sidecar.odd-content": "pass",
+    "subtitles2.sidecar.odd-route": "pass",
+    "subtitles2.vobsub.route": "pass",
+    "subtitles2.vobsub.scan": "pass",
     "trickplay.item.big": "pass",
     "trickplay.item.list": "pass",
     "trickplay.item.narrow": "pass",

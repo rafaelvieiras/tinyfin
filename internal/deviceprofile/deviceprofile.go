@@ -10,6 +10,13 @@
 // internal/api.
 package deviceprofile
 
+import (
+	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
+)
+
 // DeviceProfile mirrors the OpenAPI DeviceProfile schema. Phase 1 modeled
 // only Name/DirectPlayProfiles (Direct-Play-only decisions); this is the
 // Phase 2 follow-up (see ROADMAP.md) that adds the fields the Remux/Direct
@@ -141,14 +148,64 @@ type ProfileCondition struct {
 	IsRequired bool   `json:"IsRequired"`
 }
 
-// SubtitleProfile mirrors the OpenAPI SubtitleProfile schema. Not yet
-// evaluated by the decision logic — see the DeviceProfile doc comment.
+// SubtitleProfile mirrors the OpenAPI SubtitleProfile schema; internal/playback
+// evaluates it. Method is one of "Encode", "Embed", "External", "Hls", "Drop"
+// or "" for a number outside 0-4 (an entry no stream uses).
 type SubtitleProfile struct {
 	Format    string `json:"Format,omitempty"`
-	Method    string `json:"Method,omitempty"` // "Encode"|"Embed"|"External"|"Hls"|"Drop"
+	Method    string `json:"Method,omitempty"`
 	DidlMode  string `json:"DidlMode,omitempty"`
 	Language  string `json:"Language,omitempty"`
 	Container string `json:"Container,omitempty"`
+}
+
+var subtitleMethods = []string{"Encode", "Embed", "External", "Hls", "Drop"}
+
+// UnmarshalJSON reads a profile entry the way the reference does: Method is
+// a name in any case or a number (0 Encode, 1 Embed, 2 External, 3 Hls,
+// 4 Drop; another number is an entry that serves nothing), a missing Method
+// is 0, and an empty, null or unknown Method is an error.
+func (p *SubtitleProfile) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Format    string          `json:"Format"`
+		Method    json.RawMessage `json:"Method"`
+		DidlMode  string          `json:"DidlMode"`
+		Language  string          `json:"Language"`
+		Container string          `json:"Container"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*p = SubtitleProfile{Format: raw.Format, DidlMode: raw.DidlMode, Language: raw.Language, Container: raw.Container}
+	m := strings.TrimSpace(string(raw.Method))
+	if m == "" {
+		p.Method = "Encode"
+		return nil
+	}
+	if m == "null" {
+		return fmt.Errorf("SubtitleProfile.Method: null")
+	}
+	if m[0] == '"' {
+		var str string
+		if err := json.Unmarshal(raw.Method, &str); err != nil {
+			return err
+		}
+		for _, name := range subtitleMethods {
+			if strings.EqualFold(str, name) {
+				p.Method = name
+				return nil
+			}
+		}
+		m = str
+	}
+	n, err := strconv.Atoi(m)
+	if err != nil {
+		return fmt.Errorf("SubtitleProfile.Method: %q", m)
+	}
+	if n >= 0 && n < len(subtitleMethods) {
+		p.Method = subtitleMethods[n]
+	}
+	return nil
 }
 
 // builtins is the O2 table: static configuration data compiled into the

@@ -79,7 +79,12 @@ func (s *Scanner) probeOrReuse(ctx context.Context, pool *jobPool, itemID storag
 	// video's own (size, mtime) signature, so they are listed on every
 	// scan (one cached folder listing) and merged into whatever the probe
 	// step returns.
-	external := externalSubtitles(ctx, path)
+	external := s.externalSubtitles(ctx, path, func() []storage.MediaStreamRef {
+		if old, err := s.store.GetItem(ctx, itemID); err == nil {
+			return old.MediaStreams
+		}
+		return nil
+	})
 
 	sigs, hasSigs := s.store.(signatureStore)
 	if hasSigs && statErr == nil && !s.forceProbe && !optionsOf(ctx).embeddedTitles {

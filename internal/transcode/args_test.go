@@ -212,7 +212,7 @@ func TestBuildArgs_AudioStreamAndBurn(t *testing.T) {
 	}), " ")
 	for _, want := range []string{
 		"-map 0:v:0", "-map 0:2",
-		`-vf subtitles=filename=/m/it\\\'s (1).mkv:si=1,scale=-2:480`,
+		`-vf setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709,scale=-2:480,format=yuv420p,subtitles=f=/m/it\\\'s (1).mkv:si=1`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("args lack %q:\n%s", want, got)
@@ -232,10 +232,59 @@ func TestBuildArgs_AudioStreamAndBurn(t *testing.T) {
 		InputPath: "in.mkv", VideoCodec: "h264", MaxHeight: 360,
 		Subtitle: &Subtitle{Path: "in.mkv", Bitmap: true, StreamIndex: 3},
 	}), " ")
-	for _, want := range []string{"-filter_complex [0:v:0][0:3]overlay=", "scale=-2:360[v]", "-map [v]"} {
+	for _, want := range []string{"-filter_complex [0:3]null[sub];[0:v:0]setparams=", "scale=-2:360,format=yuv420p[main];[main][sub]overlay=", "[v] -map [v]"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("bitmap args lack %q:\n%s", want, got)
 		}
+	}
+}
+
+func TestBuildArgs_BitmapGraph(t *testing.T) {
+	base := Request{
+		InputPath: "in.mkv", VideoCodec: "h264", Container: "ts",
+		SourceWidth: 640, SourceHeight: 360,
+		Subtitle: &Subtitle{Path: "in.mkv", Bitmap: true, StreamIndex: 2, Width: 640, Height: 360},
+	}
+	got := strings.Join(buildArgs(base), " ")
+	for _, want := range []string{
+		"-canvas_size 640x360 -i in.mkv",
+		"[0:2]scale,scale=640:360:fast_bilinear[sub];[0:v:0]setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709,format=yuv420p[main];[main][sub]overlay=eof_action=pass:repeatlast=0[v]",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("same-canvas args lack %q:\n%s", want, got)
+		}
+	}
+
+	// another canvas shape: fitted to the height, cropped or padded to the size
+	base.Subtitle = &Subtitle{Path: "in.mkv", Bitmap: true, StreamIndex: 2, Width: 320, Height: 240}
+	got = strings.Join(buildArgs(base), " ")
+	if want := `[0:2]scale,scale=-1:360:fast_bilinear,crop,pad=max(640\,iw):max(360\,ih):(ow-iw)/2:(oh-ih)/2:black@0,crop=640:360[sub]`; !strings.Contains(got, want) {
+		t.Errorf("fitted args lack %q:\n%s", want, got)
+	}
+
+	// no canvas known: no -canvas_size
+	base.Subtitle = &Subtitle{Path: "in.mkv", Bitmap: true, StreamIndex: 2}
+	if got = strings.Join(buildArgs(base), " "); strings.Contains(got, "canvas_size") {
+		t.Errorf("canvas_size without a canvas:\n%s", got)
+	}
+
+	// scaled output: the pictures follow the scaled size
+	base.MaxWidth = 320
+	base.Subtitle = &Subtitle{Path: "in.mkv", Bitmap: true, StreamIndex: 2, Width: 640, Height: 360}
+	got = strings.Join(buildArgs(base), " ")
+	if want := "scale,scale=320:180:fast_bilinear[sub]"; !strings.Contains(got, want) {
+		t.Errorf("scaled args lack %q:\n%s", want, got)
+	}
+
+	// a sidecar is a second input with the canvas of its own
+	base.MaxWidth = 0
+	base.Subtitle = &Subtitle{Path: "s.idx", Bitmap: true, External: true, StreamIndex: 0, Width: 640, Height: 360}
+	got = strings.Join(buildArgs(base), " ")
+	if want := "-canvas_size 640x360 -i in.mkv -canvas_size 640x360 -i s.idx"; !strings.Contains(got, want) {
+		t.Errorf("sidecar args lack %q:\n%s", want, got)
+	}
+	if want := "[1:0]scale,scale=640:360"; !strings.Contains(got, want) {
+		t.Errorf("sidecar args lack %q:\n%s", want, got)
 	}
 }
 

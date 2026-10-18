@@ -18,83 +18,115 @@ type SubtitleDelivery struct {
 	Format string
 }
 
-// subtitleFormat maps a stream codec to the name a SubtitleProfile uses
-// for it.
-func subtitleFormat(codec string) string {
-	switch strings.ToLower(codec) {
-	case "subrip", "srt", "mov_text", "text":
-		return "srt"
-	case "webvtt", "vtt":
-		return "vtt"
-	case "ass":
-		return "ass"
-	case "ssa":
-		return "ssa"
-	case "sami", "smi":
-		return "smi"
-	}
-	return strings.ToLower(codec)
+// Delivery is the situation a subtitle is delivered in.
+type Delivery struct {
+	// AllowEmbed is false when the source is not served as it is: an
+	// embedded track cannot stay in the container then. AllowHls is false
+	// when it is: only a transcode has an HLS manifest to carry a text
+	// track. The stream a player selects is first tried with both true, to
+	// learn which of the two situations it puts the source in.
+	AllowEmbed, AllowHls bool
+	// Container is the extension of the media file (lower case, no dot);
+	// an Embed entry that lists containers applies only if it is among them.
+	Container string
 }
 
-// convertible reports whether a text stream of source format src can be
-// delivered as dst: the same format, or any text format other than SSA/ASS
-// as SubRip or WebVTT.
-func convertible(src, dst string) bool {
-	if src == dst {
+func isAssCodec(codec string) bool {
+	switch strings.ToLower(codec) {
+	case "ass", "ssa":
 		return true
 	}
-	return (dst == "vtt" || dst == "srt") && src != "ass" && src != "ssa"
+	return false
 }
 
-// DeliverSubtitle picks the first entry of profiles that can serve s: an
-// entry whose Language filter admits the stream (when set) and, by method,
+// externalDenied are the formats a text track is never offered as: the
+// SSA family (kept for tracks of that family) and the picture formats.
+var externalDenied = map[string]bool{
+	"ass": true, "ssa": true, "sub": true, "sup": true, "pgs": true, "pgssub": true,
+	"vobsub": true, "dvdsub": true, "dvbsub": true, "hdmv_pgs_subtitle": true,
+}
+
+// languageMatches reports whether the profile entry's Language (a comma
+// separated list of codes, compared as they are, any case) admits a stream
+// of the language lang. An empty list admits every stream.
+func languageMatches(list, lang string) bool {
+	if list == "" {
+		return true
+	}
+	for _, l := range strings.Split(list, ",") {
+		if lang != "" && strings.EqualFold(l, lang) {
+			return true
+		}
+	}
+	return false
+}
+
+// containerMatches is the same test for the Container list.
+func containerMatches(list, container string) bool {
+	if list == "" {
+		return true
+	}
+	for _, c := range strings.Split(list, ",") {
+		if strings.EqualFold(c, container) {
+			return true
+		}
+	}
+	return false
+}
+
+// DeliverSubtitle picks the first entry of profiles that can serve s. An
+// entry whose Language list does not admit the stream is skipped, and so are
+// Encode and Drop entries (a stream no entry serves is Encode). By method:
 //
-//   - External: the stream is a text stream and its format is the entry's
-//     format or convertible to it (the URL ends in the entry's format), or a
-//     picture stream and the entry names its codec (PGSSUB, DVDSUB, DVBSUB);
-//   - Hls: the same test, delivered through the HLS manifest;
-//   - Embed: the stream is embedded in the media file and its format is
-//     the entry's format;
-//   - Encode: always (the subtitle is burned into the video).
-//
-// The entry's Language filter is one language code. A stream that no entry
-// serves is Encode.
-//
-// allowEmbed is false when the source is going to be transcoded: an
-// embedded track cannot stay in the container then, so Embed entries do not
-// apply.
-func DeliverSubtitle(s storage.MediaStreamRef, profiles []deviceprofile.SubtitleProfile, allowEmbed bool) SubtitleDelivery {
-	src := subtitleFormat(s.Codec)
+//   - External: a text track other than SSA/ASS in any format except the
+//     picture and SSA/ASS names (the stream is converted to the entry's
+//     format, whatever it is called; the URL ends in the format as it is
+//     written); an SSA/ASS track in "ass"; a picture track in the name of
+//     its own codec (PGSSUB, DVDSUB, DVBSUB, XSUB);
+//   - Hls: only when the source is transcoded (Delivery.AllowHls), a text track in any format
+//     but SSA/ASS, or an SSA/ASS track in "ass"; picture tracks never;
+//   - Embed: only when the source is served as it is, a track embedded in
+//     the media file, whose container the entry admits (when it lists
+//     any), under the same format rules as External except that a text
+//     track takes any format but "ass" and "ssa".
+func DeliverSubtitle(s storage.MediaStreamRef, profiles []deviceprofile.SubtitleProfile, d Delivery) SubtitleDelivery {
 	text := subtitle.IsTextCodec(s.Codec)
+	ass := isAssCodec(s.Codec)
 	for _, p := range profiles {
-		if p.Language != "" && !sameLanguage(s.Language, p.Language) {
+		if !languageMatches(p.Language, s.Language) {
 			continue
 		}
-		format := subtitleFormat(strings.TrimSpace(p.Format))
-		switch strings.ToLower(p.Method) {
-		case "external":
-			if text && convertible(src, format) {
-				return SubtitleDelivery{Method: "External", Format: format}
+		f := strings.ToLower(p.Format)
+		switch p.Method {
+		case "External":
+			if formatServes(s, text, ass, f, externalDenied[f]) {
+				return SubtitleDelivery{Method: "External", Format: p.Format}
 			}
-			// A picture track is served as it is, and only to an entry that
-			// names its own codec (case-insensitive); the URL ends in the
-			// entry's spelling.
-			if !text && strings.EqualFold(strings.TrimSpace(p.Format), s.Codec) {
-				return SubtitleDelivery{Method: "External", Format: strings.TrimSpace(p.Format)}
+		case "Hls":
+			if d.AllowHls && text && formatServes(s, text, ass, f, f == "ass" || f == "ssa") {
+				return SubtitleDelivery{Method: "Hls", Format: p.Format}
 			}
-		case "hls":
-			if text && convertible(src, format) {
-				return SubtitleDelivery{Method: "Hls", Format: format}
-			}
-		case "embed":
-			if allowEmbed && !s.IsExternal && src == format {
+		case "Embed":
+			if d.AllowEmbed && !s.IsExternal && containerMatches(p.Container, d.Container) &&
+				formatServes(s, text, ass, f, f == "ass" || f == "ssa") {
 				return SubtitleDelivery{Method: "Embed"}
 			}
-		case "encode":
-			return SubtitleDelivery{Method: "Encode"}
 		}
 	}
 	return SubtitleDelivery{Method: "Encode"}
+}
+
+// formatServes tests format f (lower case) against the kind of track s is:
+// a text track takes any format not in the denied set, an SSA/ASS track
+// only "ass", a picture track only the name of its own codec.
+func formatServes(s storage.MediaStreamRef, text, ass bool, f string, denied bool) bool {
+	switch {
+	case ass:
+		return f == "ass"
+	case text:
+		return !denied
+	}
+	return strings.EqualFold(f, s.Codec)
 }
 
 func sameLanguage(a, b string) bool {

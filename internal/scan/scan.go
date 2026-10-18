@@ -1650,7 +1650,7 @@ func (s *Scanner) RefreshItem(ctx context.Context, itemID storage.ItemID, replac
 	}
 
 	// A refresh also re-reads the subtitle files beside the video.
-	refreshSubtitles(ctx, &item)
+	s.refreshSubtitles(ctx, &item)
 
 	if item.Type == storage.ItemTypeMusicVideo {
 		pool := newJobPool(1)

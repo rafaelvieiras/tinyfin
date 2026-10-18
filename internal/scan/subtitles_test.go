@@ -21,7 +21,7 @@ func TestScanExternalSubtitles(t *testing.T) {
 	for _, n := range []string{
 		"Movie (2001).srt", "Movie (2001).en.srt", "Movie (2001).pt-BR.forced.srt", "Movie (2001).fr.default.vtt",
 		"Movie (2001).de.sdh.ass", "Movie (2001).Commentary.srt", "Movie (2001) 2.srt", "Other.srt",
-		"Movie (2001).txt", "Movie (2001).en.sub",
+		"Movie (2001).txt", "Movie (2001).fr.idx",
 	} {
 		writeFile(t, filepath.Join(dir, n), "x")
 	}
@@ -118,5 +118,46 @@ func TestScanExternalSubtitles(t *testing.T) {
 	}
 	if got = subs(); len(got) != len(want)+1 {
 		t.Fatalf("after refresh: %d streams", len(got))
+	}
+}
+
+// TestScanVobSubPairs covers the .idx/.sub pairing: the pair is one stream
+// named after the .idx, a lone .sub is its own track, a lone .idx is nothing,
+// and a file that ffprobe cannot read is not listed.
+func TestScanVobSubPairs(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "Movie (2001)")
+	writeFile(t, filepath.Join(dir, "Movie (2001).mkv"), "0123456789")
+	for _, n := range []string{
+		"Movie (2001).en.idx", "Movie (2001).en.sub", // a pair
+		"Movie (2001).fr.idx", // no .sub: not listed
+		"Movie (2001).de.sub", // no .idx: listed alone
+	} {
+		writeFile(t, filepath.Join(dir, n), "x")
+	}
+	script, _ := fakeFFprobe(t)
+	st := newTestStore(t)
+	s := New(st, nil, Config{FFprobePath: script})
+	lib := storage.Library{ID: "lib", Name: "M", CollectionType: storage.CollectionTypeMovies, Paths: []string{root}}
+	ctx := context.Background()
+	if err := st.UpsertLibrary(ctx, lib); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ScanLibrary(ctx, lib); err != nil {
+		t.Fatal(err)
+	}
+	page, err := st.QueryItems(ctx, storage.ItemFilter{LibraryID: &lib.ID, ItemTypes: []storage.ItemType{storage.ItemTypeMovie}, Limit: 5})
+	if err != nil || len(page.Items) != 1 {
+		t.Fatalf("items: %v %+v", err, page.Items)
+	}
+	var names []string
+	for _, m := range page.Items[0].MediaStreams {
+		if m.Type == storage.StreamTypeSubtitle {
+			names = append(names, filepath.Base(m.Path))
+		}
+	}
+	want := []string{"Movie (2001).de.sub", "Movie (2001).en.idx"}
+	if len(names) != 2 || names[0] != want[0] || names[1] != want[1] {
+		t.Fatalf("subtitles = %v, want %v", names, want)
 	}
 }
