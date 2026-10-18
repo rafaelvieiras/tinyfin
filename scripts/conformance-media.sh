@@ -1098,4 +1098,8 @@ mkdir -p "$ROOT/.strm-http" "$MX/Mx Strm Mkv (2505)"
 [ -f "$ROOT/.strm-http/strm-src.mkv" ] || cp "$MX/Mx Mkv (2500)/Mx Mkv (2500).mkv" "$ROOT/.strm-http/strm-src.mkv"
 printf '%s/strm-src.mkv\n' "${STRM_HTTP:-http://172.17.0.1:18999}" >"$MX/Mx Strm Mkv (2505)/Mx Strm Mkv (2505).strm"
 
+# Subtitle sidecars (VobSub pairs, Matroska subtitle files, odd content): own
+# script, library "Subs2" (lazy).
+FFMPEG="$FFMPEG" "$(dirname "$0")/conformance-subs2.sh" "$ROOT"
+
 echo "media tree ready under $ROOT"
