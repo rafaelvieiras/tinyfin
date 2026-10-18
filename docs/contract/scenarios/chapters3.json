@@ -1,0 +1,3132 @@
+[
+  {
+    "id": "chapters.images.resize",
+    "endpoint": "GET /Items/{itemId}/Images/Chapter/{imageIndex}",
+    "spec": "chapters.md#images",
+    "scope": "modern",
+    "tags": [
+      "chapters",
+      "chapter-images"
+    ],
+    "covers": [
+      "chapters.images.R6"
+    ],
+    "requires": [
+      "library:chapterimg3",
+      "item:chapter-noise",
+      "item:chapter-portrait"
+    ],
+    "steps": [
+      {
+        "name": "wait for the pictures",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-small.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[1].ImageTag",
+              "op": "matches",
+              "value": "^[0-9a-f]{32}$"
+            }
+          ]
+        },
+        "retryMs": 30000
+      },
+      {
+        "name": "maxWidth 100",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "maxWidth": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u00008\u0000d"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "maxHeight 40",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "maxHeight": "40"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u0000(\u0000G"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "width 100",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "width": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u00008\u0000d"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "height 40",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "height": "40"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u0000(\u0000G"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "width and height set the size exactly",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "width": "100",
+            "height": "50"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u00002\u0000d"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "both maxima: the tighter one holds",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "maxWidth": "100",
+            "maxHeight": "30"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u0000\u001e\u00005"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a maximum above the other: the width one holds",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "maxWidth": "100",
+            "maxHeight": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u00008\u0000d"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "width then a maximum on the new shape",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "width": "100",
+            "maxHeight": "28"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u0000\u001c\u00002"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "fillWidth covers a width (when the picture is changed anyway)",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "fillWidth": "100",
+            "quality": "50"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u00009\u0000d"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a maximum wins over fill",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "fillWidth": "300",
+            "fillHeight": "300",
+            "maxWidth": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u00008\u0000d"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "names in any case",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "MAXWIDTH": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u00008\u0000d"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a space before the number is ignored",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "maxWidth": " 100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u00008\u0000d"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "the first of repeated names counts",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0?maxWidth=100&maxWidth=50"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u00008\u0000d"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "second chapter, same rules",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/1",
+          "query": {
+            "maxWidth": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u00008\u0000d"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a portrait picture by height",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-portrait.id}}/Images/Chapter/0",
+          "query": {
+            "maxHeight": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u0000d\u00008"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a portrait picture by width",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-portrait.id}}/Images/Chapter/0",
+          "query": {
+            "maxWidth": "40"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u0000G\u0000("
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "chapters.images.no-enlarge",
+    "endpoint": "GET /Items/{itemId}/Images/Chapter/{imageIndex}",
+    "spec": "chapters.md#images",
+    "scope": "modern",
+    "tags": [
+      "chapters",
+      "chapter-images"
+    ],
+    "covers": [
+      "chapters.images.R7"
+    ],
+    "requires": [
+      "library:chapterimg3",
+      "item:chapter-small"
+    ],
+    "steps": [
+      {
+        "name": "wait for the pictures",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-small.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[1].ImageTag",
+              "op": "matches",
+              "value": "^[0-9a-f]{32}$"
+            }
+          ]
+        },
+        "retryMs": 30000
+      },
+      {
+        "name": "a maximum above the size leaves it as it is",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-small.id}}/Images/Chapter/0",
+          "query": {
+            "maxWidth": "2000"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a maximum equal to the size too",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-small.id}}/Images/Chapter/0",
+          "query": {
+            "maxWidth": "120",
+            "maxHeight": "68"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a width above the size is the size, made again",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-small.id}}/Images/Chapter/0",
+          "query": {
+            "width": "2000"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u0000D\u0000x"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a height above the size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-small.id}}/Images/Chapter/0",
+          "query": {
+            "height": "500"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u0000D\u0000x"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "width and height above it keep their own shape inside the size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-small.id}}/Images/Chapter/0",
+          "query": {
+            "width": "200",
+            "height": "200"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u0000D\u0000D"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a width, then a maximum",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-small.id}}/Images/Chapter/0",
+          "query": {
+            "height": "111",
+            "maxWidth": "40"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u0000\u0017\u0000("
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "fill does not enlarge",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-small.id}}/Images/Chapter/0",
+          "query": {
+            "fillWidth": "900",
+            "fillHeight": "900",
+            "quality": "50"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u0000D\u0000x"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a smaller one shrinks",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-small.id}}/Images/Chapter/0",
+          "query": {
+            "maxWidth": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u00009\u0000d"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "chapters.images.as-is",
+    "endpoint": "GET /Items/{itemId}/Images/Chapter/{imageIndex}",
+    "spec": "chapters.md#images",
+    "scope": "modern",
+    "tags": [
+      "chapters",
+      "chapter-images"
+    ],
+    "covers": [
+      "chapters.images.R8"
+    ],
+    "requires": [
+      "library:chapterimg3",
+      "item:chapter-noise"
+    ],
+    "steps": [
+      {
+        "name": "wait for the pictures",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-small.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[1].ImageTag",
+              "op": "matches",
+              "value": "^[0-9a-f]{32}$"
+            }
+          ]
+        },
+        "retryMs": 30000
+      },
+      {
+        "name": "nothing asked",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a maximum as large as the picture",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "maxWidth": "640",
+            "maxHeight": "360"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a maximum larger",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "maxWidth": "700"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "width and height equal to its size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "width": "640",
+            "height": "360"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "the quality at the default threshold",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "quality": "90"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a higher quality",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "quality": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a quality out of range above",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "quality": "200"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "an empty quality",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "quality": ""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "format jpg",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "format": "jpg"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "format Jpg",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "format": "Jpg"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "an unknown format word",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "format": "xyz"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "format 2 (jpg)",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "format": "2"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "an empty format",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "format": ""
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "svg is never processed",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "format": "Svg",
+            "maxWidth": "100",
+            "quality": "10"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "svg by number",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "format": "5",
+            "width": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a tag alone",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "tag": "abc"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a fill alone",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "fillWidth": "300",
+            "fillHeight": "300"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "overlays at zero change nothing",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "percentPlayed": "0",
+            "unplayedCount": "0"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "chapters.images.recode",
+    "endpoint": "GET /Items/{itemId}/Images/Chapter/{imageIndex}",
+    "spec": "chapters.md#images",
+    "scope": "modern",
+    "tags": [
+      "chapters",
+      "chapter-images"
+    ],
+    "covers": [
+      "chapters.images.R8"
+    ],
+    "requires": [
+      "library:chapterimg3",
+      "item:chapter-noise"
+    ],
+    "steps": [
+      {
+        "name": "wait for the pictures",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-small.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[1].ImageTag",
+              "op": "matches",
+              "value": "^[0-9a-f]{32}$"
+            }
+          ]
+        },
+        "retryMs": 30000
+      },
+      {
+        "name": "a quality below 90",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "quality": "89"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "quality 50",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "quality": "50"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "quality 1",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "quality": "1"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "quality 0 is the lowest",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "quality": "0"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a negative quality is the lowest",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "quality": "-1"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a maximum of 0 is no maximum but the picture is made again",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "maxWidth": "0"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a negative maximum",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "maxWidth": "-5"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a width above the size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "width": "2000"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a width of 0",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "width": "0"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "the bmp format becomes a jpeg",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "format": "bmp"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "the gif format becomes a jpeg",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "format": "gif"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "format 1 (gif) too",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "format": "1"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a large maximum with a quality",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "maxWidth": "2147483647",
+            "quality": "80"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "chapters.images.png",
+    "endpoint": "GET /Items/{itemId}/Images/Chapter/{imageIndex}",
+    "spec": "chapters.md#images",
+    "scope": "modern",
+    "tags": [
+      "chapters",
+      "chapter-images"
+    ],
+    "covers": [
+      "chapters.images.R9"
+    ],
+    "requires": [
+      "library:chapterimg3",
+      "item:chapter-noise"
+    ],
+    "steps": [
+      {
+        "name": "wait for the pictures",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-small.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[1].ImageTag",
+              "op": "matches",
+              "value": "^[0-9a-f]{32}$"
+            }
+          ]
+        },
+        "retryMs": 30000
+      },
+      {
+        "name": "Png with a size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "format": "Png",
+            "maxWidth": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/png"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "PNG\r\n\u001a\n"
+            },
+            {
+              "op": "contains",
+              "value": "IHDR\u0000\u0000\u0000d\u0000\u0000\u00008"
+            }
+          ]
+        }
+      },
+      {
+        "name": "any case",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "format": "png",
+            "maxWidth": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/png"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "PNG\r\n\u001a\n"
+            },
+            {
+              "op": "contains",
+              "value": "IHDR\u0000\u0000\u0000d\u0000\u0000\u00008"
+            }
+          ]
+        }
+      },
+      {
+        "name": "upper case",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "format": "PNG",
+            "maxHeight": "40"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/png"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "PNG\r\n\u001a\n"
+            },
+            {
+              "op": "contains",
+              "value": "IHDR\u0000\u0000\u0000G\u0000\u0000\u0000("
+            }
+          ]
+        }
+      },
+      {
+        "name": "by number",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "format": "3",
+            "maxWidth": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/png"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "PNG\r\n\u001a\n"
+            },
+            {
+              "op": "contains",
+              "value": "IHDR\u0000\u0000\u0000d\u0000\u0000\u00008"
+            }
+          ]
+        }
+      },
+      {
+        "name": "without a size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "format": "Png"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/png"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "PNG\r\n\u001a\n"
+            }
+          ]
+        }
+      },
+      {
+        "name": "the quality is for jpeg only",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "format": "Png",
+            "quality": "5",
+            "maxWidth": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/png"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "PNG\r\n\u001a\n"
+            },
+            {
+              "op": "contains",
+              "value": "IHDR\u0000\u0000\u0000d\u0000\u0000\u00008"
+            }
+          ]
+        }
+      },
+      {
+        "name": "the first format of repeated names counts",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0?format=Png&format=Jpg&maxWidth=100"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/png"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "PNG\r\n\u001a\n"
+            },
+            {
+              "op": "contains",
+              "value": "IHDR\u0000\u0000\u0000d\u0000\u0000\u00008"
+            }
+          ]
+        }
+      },
+      {
+        "name": "the first one again, the other way round",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0?format=Svg&format=Png&maxWidth=100"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "chapters.images.headers",
+    "endpoint": "GET /Items/{itemId}/Images/Chapter/{imageIndex}",
+    "spec": "chapters.md#images",
+    "scope": "modern",
+    "tags": [
+      "chapters",
+      "chapter-images"
+    ],
+    "covers": [
+      "chapters.images.R2",
+      "chapters.images.R10"
+    ],
+    "requires": [
+      "library:chapterimg3",
+      "item:chapter-noise"
+    ],
+    "steps": [
+      {
+        "name": "wait for the pictures",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-small.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[1].ImageTag",
+              "op": "matches",
+              "value": "^[0-9a-f]{32}$"
+            }
+          ]
+        },
+        "retryMs": 30000
+      },
+      {
+        "name": "a tag on a resized picture",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "tag": "abc",
+            "maxWidth": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg",
+            "ETag": "\"abc\"",
+            "Cache-Control": "public, max-age=31536000, immutable"
+          }
+        }
+      },
+      {
+        "name": "no tag: no ETag, short cache",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "maxWidth": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg",
+            "ETag": "absent",
+            "Cache-Control": "public",
+            "Last-Modified": "present"
+          }
+        }
+      },
+      {
+        "name": "an empty tag is no tag",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "tag": "",
+            "maxWidth": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg",
+            "ETag": "absent",
+            "Cache-Control": "public"
+          }
+        }
+      },
+      {
+        "name": "the same ETag back is not modified",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "tag": "abc",
+            "maxWidth": "100"
+          },
+          "headers": {
+            "If-None-Match": "\"abc\""
+          }
+        },
+        "expect": {
+          "status": 304
+        }
+      },
+      {
+        "name": "a date later than the picture is not modified",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "maxWidth": "100"
+          },
+          "headers": {
+            "If-Modified-Since": "Fri, 01 Jan 2100 00:00:00 GMT"
+          }
+        },
+        "expect": {
+          "status": 304
+        }
+      },
+      {
+        "name": "the stored picture too",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "headers": {
+            "If-Modified-Since": "Fri, 01 Jan 2100 00:00:00 GMT"
+          }
+        },
+        "expect": {
+          "status": 304
+        }
+      },
+      {
+        "name": "a byte range is ignored: the whole picture",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "headers": {
+            "Range": "bytes=0-9"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg",
+            "Content-Range": "absent"
+          }
+        }
+      },
+      {
+        "name": "HEAD",
+        "as": "admin",
+        "request": {
+          "method": "HEAD",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "maxWidth": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg",
+            "Content-Length": "present"
+          }
+        }
+      },
+      {
+        "name": "it is public: no token needed",
+        "as": "anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "maxWidth": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "chapters.images.errors",
+    "endpoint": "GET /Items/{itemId}/Images/Chapter/{imageIndex}",
+    "spec": "chapters.md#images",
+    "scope": "modern",
+    "tags": [
+      "chapters",
+      "chapter-images"
+    ],
+    "covers": [
+      "chapters.images.R3",
+      "chapters.images.R11"
+    ],
+    "requires": [
+      "library:chapterimg3",
+      "item:chapter-noise"
+    ],
+    "steps": [
+      {
+        "name": "wait for the pictures",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-small.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[1].ImageTag",
+              "op": "matches",
+              "value": "^[0-9a-f]{32}$"
+            }
+          ]
+        },
+        "retryMs": 30000
+      },
+      {
+        "name": "a size that is not a number",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "maxWidth": "abc"
+          }
+        },
+        "expect": {
+          "status": 400,
+          "json": [
+            {
+              "path": "$.errors.maxWidth",
+              "op": "exists"
+            }
+          ],
+          "problem": 400
+        }
+      },
+      {
+        "name": "every bad value is named",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "maxWidth": "abc",
+            "quality": "x",
+            "fillHeight": "1.5"
+          }
+        },
+        "expect": {
+          "status": 400,
+          "json": [
+            {
+              "path": "$.errors.maxWidth",
+              "op": "exists"
+            },
+            {
+              "path": "$.errors.quality",
+              "op": "exists"
+            },
+            {
+              "path": "$.errors.fillHeight",
+              "op": "exists"
+            }
+          ],
+          "problem": 400
+        }
+      },
+      {
+        "name": "and the index too",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/x",
+          "query": {
+            "maxWidth": "abc"
+          }
+        },
+        "expect": {
+          "status": 400,
+          "json": [
+            {
+              "path": "$.errors.maxWidth",
+              "op": "exists"
+            },
+            {
+              "path": "$.errors.imageIndex",
+              "op": "exists"
+            }
+          ],
+          "problem": 400
+        }
+      },
+      {
+        "name": "a number over 32 bits",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "maxHeight": "2147483648"
+          }
+        },
+        "expect": {
+          "status": 400,
+          "json": [
+            {
+              "path": "$.errors.maxHeight",
+              "op": "exists"
+            }
+          ],
+          "problem": 400
+        }
+      },
+      {
+        "name": "width",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "width": "1e3"
+          }
+        },
+        "expect": {
+          "status": 400,
+          "json": [
+            {
+              "path": "$.errors.width",
+              "op": "exists"
+            }
+          ],
+          "problem": 400
+        }
+      },
+      {
+        "name": "height",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "height": "abc"
+          }
+        },
+        "expect": {
+          "status": 400,
+          "json": [
+            {
+              "path": "$.errors.height",
+              "op": "exists"
+            }
+          ],
+          "problem": 400
+        }
+      },
+      {
+        "name": "fillWidth",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "fillWidth": "abc"
+          }
+        },
+        "expect": {
+          "status": 400,
+          "json": [
+            {
+              "path": "$.errors.fillWidth",
+              "op": "exists"
+            }
+          ],
+          "problem": 400
+        }
+      },
+      {
+        "name": "percentPlayed",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "percentPlayed": "abc"
+          }
+        },
+        "expect": {
+          "status": 400,
+          "json": [
+            {
+              "path": "$.errors.percentPlayed",
+              "op": "exists"
+            }
+          ],
+          "problem": 400
+        }
+      },
+      {
+        "name": "blur",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "blur": "abc"
+          }
+        },
+        "expect": {
+          "status": 400,
+          "json": [
+            {
+              "path": "$.errors.blur",
+              "op": "exists"
+            }
+          ],
+          "problem": 400
+        }
+      },
+      {
+        "name": "unplayedCount",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "unplayedCount": "abc"
+          }
+        },
+        "expect": {
+          "status": 400,
+          "json": [
+            {
+              "path": "$.errors.unplayedCount",
+              "op": "exists"
+            }
+          ],
+          "problem": 400
+        }
+      },
+      {
+        "name": "a decimal percentPlayed is fine",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "percentPlayed": "1.5",
+            "maxWidth": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          }
+        }
+      },
+      {
+        "name": "an addPlayedIndicator that is not a boolean is ignored",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "addPlayedIndicator": "abc",
+            "maxWidth": "100"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          }
+        }
+      },
+      {
+        "name": "a format number out of range",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "format": "6"
+          }
+        },
+        "expect": {
+          "status": 400,
+          "text": [
+            {
+              "op": "contains",
+              "value": "Error processing request."
+            }
+          ]
+        }
+      },
+      {
+        "name": "a negative one",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+          "query": {
+            "format": "-1"
+          }
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "no picture there is still 404 whatever the size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/9",
+          "query": {
+            "maxWidth": "100"
+          }
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "and a negative index",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/-1",
+          "query": {
+            "maxWidth": "100"
+          }
+        },
+        "expect": {
+          "status": 404
+        }
+      }
+    ]
+  },
+  {
+    "id": "chapters.images.long-form",
+    "endpoint": "GET /Items/{itemId}/Images/{imageType}/{imageIndex}/{tag}/{format}/{maxWidth}/{maxHeight}/{percentPlayed}/{unplayedCount}",
+    "spec": "chapters.md#images",
+    "scope": "modern",
+    "tags": [
+      "chapters",
+      "chapter-images"
+    ],
+    "covers": [
+      "chapters.images.R12"
+    ],
+    "requires": [
+      "library:chapterimg3",
+      "item:chapter-noise"
+    ],
+    "steps": [
+      {
+        "name": "wait for the pictures",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-small.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[1].ImageTag",
+              "op": "matches",
+              "value": "^[0-9a-f]{32}$"
+            }
+          ]
+        },
+        "retryMs": 30000
+      },
+      {
+        "name": "Png 100 x 100",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0/abc/Png/100/100/0/0"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/png",
+            "ETag": "\"abc\"",
+            "Cache-Control": "public, max-age=31536000, immutable"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "IHDR\u0000\u0000\u0000d\u0000\u0000\u00008"
+            }
+          ]
+        }
+      },
+      {
+        "name": "the format by number",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0/abc/3/100/100/0/0"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/png"
+          }
+        }
+      },
+      {
+        "name": "jpg and a width only",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0/abc/Jpg/100/0/0/0"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u00008\u0000d"
+            },
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a height only",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0/abc/jpg/0/40/0/0"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u0000(\u0000G"
+            }
+          ]
+        }
+      },
+      {
+        "name": "zero sizes are no limit, but the picture is made again",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0/abc/Jpg/0/0/0/0"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "svg too",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0/abc/Svg/100/100/0/0"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "the path wins over the query",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0/abc/Jpg/100/0/0/0",
+          "query": {
+            "maxWidth": "50"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "contains",
+              "value": "\u0000\u0011\b\u00008\u0000d"
+            }
+          ]
+        }
+      },
+      {
+        "name": "the query is read for the rest",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0/abc/Jpg/0/0/0/0",
+          "query": {
+            "quality": "10"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          },
+          "text": [
+            {
+              "op": "notcontains",
+              "value": "Lavc"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a format word that is not a name",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0/abc/jpeg/100/100/0/0"
+        },
+        "expect": {
+          "status": 400,
+          "json": [
+            {
+              "path": "$.errors.format",
+              "op": "exists"
+            }
+          ],
+          "problem": 400
+        }
+      },
+      {
+        "name": "a width that is not a number",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0/abc/Png/abc/100/0/0"
+        },
+        "expect": {
+          "status": 400,
+          "json": [
+            {
+              "path": "$.errors.maxWidth",
+              "op": "exists"
+            }
+          ],
+          "problem": 400
+        }
+      },
+      {
+        "name": "a percentPlayed",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0/abc/Png/100/100/abc/0"
+        },
+        "expect": {
+          "status": 400,
+          "json": [
+            {
+              "path": "$.errors.percentPlayed",
+              "op": "exists"
+            }
+          ],
+          "problem": 400
+        }
+      },
+      {
+        "name": "an unplayedCount",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0/abc/Png/100/100/0/abc"
+        },
+        "expect": {
+          "status": 400,
+          "json": [
+            {
+              "path": "$.errors.unplayedCount",
+              "op": "exists"
+            }
+          ],
+          "problem": 400
+        }
+      },
+      {
+        "name": "a decimal percentPlayed and a negative count are fine",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0/abc/Png/100/100/1.5/-3"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/png"
+          }
+        }
+      },
+      {
+        "name": "fewer members is no route",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0/abc/Png/100/100/0"
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "the index of a missing picture",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/9/abc/Png/100/100/0/0"
+        },
+        "expect": {
+          "status": 404
+        }
+      }
+    ]
+  },
+  {
+    "id": "chapters.images.partial",
+    "endpoint": "GET /Items/{itemId}",
+    "spec": "chapters.md#images",
+    "scope": "modern",
+    "tags": [
+      "chapters",
+      "chapter-images"
+    ],
+    "covers": [
+      "chapters.images.R4"
+    ],
+    "requires": [
+      "library:chapterimg3",
+      "item:chapter-edge14",
+      "item:chapter-edge15",
+      "item:chapter-edge16",
+      "item:chapter-tail"
+    ],
+    "steps": [
+      {
+        "name": "a 16 s video has the pictures of both chapters",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-edge16.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[1].ImageTag",
+              "op": "matches",
+              "value": "^[0-9a-f]{32}$"
+            }
+          ]
+        },
+        "retryMs": 30000
+      },
+      {
+        "name": "give the others time",
+        "sleepMs": 4000
+      },
+      {
+        "name": "the first chapter's picture is taken at 15 s, so a 14 s video has none",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-edge14.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[0].ImageTag",
+              "op": "absent"
+            },
+            {
+              "path": "$.Chapters[1].ImageTag",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "nor one of exactly 15 s",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-edge15.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[0].ImageTag",
+              "op": "absent"
+            },
+            {
+              "path": "$.Chapters[1].ImageTag",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a 16 s video has both",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-edge16.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[0].ImageTag",
+              "op": "matches",
+              "value": "^[0-9a-f]{32}$"
+            },
+            {
+              "path": "$.Chapters[1].ImageTag",
+              "op": "matches",
+              "value": "^[0-9a-f]{32}$"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a picture too close to the end fails; the ones before it are kept",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-tail.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[0].ImageTag",
+              "op": "matches",
+              "value": "^[0-9a-f]{32}$"
+            },
+            {
+              "path": "$.Chapters[1].ImageTag",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "and served",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-tail.id}}/Images/Chapter/0"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "image/jpeg"
+          }
+        }
+      },
+      {
+        "name": "the failed one has nothing",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-tail.id}}/Images/Chapter/1"
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "a short video has nothing even for its later chapter",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-edge14.id}}/Images/Chapter/1"
+        },
+        "expect": {
+          "status": 404
+        }
+      }
+    ]
+  },
+  {
+    "id": "chapters.images.toggle",
+    "endpoint": "POST /Library/VirtualFolders/LibraryOptions",
+    "spec": "chapters.md#images",
+    "scope": "modern",
+    "tags": [
+      "chapters",
+      "chapter-images"
+    ],
+    "covers": [
+      "chapters.images.R5",
+      "chapters.images.R13"
+    ],
+    "requires": [
+      "library:chapterimgtoggle",
+      "item:chapter-toggle"
+    ],
+    "steps": [
+      {
+        "name": "give the scan time",
+        "sleepMs": 3000
+      },
+      {
+        "name": "a library that does not enable extraction has none",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-toggle.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[0].ImageTag",
+              "op": "absent"
+            },
+            {
+              "path": "$.Chapters[1].ImageTag",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "switch it on, during the scan",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Library/VirtualFolders/LibraryOptions",
+          "body": {
+            "Id": "{{library.chapterimgtoggle.id}}",
+            "LibraryOptions": {
+              "EnableChapterImageExtraction": true,
+              "ExtractChapterImagesDuringLibraryScan": true,
+              "PathInfos": [
+                {
+                  "Path": "{{server.mediaroot}}/ChapterImgToggle"
+                }
+              ]
+            }
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "saving the options makes none",
+        "sleepMs": 3000
+      },
+      {
+        "name": "still none",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-toggle.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[0].ImageTag",
+              "op": "absent"
+            },
+            {
+              "path": "$.Chapters[1].ImageTag",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a scan of media that did not change",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Library/Refresh"
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "makes them",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-toggle.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[0].ImageTag",
+              "op": "matches",
+              "value": "^[0-9a-f]{32}$"
+            },
+            {
+              "path": "$.Chapters[1].ImageTag",
+              "op": "matches",
+              "value": "^[0-9a-f]{32}$"
+            }
+          ]
+        },
+        "retryMs": 30000,
+        "capture": {
+          "tag0": "$.Chapters[0].ImageTag"
+        }
+      },
+      {
+        "name": "another scan does not make them again",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Library/Refresh"
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "give it time",
+        "sleepMs": 3000
+      },
+      {
+        "name": "same pictures",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-toggle.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[0].ImageTag",
+              "op": "eq",
+              "value": "{{capture.tag0}}"
+            }
+          ]
+        }
+      },
+      {
+        "name": "switching extraction off keeps what was made",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Library/VirtualFolders/LibraryOptions",
+          "body": {
+            "Id": "{{library.chapterimgtoggle.id}}",
+            "LibraryOptions": {
+              "EnableChapterImageExtraction": false,
+              "ExtractChapterImagesDuringLibraryScan": false,
+              "PathInfos": [
+                {
+                  "Path": "{{server.mediaroot}}/ChapterImgToggle"
+                }
+              ]
+            }
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "scan",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Library/Refresh"
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "give it time again",
+        "sleepMs": 3000
+      },
+      {
+        "name": "still there",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-toggle.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[0].ImageTag",
+              "op": "eq",
+              "value": "{{capture.tag0}}"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a refresh of the item does not touch them",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.chapter-toggle.id}}/Refresh",
+          "query": {
+            "Recursive": "true",
+            "ImageRefreshMode": "FullRefresh",
+            "MetadataRefreshMode": "FullRefresh",
+            "ReplaceAllImages": "true",
+            "ReplaceAllMetadata": "true"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "give the refresh time",
+        "sleepMs": 3000
+      },
+      {
+        "name": "unchanged",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-toggle.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[0].ImageTag",
+              "op": "eq",
+              "value": "{{capture.tag0}}"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "chapters.images.path",
+    "endpoint": "GET /Items/{itemId}",
+    "spec": "chapters.md#images",
+    "scope": "modern",
+    "tags": [
+      "chapters",
+      "chapter-images"
+    ],
+    "covers": [
+      "chapters.images.R14"
+    ],
+    "requires": [
+      "library:chapterimg3",
+      "item:chapter-noise"
+    ],
+    "steps": [
+      {
+        "name": "wait for the pictures",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-small.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[1].ImageTag",
+              "op": "matches",
+              "value": "^[0-9a-f]{32}$"
+            }
+          ]
+        },
+        "retryMs": 30000
+      },
+      {
+        "name": "an administrator does not read the server's path",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.chapter-noise.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Chapters[0].ImagePath",
+              "op": "absent"
+            },
+            {
+              "path": "$.Chapters[1].ImagePath",
+              "op": "absent"
+            }
+          ]
+        }
+      }
+    ],
+    "divergence": {
+      "reason": "the reference puts the server path of every chapter picture in ImagePath, for every caller (a path leak); Tinyfin never does"
+    }
+  }
+]
