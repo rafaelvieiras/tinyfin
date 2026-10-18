@@ -290,7 +290,9 @@ func audioDisplayTitle(s storage.MediaStreamRef) string {
 func subtitleDisplayTitle(s storage.MediaStreamRef) string {
 	var attrs []string
 
-	if isUsableLanguage(s.Language) {
+	if strings.EqualFold(s.Language, "und") {
+		attrs = append(attrs, "Undetermined")
+	} else if isUsableLanguage(s.Language) {
 		attrs = append(attrs, subtitle.DisplayName(s.Language))
 	} else {
 		attrs = append(attrs, "Undefined")

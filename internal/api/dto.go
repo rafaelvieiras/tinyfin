@@ -782,7 +782,10 @@ func mediaStreamDtos(streams []storage.MediaStreamRef) []mediaStreamDto {
 			d.LocalizedForced = "Forced"
 			d.LocalizedExternal = "External"
 			d.LocalizedHearingImpaired = "Hearing Impaired"
-			if isUsableLanguage(s.Language) {
+			if strings.EqualFold(s.Language, "und") {
+				// a sidecar file can carry the tag; an embedded track never does
+				d.LocalizedLanguage = "Undetermined"
+			} else if isUsableLanguage(s.Language) {
 				d.LocalizedLanguage = subtitle.DisplayName(s.Language)
 			}
 		}
