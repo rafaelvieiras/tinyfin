@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Subtitle sidecars by content and the rest of the subtitle matrix (`subtitles.md#sidecar`, `subtitles2.json`,
+  10 new scenarios, fixtures from `scripts/conformance-subs2.sh`): subtitle files are probed, not trusted by
+  extension (a SubRip `.vtt` is `subrip`, an empty or unreadable file is no stream), VobSub `.idx`/`.sub` pairs
+  are `DVDSUB` streams per index track, Matroska `.mks` files list their tracks, and a sidecar keeps its own
+  language tag (`und` too). The subtitle routes serve sidecars by the reference's rules (`idx`, `sub`, `mks`,
+  `sup`, `smi`, mismatched content, 400 for the formats that are not served). `SubtitleProfiles` take any
+  format name for a text track, a bad `Method` is a 400, and the delivery follows the transcode/direct-play
+  situation. Burn-in passes `-canvas_size`, scales picture subtitles to the output picture, reads sidecar
+  pictures as a second input, orders the text chain as the reference (colour tags, scale, pixel format, then
+  `subtitles`), extracts embedded text first and passes `charenc` for external files with a language.
+
 - HLS seek and segment plan (`docs/contract/specs/playback.md#hls`, `playback5.json`, 3 new scenarios): a
   segment request starts the transcode at its own `runtimeTicks` (ffmpeg `-ss`, segments numbered from the
   requested one) instead of waiting for one that runs from the start of the file; a request further on or
