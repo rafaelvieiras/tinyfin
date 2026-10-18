@@ -129,6 +129,10 @@ type Request struct {
 	Subtitle *Subtitle
 	// FontsDir is filled from Config.FontsDir by Start.
 	FontsDir string
+	// SourceWidth and SourceHeight are the size of the source picture; Start
+	// fills them for a picture subtitle burn-in, which needs the size of the
+	// picture it overlays.
+	SourceWidth, SourceHeight int
 }
 
 // Subtitle describes the track to burn in.
@@ -142,8 +146,19 @@ type Subtitle struct {
 	Index    int
 	// Bitmap marks picture subtitles (PGS, DVD, DVB), rendered with the
 	// overlay filter from the stream StreamIndex of the input.
-	Bitmap      bool
+	Bitmap bool
+	// StreamIndex is the stream of the input (of the sidecar file when
+	// External) the pictures are read from.
 	StreamIndex int
+	// External: the pictures come from the sidecar file Path (idx, sup, mks),
+	// a second input of the job. Filled by Start from what the file holds.
+	External bool
+	// Charset is the encoding of an external text file, for the charenc option
+	// ("" leaves it out). Filled by Start.
+	Charset string
+	// Width and Height are the canvas size of a picture track, as ffprobe
+	// reports it (0 when unknown). Filled by Start.
+	Width, Height int
 }
 
 // Manager starts and tracks jobs, keyed by an opaque session ID the caller
@@ -205,6 +220,12 @@ func (m *Manager) Start(ctx context.Context, sessionID string, req Request) (*Jo
 	}
 	if err := os.MkdirAll(jobDir, 0o755); err != nil {
 		return nil, fmt.Errorf("transcode: create job dir: %w", err)
+	}
+
+	if req.Subtitle != nil {
+		sub := *req.Subtitle
+		req.Subtitle = &sub
+		m.cfg.resolveBurn(&req, jobDir)
 	}
 
 	logFile, err := os.Create(filepath.Join(jobDir, "ffmpeg.log"))

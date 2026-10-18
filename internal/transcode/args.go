@@ -74,22 +74,30 @@ func encodeArgs(req Request) []string {
 		args = append(args, "-ss", strconv.FormatFloat(float64(ms)/1000, 'f', 3, 64))
 	}
 
+	burn := req.Subtitle != nil && !(req.VideoCodec == "" || req.VideoCodec == "copy")
+	args = append(args, canvasArgs(req.Subtitle)...)
 	args = append(args, "-i", req.InputPath)
+	subInput := 0
+	if burn && req.Subtitle.Bitmap && req.Subtitle.External {
+		// the pictures of a sidecar are a second input, seeked like the first
+		if req.StartTimeTicks > 0 {
+			ms := (req.StartTimeTicks + ticksPerSecond/1000 - 1) / (ticksPerSecond / 1000)
+			args = append(args, "-ss", strconv.FormatFloat(float64(ms)/1000, 'f', 3, 64))
+		}
+		args = append(args, canvasArgs(req.Subtitle)...)
+		args = append(args, "-i", req.Subtitle.Path)
+		subInput = 1
+	}
 
 	// Burn-in (docs/contract/specs/subtitles.md, "Burned-in subtitles") is a
 	// filter on the video, so it needs a re-encode: a copied video stream
 	// cannot be filtered (the caller promotes the mode, see
 	// internal/playback.Options.BurnSubtitle).
-	burn := req.Subtitle != nil && !(req.VideoCodec == "" || req.VideoCodec == "copy")
 	videoMap := "0:v:0"
 	if burn && req.Subtitle.Bitmap {
-		// Bitmap tracks (PGS, DVD, DVB) are decoded to pictures and
-		// overlaid; the scale, if any, follows the overlay.
-		graph := fmt.Sprintf("[0:v:0][0:%d]overlay=eof_action=pass:repeatlast=0", req.Subtitle.StreamIndex)
-		if req.MaxHeight > 0 {
-			graph += fmt.Sprintf(",scale=-2:%d", req.MaxHeight)
-		}
-		args = append(args, "-filter_complex", graph+"[v]")
+		// Bitmap tracks (PGS, DVD, DVB) are decoded to pictures, scaled to
+		// the output picture and overlaid on it.
+		args = append(args, "-filter_complex", bitmapGraph(req, subInput))
 		videoMap = "[v]"
 	}
 	audioOnly := req.VideoCodec == "none"
@@ -254,15 +262,20 @@ func hlsOutputArgs(req Request) []string {
 // the frames restart at zero while the cues keep their absolute times, so the
 // chain shifts the timestamps by the seek offset around the renderer.
 func videoFilter(req Request, burn bool) string {
-	var chain []string
 	if burn && !req.Subtitle.Bitmap {
+		// colour tags, scaling and pixel format first: the renderer lays the
+		// text out on the picture the viewer gets
+		chain := []string{burnVideoFilter(req)}
 		seek := req.StartTimeTicks > 0
 		if seek {
 			chain = append(chain, fmt.Sprintf("setpts=PTS+%s/TB", strconv.FormatFloat(float64(req.StartTimeTicks)/ticksPerSecond, 'f', 3, 64)))
 		}
-		f := "subtitles=filename=" + quoteFilterValue(req.Subtitle.Path)
+		f := "subtitles=f=" + quoteFilterValue(req.Subtitle.Path)
 		if req.Subtitle.Embedded {
 			f += fmt.Sprintf(":si=%d", req.Subtitle.Index)
+		}
+		if req.Subtitle.Charset != "" {
+			f += ":charenc=" + req.Subtitle.Charset
 		}
 		if req.FontsDir != "" {
 			f += ":fontsdir=" + quoteFilterValue(req.FontsDir)
@@ -271,7 +284,9 @@ func videoFilter(req Request, burn bool) string {
 		if seek {
 			chain = append(chain, "setpts=PTS-STARTPTS")
 		}
+		return strings.Join(chain, ",")
 	}
+	var chain []string
 	if req.MaxWidth > 0 && !(burn && req.Subtitle.Bitmap) {
 		chain = append(chain, fmt.Sprintf("scale='min(iw,%d)':-2", req.MaxWidth))
 	}

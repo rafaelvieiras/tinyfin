@@ -175,31 +175,9 @@ func (s *Server) extractEmbeddedSubtitle(ctx context.Context, src storage.Item, 
 		return nil, kind, "", false, err
 	}
 	if kind == subtitle.KindASS {
-		out, bom = replaceArialStyle(out)
+		out, bom = subtitle.ReplaceArialStyle(out)
 	}
 	return out, kind, format, bom, nil
-}
-
-// replaceArialStyle swaps the font "Arial" of the Style lines of an ASS
-// script for "Arial Unicode MS", as the reference does to the tracks it
-// extracts, and reports whether it changed anything.
-func replaceArialStyle(data []byte) ([]byte, bool) {
-	lines := bytes.Split(data, []byte("\n"))
-	changed := false
-	for i, ln := range lines {
-		if !bytes.HasPrefix(ln, []byte("Style:")) {
-			continue
-		}
-		fields := bytes.SplitN(ln, []byte(","), 3)
-		if len(fields) == 3 && string(bytes.TrimSpace(fields[1])) == "Arial" {
-			lines[i] = bytes.Join([][]byte{fields[0], []byte("Arial Unicode MS"), fields[2]}, []byte(","))
-			changed = true
-		}
-	}
-	if !changed {
-		return data, false
-	}
-	return bytes.Join(lines, []byte("\n")), true
 }
 
 // handleSubtitleStream serves GET /Videos/{itemId}/{mediaSourceId}/

@@ -202,3 +202,15 @@ func TestParseIDXAndVTTHeader(t *testing.T) {
 		t.Errorf("vtt without header parsed %d cues, want 0", len(got.Cues))
 	}
 }
+
+func TestReplaceArialStyle(t *testing.T) {
+	in := "[V4+ Styles]\nStyle: Default,Arial,20,&H00FFFFFF\nStyle: Alt,Arial Black,20,&H00FFFFFF\nDialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Arial\n"
+	out, ok := ReplaceArialStyle([]byte(in))
+	want := "[V4+ Styles]\nStyle: Default,Arial Unicode MS,20,&H00FFFFFF\nStyle: Alt,Arial Black,20,&H00FFFFFF\nDialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Arial\n"
+	if !ok || string(out) != want {
+		t.Errorf("got %q (%v)", out, ok)
+	}
+	if _, ok := ReplaceArialStyle([]byte("Style: A,Verdana,1\n")); ok {
+		t.Error("changed a style without Arial")
+	}
+}
