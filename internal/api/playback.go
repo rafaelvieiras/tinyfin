@@ -11,6 +11,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/json"
@@ -282,6 +283,17 @@ func remoteProtocol(u string) string {
 // through to the registry/default lookup; the POST form is how a real
 // client normally negotiates (docs/04).
 func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost && r.Body != nil {
+		// A subtitle profile with an empty, null or unknown Method is a
+		// request the reference refuses outright.
+		raw, _ := io.ReadAll(r.Body)
+		r.Body = io.NopCloser(bytes.NewReader(raw))
+		var probe playbackInfoRequestBody
+		if err := json.Unmarshal(raw, &probe); err != nil && strings.Contains(err.Error(), "SubtitleProfile.Method") {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
 	itemID := storage.ItemID(r.PathValue("itemId"))
 	item, err := s.store.GetItem(r.Context(), itemID)
 	if err != nil || !s.itemReadableByCaller(r, item) {
@@ -361,7 +373,7 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 	subMethod := ""
 	subTrack, hasSub := subtitleStream(item.MediaStreams, subIdx)
 	if inline && hasSub {
-		m := playback.DeliverSubtitle(subTrack, profile.SubtitleProfiles, true).Method
+		m := playback.DeliverSubtitle(subTrack, profile.SubtitleProfiles, subtitleDelivery(item, true, true)).Method
 		switch m {
 		case "Encode":
 			opts.BurnSubtitle = true
@@ -387,14 +399,14 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 		decision = playback.Decision{Mode: playback.ModeDirectPlay, Container: strings.ToLower(item.Container)}
 	}
 	if inline && hasSub && !opts.BurnSubtitle && decision.Mode != playback.ModeDirectPlay && decision.Mode != playback.ModeNone &&
-		playback.DeliverSubtitle(subTrack, profile.SubtitleProfiles, false).Method == "Encode" {
+		playback.DeliverSubtitle(subTrack, profile.SubtitleProfiles, subtitleDelivery(item, false, true)).Method == "Encode" {
 		// the file is not served as is any more, so an embedded track
 		// cannot stay in it: it has to be rendered into the picture
 		opts.BurnSubtitle = true
 		decision = playback.DecideWith(item, profile, opts)
 	}
 	if hasSub && inline {
-		subMethod = playback.DeliverSubtitle(subTrack, profile.SubtitleProfiles, decision.Mode == playback.ModeDirectPlay).Method
+		subMethod = playback.DeliverSubtitle(subTrack, profile.SubtitleProfiles, subtitleDelivery(item, decision.Mode == playback.ModeDirectPlay, decision.Mode != playback.ModeDirectPlay)).Method
 	}
 	if overBitrate && decision.Mode != playback.ModeDirectPlay {
 		if bitrateOnly {
@@ -818,6 +830,15 @@ func (s *Server) applyStreamDefaults(ctx context.Context, src *mediaSourceInfoDt
 	src.DefaultSubtitleStreamIndex = playback.DefaultSubtitleIndex(streams, mode, subLangs, audioLang)
 }
 
+// subtitleDelivery is the situation a subtitle of item is delivered in.
+func subtitleDelivery(item storage.Item, allowEmbed, allowHls bool) playback.Delivery {
+	return playback.Delivery{
+		AllowEmbed: allowEmbed,
+		AllowHls:   allowHls,
+		Container:  strings.ToLower(strings.TrimPrefix(filepath.Ext(item.Path), ".")),
+	}
+}
+
 // subtitleDeliveryURL is the path of a subtitle stream served as format. The
 // item is written in its dashed form, the media source id as it is.
 func subtitleDeliveryURL(itemID, sourceID string, index int, format, apiKey string) string {
@@ -847,7 +868,7 @@ func (s *Server) applySubtitleDelivery(r *http.Request, src *mediaSourceInfoDto,
 	allowEmbed := served
 	if src.DefaultSubtitleStreamIndex != nil {
 		if def, ok := byIndex[*src.DefaultSubtitleStreamIndex]; ok {
-			m := playback.DeliverSubtitle(def, profiles, true).Method
+			m := playback.DeliverSubtitle(def, profiles, subtitleDelivery(item, true, true)).Method
 			allowEmbed = allowEmbed && m != "Encode" && m != "Hls"
 		}
 	}
@@ -856,7 +877,7 @@ func (s *Server) applySubtitleDelivery(r *http.Request, src *mediaSourceInfoDto,
 		if d.Type != string(storage.StreamTypeSubtitle) {
 			continue
 		}
-		del := playback.DeliverSubtitle(byIndex[d.Index], profiles, allowEmbed)
+		del := playback.DeliverSubtitle(byIndex[d.Index], profiles, subtitleDelivery(item, allowEmbed, !allowEmbed))
 		d.DeliveryMethod = del.Method
 		if del.Method == "External" {
 			d.DeliveryURL = subtitleDeliveryURL(string(item.ID), src.ID, d.Index, del.Format, token)

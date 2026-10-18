@@ -1,6 +1,9 @@
 package deviceprofile
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestLookupKnownClients(t *testing.T) {
 	for _, client := range []string{"Jellyfin Web", "Jellyfin Android", "Jellyfin iOS"} {
@@ -58,5 +61,25 @@ func TestDefaultHasTranscodingFallback(t *testing.T) {
 	tp := d.TranscodingProfiles[0]
 	if tp.Container != "ts" || tp.Protocol != "hls" || tp.VideoCodec != "h264" || tp.AudioCodec != "aac" {
 		t.Errorf("Default().TranscodingProfiles[0] = %+v, want h264/aac over hls/ts baseline", tp)
+	}
+}
+
+func TestSubtitleProfileMethod(t *testing.T) {
+	ok := map[string]string{
+		`{"Method":"external"}`: "External", `{"Method":"HLS"}`: "Hls", `{"Method":0}`: "Encode", `{"Method":1}`: "Embed",
+		`{"Method":2}`: "External", `{"Method":3}`: "Hls", `{"Method":4}`: "Drop", `{"Method":"2"}`: "External",
+		`{"Method":9}`: "", `{}`: "Encode", `{"Format":"srt"}`: "Encode",
+	}
+	for in, want := range ok {
+		var p SubtitleProfile
+		if err := json.Unmarshal([]byte(in), &p); err != nil || p.Method != want {
+			t.Errorf("%s: %q, %v (want %q)", in, p.Method, err, want)
+		}
+	}
+	for _, in := range []string{`{"Method":""}`, `{"Method":null}`, `{"Method":"Bogus"}`} {
+		var p SubtitleProfile
+		if err := json.Unmarshal([]byte(in), &p); err == nil {
+			t.Errorf("%s: no error", in)
+		}
 	}
 }
