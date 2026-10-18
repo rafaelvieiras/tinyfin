@@ -18,7 +18,14 @@ func fakeFFprobe(t *testing.T) (script, counter string) {
 	dir := t.TempDir()
 	counter = filepath.Join(dir, "calls")
 	script = filepath.Join(dir, "ffprobe")
-	body := "#!/bin/sh\necho x >> " + counter + "\n" +
+	// Subtitle files answer with one subtitle stream and are not counted;
+	// every other file is a video.
+	body := "#!/bin/sh\nfor a; do f=$a; done\n" +
+		"case \"$f\" in\n" +
+		`*.ass) echo '{"streams":[{"codec_type":"subtitle","codec_name":"ass","time_base":"1/100"}]}'; exit 0;;` + "\n" +
+		`*.vtt) echo '{"streams":[{"codec_type":"subtitle","codec_name":"webvtt","time_base":"1/1000"}]}'; exit 0;;` + "\n" +
+		`*.srt|*.smi|*.sup|*.sub|*.idx|*.mks) echo '{"streams":[{"codec_type":"subtitle","codec_name":"subrip","time_base":"1/1000"}]}'; exit 0;;` + "\n" +
+		"esac\necho x >> " + counter + "\n" +
 		`echo '{"streams":[{"codec_type":"video","codec_name":"h264","width":640,"height":360}],"format":{"duration":"12.5"}}'` + "\n"
 	if err := os.WriteFile(script, []byte(body), 0o755); err != nil {
 		t.Fatal(err)

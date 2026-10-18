@@ -40,7 +40,9 @@ func TestParseSidecar(t *testing.T) {
 		{"Movie-en.srt", false, "", "", "", false, false, false},
 		{"Other.srt", false, "", "", "", false, false, false},
 		{"Movie.en.txt", false, "", "", "", false, false, false},
-		{"Movie.en.sub", false, "", "", "", false, false, false},
+		{"Movie.en.sub", true, "eng", "", "DVDSUB", false, false, false},
+		{"Movie.fr.forced.idx", true, "fra", "", "DVDSUB", true, false, false},
+		{"Movie.en.mks", true, "eng", "", "", false, false, false},
 	}
 	for _, c := range cases {
 		sc, ok := ParseSidecar("Movie", c.file)

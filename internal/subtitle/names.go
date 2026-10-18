@@ -85,7 +85,16 @@ func ParseSidecar(videoBase, fileName string) (Sidecar, bool) {
 	ext := strings.ToLower(fileName[dot+1:])
 	codec, ok := extCodec[ext]
 	if !ok {
-		return Sidecar{}, false
+		// VobSub pairs and Matroska subtitle files are named like any other
+		// sidecar; what they hold is known only once they are probed.
+		switch ext {
+		case "idx", "sub":
+			codec = "DVDSUB"
+		case "mks":
+			codec = ""
+		default:
+			return Sidecar{}, false
+		}
 	}
 	stem := fileName[:dot]
 	if len(stem) <= len(videoBase) || !strings.EqualFold(stem[:len(videoBase)], videoBase) || stem[len(videoBase)] != '.' {
