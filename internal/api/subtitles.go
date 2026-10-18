@@ -344,6 +344,11 @@ func (s *Server) handleSubtitleStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if fileExt == "sup" && subtitle.IsTextCodec(st.Codec) {
+		// text saved as .sup: only the codec's own name serves it, as it is
+		if lowerFormat == "pgssub" {
+			s.serveSubtitleFile(w, r, st.Path, true, "application/octet-stream")
+			return
+		}
 		writeSubtitleError(w, http.StatusBadRequest)
 		return
 	}
