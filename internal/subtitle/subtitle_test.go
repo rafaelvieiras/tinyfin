@@ -188,3 +188,17 @@ func TestDisplayName(t *testing.T) {
 		}
 	}
 }
+
+func TestParseIDXAndVTTHeader(t *testing.T) {
+	idx := "size: 720x480\nid: en, index: 0\ntimestamp: 00:00:01:500, filepos: 000000000\ntimestamp: 00:00:03:000, filepos: 000000800\n"
+	tr := Parse(KindIDX, []byte(idx))
+	if len(tr.Cues) != 2 {
+		t.Fatalf("idx cues = %d, want 2", len(tr.Cues))
+	}
+	if tr.Cues[0].Start != 1500*ticksPerMs {
+		t.Errorf("first idx cue start = %d", tr.Cues[0].Start)
+	}
+	if got := Parse(KindVTT, []byte("1\n00:00:01.000 --> 00:00:02.000\nhi\n")); len(got.Cues) != 0 {
+		t.Errorf("vtt without header parsed %d cues, want 0", len(got.Cues))
+	}
+}

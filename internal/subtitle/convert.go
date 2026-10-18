@@ -24,6 +24,7 @@ const (
 	KindASS // an ".ass" file: override tags are dropped for HTML-like targets
 	KindSSA // an ".ssa" file: override tags become HTML-like tags
 	KindSAMI
+	KindIDX // a VobSub ".idx" index read as text: one cue per timestamp line
 )
 
 // Cue is one timed text.
@@ -73,6 +74,8 @@ func Parse(kind Kind, data []byte) Track {
 		t.Cues, t.Style = parseASS(text)
 	case KindSAMI:
 		t.Cues = parseSAMI(text)
+	case KindIDX:
+		t.Cues = parseIDX(text)
 	}
 	return t
 }
@@ -142,6 +145,9 @@ func parseSRT(text string) []Cue {
 }
 
 func parseVTT(text string) []Cue {
+	if !strings.HasPrefix(text, "WEBVTT") {
+		return nil // not a WebVTT document
+	}
 	var cues []Cue
 	blocks := strings.Split(text, "\n\n")
 	for _, b := range blocks {
@@ -242,6 +248,27 @@ var (
 	samiTagRe  = regexp.MustCompile(`(?is)<[^>]*>`)
 	samiBrRe   = regexp.MustCompile(`(?is)<br\s*/?>`)
 )
+
+var idxRe = regexp.MustCompile(`^\s*timestamp:\s*(-?)(\d+):(\d{2}):(\d{2}):(\d{3})\s*,\s*filepos:\s*(\w+)`)
+
+// parseIDX reads the timestamp lines of a VobSub index the way the reference
+// does when it is asked for text: the start is the timestamp, the end is zero
+// and the text is a space and the file position.
+func parseIDX(text string) []Cue {
+	var cues []Cue
+	for _, line := range strings.Split(text, "\n") {
+		m := idxRe.FindStringSubmatch(line)
+		if m == nil {
+			continue
+		}
+		ms := ((atoi(m[2])*60+atoi(m[3]))*60+atoi(m[4]))*1000 + atoi(m[5])
+		if m[1] == "-" {
+			ms = -ms
+		}
+		cues = append(cues, Cue{Start: ms * ticksPerMs, Text: " " + m[6]})
+	}
+	return cues
+}
 
 func parseSAMI(text string) []Cue {
 	idx := samiSyncRe.FindAllStringSubmatchIndex(text, -1)
@@ -505,7 +532,11 @@ func (t Track) Write(f Format, o Options) []byte {
 	switch f {
 	case FormatSRT:
 		for i, c := range t.Cues {
-			fmt.Fprintf(&b, "%d\n%s --> %s\n%s\n\n", i+1, fmtClock(c.Start, ','), fmtClock(c.End, ','), t.raw(c))
+			n := i + 1
+			if t.Kind == KindIDX {
+				n = 0
+			}
+			fmt.Fprintf(&b, "%d\n%s --> %s\n%s\n\n", n, fmtClock(c.Start, ','), fmtClock(c.End, ','), t.raw(c))
 		}
 	case FormatVTT:
 		b.WriteString("WEBVTT\n")
@@ -534,7 +565,7 @@ func (t Track) Write(f Format, o Options) []byte {
 		}
 		for _, c := range t.Cues {
 			text := c.Text
-			if t.Kind == KindSRT || t.Kind == KindVTT || t.Kind == KindSAMI {
+			if t.Kind == KindSRT || t.Kind == KindVTT || t.Kind == KindSAMI || t.Kind == KindIDX {
 				text = htmlToASS(c.Text)
 			}
 			if f == FormatASS {
@@ -549,8 +580,12 @@ func (t Track) Write(f Format, o Options) []byte {
 			if i > 0 {
 				b.WriteByte(',')
 			}
+			id := i + 1
+			if t.Kind == KindIDX {
+				id = 0
+			}
 			fmt.Fprintf(&b, `{"Id":"%d","Text":%s,"StartPositionTicks":%d,"EndPositionTicks":%d}`,
-				i+1, jsonString(t.raw(c)), c.Start, c.End)
+				id, jsonString(t.raw(c)), c.Start, c.End)
 		}
 		b.WriteString(`]}`)
 	case FormatTTML:

@@ -15,6 +15,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -128,21 +129,38 @@ func decodeSubtitleText(data []byte) []byte {
 	return b.Bytes()
 }
 
-// extractEmbeddedSubtitle writes the embedded text stream st of the media
-// file as text of the family it is kept in (SubRip, ASS or WebVTT).
-func (s *Server) extractEmbeddedSubtitle(ctx context.Context, src storage.Item, st storage.MediaStreamRef) ([]byte, subtitle.Kind, string, error) {
+// subtitleOrdinal is the position of st among the subtitle streams that come
+// from the same file (the media file for an embedded one, the subtitle file
+// for an external one): what ffmpeg's 0:s:N counts.
+func subtitleOrdinal(src storage.Item, st storage.MediaStreamRef) int {
 	ordinal := 0
 	for _, o := range src.MediaStreams {
-		if o.Type == storage.StreamTypeSubtitle && !o.IsExternal && o.Index < st.Index {
+		if o.Type == storage.StreamTypeSubtitle && o.IsExternal == st.IsExternal && o.Path == st.Path && o.Index < st.Index {
 			ordinal++
 		}
 	}
+	return ordinal
+}
+
+// subtitleFile is the file stream st is read from.
+func subtitleFile(src storage.Item, st storage.MediaStreamRef) string {
+	if st.IsExternal {
+		return st.Path
+	}
+	return src.Path
+}
+
+// extractEmbeddedSubtitle writes a text stream of a media or Matroska
+// subtitle file as text of the family it is kept in: ASS stays ASS, every
+// other text track (and a picture track, whose decoder yields no text but
+// whatever ffmpeg makes of it) comes out as SubRip. bom is true when the
+// ASS text had its "Arial" style font replaced, which the reference marks
+// with a byte order mark when it serves the text as it is.
+func (s *Server) extractEmbeddedSubtitle(ctx context.Context, src storage.Item, st storage.MediaStreamRef) (data []byte, kind subtitle.Kind, ext string, bom bool, err error) {
+	ordinal := subtitleOrdinal(src, st)
 	kind, codec, format := subtitle.KindSRT, "srt", "srt"
-	switch strings.ToLower(st.Codec) {
-	case "ass", "ssa":
+	if strings.EqualFold(st.Codec, "ass") || strings.EqualFold(st.Codec, "ssa") {
 		kind, codec, format = subtitle.KindASS, "ass", "ass"
-	case "webvtt":
-		kind, codec, format = subtitle.KindVTT, "webvtt", "webvtt"
 	}
 	ffmpeg := s.cfg.TranscodeFFmpegPath
 	if ffmpeg == "" {
@@ -150,14 +168,38 @@ func (s *Server) extractEmbeddedSubtitle(ctx context.Context, src storage.Item, 
 	}
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, ffmpeg, "-v", "error", "-nostdin", "-i", src.Path,
+	cmd := exec.CommandContext(ctx, ffmpeg, "-v", "error", "-nostdin", "-i", subtitleFile(src, st),
 		"-map", fmt.Sprintf("0:s:%d", ordinal), "-an", "-vn", "-c:s", codec, "-f", format, "-")
 	out, err := cmd.Output()
 	if err != nil {
-		return nil, kind, "", err
+		return nil, kind, "", false, err
 	}
-	ext := map[string]string{"srt": "srt", "ass": "ass", "webvtt": "vtt"}[format]
-	return out, kind, ext, nil
+	if kind == subtitle.KindASS {
+		out, bom = replaceArialStyle(out)
+	}
+	return out, kind, format, bom, nil
+}
+
+// replaceArialStyle swaps the font "Arial" of the Style lines of an ASS
+// script for "Arial Unicode MS", as the reference does to the tracks it
+// extracts, and reports whether it changed anything.
+func replaceArialStyle(data []byte) ([]byte, bool) {
+	lines := bytes.Split(data, []byte("\n"))
+	changed := false
+	for i, ln := range lines {
+		if !bytes.HasPrefix(ln, []byte("Style:")) {
+			continue
+		}
+		fields := bytes.SplitN(ln, []byte(","), 3)
+		if len(fields) == 3 && string(bytes.TrimSpace(fields[1])) == "Arial" {
+			lines[i] = bytes.Join([][]byte{fields[0], []byte("Arial Unicode MS"), fields[2]}, []byte(","))
+			changed = true
+		}
+	}
+	if !changed {
+		return data, false
+	}
+	return bytes.Join(lines, []byte("\n")), true
 }
 
 // handleSubtitleStream serves GET /Videos/{itemId}/{mediaSourceId}/
@@ -170,7 +212,7 @@ func (s *Server) handleSubtitleStream(w http.ResponseWriter, r *http.Request) {
 	rawTicks := r.PathValue("startTicks")
 
 	isPlaylist := lower == "subtitles.m3u8" && rawTicks == ""
-	if !isPlaylist && !strings.HasPrefix(lower, "stream.") {
+	if !isPlaylist && (!strings.HasPrefix(lower, "stream.") || lower == "stream.") {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -233,18 +275,11 @@ func (s *Server) handleSubtitleStream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var format subtitle.Format
-	var alias bool
-	var copyFormat string // a picture-track format name, see bitmapCopyFormat
+	var alias, knownFormat bool
+	var rawFormat string // the format as the URL spells it
 	if !isPlaylist {
-		f, isAlias, ok := subtitle.ParseFormat(file[len("stream."):])
-		if !ok {
-			if !bitmapCopyFormat(file[len("stream."):]) {
-				writeSubtitleError(w, http.StatusBadRequest)
-				return
-			}
-			copyFormat = strings.ToLower(file[len("stream."):])
-		}
-		format, alias = f, isAlias
+		rawFormat = file[len("stream."):]
+		format, alias, knownFormat = subtitle.ParseFormat(rawFormat)
 	}
 
 	item, err := s.store.GetItem(r.Context(), storage.ItemID(itemID))
@@ -265,6 +300,10 @@ func (s *Server) handleSubtitleStream(w http.ResponseWriter, r *http.Request) {
 
 	st, ok := subtitleStreamOf(src, index)
 	if !ok {
+		if !knownFormat && !bitmapCopyFormat(rawFormat) {
+			writeSubtitleError(w, http.StatusBadRequest)
+			return
+		}
 		writeSubtitleError(w, http.StatusInternalServerError)
 		return
 	}
@@ -272,11 +311,73 @@ func (s *Server) handleSubtitleStream(w http.ResponseWriter, r *http.Request) {
 		writeSubtitleError(w, http.StatusNotFound)
 		return
 	}
-	if !subtitle.IsTextCodec(st.Codec) {
-		s.serveBitmapSubtitle(w, r, src, st, copyFormat)
+	lowerFormat := strings.ToLower(rawFormat)
+	fileExt := ""
+	if st.IsExternal {
+		fileExt = strings.ToLower(strings.TrimPrefix(filepath.Ext(st.Path), "."))
+	}
+
+	// External files have their own rules, whatever the track inside them.
+	var pre *extractedSubtitle
+	switch fileExt {
+	case "smi":
+		if lowerFormat == "smi" {
+			s.serveSubtitleFile(w, r, st.Path, true, "application/smil+xml")
+			return
+		}
+	case "sub":
+		s.serveSubtitleFile(w, r, st.Path, lowerFormat == "sub", "text/vnd.dvb.subtitle")
+		return
+	case "idx":
+		if lowerFormat == "idx" {
+			s.serveSubtitleFile(w, r, st.Path, true, "application/octet-stream")
+			return
+		}
+	case "sami":
+		// not a name the reference reads itself: whatever ffmpeg makes of
+		// the file as SubRip, or a failure, before the format is looked at
+		as := st
+		as.Codec = "subrip"
+		data, kind, ext, _, err := s.extractEmbeddedSubtitle(r.Context(), src, as)
+		if err != nil || len(data) == 0 {
+			writeSubtitleError(w, http.StatusInternalServerError)
+			return
+		}
+		if lowerFormat == "smi" {
+			writeSubtitleError(w, http.StatusBadRequest)
+			return
+		}
+		pre = &extractedSubtitle{data: decodeSubtitleText(data), kind: kind, ext: ext}
+	case "mks":
+		if !hasEBMLHeader(st.Path) && !strings.EqualFold(st.Codec, "ass") && subtitle.NormalizeCodec(st.Codec) != "text" {
+			writeSubtitleError(w, http.StatusNotFound)
+			return
+		}
+	}
+
+	if st.IsExternal && (nativeSubtitleText[fileExt] || fileExt == "sami") && !subtitle.IsTextCodec(st.Codec) {
+		// pictures inside a text file's name: the file as it is, in the
+		// format its extension names, and nothing else
+		if knownFormat && !alias && (lowerFormat == fileExt || (fileExt == "ssa" && format == subtitle.FormatASS)) {
+			s.serveSubtitleFile(w, r, st.Path, true, format.ContentType())
+			return
+		}
+		writeSubtitleError(w, http.StatusBadRequest)
 		return
 	}
-	if copyFormat != "" {
+	if fileExt == "sup" && subtitle.IsTextCodec(st.Codec) {
+		writeSubtitleError(w, http.StatusBadRequest)
+		return
+	}
+	if !subtitle.IsTextCodec(st.Codec) && fileExt != "idx" {
+		if !bitmapCopyFormat(rawFormat) {
+			writeSubtitleError(w, http.StatusBadRequest)
+			return
+		}
+		s.serveBitmapSubtitle(w, r, src, st, lowerFormat)
+		return
+	}
+	if !knownFormat {
 		writeSubtitleError(w, http.StatusBadRequest)
 		return
 	}
@@ -284,7 +385,17 @@ func (s *Server) handleSubtitleStream(w http.ResponseWriter, r *http.Request) {
 	var data []byte
 	var kind subtitle.Kind
 	var ext string
-	if st.IsExternal {
+	var bom bool
+	if pre != nil {
+		data, kind, ext = pre.data, pre.kind, pre.ext
+	} else if fileExt == "idx" {
+		raw, err := os.ReadFile(st.Path)
+		if err != nil {
+			writeSubtitleError(w, http.StatusInternalServerError)
+			return
+		}
+		data, kind, ext = decodeSubtitleText(raw), subtitle.KindIDX, "idx"
+	} else if st.IsExternal && fileExt != "mks" {
 		raw, err := os.ReadFile(st.Path)
 		if err != nil {
 			writeSubtitleError(w, http.StatusInternalServerError)
@@ -293,12 +404,16 @@ func (s *Server) handleSubtitleStream(w http.ResponseWriter, r *http.Request) {
 		data = decodeSubtitleText(raw)
 		kind, ext = subtitleKindOf(st.Path)
 	} else {
-		data, kind, ext, err = s.extractEmbeddedSubtitle(r.Context(), src, st)
+		data, kind, ext, bom, err = s.extractEmbeddedSubtitle(r.Context(), src, st)
 		if err != nil {
 			writeSubtitleError(w, http.StatusInternalServerError)
 			return
 		}
 		data = decodeSubtitleText(data)
+		if fileExt == "mks" && len(data) == 0 {
+			writeSubtitleError(w, http.StatusNotFound)
+			return
+		}
 	}
 
 	var out []byte
@@ -308,9 +423,18 @@ func (s *Server) handleSubtitleStream(w http.ResponseWriter, r *http.Request) {
 		if format == subtitle.FormatVTT && timeMap {
 			out = subtitle.InsertVTTTimeMap(out)
 		}
+		if bom && format == subtitle.FormatASS {
+			out = append([]byte("\xef\xbb\xbf"), out...)
+		}
 	default:
-		tr := subtitle.Parse(kind, data).Window(startTicks, endTicks, copyTS)
-		out = tr.Write(format, subtitle.Options{VTTTimeMap: timeMap})
+		parsed := subtitle.Parse(kind, data)
+		if len(parsed.Cues) == 0 && nativeSubtitleText[fileExt] {
+			// a file is converted only when it holds cues of what its
+			// extension says
+			writeSubtitleError(w, http.StatusBadRequest)
+			return
+		}
+		out = parsed.Window(startTicks, endTicks, copyTS).Write(format, subtitle.Options{VTTTimeMap: timeMap})
 	}
 	contentType := format.ContentType()
 	if alias {
@@ -321,6 +445,51 @@ func (s *Server) handleSubtitleStream(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	if r.Method != http.MethodHead {
 		_, _ = w.Write(out)
+	}
+}
+
+// extractedSubtitle is the text ffmpeg made of a subtitle file.
+type extractedSubtitle struct {
+	data []byte
+	kind subtitle.Kind
+	ext  string
+}
+
+// nativeSubtitleText are the extensions of the text files the server reads
+// itself: a request to convert one that yields no cue is refused.
+var nativeSubtitleText = map[string]bool{"srt": true, "vtt": true, "ass": true, "ssa": true, "smi": true}
+
+// hasEBMLHeader reports whether the file starts with the EBML header.
+func hasEBMLHeader(path string) bool {
+	f, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	var magic [4]byte
+	if _, err := io.ReadFull(f, magic[:]); err != nil {
+		return false
+	}
+	return magic == [4]byte{0x1a, 0x45, 0xdf, 0xa3}
+}
+
+// serveSubtitleFile answers with the bytes of a subtitle file as they are
+// (ok), or with a 400 when the format asked for is not the file's own.
+func (s *Server) serveSubtitleFile(w http.ResponseWriter, r *http.Request, path string, ok bool, contentType string) {
+	if !ok {
+		writeSubtitleError(w, http.StatusBadRequest)
+		return
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		writeSubtitleError(w, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	w.WriteHeader(http.StatusOK)
+	if r.Method != http.MethodHead {
+		_, _ = w.Write(data)
 	}
 }
 
@@ -343,12 +512,12 @@ func bitmapCopyFormat(name string) bool {
 // .sup file as it is. Any other format (srt, vtt, ...) is a 400.
 func (s *Server) serveBitmapSubtitle(w http.ResponseWriter, r *http.Request, src storage.Item, st storage.MediaStreamRef, format string) {
 	dvd := strings.EqualFold(st.Codec, "DVDSUB")
-	if format == "" || format == "dvbsub" || (format == "mks" && !dvd) {
+	if format == "" || format == "dvbsub" || (format == "mks" && (!dvd || (st.IsExternal && !strings.EqualFold(filepath.Ext(st.Path), ".mks")))) {
 		writeSubtitleError(w, http.StatusBadRequest)
 		return
 	}
 	var data []byte
-	if st.IsExternal {
+	if st.IsExternal && !strings.EqualFold(filepath.Ext(st.Path), ".mks") {
 		raw, err := os.ReadFile(st.Path)
 		if err != nil {
 			writeSubtitleError(w, http.StatusInternalServerError)
@@ -356,12 +525,7 @@ func (s *Server) serveBitmapSubtitle(w http.ResponseWriter, r *http.Request, src
 		}
 		data = raw
 	} else {
-		ordinal := 0
-		for _, o := range src.MediaStreams {
-			if o.Type == storage.StreamTypeSubtitle && !o.IsExternal && o.Index < st.Index {
-				ordinal++
-			}
-		}
+		ordinal := subtitleOrdinal(src, st)
 		ffmpeg := s.cfg.TranscodeFFmpegPath
 		if ffmpeg == "" {
 			ffmpeg = "ffmpeg"
@@ -379,7 +543,7 @@ func (s *Server) serveBitmapSubtitle(w http.ResponseWriter, r *http.Request, src
 		out := filepath.Join(dir, "track"+ext)
 		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Minute)
 		defer cancel()
-		cmd := exec.CommandContext(ctx, ffmpeg, "-v", "error", "-nostdin", "-i", src.Path,
+		cmd := exec.CommandContext(ctx, ffmpeg, "-v", "error", "-nostdin", "-i", subtitleFile(src, st),
 			"-map", fmt.Sprintf("0:s:%d", ordinal), "-an", "-vn", "-c:s", "copy", "-f", muxer, out)
 		if err := cmd.Run(); err != nil {
 			writeSubtitleError(w, http.StatusInternalServerError)
@@ -391,7 +555,7 @@ func (s *Server) serveBitmapSubtitle(w http.ResponseWriter, r *http.Request, src
 		}
 	}
 	contentType := "application/octet-stream"
-	if dvd && !st.IsExternal {
+	if dvd && (!st.IsExternal || strings.EqualFold(filepath.Ext(st.Path), ".mks")) {
 		contentType = "video/x-matroska"
 	}
 	w.Header().Set("Content-Type", contentType)
