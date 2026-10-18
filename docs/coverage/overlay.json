@@ -323,11 +323,6 @@
    "notes": "Not implemented.",
    "priority": "low"
   },
-  "GET /Items/{itemId}/Images/{imageType}/{imageIndex}/{tag}/{format}/{maxWidth}/{maxHeight}/{percentPlayed}/{unplayedCount}": {
-   "status": "planned",
-   "notes": "The long resize form; Tinyfin serves the originals through the two short forms and ignores resize parameters.",
-   "priority": "medium"
-  },
   "GET /UserImage": {
    "status": "planned",
    "notes": "User avatars are not stored.",

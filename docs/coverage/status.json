@@ -8,13 +8,13 @@
    "supported": 64
   },
   "operations": 364,
-  "registered": 184,
+  "registered": 186,
   "routes_by_status": {
    "divergent-by-design": 16,
    "not-planned": 95,
    "partial": 12,
-   "planned": 85,
-   "supported": 156
+   "planned": 83,
+   "supported": 158
   },
   "verified": 142
  },
@@ -1154,8 +1154,16 @@
    "verified": true,
    "web": false,
    "scenarios": [
+    "chapters.images.as-is",
+    "chapters.images.errors",
     "chapters.images.generate",
+    "chapters.images.headers",
+    "chapters.images.no-enlarge",
     "chapters.images.off",
+    "chapters.images.partial",
+    "chapters.images.png",
+    "chapters.images.recode",
+    "chapters.images.resize",
     "chapters.images.short",
     "chapters.images.task",
     "images.api.index-lookup",
@@ -1173,8 +1181,16 @@
    "verified": true,
    "web": false,
    "scenarios": [
+    "chapters.images.as-is",
+    "chapters.images.errors",
     "chapters.images.generate",
+    "chapters.images.headers",
+    "chapters.images.no-enlarge",
     "chapters.images.off",
+    "chapters.images.partial",
+    "chapters.images.png",
+    "chapters.images.recode",
+    "chapters.images.resize",
     "chapters.images.short",
     "chapters.images.task",
     "images.api.index-lookup",
@@ -1209,24 +1225,26 @@
    "tag": "Image",
    "group": "images",
    "policy": "Anonymous",
-   "status": "planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": false,
-   "notes": "The long resize form; Tinyfin serves the originals through the two short forms and ignores resize parameters.",
-   "priority": "medium"
+   "scenarios": [
+    "chapters.images.long-form"
+   ]
   },
   {
    "id": "HEAD /Items/{itemId}/Images/{imageType}/{imageIndex}/{tag}/{format}/{maxWidth}/{maxHeight}/{percentPlayed}/{unplayedCount}",
    "tag": "Image",
    "group": "images",
    "policy": "Anonymous",
-   "status": "planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": false,
-   "notes": "Not implemented.",
-   "priority": "low"
+   "scenarios": [
+    "chapters.images.long-form"
+   ]
   },
   {
    "id": "GET /MusicGenres/{name}/Images/{imageType}",
@@ -1999,10 +2017,21 @@
     "browse.persons",
     "browse.persons.credits",
     "browse.years",
+    "chapters.images.as-is",
+    "chapters.images.errors",
     "chapters.images.generate",
+    "chapters.images.headers",
+    "chapters.images.long-form",
+    "chapters.images.no-enlarge",
     "chapters.images.off",
+    "chapters.images.partial",
+    "chapters.images.path",
+    "chapters.images.png",
+    "chapters.images.recode",
+    "chapters.images.resize",
     "chapters.images.short",
     "chapters.images.task",
+    "chapters.images.toggle",
     "chapters.item.detail",
     "chapters.item.none",
     "collections.add.appends",
@@ -2301,6 +2330,7 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "chapters.images.toggle",
     "collections.auto.rescan",
     "collections.item.metadata-on-change",
     "musicvideos.scan.incremental",
@@ -2471,6 +2501,7 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "chapters.images.toggle",
     "collections.auto.rescan"
    ]
   },
@@ -2607,7 +2638,10 @@
    "status": "supported",
    "registered": true,
    "verified": false,
-   "web": true
+   "web": true,
+   "scenarios": [
+    "chapters.images.toggle"
+   ]
   },
   {
    "id": "POST /Library/VirtualFolders/Name",

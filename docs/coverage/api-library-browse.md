@@ -44,14 +44,14 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `GET /Items/Latest` | DefaultAuthorization | yes | 5/5 |  |
 | ✅ supported *(no scenario)* | `GET /Items/Root` | DefaultAuthorization | yes |  |  |
 | ✅ supported | `DELETE /Items/{itemId}` | DefaultAuthorization | yes | 10/10 |  |
-| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 208/208 |  |
+| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 208/219 |  |
 | ✅ supported | `GET /Items/{itemId}/Ancestors` | DefaultAuthorization | yes | 2/2 |  |
 | ✅ supported | `GET /Items/{itemId}/Collections` | DefaultAuthorization | yes | 1/1 |  |
 | ✅ supported | `GET /Items/{itemId}/Download` | Download |  | 7/7 |  |
 | 🗓️ planned | `GET /Items/{itemId}/File` | DefaultAuthorization |  |  | Raw file delivery is not implemented. (priority: low) |
 | ✅ supported | `GET /Items/{itemId}/Intros` | DefaultAuthorization | yes | 1/1 |  |
 | ✅ supported | `GET /Items/{itemId}/LocalTrailers` | DefaultAuthorization | yes | 7/7 |  |
-| ✅ supported | `POST /Items/{itemId}/Refresh` | RequiresElevation | yes | 8/8 |  |
+| ✅ supported | `POST /Items/{itemId}/Refresh` | RequiresElevation | yes | 8/9 |  |
 | ✅ supported | `GET /Items/{itemId}/Similar` | DefaultAuthorization | yes | 5/5 |  |
 | ✅ supported | `GET /Items/{itemId}/SpecialFeatures` | DefaultAuthorization | yes | 5/5 |  |
 | ✅ supported | `GET /Items/{itemId}/ThemeMedia` | DefaultAuthorization | yes | 2/2 |  |
@@ -63,7 +63,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | 🗓️ planned | `POST /Library/Movies/Added` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | 🗓️ planned | `POST /Library/Movies/Updated` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | 🗓️ planned | `GET /Library/PhysicalPaths` | RequiresElevation |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
-| ✅ supported | `POST /Library/Refresh` | RequiresElevation | yes | 1/1 |  |
+| ✅ supported | `POST /Library/Refresh` | RequiresElevation | yes | 1/2 |  |
 | 🗓️ planned | `POST /Library/Series/Added` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | 🗓️ planned | `POST /Library/Series/Updated` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | ✅ supported | `GET /Movies/{itemId}/Similar` | DefaultAuthorization | yes | 1/1 |  |
