@@ -4,7 +4,7 @@
 
 Item, person, genre and user images; remote image providers.
 
-[Overview](../COVERAGE.md) · 40 operations · 11 registered (28%) · 5 verified · ✅ 11 · 🗓️ 29
+[Overview](../COVERAGE.md) · 40 operations · 11 registered (28%) · 7 verified · ✅ 11 · 🗓️ 29
 
 ✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️
 
@@ -29,12 +29,12 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `HEAD /Items/{itemId}/Images/{imageType}` | Anonymous | yes | 5/5 |  |
 | ✅ supported *(no scenario)* | `POST /Items/{itemId}/Images/{imageType}` | RequiresElevation | yes |  |  |
 | ✅ supported *(no scenario)* | `DELETE /Items/{itemId}/Images/{imageType}/{imageIndex}` | RequiresElevation |  |  |  |
-| ✅ supported | `GET /Items/{itemId}/Images/{imageType}/{imageIndex}` | Anonymous |  | 7/15 |  |
-| ✅ supported | `HEAD /Items/{itemId}/Images/{imageType}/{imageIndex}` | Anonymous |  | 7/15 |  |
+| ✅ supported | `GET /Items/{itemId}/Images/{imageType}/{imageIndex}` | Anonymous |  | 15/15 |  |
+| ✅ supported | `HEAD /Items/{itemId}/Images/{imageType}/{imageIndex}` | Anonymous |  | 15/15 |  |
 | ✅ supported *(no scenario)* | `POST /Items/{itemId}/Images/{imageType}/{imageIndex}` | RequiresElevation |  |  |  |
 | 🗓️ planned | `POST /Items/{itemId}/Images/{imageType}/{imageIndex}/Index` | RequiresElevation |  |  | Not implemented. (priority: low) |
-| ✅ supported *(no scenario)* | `GET /Items/{itemId}/Images/{imageType}/{imageIndex}/{tag}/{format}/{maxWidth}/{maxHeight}/{percentPlayed}/{unplayedCount}` | Anonymous |  | 0/1 |  |
-| ✅ supported *(no scenario)* | `HEAD /Items/{itemId}/Images/{imageType}/{imageIndex}/{tag}/{format}/{maxWidth}/{maxHeight}/{percentPlayed}/{unplayedCount}` | Anonymous |  | 0/1 |  |
+| ✅ supported | `GET /Items/{itemId}/Images/{imageType}/{imageIndex}/{tag}/{format}/{maxWidth}/{maxHeight}/{percentPlayed}/{unplayedCount}` | Anonymous |  | 1/1 |  |
+| ✅ supported | `HEAD /Items/{itemId}/Images/{imageType}/{imageIndex}/{tag}/{format}/{maxWidth}/{maxHeight}/{percentPlayed}/{unplayedCount}` | Anonymous |  | 1/1 |  |
 | 🗓️ planned | `GET /MusicGenres/{name}/Images/{imageType}` | Anonymous | yes |  | Not implemented. (priority: low) |
 | 🗓️ planned | `HEAD /MusicGenres/{name}/Images/{imageType}` | Anonymous | yes |  | Not implemented. (priority: low) |
 | 🗓️ planned | `GET /MusicGenres/{name}/Images/{imageType}/{imageIndex}` | Anonymous |  |  | Not implemented. (priority: low) |

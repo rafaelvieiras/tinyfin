@@ -16,7 +16,7 @@
    "planned": 83,
    "supported": 158
   },
-  "verified": 142
+  "verified": 145
  },
  "routes": [
   {
@@ -1227,7 +1227,7 @@
    "policy": "Anonymous",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": false,
    "scenarios": [
     "chapters.images.long-form"
@@ -1240,7 +1240,7 @@
    "policy": "Anonymous",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": false,
    "scenarios": [
     "chapters.images.long-form"
@@ -2637,7 +2637,7 @@
    "policy": "FirstTimeSetupOrElevated",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "chapters.images.toggle"

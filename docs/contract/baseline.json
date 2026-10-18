@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 817
+    "pass": 829
   },
   "scenarios": {
     "admin.backup.create": "pass",
@@ -40,10 +40,21 @@
     "browse.suggestions": "pass",
     "browse.years": "pass",
     "browse.years.total": "pass",
+    "chapters.images.as-is": "pass",
+    "chapters.images.errors": "pass",
     "chapters.images.generate": "pass",
+    "chapters.images.headers": "pass",
+    "chapters.images.long-form": "pass",
+    "chapters.images.no-enlarge": "pass",
     "chapters.images.off": "pass",
+    "chapters.images.partial": "pass",
+    "chapters.images.path": "pass",
+    "chapters.images.png": "pass",
+    "chapters.images.recode": "pass",
+    "chapters.images.resize": "pass",
     "chapters.images.short": "pass",
     "chapters.images.task": "pass",
+    "chapters.images.toggle": "pass",
     "chapters.item.detail": "pass",
     "chapters.item.listing": "pass",
     "chapters.item.none": "pass",
@@ -339,6 +350,7 @@
     "playback.hls.query-first": "pass",
     "playback.hls.segment": "pass",
     "playback.hls.segment-seek": "pass",
+    "playback.hls.timestamps": "pass",
     "playback.offer.audio-estimates": "pass",
     "playback.offer.codec-conditions": "pass",
     "playback.offer.container-names": "pass",

@@ -350,3 +350,5 @@ scenario that is not pending or divergent; `risky` ones run only with
 | users | 202 | 202 | 0 | 0 | 0 |
 | wire | 14 | 14 | 0 | 0 | 0 |
 | **Total** | 661 | 661 | 0 | 0 | 0 |
+
+Note on probes: the HDR10+ and Dolby Vision scenarios (`playback.offer.video-range`, `playback.offer.codec-conditions`, library `Matrix2`) need an ffprobe that supports `-only_first_vframe`, i.e. jellyfin-ffmpeg's. A stock ffprobe (Ubuntu, conda) runs without the first-frame data and reports HDR10 instead of HDR10+. Point `TINYFIN_FFPROBE_PATH` at the jellyfin-ffmpeg ffprobe (or a wrapper around the `jellyfin/jellyfin` image) when running them.
