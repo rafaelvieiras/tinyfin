@@ -895,6 +895,48 @@ chapterramp "$CI/Chapter Short (2661)/Chapter Short (2661).mkv" 10 "0|Start" "50
 chapterramp "$ROOT/ChapterImgTask/Chapter Task (2662)/Chapter Task (2662).mkv" 30 "0|One" "10000|Two" "20000"
 chapterramp "$ROOT/ChapterImgOff/Chapter Off (2663)/Chapter Off (2663).mkv" 30 "0|One" "10000|Two" "20000"
 
+# More chapter pictures (own libraries "ChapterImg3", extraction on during the
+# scan, and "ChapterImgToggle", extraction off, both lazy): videos with
+# detailed, noisy pictures (so a re-encode at another quality changes the
+# bytes) of several sizes, chapters at 5 s ("A") and 10 s ("B") unless noted.
+# "Chapter Noise" 640x360, "Chapter Portrait" 360x640, "Chapter Small" 120x68
+# (smaller than the sizes the scenarios ask for); "Chapter Edge14/15/16" are
+# 14, 15 and 16 s long with chapters at 0 s and 7 s (the picture of the first
+# one is taken at 15 s, so only the 16 s file has any); "Chapter Tail" is 20 s
+# with a chapter at 5 s and one at 19.95 s (too close to the end for a frame,
+# so the second has none and the first keeps its own).
+CI3="$ROOT/ChapterImg3"
+chapternoise() { # <out> <seconds> <WxH> <chapter starts in ms, "|title" optional>...
+  [ -f "$1" ] && return 0
+  mkdir -p "$(dirname "$1")"
+  local out="$1" secs="$2" size="$3"; shift 3
+  local t; t="$(mktemp -d)"
+  python3 - "$t/m.txt" "$secs" "$@" <<'PY'
+import sys
+out, secs, specs = sys.argv[1], int(sys.argv[2]), sys.argv[3:]
+starts = [(int(s.split("|")[0]), (s.split("|") + [""])[1]) for s in specs]
+ends = [s for s, _ in starts[1:]] + [secs * 1000]
+with open(out, "w") as f:
+    f.write(";FFMETADATA1\n")
+    for (s, title), e in zip(starts, ends):
+        f.write("[CHAPTER]\nTIMEBASE=1/1000\nSTART=%d\nEND=%d\n" % (s, e))
+        if title:
+            f.write("title=%s\n" % title)
+PY
+  "$FFMPEG" -v error -y -f lavfi -i "testsrc2=s=${size}:r=5:d=${secs},noise=alls=40:allf=t" \
+    -f lavfi -i "sine=frequency=500:duration=${secs}" -i "$t/m.txt" -map 0 -map 1 -map_metadata 2 \
+    -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "$out"
+  rm -rf "$t"
+}
+chapternoise "$CI3/Chapter Noise (2670)/Chapter Noise (2670).mkv" 20 640x360 "5000|A" "10000|B"
+chapternoise "$CI3/Chapter Portrait (2671)/Chapter Portrait (2671).mkv" 20 360x640 "5000|A" "10000|B"
+chapternoise "$CI3/Chapter Small (2673)/Chapter Small (2673).mkv" 20 120x68 "5000|A" "10000|B"
+chapternoise "$CI3/Chapter Edge14 (2674)/Chapter Edge14 (2674).mkv" 14 640x360 "0|A" "7000|B"
+chapternoise "$CI3/Chapter Edge15 (2675)/Chapter Edge15 (2675).mkv" 15 640x360 "0|A" "7000|B"
+chapternoise "$CI3/Chapter Edge16 (2676)/Chapter Edge16 (2676).mkv" 16 640x360 "0|A" "7000|B"
+chapternoise "$CI3/Chapter Tail (2678)/Chapter Tail (2678).mkv" 20 640x360 "5000|A" "19950|B"
+chapternoise "$ROOT/ChapterImgToggle/Chapter Toggle (2679)/Chapter Toggle (2679).mkv" 20 640x360 "5000|A" "10000|B"
+
 # Trickplay (own libraries "Trickplay", with the sheets switched on, and
 # "TrickplayOff", lazy): a 25.5 s clip (3 thumbnails, one sheet), a 1500 s
 # one at 1 fps (150 thumbnails, two sheets) and a 160x90 one that is narrower

@@ -182,15 +182,26 @@ func encodeArgs(req Request) []string {
 // the picture's own time, whatever the position the transcode starts at.
 const hlsTimestampOffset = 10
 
+// hlsMuxDelay is the MPEG-TS muxer delay that produces that shift. The muxer
+// adds twice its delay to every timestamp (and starts its clock reference
+// that delay before the first one), after the format layer has moved
+// timestamps that would be negative up to zero. That order is what the
+// reference's segments show: the source's own start (a few milliseconds
+// of audio priming or picture reordering ahead of the first frame, which
+// MP4 and Matroska files hold as negative times) is lifted to zero first
+// and the 10 s come on top, so the first sound of a file is at exactly 10 s,
+// where an output offset of 10 s would leave the priming at 9.98 s.
+const hlsMuxDelay = hlsTimestampOffset / 2
+
 // segmentTimeMargin is how far before a key frame's time a cut is placed, so
 // the frame itself opens the new segment whatever the rounding of its time.
 const segmentTimeMargin = 0.005
 
 // hlsOutputArgs is the HLS muxer part of an HLS job. A job always numbers its
 // segments from req.StartNumber and shifts the timestamps by the seek offset
-// plus hlsTimestampOffset, so the segment n of a job that starts at the
-// position of segment n looks like the one a transcode from the start of the
-// file writes. A copied picture is cut at req.Cuts (the key frame plan) with
+// (the muxer delay adds hlsTimestampOffset), so the segment n of a job that
+// starts at the position of segment n looks like the one a transcode from the
+// start of the file writes. A copied picture is cut at req.Cuts (the key frame plan) with
 // the segment muxer; everything else is cut by the HLS muxer on its grid.
 func hlsOutputArgs(req Request) []string {
 	var args []string
@@ -207,15 +218,15 @@ func hlsOutputArgs(req Request) []string {
 	}
 	seek := float64(req.StartTimeTicks) / ticksPerSecond
 	args = append(args,
-		"-muxdelay", "0", "-muxpreload", "0",
-		"-output_ts_offset", strconv.FormatFloat(seek+hlsTimestampOffset, 'f', 3, 64),
+		"-muxdelay", strconv.Itoa(hlsMuxDelay), "-muxpreload", "0",
+		"-output_ts_offset", strconv.FormatFloat(seek, 'f', 3, 64),
 	)
 
 	if req.Cuts != nil && req.VideoCodec == "copy" {
 		var times []string
 		for _, c := range req.Cuts {
 			if c > req.StartTimeTicks+ticksPerSecond/1000 {
-				times = append(times, strconv.FormatFloat(float64(c)/ticksPerSecond+hlsTimestampOffset-segmentTimeMargin, 'f', 3, 64))
+				times = append(times, strconv.FormatFloat(float64(c)/ticksPerSecond-segmentTimeMargin, 'f', 3, 64))
 			}
 		}
 		if len(times) == 0 {

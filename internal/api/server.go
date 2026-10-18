@@ -719,6 +719,7 @@ func (s *Server) routes() {
 	// (broken poster/backdrop, no console-visible crash).
 	s.mux.HandleFunc("GET /Items/{itemId}/Images/{imageType}", s.handleItemImage)
 	s.mux.HandleFunc("GET /Items/{itemId}/Images/{imageType}/{imageIndex}", s.handleItemImage)
+	s.mux.HandleFunc("GET /Items/{itemId}/Images/{imageType}/{imageIndex}/{tag}/{format}/{maxWidth}/{maxHeight}/{percentPlayed}/{unplayedCount}", s.handleItemImage)
 	// Admin-only counterparts (item_images_admin.go) — list/upload/delete,
 	// unlike the public byte-serving GET routes above.
 	s.mux.HandleFunc("GET /Items/{itemId}/Images", requireAdmin(s.handleListItemImages))

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "playback.hls.timestamps",
+    "endpoint": "GET /Videos/{itemId}/hls1/{playlistId}/{segmentId}.{container}",
+    "spec": "playback.md#hls",
+    "scope": "modern",
+    "tags": [
+      "playback",
+      "transcode"
+    ],
+    "covers": [
+      "playback.hls.R9"
+    ],
+    "requires": [
+      "item:alpha",
+      "library:long",
+      "item:long"
+    ],
+    "steps": [
+      {
+        "name": "a copied MP4 whose sound starts ahead of its picture: the sound is at 10 s exactly",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.alpha.id}}/hls1/main/0.ts?MediaSourceId={{item.alpha.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&PlaySessionId=ts8-{{run.suffix}}-a&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "video/mp2t"
+          },
+          "text": [
+            {
+              "op": "matches",
+              "value": "(?s)!\\x007wA"
+            },
+            {
+              "op": "notcontains",
+              "value": "!\u00007f"
+            }
+          ]
+        }
+      },
+      {
+        "name": "an encoded segment from the start of a file",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.long.id}}/hls1/main/0.ts?MediaSourceId={{item.long.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000&PlaySessionId=ts8-{{run.suffix}}-b&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "video/mp2t"
+          },
+          "text": [
+            {
+              "op": "matches",
+              "value": "(?s)!\\x007wA"
+            },
+            {
+              "op": "notcontains",
+              "value": "!\u00007f"
+            }
+          ]
+        }
+      }
+    ]
+  }
+]
