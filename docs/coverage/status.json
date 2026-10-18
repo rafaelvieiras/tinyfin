@@ -2187,6 +2187,9 @@
     "subtitles.embedded.mixed",
     "subtitles.embedded.streams",
     "subtitles.manage.upload-delete",
+    "subtitles2.mks.scan",
+    "subtitles2.sidecar.odd-content",
+    "subtitles2.vobsub.scan",
     "trickplay.item.big",
     "trickplay.item.narrow",
     "trickplay.item.off",
@@ -3301,7 +3304,10 @@
     "policy.stream.rating-tags",
     "subtitles.delivery.embedded",
     "subtitles.delivery.external",
-    "subtitles.delivery.no-profile"
+    "subtitles.delivery.no-profile",
+    "subtitles2.delivery.bitmap-matrix",
+    "subtitles2.delivery.embedded-matrix",
+    "subtitles2.delivery.external-matrix"
    ]
   },
   {
