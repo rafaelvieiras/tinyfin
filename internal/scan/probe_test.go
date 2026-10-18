@@ -243,3 +243,37 @@ func TestMediaStreamsFromProbeIsDefaultPerStream(t *testing.T) {
 		t.Errorf("streams[1].IsDefault = true, want false (disposition.default=0)")
 	}
 }
+
+func TestStreamBitRateFromMatroskaTags(t *testing.T) {
+	f := ffprobeFormat{Duration: "4"}
+	mk := func(tags map[string]string) ffprobeStream {
+		return ffprobeStream{Tags: streamTags{All: tags}}
+	}
+	if br := streamBitRate(mk(map[string]string{"bps": "1000000"}), f); br == nil || *br != 1000000 {
+		t.Errorf("BPS: %v", br)
+	}
+	if br := streamBitRate(mk(map[string]string{"number_of_bytes": "500000", "duration": "00:00:02.023000000"}), f); br == nil || *br != 1977261 {
+		t.Errorf("bytes/duration: %v", br)
+	}
+	if br := streamBitRate(mk(map[string]string{"bps": "abc"}), f); br != nil {
+		t.Errorf("bad BPS: %v", *br)
+	}
+	if br := streamBitRate(mk(map[string]string{"number_of_bytes": "500000"}), f); br == nil || *br != 1000000 {
+		t.Errorf("container duration: %v", br)
+	}
+}
+
+func TestEstimatedAudioBitRate(t *testing.T) {
+	for _, c := range []struct {
+		codec string
+		ch    int
+		want  int64
+	}{{"aac", 1, 192000}, {"aac", 2, 192000}, {"aac", 6, 320000}, {"flac", 2, 960000}, {"alac", 6, 2880000}, {"opus", 2, 128000}, {"vorbis", 2, 160000}, {"truehd", 2, 1400000}} {
+		if br := estimatedAudioBitRate(c.codec, c.ch); br == nil || *br != c.want {
+			t.Errorf("%s/%d: %v, want %d", c.codec, c.ch, br, c.want)
+		}
+	}
+	if estimatedAudioBitRate("wavpack", 2) != nil {
+		t.Error("wavpack has no estimate")
+	}
+}

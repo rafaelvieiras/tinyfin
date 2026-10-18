@@ -77,8 +77,9 @@ func TestPlaybackInfoDirectPlaySupported(t *testing.T) {
 	if !got.MediaSources[0].SupportsDirectPlay {
 		t.Error("SupportsDirectPlay = false, want true")
 	}
-	if got.MediaSources[0].Container != "mp4" {
-		t.Errorf("Container = %q, want %q", got.MediaSources[0].Container, "mp4")
+	if got.MediaSources[0].Container != "mov,mp4,m4a,3gp,3g2,mj2" {
+		// without a profile the source carries the format name of the probe
+		t.Errorf("Container = %q, want %q", got.MediaSources[0].Container, "mov,mp4,m4a,3gp,3g2,mj2")
 	}
 	if got.ErrorCode != "" {
 		t.Errorf("ErrorCode = %q, want empty", got.ErrorCode)

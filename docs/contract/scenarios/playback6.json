@@ -1,0 +1,1189 @@
+[
+ {
+  "id": "playback.offer.stream-bitrate",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "playback.md#offer",
+  "scope": "modern",
+  "tags": [
+   "playback"
+  ],
+  "covers": [
+   "playback.offer.R9"
+  ],
+  "requires": [
+   "library:matrix",
+   "item:mx-mkv",
+   "item:mx-stats",
+   "library:avtrack",
+   "item:av-multi"
+  ],
+  "steps": [
+   {
+    "name": "statistics tags of a Matroska file give the stream bit rates",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx-stats.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx-stats.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].BitRate",
+       "op": "gte",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].BitRate",
+       "op": "gte",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "no tag: the video has none, an AAC track gets the estimate for its channel count",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx-mkv.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx-mkv.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].BitRate",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].BitRate",
+       "op": "eq",
+       "value": 192000
+      }
+     ]
+    }
+   },
+   {
+    "name": "a rate the container states is kept (MP3), the AAC track is estimated",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-multi.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-multi.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].BitRate",
+       "op": "eq",
+       "value": 192000
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].BitRate",
+       "op": "eq",
+       "value": 64000
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.offer.stream-members",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "playback.md#offer",
+  "scope": "modern",
+  "tags": [
+   "playback"
+  ],
+  "covers": [
+   "playback.offer.R10"
+  ],
+  "requires": [
+   "library:matrix",
+   "item:mx-mkv",
+   "item:mx-hdr",
+   "item:mx-ten",
+   "item:mx-ana"
+  ],
+  "steps": [
+   {
+    "name": "an SDR 8-bit H.264 track",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx-mkv.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx-mkv.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].BitDepth",
+       "op": "eq",
+       "value": 8
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRange",
+       "op": "eq",
+       "value": "SDR"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRangeType",
+       "op": "eq",
+       "value": "SDR"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].IsAnamorphic",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].IsAVC",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].NalLengthSize",
+       "op": "eq",
+       "value": "4"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].AverageFrameRate",
+       "op": "eq",
+       "value": 12
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].RealFrameRate",
+       "op": "eq",
+       "value": 12
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].ReferenceFrameRate",
+       "op": "eq",
+       "value": 12
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].AudioSpatialFormat",
+       "op": "eq",
+       "value": "None"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].ColorTransfer",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].VideoRange",
+       "op": "eq",
+       "value": "Unknown"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].VideoRangeType",
+       "op": "eq",
+       "value": "Unknown"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].AudioSpatialFormat",
+       "op": "eq",
+       "value": "None"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].LocalizedDefault",
+       "op": "eq",
+       "value": "Default"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].LocalizedExternal",
+       "op": "eq",
+       "value": "External"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].LocalizedOriginal",
+       "op": "eq",
+       "value": "Original"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].TimeBase",
+       "op": "eq",
+       "value": "1/1000"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an HDR10 HEVC track",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx-hdr.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx-hdr.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].BitDepth",
+       "op": "eq",
+       "value": 10
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRange",
+       "op": "eq",
+       "value": "HDR"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRangeType",
+       "op": "eq",
+       "value": "HDR10"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].ColorTransfer",
+       "op": "eq",
+       "value": "smpte2084"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].ColorPrimaries",
+       "op": "eq",
+       "value": "bt2020"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].ColorSpace",
+       "op": "eq",
+       "value": "bt2020nc"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].IsAVC",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].NalLengthSize",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "10-bit H.264 stays SDR",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx-ten.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx-ten.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].BitDepth",
+       "op": "eq",
+       "value": 10
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRange",
+       "op": "eq",
+       "value": "SDR"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].IsAVC",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "a non-square sample aspect ratio is anamorphic",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx-ana.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx-ana.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].IsAnamorphic",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].AspectRatio",
+       "op": "eq",
+       "value": "16:9"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.offer.mp4-container-names",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "playback.md#offer",
+  "scope": "modern",
+  "tags": [
+   "playback"
+  ],
+  "covers": [
+   "playback.offer.R11"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-plain",
+   "library:strm",
+   "item:strm-http"
+  ],
+  "steps": [
+   {
+    "name": "without a profile an MP4 file carries the format name",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-plain.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-plain.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "mov,mp4,m4a,3gp,3g2,mj2"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a profile that lists none of its names keeps the format name",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-plain.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-plain.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "mov,mp4,m4a,3gp,3g2,mj2"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a profile that lists one gets that name",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.av-plain.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.av-plain.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "mp4"
+      }
+     ]
+    }
+   },
+   {
+    "name": "any of the format names of an address plays it",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.strm-http.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.strm-http.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mov",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "mov"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].RefFrames",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.offer.strm-mkv",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "playback.md#offer",
+  "scope": "modern",
+  "tags": [
+   "playback"
+  ],
+  "covers": [
+   "playback.offer.R11"
+  ],
+  "requires": [
+   "library:matrix",
+   "item:mx-strm-mkv"
+  ],
+  "steps": [
+   {
+    "name": "an address holding Matroska is direct played as mkv",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx-strm-mkv.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx-strm-mkv.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "mkv"
+      },
+      {
+       "path": "$.MediaSources[0].Protocol",
+       "op": "eq",
+       "value": "Http"
+      },
+      {
+       "path": "$.MediaSources[0].IsRemote",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].Bitrate",
+       "op": "gte",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].Path",
+       "op": "matches",
+       "value": "^http://[^/]+/strm-src\\.mkv$"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].BitRate",
+       "op": "eq",
+       "value": 192000
+      }
+     ]
+    }
+   },
+   {
+    "name": "webm and matroska name no direct play; the container stays mkv",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx-strm-mkv.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx-strm-mkv.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "webm",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "mkv"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "TranscodeReasons=ContainerNotSupported"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a transcode keeps mkv",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx-strm-mkv.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx-strm-mkv.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "mkv"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingSubProtocol",
+       "op": "eq",
+       "value": "hls"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "policy.remote.force-source-transcoding-unprobed",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "playback.md#offer",
+  "scope": "modern",
+  "tags": [
+   "playback"
+  ],
+  "covers": [
+   "playback.offer.R12"
+  ],
+  "requires": [
+   "library:strm",
+   "item:strm-url",
+   "item:strm-local",
+   "item:strm-empty"
+  ],
+  "steps": [
+   {
+    "name": "create tmp-force-strm",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-force-strm",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u": "$.Id",
+     "apu": "$.Policy.AuthenticationProviderId",
+     "rpu": "$.Policy.PasswordResetProviderId"
+    }
+   },
+   {
+    "name": "set policy of tmp-force-strm",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.apu}}",
+      "PasswordResetProviderId": "{{capture.rpu}}",
+      "EnableAllFolders": true,
+      "ForceRemoteSourceTranscoding": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "login tmp-force-strm",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-force-strm",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-force-strm{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tok": "$.AccessToken"
+    }
+   },
+   {
+    "name": "an address that cannot be probed is transcoded (hls), copying forbidden",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.strm-url.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.strm-url.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "strm"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingSubProtocol",
+       "op": "eq",
+       "value": "hls"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "matches",
+       "value": "^/videos/[0-9a-f-]{36}/master\\.m3u8\\?DeviceId=.*&TranscodeReasons=ContainerNotSupported,VideoCodecNotSupported&allowVideoStreamCopy=false&allowAudioStreamCopy=false$"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "&AudioBitrate=192000&"
+      }
+     ]
+    }
+   },
+   {
+    "name": "so is a local path, which has no copy flags",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.strm-local.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.strm-local.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "strm"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingSubProtocol",
+       "op": "eq",
+       "value": "hls"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "matches",
+       "value": "TranscodeReasons=ContainerNotSupported,VideoCodecNotSupported$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "and an empty file",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.strm-empty.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.strm-empty.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "strm"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingSubProtocol",
+       "op": "eq",
+       "value": "hls"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a profile that lists strm still gets a progressive transcode, only the video codec fails",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.strm-url.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.strm-url.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "strm",
+         "Type": "Video"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "mp4",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "http",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "vtt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "strm"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingSubProtocol",
+       "op": "eq",
+       "value": "http"
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "matches",
+       "value": "^/videos/[0-9a-f-]{36}/stream\\.mp4\\?.*&TranscodeReasons=VideoCodecNotSupported&allowVideoStreamCopy=false&allowAudioStreamCopy=false$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "without a DeviceProfile the file is offered as it is",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.strm-local.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.strm-local.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete u",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u}}"
+    },
+    "expect": {}
+   }
+  ]
+ }
+]

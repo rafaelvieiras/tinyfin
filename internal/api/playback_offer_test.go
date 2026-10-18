@@ -79,16 +79,19 @@ func TestBuildTranscodeOfferProfileFlagsAndCopyLimits(t *testing.T) {
 	}
 }
 
-func TestSourceContainerNameOfAnAddress(t *testing.T) {
+func TestMP4SourceName(t *testing.T) {
 	prof := deviceprofile.DeviceProfile{DirectPlayProfiles: []deviceprofile.DirectPlayProfile{{Container: "mkv", Type: "Video"}}}
-	if got := sourceContainerName(storage.Item{Container: "mp4", RemoteURL: "http://h/x.mp4"}, prof); got != "mov,mp4,m4a,3gp,3g2,mj2" {
+	if got := mp4SourceName("mp4", prof, true); got != "mov,mp4,m4a,3gp,3g2,mj2" {
 		t.Errorf("no match: %q", got)
 	}
-	prof.DirectPlayProfiles[0].Container = "mp4,m4v"
-	if got := sourceContainerName(storage.Item{Container: "mp4", RemoteURL: "http://h/x.mp4"}, prof); got != "mp4" {
+	if got := mp4SourceName("mp4", prof, false); got != "mov,mp4,m4a,3gp,3g2,mj2" {
+		t.Errorf("no profile: %q", got)
+	}
+	prof.DirectPlayProfiles[0].Container = "mkv,mov"
+	if got := mp4SourceName("mp4", prof, true); got != "mov" {
 		t.Errorf("match: %q", got)
 	}
-	if got := sourceContainerName(storage.Item{Container: "MKV"}, prof); got != "mkv" {
-		t.Errorf("file: %q", got)
+	if !isMP4Family("M4V") || isMP4Family("mkv") {
+		t.Error("family")
 	}
 }
