@@ -20,7 +20,7 @@ func TestBuildArgs_Remux(t *testing.T) {
 		"-map", "0:v:0", "-map", "0:a:0",
 		"-c:v", "copy",
 		"-c:a", "copy",
-		"-muxdelay", "0", "-muxpreload", "0", "-output_ts_offset", "10.000",
+		"-muxdelay", "5", "-muxpreload", "0", "-output_ts_offset", "0.000",
 		"-f", "hls",
 		"-hls_time", "6",
 		"-hls_playlist_type", "event",
@@ -56,7 +56,7 @@ func TestBuildArgs_DirectStream_AudioOnlyEncode(t *testing.T) {
 		"-c:a", "aac",
 		"-b:a", "192000",
 		"-ac", "2",
-		"-muxdelay", "0", "-muxpreload", "0", "-output_ts_offset", "10.000",
+		"-muxdelay", "5", "-muxpreload", "0", "-output_ts_offset", "0.000",
 		"-f", "hls",
 		"-hls_time", "6",
 		"-hls_playlist_type", "event",
@@ -99,7 +99,7 @@ func TestBuildArgs_FullTranscode(t *testing.T) {
 		"-b:a", "128000",
 		"-ac", "2",
 		"-force_key_frames", "expr:gte(t,n_forced*4)",
-		"-muxdelay", "0", "-muxpreload", "0", "-output_ts_offset", "22.345",
+		"-muxdelay", "5", "-muxpreload", "0", "-output_ts_offset", "12.345",
 		"-f", "hls",
 		"-hls_time", "4",
 		"-hls_playlist_type", "event",
@@ -188,7 +188,7 @@ func TestBuildArgs_EmptyVideoAudioCodecTreatedAsCopy(t *testing.T) {
 		"-map", "0:v:0", "-map", "0:a:0",
 		"-c:v", "copy",
 		"-c:a", "copy",
-		"-muxdelay", "0", "-muxpreload", "0", "-output_ts_offset", "10.000",
+		"-muxdelay", "5", "-muxpreload", "0", "-output_ts_offset", "0.000",
 		"-f", "hls",
 		"-hls_time", "6",
 		"-hls_playlist_type", "event",
@@ -261,10 +261,10 @@ func TestBuildArgs_CopiedPictureIsCutAtTheKeyFramePlan(t *testing.T) {
 	if !strings.Contains(got, "-f segment -segment_times ") || !strings.Contains(got, "-segment_start_number 6") {
 		t.Fatalf("expected the segment muxer numbered from 6, got: %s", got)
 	}
-	if !strings.Contains(got, "-segment_times 62.018,72.435,110.435 ") {
-		t.Fatalf("cuts at or before the start must be left out and the rest shifted by 10 s, got: %s", got)
+	if !strings.Contains(got, "-segment_times 52.018,62.435,100.435 ") {
+		t.Fatalf("cuts at or before the start must be left out and the rest cut just before their own time, got: %s", got)
 	}
-	if !strings.Contains(got, "-ss 50.023 ") || !strings.Contains(got, "-output_ts_offset 60.023") {
+	if !strings.Contains(got, "-ss 50.023 ") || !strings.Contains(got, "-output_ts_offset 50.023") {
 		t.Fatalf("seek and timestamp offset expected, got: %s", got)
 	}
 	// an encoded picture is cut by the HLS muxer on its grid, numbered from the start number
