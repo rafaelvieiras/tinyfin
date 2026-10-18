@@ -234,10 +234,17 @@ func joinAttrs(attrs []string, sep string) string {
 
 // videoDisplayTitle implements docs/12's "Video streams" section.
 func videoDisplayTitle(s storage.MediaStreamRef) string {
+	rangeLabel := dynamicRangeLabel(s.ColorTransfer)
+	if t := doviTitle(s.DoVi); t != "" {
+		// a Dolby Vision record names the range itself
+		rangeLabel = t
+	} else if rng, _ := videoRangeOf(s); rng != "" {
+		rangeLabel = rng
+	}
 	attrs := []string{
 		resolutionLabel(s.Width, s.Height, s.IsInterlaced),
 		strings.ToUpper(s.Codec),
-		dynamicRangeLabel(s.ColorTransfer),
+		rangeLabel,
 	}
 	if s.Title != "" {
 		return mergeWithTitle(s.Title, attrs)

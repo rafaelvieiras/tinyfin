@@ -37,7 +37,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
 | ✅ supported | `GET /Items/{itemId}/PlaybackInfo` | DefaultAuthorization | yes | 4/4 |  |
-| ✅ supported | `POST /Items/{itemId}/PlaybackInfo` | DefaultAuthorization | yes | 42/42 |  |
+| ✅ supported | `POST /Items/{itemId}/PlaybackInfo` | DefaultAuthorization | yes | 47/47 |  |
 | ⛔ not-planned | `POST /LiveStreams/Close` | DefaultAuthorization | yes |  | Out of scope for v1 (docs/01, decision D8). Live streams belong to tuners. (priority: low) |
 | ⛔ not-planned | `POST /LiveStreams/Open` | DefaultAuthorization | yes |  | Out of scope for v1 (docs/01, decision D8). Live streams belong to tuners. (priority: low) |
 | ✅ supported *(no scenario)* | `GET /Playback/BitrateTest` | DefaultAuthorization | yes |  |  |

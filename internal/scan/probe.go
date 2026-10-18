@@ -1,8 +1,10 @@
 package scan
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"math"
 	"os/exec"
 	"sort"
@@ -38,11 +40,10 @@ type ffprobeStream struct {
 	DisplayAspectRatio string `json:"display_aspect_ratio"`
 	RefFrames          int    `json:"refs"`
 	PixFmt             string `json:"pix_fmt"`
-	// Level: -99 is ffprobe's own "not applicable" sentinel for a codec
-	// with no level concept; 0 is indistinguishable from "field absent"
-	// either way, so mediaStreamsFromProbe below only exposes a Level
-	// pointer for a value outside {0, -99}.
-	Level      int    `json:"level"`
+	// Level is a pointer so that an absent member differs from the 0 and the
+	// -99 ("not applicable") that ffprobe prints for codecs without a level
+	// concept; the stream listings carry whatever ffprobe printed.
+	Level      *int   `json:"level"`
 	FieldOrder string `json:"field_order"`
 	// BitRate is ffprobe's bit_rate (a numeric string, absent when the
 	// container does not record one); AvgFrameRate a "num/den" fraction.
@@ -57,10 +58,15 @@ type ffprobeStream struct {
 	RFrameRate        string `json:"r_frame_rate"`
 	SampleAspectRatio string `json:"sample_aspect_ratio"`
 	BitsPerRawSample  string `json:"bits_per_raw_sample"`
-	CodecTagString    string `json:"codec_tag_string"`
-	IsAVC             string `json:"is_avc"`
-	NalLengthSize     string `json:"nal_length_size"`
-	Disposition       struct {
+	// BitsPerSample is the coded sample size (PCM, ADPCM), 0 when none.
+	BitsPerSample int `json:"bits_per_sample"`
+	// SideData lists the stream's side data; the Dolby Vision configuration
+	// record is read from it.
+	SideData       []ffprobeSideData `json:"side_data_list"`
+	CodecTagString string            `json:"codec_tag_string"`
+	IsAVC          string            `json:"is_avc"`
+	NalLengthSize  string            `json:"nal_length_size"`
+	Disposition    struct {
 		Default  int `json:"default"`
 		Forced   int `json:"forced"`
 		Original int `json:"original"`
@@ -106,10 +112,32 @@ func (t *streamTags) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// ffprobeSideData is one member of a stream's or frame's side_data_list: the
+// type and, for a Dolby Vision configuration record, its fields.
+type ffprobeSideData struct {
+	Type            string `json:"side_data_type"`
+	VersionMajor    *int   `json:"dv_version_major"`
+	VersionMinor    *int   `json:"dv_version_minor"`
+	Profile         *int   `json:"dv_profile"`
+	Level           *int   `json:"dv_level"`
+	RPUPresent      *int   `json:"rpu_present_flag"`
+	ELPresent       *int   `json:"el_present_flag"`
+	BLPresent       *int   `json:"bl_present_flag"`
+	CompatibilityID *int   `json:"dv_bl_signal_compatibility_id"`
+}
+
+// ffprobeFrame is one entry of -show_frames: only the side data of the first
+// video frame is kept.
+type ffprobeFrame struct {
+	MediaType string            `json:"media_type"`
+	SideData  []ffprobeSideData `json:"side_data_list"`
+}
+
 type ffprobeOutput struct {
 	Streams  []ffprobeStream  `json:"streams"`
 	Format   ffprobeFormat    `json:"format"`
 	Chapters []ffprobeChapter `json:"chapters"`
+	Frames   []ffprobeFrame   `json:"frames"`
 }
 
 // ffprobeChapter is one entry of ffprobe -show_chapters' JSON output.
@@ -176,12 +204,20 @@ func (s *Scanner) probe(ctx context.Context, path string) (ffprobeOutput, error)
 	}
 	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
 	defer cancel()
-	// -probesize/-analyzeduration are pinned to FFmpeg's own defaults (5 MB,
-	// 5 s) so a remote file is never read further than that by a build with
-	// different defaults; output fields are unchanged.
-	cmd := exec.CommandContext(ctx, s.ffprobePath, "-v", "error", "-probesize", "5000000", "-analyzeduration", "5000000",
-		"-print_format", "json", "-show_format", "-show_streams", "-show_chapters", path)
-	data, err := cmd.Output()
+	// The first video frame is decoded for the side data a stream header does
+	// not carry (HDR10+ metadata) and for the reference-frame count a decoder
+	// reports; an audio file has no such frame and is not asked for them.
+	frames := !audioExtensions[strings.ToLower(videoExt(path))] && !s.noFirstFrame.Load()
+	data, err := s.runProbe(ctx, path, frames)
+	if err != nil && frames {
+		var ee *exec.ExitError
+		if errors.As(err, &ee) && bytes.Contains(ee.Stderr, []byte("only_first_vframe")) {
+			// a build without the option (the stock ffmpeg ones): no frame
+			// data, and not asked again
+			s.noFirstFrame.Store(true)
+			data, err = s.runProbe(ctx, path, false)
+		}
+	}
 	if err != nil {
 		return out, err
 	}
@@ -189,6 +225,20 @@ func (s *Scanner) probe(ctx context.Context, path string) (ffprobeOutput, error)
 		return out, err
 	}
 	return out, nil
+}
+
+// runProbe runs ffprobe against path; withFrame adds the first video frame to
+// its output.
+func (s *Scanner) runProbe(ctx context.Context, path string, withFrame bool) ([]byte, error) {
+	// -probesize/-analyzeduration are pinned to FFmpeg's own defaults (5 MB,
+	// 5 s) so a remote file is never read further than that by a build with
+	// different defaults; output fields are unchanged.
+	args := []string{"-v", "error", "-probesize", "5000000", "-analyzeduration", "5000000",
+		"-print_format", "json", "-show_format", "-show_streams", "-show_chapters"}
+	if withFrame {
+		args = append(args, "-show_frames", "-only_first_vframe")
+	}
+	return exec.CommandContext(ctx, s.ffprobePath, append(args, path)...).Output()
 }
 
 // isInterlacedFieldOrder reports whether ffprobe's field_order value
@@ -217,6 +267,7 @@ func isInterlacedFieldOrder(fieldOrder string) bool {
 func mediaStreamsFromProbe(info ffprobeOutput) []storage.MediaStreamRef {
 	var streams []storage.MediaStreamRef
 	idx := 0
+	seenVideo := false
 	for _, st := range info.Streams {
 		if st.CodecType == "video" && st.Disposition.AttachedPic == 1 {
 			// The cover of an audio file, not a video track.
@@ -262,11 +313,16 @@ func mediaStreamsFromProbe(info ffprobeOutput) []storage.MediaStreamRef {
 				rf := st.RefFrames
 				ref.RefFrames = &rf
 			}
-			// ffprobe's own "not applicable" sentinel (this type's doc
-			// comment on Level) — only expose a value outside {0, -99}.
-			if st.Level != 0 && st.Level != -99 {
-				lvl := float64(st.Level)
+			// whatever ffprobe printed, the -99 "not applicable" and the 0 of
+			// a codec without levels included
+			if st.Level != nil {
+				lvl := float64(*st.Level)
 				ref.Level = &lvl
+			}
+			ref.DoVi = doviOf(st.SideData)
+			if !seenVideo {
+				seenVideo = true
+				ref.Hdr10Plus = hasHDR10Plus(info.Frames)
 			}
 			if fr := parseFrameRate(st.AvgFrameRate); fr > 0 {
 				ref.FrameRate = &fr
@@ -284,7 +340,7 @@ func mediaStreamsFromProbe(info ffprobeOutput) []storage.MediaStreamRef {
 				Title:         st.Tags.Title,
 				Language:      st.Tags.Language,
 				Profile:       st.Profile,
-				ChannelLayout: st.ChannelLayout,
+				ChannelLayout: plainChannelLayout(st.ChannelLayout),
 				IsOriginal:    st.Disposition.Original != 0,
 				TimeBase:      st.TimeBase,
 				CodecTag:      codecTagOf(st.CodecTagString),
@@ -293,6 +349,10 @@ func mediaStreamsFromProbe(info ffprobeOutput) []storage.MediaStreamRef {
 				ref.SampleRate = &sr
 			}
 			if d, err := strconv.Atoi(st.BitsPerRawSample); err == nil && d > 0 {
+				ref.BitDepth = &d
+			} else if st.BitsPerSample > 0 {
+				// PCM and ADPCM state their sample size only as the coded one
+				d := st.BitsPerSample
 				ref.BitDepth = &d
 			}
 			ref.BitRate = streamBitRate(st, info.Format)
@@ -333,7 +393,89 @@ func mediaStreamsFromProbe(info ffprobeOutput) []storage.MediaStreamRef {
 			idx++
 		}
 	}
+	deriveVideoBitRate(streams, info.Format)
 	return streams
+}
+
+// deriveVideoBitRate gives the video stream of a file that states no rate for
+// it the rate left over from the container's: the container rate less the
+// rate of every other stream, when there is one video stream, the container
+// states a rate and each other stream has a rate of its own (an estimate
+// counts). A remainder that is not positive leaves the stream without one.
+func deriveVideoBitRate(streams []storage.MediaStreamRef, f ffprobeFormat) {
+	total, err := strconv.ParseInt(strings.TrimSpace(f.BitRate), 10, 64)
+	if err != nil || total <= 0 {
+		return
+	}
+	video := -1
+	rest := total
+	for i, s := range streams {
+		switch s.Type {
+		case storage.StreamTypeVideo:
+			if video >= 0 {
+				return
+			}
+			video = i
+		case storage.StreamTypeAudio:
+			if s.BitRate == nil {
+				return
+			}
+			rest -= *s.BitRate
+		}
+	}
+	if video < 0 || streams[video].BitRate != nil || rest <= 0 {
+		return
+	}
+	streams[video].BitRate = &rest
+}
+
+// doviOf reads the Dolby Vision configuration record out of a stream's side
+// data; nil when it has none.
+func doviOf(list []ffprobeSideData) *storage.DoViConfig {
+	for _, sd := range list {
+		if sd.Type != "DOVI configuration record" || sd.Profile == nil {
+			continue
+		}
+		val := func(p *int) int {
+			if p == nil {
+				return 0
+			}
+			return *p
+		}
+		return &storage.DoViConfig{
+			VersionMajor: val(sd.VersionMajor), VersionMinor: val(sd.VersionMinor),
+			Profile: val(sd.Profile), Level: val(sd.Level),
+			RPUPresent: val(sd.RPUPresent), ELPresent: val(sd.ELPresent), BLPresent: val(sd.BLPresent),
+			CompatibilityID: val(sd.CompatibilityID),
+		}
+	}
+	return nil
+}
+
+// hasHDR10Plus reports whether the first video frame carries HDR10+ (SMPTE
+// 2094-40) dynamic metadata.
+func hasHDR10Plus(frames []ffprobeFrame) bool {
+	for _, fr := range frames {
+		if fr.MediaType != "video" {
+			continue
+		}
+		for _, sd := range fr.SideData {
+			if strings.HasPrefix(sd.Type, "HDR Dynamic Metadata SMPTE2094-40") {
+				return true
+			}
+		}
+		return false
+	}
+	return false
+}
+
+// plainChannelLayout is a channel layout without the arrangement ffprobe adds
+// in parentheses ("5.1(side)" is "5.1", "quad(side)" "quad").
+func plainChannelLayout(v string) string {
+	if i := strings.IndexByte(v, '('); i > 0 {
+		return v[:i]
+	}
+	return v
 }
 
 // runtimeTicksFromProbe converts ffprobe's format.duration (decimal
@@ -410,7 +552,7 @@ func knownColor(v string) string {
 // codecTagOf is the container's codec tag ("avc1"), "" when there is none
 // (ffprobe prints "[0][0][0][0]").
 func codecTagOf(v string) string {
-	if strings.HasPrefix(v, "[") || strings.HasPrefix(v, "0x") {
+	if strings.Contains(v, "[") || strings.HasPrefix(v, "0x") {
 		return ""
 	}
 	return v
@@ -491,8 +633,14 @@ func estimatedAudioBitRate(codec string, channels int) *int64 {
 		br = 480000 * int64(channels)
 	case "opus":
 		br = 128000
+		if channels > 2 {
+			br = 256000
+		}
 	case "vorbis":
 		br = 160000
+		if channels > 2 {
+			br = 320000
+		}
 	case "truehd":
 		br = 700000 * int64(channels)
 	default:

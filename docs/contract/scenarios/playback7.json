@@ -1,0 +1,1701 @@
+[
+ {
+  "id": "playback.offer.video-range",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "playback.md#offer",
+  "scope": "modern",
+  "tags": [
+   "playback"
+  ],
+  "covers": [
+   "playback.offer.R13"
+  ],
+  "requires": [
+   "library:matrix2",
+   "item:mx2-hdr10",
+   "item:mx2-hlg",
+   "item:mx2-h10p",
+   "item:mx2-dv81",
+   "item:mx2-dv5",
+   "item:mx2-dv81-sdr",
+   "item:mx2-dv7el",
+   "item:mx2-dv81-mp4"
+  ],
+  "steps": [
+   {
+    "name": "mx2-hdr10: range, type, Dolby Vision record and title",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-hdr10.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-hdr10.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRange",
+       "op": "eq",
+       "value": "HDR"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRangeType",
+       "op": "eq",
+       "value": "HDR10"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DisplayTitle",
+       "op": "eq",
+       "value": "240p HEVC HDR"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvVersionMajor",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvProfile",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvBlSignalCompatibilityId",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "mx2-hlg: range, type, Dolby Vision record and title",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-hlg.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-hlg.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRange",
+       "op": "eq",
+       "value": "HDR"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRangeType",
+       "op": "eq",
+       "value": "HLG"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DisplayTitle",
+       "op": "eq",
+       "value": "240p HEVC HDR"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvVersionMajor",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvProfile",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvBlSignalCompatibilityId",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "mx2-h10p: range, type, Dolby Vision record and title",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-h10p.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-h10p.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRange",
+       "op": "eq",
+       "value": "HDR"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRangeType",
+       "op": "eq",
+       "value": "HDR10Plus"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DisplayTitle",
+       "op": "eq",
+       "value": "240p HEVC HDR"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvVersionMajor",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvProfile",
+       "op": "absent"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvBlSignalCompatibilityId",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "mx2-dv81: range, type, Dolby Vision record and title",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-dv81.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-dv81.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRange",
+       "op": "eq",
+       "value": "HDR"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRangeType",
+       "op": "eq",
+       "value": "DOVIWithHDR10"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DisplayTitle",
+       "op": "eq",
+       "value": "240p HEVC Dolby Vision Profile 8.1 (HDR10)"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvVersionMajor",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvProfile",
+       "op": "eq",
+       "value": 8
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvBlSignalCompatibilityId",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "mx2-dv5: range, type, Dolby Vision record and title",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-dv5.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-dv5.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRange",
+       "op": "eq",
+       "value": "HDR"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRangeType",
+       "op": "eq",
+       "value": "DOVI"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DisplayTitle",
+       "op": "eq",
+       "value": "240p HEVC Dolby Vision Profile 5"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvVersionMajor",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvProfile",
+       "op": "eq",
+       "value": 5
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvBlSignalCompatibilityId",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "mx2-dv81-sdr: range, type, Dolby Vision record and title",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-dv81-sdr.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-dv81-sdr.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRange",
+       "op": "eq",
+       "value": "SDR"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRangeType",
+       "op": "eq",
+       "value": "DOVIWithSDR"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DisplayTitle",
+       "op": "eq",
+       "value": "240p HEVC Dolby Vision Profile 8.2 (SDR)"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvVersionMajor",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvProfile",
+       "op": "eq",
+       "value": 8
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvBlSignalCompatibilityId",
+       "op": "eq",
+       "value": 2
+      }
+     ]
+    }
+   },
+   {
+    "name": "mx2-dv7el: range, type, Dolby Vision record and title",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-dv7el.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-dv7el.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRange",
+       "op": "eq",
+       "value": "HDR"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRangeType",
+       "op": "eq",
+       "value": "DOVIWithEL"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DisplayTitle",
+       "op": "eq",
+       "value": "240p HEVC Dolby Vision Profile 7.6 (HDR10)"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvVersionMajor",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvProfile",
+       "op": "eq",
+       "value": 7
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvBlSignalCompatibilityId",
+       "op": "eq",
+       "value": 6
+      }
+     ]
+    }
+   },
+   {
+    "name": "mx2-dv81-mp4: range, type, Dolby Vision record and title",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-dv81-mp4.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-dv81-mp4.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRange",
+       "op": "eq",
+       "value": "HDR"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRangeType",
+       "op": "eq",
+       "value": "DOVIWithHDR10"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DisplayTitle",
+       "op": "eq",
+       "value": "240p HEVC Dolby Vision Profile 8.1 (HDR10)"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvVersionMajor",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvProfile",
+       "op": "eq",
+       "value": 8
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvBlSignalCompatibilityId",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.offer.audio-estimates",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "playback.md#offer",
+  "scope": "modern",
+  "tags": [
+   "playback"
+  ],
+  "covers": [
+   "playback.offer.R14"
+  ],
+  "requires": [
+   "library:matrix2",
+   "item:mx2-opus",
+   "item:mx2-vorbis"
+  ],
+  "steps": [
+   {
+    "name": "mx2-opus: the estimate of each track follows its codec and channel count",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-opus.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-opus.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].BitRate",
+       "op": "eq",
+       "value": 128000
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].BitRate",
+       "op": "eq",
+       "value": 128000
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].BitRate",
+       "op": "eq",
+       "value": 256000
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].BitRate",
+       "op": "eq",
+       "value": 256000
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].BitRate",
+       "op": "eq",
+       "value": 256000
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].BitRate",
+       "op": "eq",
+       "value": 256000
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].BitRate",
+       "op": "eq",
+       "value": 256000
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].BitRate",
+       "op": "eq",
+       "value": 256000
+      }
+     ]
+    }
+   },
+   {
+    "name": "mx2-vorbis: the estimate of each track follows its codec and channel count",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-vorbis.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-vorbis.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[1].BitRate",
+       "op": "eq",
+       "value": 160000
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].BitRate",
+       "op": "eq",
+       "value": 160000
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[3].BitRate",
+       "op": "eq",
+       "value": 320000
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[4].BitRate",
+       "op": "eq",
+       "value": 320000
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[5].BitRate",
+       "op": "eq",
+       "value": 320000
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[6].BitRate",
+       "op": "eq",
+       "value": 320000
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[7].BitRate",
+       "op": "eq",
+       "value": 320000
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[8].BitRate",
+       "op": "eq",
+       "value": 320000
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.offer.codec-conditions",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "playback.md#offer",
+  "scope": "modern",
+  "tags": [
+   "playback"
+  ],
+  "covers": [
+   "playback.offer.R15",
+   "playback.offer.R16"
+  ],
+  "requires": [
+   "library:matrix2",
+   "item:mx2-dv81",
+   "item:mx2-hdr10"
+  ],
+  "steps": [
+   {
+    "name": "Dolby Vision 8.1 with a profile without DOVIWithHDR10",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-dv81.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-dv81.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "hevc",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": [
+        {
+         "Type": "Video",
+         "Conditions": [
+          {
+           "Condition": "EqualsAny",
+           "Property": "VideoRangeType",
+           "Value": "SDR|HDR10|HLG",
+           "IsRequired": true
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "VideoRangeTypeNotSupported"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the same with it listed",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-dv81.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-dv81.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "hevc",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": [
+        {
+         "Type": "Video",
+         "Conditions": [
+          {
+           "Condition": "EqualsAny",
+           "Property": "VideoRangeType",
+           "Value": "SDR|HDR10|HLG|DOVIWithHDR10",
+           "IsRequired": true
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "HDR10 with SDR only",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-hdr10.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-hdr10.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "hevc",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": [
+        {
+         "Type": "Video",
+         "Conditions": [
+          {
+           "Condition": "EqualsAny",
+           "Property": "VideoRangeType",
+           "Value": "SDR",
+           "IsRequired": true
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "VideoRangeTypeNotSupported"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a width limit",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-hdr10.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-hdr10.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "hevc",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": [
+        {
+         "Type": "Video",
+         "Codec": "hevc",
+         "Conditions": [
+          {
+           "Condition": "LessThanEqual",
+           "Property": "Width",
+           "Value": "100",
+           "IsRequired": true
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "VideoResolutionNotSupported"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a width limit for another codec",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-hdr10.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-hdr10.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "hevc",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": [
+        {
+         "Type": "Video",
+         "Codec": "h264",
+         "Conditions": [
+          {
+           "Condition": "LessThanEqual",
+           "Property": "Width",
+           "Value": "100",
+           "IsRequired": true
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "a bit depth limit",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-hdr10.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-hdr10.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "hevc",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": [
+        {
+         "Type": "Video",
+         "Conditions": [
+          {
+           "Condition": "LessThanEqual",
+           "Property": "VideoBitDepth",
+           "Value": "8",
+           "IsRequired": true
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "VideoBitDepthNotSupported"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.offer.container-names",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "playback.md#offer",
+  "scope": "modern",
+  "tags": [
+   "playback"
+  ],
+  "covers": [
+   "playback.offer.R17"
+  ],
+  "requires": [
+   "library:matrix2",
+   "item:mx2-webm",
+   "item:mx2-m2ts",
+   "item:mx2-wmv",
+   "item:mx2-mpg",
+   "item:mx2-3gp",
+   "item:mx2-h264"
+  ],
+  "steps": [
+   {
+    "name": "mx2-webm with a profile naming mkv",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-webm.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-webm.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264,vp9,mpeg2video,mpeg1video,wmv3,h263,msmpeg4v3",
+         "AudioCodec": "aac,opus,mp3,mp2,wmav2,amr_nb"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": []
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "mkv"
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "mx2-webm with a profile naming webm",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-webm.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-webm.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "webm",
+         "Type": "Video",
+         "VideoCodec": "h264,vp9,mpeg2video,mpeg1video,wmv3,h263,msmpeg4v3",
+         "AudioCodec": "aac,opus,mp3,mp2,wmav2,amr_nb"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": []
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "webm"
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "mx2-webm with a profile naming ts",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-webm.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-webm.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264,vp9,mpeg2video,mpeg1video,wmv3,h263,msmpeg4v3",
+         "AudioCodec": "aac,opus,mp3,mp2,wmav2,amr_nb"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": []
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "mkv,webm"
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "mx2-m2ts with a profile naming ts",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-m2ts.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-m2ts.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264,vp9,mpeg2video,mpeg1video,wmv3,h263,msmpeg4v3",
+         "AudioCodec": "aac,opus,mp3,mp2,wmav2,amr_nb"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": []
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "ts"
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "mx2-m2ts with a profile naming m2ts",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-m2ts.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-m2ts.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "m2ts",
+         "Type": "Video",
+         "VideoCodec": "h264,vp9,mpeg2video,mpeg1video,wmv3,h263,msmpeg4v3",
+         "AudioCodec": "aac,opus,mp3,mp2,wmav2,amr_nb"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": []
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "ts"
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "mx2-wmv with a profile naming asf",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-wmv.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-wmv.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "asf",
+         "Type": "Video",
+         "VideoCodec": "h264,vp9,mpeg2video,mpeg1video,wmv3,h263,msmpeg4v3",
+         "AudioCodec": "aac,opus,mp3,mp2,wmav2,amr_nb"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": []
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "asf"
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "mx2-wmv with a profile naming wmv",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-wmv.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-wmv.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "wmv",
+         "Type": "Video",
+         "VideoCodec": "h264,vp9,mpeg2video,mpeg1video,wmv3,h263,msmpeg4v3",
+         "AudioCodec": "aac,opus,mp3,mp2,wmav2,amr_nb"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": []
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "asf"
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "mx2-mpg with a profile naming mpeg",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-mpg.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-mpg.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "mpeg",
+         "Type": "Video",
+         "VideoCodec": "h264,vp9,mpeg2video,mpeg1video,wmv3,h263,msmpeg4v3",
+         "AudioCodec": "aac,opus,mp3,mp2,wmav2,amr_nb"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": []
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "mpeg"
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "mx2-mpg with a profile naming mpg",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-mpg.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-mpg.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "mpg",
+         "Type": "Video",
+         "VideoCodec": "h264,vp9,mpeg2video,mpeg1video,wmv3,h263,msmpeg4v3",
+         "AudioCodec": "aac,opus,mp3,mp2,wmav2,amr_nb"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": []
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "mpeg"
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "mx2-3gp with a profile naming mp4",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-3gp.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-3gp.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4",
+         "Type": "Video",
+         "VideoCodec": "h264,vp9,mpeg2video,mpeg1video,wmv3,h263,msmpeg4v3",
+         "AudioCodec": "aac,opus,mp3,mp2,wmav2,amr_nb"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": []
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "mp4"
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "mx2-3gp with a profile naming 3gp",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-3gp.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-3gp.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "3gp",
+         "Type": "Video",
+         "VideoCodec": "h264,vp9,mpeg2video,mpeg1video,wmv3,h263,msmpeg4v3",
+         "AudioCodec": "aac,opus,mp3,mp2,wmav2,amr_nb"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": []
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "3gp"
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "mx2-h264 with a profile naming mp4",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-h264.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-h264.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4",
+         "Type": "Video",
+         "VideoCodec": "h264,vp9,mpeg2video,mpeg1video,wmv3,h263,msmpeg4v3",
+         "AudioCodec": "aac,opus,mp3,mp2,wmav2,amr_nb"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": []
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "mkv"
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "mx2-h264 with a profile naming webm",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-h264.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-h264.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "webm",
+         "Type": "Video",
+         "VideoCodec": "h264,vp9,mpeg2video,mpeg1video,wmv3,h263,msmpeg4v3",
+         "AudioCodec": "aac,opus,mp3,mp2,wmav2,amr_nb"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": []
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].Container",
+       "op": "eq",
+       "value": "mkv"
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.offer.default-audio",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "playback.md#offer",
+  "scope": "modern",
+  "tags": [
+   "playback"
+  ],
+  "covers": [
+   "playback.offer.R18"
+  ],
+  "requires": [
+   "library:matrix2",
+   "item:mx2-h264"
+  ],
+  "steps": [
+   {
+    "name": "no default audio track: its codec does not restrict direct play",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-h264.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-h264.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "mkv",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "ac3"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": []
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "no default audio track: the transcode reasons name the audio codec",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-h264.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-h264.id}}"
+     },
+     "body": {
+      "DeviceProfile": {
+       "DirectPlayProfiles": [
+        {
+         "Container": "mp4",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "Protocol": "hls",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Context": "Streaming"
+        }
+       ],
+       "CodecProfiles": []
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].TranscodingUrl",
+       "op": "contains",
+       "value": "TranscodeReasons=ContainerNotSupported,AudioCodecNotSupported"
+      }
+     ]
+    }
+   }
+  ]
+ }
+]

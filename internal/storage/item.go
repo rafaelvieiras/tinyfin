@@ -193,6 +193,25 @@ type MediaStreamRef struct {
 	CodecTag          string
 	IsAVC             bool
 	NalLengthSize     string
+
+	// DoVi is the Dolby Vision configuration record of the video stream (the
+	// record ffprobe lists as side data), nil when the stream has none.
+	// Hdr10Plus is set on the video stream whose first frame carries HDR10+
+	// (SMPTE 2094-40) dynamic metadata.
+	DoVi      *DoViConfig
+	Hdr10Plus bool
+}
+
+// DoViConfig is a Dolby Vision configuration record: the version, the profile
+// and level, whether the stream holds an RPU, an enhancement layer and a base
+// layer, and the signal compatibility id of the base layer (1 HDR10, 2 SDR,
+// 4 HLG, 0 none).
+type DoViConfig struct {
+	VersionMajor, VersionMinor int
+	Profile, Level             int
+	RPUPresent, ELPresent      int
+	BLPresent                  int
+	CompatibilityID            int
 }
 
 // Person is one cast/crew credit on an Item — the storage-side counterpart

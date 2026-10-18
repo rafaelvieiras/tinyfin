@@ -1098,4 +1098,294 @@ mkdir -p "$ROOT/.strm-http" "$MX/Mx Strm Mkv (2505)"
 [ -f "$ROOT/.strm-http/strm-src.mkv" ] || cp "$MX/Mx Mkv (2500)/Mx Mkv (2500).mkv" "$ROOT/.strm-http/strm-src.mkv"
 printf '%s/strm-src.mkv\n' "${STRM_HTTP:-http://172.17.0.1:18999}" >"$MX/Mx Strm Mkv (2505)/Mx Strm Mkv (2505).strm"
 
+# Stream-property matrix 2 (own library "Matrix2", lazy; 320x240, 3 s): the
+# Dolby Vision / HDR10+ / HLG video fixtures and the audio-codec x channel-count
+# matrix in Matroska and MP4. These need an ffmpeg with more encoders than a
+# distribution build (libx265, libsvtav1, libvpx, libopus, libvorbis, dca, truehd,
+# eac3), so they are made with jellyfin-ffmpeg: JFFMPEG=<binary>, else the binary
+# of a Jellyfin container image (docker; JF_IMAGE, default jellyfin/jellyfin:12.2).
+# Dolby Vision RPUs and HDR10+ metadata are synthesized with dovi_tool and
+# hdr10plus_tool (DOVI_TOOL / HDR10PLUS_TOOL, else PATH, else a pinned release is
+# downloaded into $ROOT/.tools) and muxed with mkvmerge. Without these tools the
+# library is skipped and the scenarios that need it are not runnable.
+MX2="$ROOT/Matrix2"
+mx2_tools() {
+  local arch; arch="$(uname -m)"
+  if [ -n "${JFFMPEG:-}" ]; then JFF=("$JFFMPEG")
+  elif command -v docker >/dev/null 2>&1; then
+    local r; r="$(realpath "$ROOT")"
+    JFF=(docker run --rm -u "$(id -u):$(id -g)" -v "$r:$r" -w "$r" --entrypoint /usr/lib/jellyfin-ffmpeg/ffmpeg "${JF_IMAGE:-jellyfin/jellyfin:12.2}")
+  else echo "Matrix2: skipped (no JFFMPEG and no docker)"; return 1; fi
+  command -v mkvmerge >/dev/null 2>&1 || { echo "Matrix2: skipped (no mkvmerge)"; return 1; }
+  local tools="$ROOT/.tools"
+  DOVI="${DOVI_TOOL:-$(command -v dovi_tool || true)}"
+  H10P="${HDR10PLUS_TOOL:-$(command -v hdr10plus_tool || true)}"
+  if [ -z "$DOVI" ] || [ -z "$H10P" ]; then
+    [ "$arch" = x86_64 ] || { echo "Matrix2: skipped (set DOVI_TOOL and HDR10PLUS_TOOL)"; return 1; }
+    mkdir -p "$tools"
+    if [ -z "$DOVI" ]; then
+      [ -x "$tools/dovi_tool" ] || curl -fsSL "https://github.com/quietvoid/dovi_tool/releases/download/2.3.4/dovi_tool-2.3.4-x86_64-unknown-linux-musl.tar.gz" | tar xz -C "$tools" || return 1
+      DOVI="$tools/dovi_tool"
+    fi
+    if [ -z "$H10P" ]; then
+      [ -x "$tools/hdr10plus_tool" ] || curl -fsSL "https://github.com/quietvoid/hdr10plus_tool/releases/download/1.7.2/hdr10plus_tool-1.7.2-x86_64-unknown-linux-musl.tar.gz" | tar xz -C "$tools" || return 1
+      H10P="$tools/hdr10plus_tool"
+    fi
+  fi
+}
+
+mx2_make() {
+  local WORK="$ROOT/.mx2-work"
+  mkdir -p "$WORK"
+  mx2_fail() { rm -rf "$WORK"; }
+  jf() { "${JFF[@]}" -v error -y "$@"; }
+  # <dir name incl. year> <ext> : the output path of one movie
+  out() { mkdir -p "$MX2/$1"; echo "$MX2/$1/$1.$2"; }
+  # <dir> <ext> <video args...> : one video track (320x240, 12 fps, 3 s) and one AAC stereo track
+  mxv() {
+    local o; o="$(out "$1" "$2")"; shift 2
+    [ -f "$o" ] && return 0
+    jf -f lavfi -i "testsrc=duration=3:size=${MX2_SIZE:-320x240}:rate=${MX2_RATE:-12}" -f lavfi -i "sine=frequency=440:duration=3" "$@" -c:a "${MX2_ACODEC:-aac}" -shortest "$o"
+  }
+  # a raw HEVC elementary stream of 36 frames: <out.hevc> <pix_fmt> <x265 params>
+  hevc() {
+    jf -f lavfi -i "testsrc=duration=3:size=320x240:rate=12" -c:v libx265 -preset ultrafast -pix_fmt "$2" \
+      -x265-params "log-level=error:repeat-headers=1:no-open-gop=1:$3" -f hevc "$1"
+  }
+  # <out.mkv> <video.hevc> : the raw stream and an AAC stereo track in Matroska
+  mux() {
+    jf -f lavfi -i "sine=frequency=440:duration=3" -c:a aac "$WORK/a.mka"
+    mkvmerge -q -o "$1" --default-duration 0:12fps "$2" "$WORK/a.mka" >/dev/null
+  }
+  # <out.hevc> <in.hevc> <profile> : in.hevc with a synthesized Dolby Vision RPU of that profile
+  dvrpu() {
+    printf '{"cm_version":"V29","length":36,"profile":"%s","level6":{"max_display_mastering_luminance":1000,"min_display_mastering_luminance":1,"max_content_light_level":1000,"max_frame_average_light_level":400},"default_metadata_blocks":[{"Level1":{"min_pq":0,"max_pq":3079,"avg_pq":1234}}]}\n' "$3" >"$WORK/dv.json"
+    rm -f "$1"
+    "$DOVI" generate -j "$WORK/dv.json" -o "$WORK/rpu.bin" >/dev/null &&
+      "$DOVI" inject-rpu -i "$2" --rpu-in "$WORK/rpu.bin" -o "$1" >/dev/null
+  }
+  # <out.hevc> <in.hevc> : in.hevc with synthesized HDR10+ (SMPTE 2094-40) metadata
+  h10pmeta() {
+    { printf '{"JSONInfo":{"HDR10plusProfile":"B","Version":"1.0"},"SceneInfo":['
+      local i; for i in $(seq 0 35); do
+        [ "$i" -gt 0 ] && printf ','
+        printf '{"BezierCurveData":{"Anchors":[3,9,26,53,87,131,181,233,293],"KneePointX":327,"KneePointY":152},"LuminanceParameters":{"AverageRGB":300,"LuminanceDistributions":{"DistributionIndex":[1,5,10,25,50,75,90,95,99],"DistributionValues":[10,100,200,500,1000,2000,3000,4000,5000]},"MaxScl":[1000,2000,3000]},"NumberOfWindows":1,"TargetedSystemDisplayMaximumLuminance":400,"SceneFrameIndex":%d,"SceneId":0,"SequenceFrameIndex":%d}' "$i" "$i"
+      done
+      printf '],"SceneInfoSummary":{"SceneFirstFrameIndex":[0],"SceneFrameNumbers":[36]},"ToolInfo":{"Tool":"tinyfin-fixtures","Version":"1"}}\n'; } >"$WORK/h10p.json"
+    rm -f "$1"
+    "$H10P" inject -i "$2" -j "$WORK/h10p.json" -o "$1" >/dev/null
+  }
+  local HDR10='colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc:hdr10=1:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,1):max-cll=1000,400'
+  local HLGP='colorprim=bt2020:transfer=arib-std-b67:colormatrix=bt2020nc'
+  local f
+
+  # HDR10, HLG and 8-bit HDR-tagged video
+  f="$MX2/Mx2 Hdr10 (2600)/Mx2 Hdr10 (2600).mkv"
+  if [ ! -f "$f" ]; then hevc "$WORK/b.hevc" yuv420p10le "$HDR10" && mkdir -p "$(dirname "$f")" && mux "$f" "$WORK/b.hevc"; fi
+  f="$MX2/Mx2 Hlg (2601)/Mx2 Hlg (2601).mkv"
+  if [ ! -f "$f" ]; then hevc "$WORK/b.hevc" yuv420p10le "$HLGP" && mkdir -p "$(dirname "$f")" && mux "$f" "$WORK/b.hevc"; fi
+  # Dolby Vision: profile 8.1 (HDR10 base) in Matroska and MP4, 5 (no compatible base) and 8.4 (HLG base)
+  f="$MX2/Mx2 Dv81 Mkv (2602)/Mx2 Dv81 Mkv (2602).mkv"
+  if [ ! -f "$f" ]; then
+    hevc "$WORK/b.hevc" yuv420p10le "$HDR10" && dvrpu "$WORK/d.hevc" "$WORK/b.hevc" 8.1 && mkdir -p "$(dirname "$f")" && mux "$f" "$WORK/d.hevc"
+  fi
+  f="$MX2/Mx2 Dv81 Mp4 (2603)/Mx2 Dv81 Mp4 (2603).mp4"
+  if [ ! -f "$f" ] && [ -f "$MX2/Mx2 Dv81 Mkv (2602)/Mx2 Dv81 Mkv (2602).mkv" ]; then
+    mkdir -p "$(dirname "$f")"; jf -i "$MX2/Mx2 Dv81 Mkv (2602)/Mx2 Dv81 Mkv (2602).mkv" -c copy -tag:v dvh1 -strict unofficial "$f"
+  fi
+  f="$MX2/Mx2 Dv5 (2604)/Mx2 Dv5 (2604).mkv"
+  if [ ! -f "$f" ]; then
+    hevc "$WORK/b.hevc" yuv420p10le "colormatrix=bt2020nc" && dvrpu "$WORK/d.hevc" "$WORK/b.hevc" 5 && mkdir -p "$(dirname "$f")" && mux "$f" "$WORK/d.hevc"
+  fi
+  f="$MX2/Mx2 Dv84 (2605)/Mx2 Dv84 (2605).mkv"
+  if [ ! -f "$f" ]; then
+    hevc "$WORK/b.hevc" yuv420p10le "$HLGP" && dvrpu "$WORK/d.hevc" "$WORK/b.hevc" 8.4 && mkdir -p "$(dirname "$f")" && mux "$f" "$WORK/d.hevc"
+  fi
+  # HDR10+ (dynamic metadata SEI) in Matroska and MP4, and Dolby Vision 8.1 + HDR10+
+  f="$MX2/Mx2 Hdr10Plus Mkv (2607)/Mx2 Hdr10Plus Mkv (2607).mkv"
+  if [ ! -f "$f" ]; then
+    hevc "$WORK/b.hevc" yuv420p10le "$HDR10" && h10pmeta "$WORK/p.hevc" "$WORK/b.hevc" && mkdir -p "$(dirname "$f")" && mux "$f" "$WORK/p.hevc"
+  fi
+  f="$MX2/Mx2 Hdr10Plus Mp4 (2608)/Mx2 Hdr10Plus Mp4 (2608).mp4"
+  if [ ! -f "$f" ] && [ -f "$MX2/Mx2 Hdr10Plus Mkv (2607)/Mx2 Hdr10Plus Mkv (2607).mkv" ]; then
+    mkdir -p "$(dirname "$f")"; jf -i "$MX2/Mx2 Hdr10Plus Mkv (2607)/Mx2 Hdr10Plus Mkv (2607).mkv" -c copy -tag:v hvc1 "$f"
+  fi
+  f="$MX2/Mx2 Dv81 Hdr10Plus (2609)/Mx2 Dv81 Hdr10Plus (2609).mkv"
+  if [ ! -f "$f" ]; then
+    hevc "$WORK/b.hevc" yuv420p10le "$HDR10" && h10pmeta "$WORK/p.hevc" "$WORK/b.hevc" && dvrpu "$WORK/d.hevc" "$WORK/p.hevc" 8.1 && mkdir -p "$(dirname "$f")" && mux "$f" "$WORK/d.hevc"
+  fi
+
+  # a copy of a Dolby Vision Matroska file whose configuration record states <profile> <compat id> <el present> :
+  # the RPU stays that of the source, only the record that ffprobe reports changes
+  dvcfg() { # <src.mkv> <out dir name> <profile> <compat> <el>
+    local o; o="$(out "$2" mkv)"
+    [ -f "$o" ] && return 0
+    python3 - "$1" "$o" "$3" "$4" "$5" <<'PY'
+import sys
+src, dst, profile, compat, el = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5])
+data = bytearray(open(src, "rb").read())
+# the start of the record of a profile 8, level 1 stream: version 1.0, then the profile/level/rpu/el/bl bits and the compat id
+old = bytes([1, 0, 0x10, 0x0D])
+i = data.find(old)
+if i < 0:
+    sys.exit("configuration record not found")
+word = profile << 9 | 1 << 3 | 1 << 2 | el << 1 | 1
+data[i + 2], data[i + 3], data[i + 4] = word >> 8, word & 255, compat << 4
+open(dst, "wb").write(data)
+PY
+  }
+  local DV81="$MX2/Mx2 Dv81 Mkv (2602)/Mx2 Dv81 Mkv (2602).mkv"
+  if [ -f "$DV81" ]; then
+    dvcfg "$DV81" "Mx2 Dv Cfg 8 2 (2610)" 8 2 0
+    dvcfg "$DV81" "Mx2 Dv Cfg 8 4 (2611)" 8 4 0
+    dvcfg "$DV81" "Mx2 Dv Cfg 8 0 (2612)" 8 0 0
+    dvcfg "$DV81" "Mx2 Dv Cfg 7 6 El (2613)" 7 6 1
+    dvcfg "$DV81" "Mx2 Dv Cfg 7 6 (2614)" 7 6 0
+    dvcfg "$DV81" "Mx2 Dv Cfg 4 2 (2615)" 4 2 0
+    dvcfg "$DV81" "Mx2 Dv Cfg 10 0 (2616)" 10 0 0
+    dvcfg "$DV81" "Mx2 Dv Cfg 5 1 (2617)" 5 1 0
+    dvcfg "$DV81" "Mx2 Dv Cfg 8 3 (2618)" 8 3 0
+    dvcfg "$DV81" "Mx2 Dv Cfg 8 5 (2619)" 8 5 0
+    dvcfg "$DV81" "Mx2 Dv Cfg 8 6 (2710)" 8 6 0
+    dvcfg "$DV81" "Mx2 Dv Cfg 8 9 (2711)" 8 9 0
+    dvcfg "$DV81" "Mx2 Dv Cfg 9 1 (2712)" 9 1 0
+    dvcfg "$DV81" "Mx2 Dv Cfg 10 1 (2714)" 10 1 0
+    dvcfg "$DV81" "Mx2 Dv Cfg 10 2 (2715)" 10 2 0
+    dvcfg "$DV81" "Mx2 Dv Cfg 10 4 (2716)" 10 4 0
+    dvcfg "$DV81" "Mx2 Dv Cfg 10 6 (2717)" 10 6 0
+    dvcfg "$DV81" "Mx2 Dv Cfg 7 1 (2718)" 7 1 1
+    dvcfg "$DV81" "Mx2 Dv Cfg 7 0 (2719)" 7 0 1
+    dvcfg "$DV81" "Mx2 Dv Cfg 7 2 (2721)" 7 2 1
+  fi
+  # a profile 8.1 record on a stream with an SDR base
+  f="$MX2/Mx2 Dv81 Sdr Base (2722)/Mx2 Dv81 Sdr Base (2722).mkv"
+  if [ ! -f "$f" ]; then
+    hevc "$WORK/b.hevc" yuv420p10le "colorprim=bt709:transfer=bt709:colormatrix=bt709" && dvrpu "$WORK/d.hevc" "$WORK/b.hevc" 8.1 && mkdir -p "$(dirname "$f")" && mux "$f" "$WORK/d.hevc"
+  fi
+  # the same on a stream with HDR10+ metadata and on one with an HLG base
+  local DV81P="$MX2/Mx2 Dv81 Hdr10Plus (2609)/Mx2 Dv81 Hdr10Plus (2609).mkv" DV84="$MX2/Mx2 Dv84 (2605)/Mx2 Dv84 (2605).mkv"
+  if [ -f "$DV81P" ]; then
+    dvcfg "$DV81P" "Mx2 Dv Cfg H10p 7 6 El (2666)" 7 6 1
+    dvcfg "$DV81P" "Mx2 Dv Cfg H10p 8 4 (2667)" 8 4 0
+    dvcfg "$DV81P" "Mx2 Dv Cfg H10p 8 2 (2668)" 8 2 0
+  fi
+  if [ -f "$DV84" ]; then
+    dvcfg "$DV84" "Mx2 Dv Cfg Hlg 8 1 (2669)" 8 1 0
+    dvcfg "$DV84" "Mx2 Dv Cfg Hlg 8 2 (2713)" 8 2 0
+  fi
+  # the same stream with other colour descriptions, and a Dolby Vision tag without a configuration record
+  local pq='transfer=smpte2084'
+  f="$MX2/Mx2 Pq Bt709 (2660)/Mx2 Pq Bt709 (2660).mkv"
+  if [ ! -f "$f" ]; then hevc "$WORK/b.hevc" yuv420p10le "colorprim=bt709:$pq:colormatrix=bt709" && mkdir -p "$(dirname "$f")" && mux "$f" "$WORK/b.hevc"; fi
+  f="$MX2/Mx2 Bt2020 10 (2661)/Mx2 Bt2020 10 (2661).mkv"
+  if [ ! -f "$f" ]; then hevc "$WORK/b.hevc" yuv420p10le "colorprim=bt2020:transfer=bt2020-10:colormatrix=bt2020nc" && mkdir -p "$(dirname "$f")" && mux "$f" "$WORK/b.hevc"; fi
+  f="$MX2/Mx2 Hlg Hdr10Plus (2662)/Mx2 Hlg Hdr10Plus (2662).mkv"
+  if [ ! -f "$f" ]; then hevc "$WORK/b.hevc" yuv420p10le "$HLGP" && h10pmeta "$WORK/p.hevc" "$WORK/b.hevc" && mkdir -p "$(dirname "$f")" && mux "$f" "$WORK/p.hevc"; fi
+  f="$MX2/Mx2 Sdr Hdr10Plus (2663)/Mx2 Sdr Hdr10Plus (2663).mkv"
+  if [ ! -f "$f" ]; then hevc "$WORK/b.hevc" yuv420p10le "colorprim=bt709:transfer=bt709:colormatrix=bt709" && h10pmeta "$WORK/p.hevc" "$WORK/b.hevc" && mkdir -p "$(dirname "$f")" && mux "$f" "$WORK/p.hevc"; fi
+  f="$MX2/Mx2 Dv5 Hdr10Plus (2664)/Mx2 Dv5 Hdr10Plus (2664).mkv"
+  if [ ! -f "$f" ]; then
+    hevc "$WORK/b.hevc" yuv420p10le "colormatrix=bt2020nc" && h10pmeta "$WORK/p.hevc" "$WORK/b.hevc" && dvrpu "$WORK/d.hevc" "$WORK/p.hevc" 5 && mkdir -p "$(dirname "$f")" && mux "$f" "$WORK/d.hevc"
+  fi
+  f="$MX2/Mx2 Dv Tag Only (2665)/Mx2 Dv Tag Only (2665).mp4"
+  if [ ! -f "$f" ] && [ -f "$MX2/Mx2 Hdr10 (2600)/Mx2 Hdr10 (2600).mkv" ]; then
+    mkdir -p "$(dirname "$f")"; jf -i "$MX2/Mx2 Hdr10 (2600)/Mx2 Hdr10 (2600).mkv" -c copy -tag:v dvh1 "$f"
+  fi
+
+  # video codec x container
+  mxv "Mx2 H264 Mkv (2620)" mkv -c:v libx264 -preset ultrafast -pix_fmt yuv420p
+  mxv "Mx2 H264 Mp4 (2621)" mp4 -c:v libx264 -preset ultrafast -pix_fmt yuv420p
+  mxv "Mx2 Hevc Mkv (2622)" mkv -c:v libx265 -preset ultrafast -pix_fmt yuv420p -x265-params log-level=error
+  mxv "Mx2 Hevc Mp4 (2623)" mp4 -c:v libx265 -preset ultrafast -pix_fmt yuv420p -tag:v hvc1 -x265-params log-level=error
+  mxv "Mx2 Av1 Mkv (2624)" mkv -c:v libsvtav1 -preset 10 -pix_fmt yuv420p
+  mxv "Mx2 Av1 Mp4 (2625)" mp4 -c:v libsvtav1 -preset 10 -pix_fmt yuv420p
+  mxv "Mx2 Vp9 Mkv (2626)" mkv -c:v libvpx-vp9 -deadline realtime -cpu-used 8 -pix_fmt yuv420p
+  mxv "Mx2 Vp9 Mp4 (2627)" mp4 -c:v libvpx-vp9 -deadline realtime -cpu-used 8 -pix_fmt yuv420p
+  mxv "Mx2 Vp8 Mkv (2628)" mkv -c:v libvpx -deadline realtime -cpu-used 8 -pix_fmt yuv420p
+  mxv "Mx2 Mpeg4 Mkv (2629)" mkv -c:v mpeg4 -pix_fmt yuv420p
+  mxv "Mx2 Mpeg4 Mp4 (2630)" mp4 -c:v mpeg4 -pix_fmt yuv420p
+  mxv "Mx2 Mpeg2 Mkv (2631)" mkv -c:v mpeg2video -pix_fmt yuv420p
+  mxv "Mx2 Mpeg2 Mp4 (2632)" mp4 -c:v mpeg2video -pix_fmt yuv420p
+  mxv "Mx2 Theora Mkv (2633)" mkv -c:v libtheora
+  # pixel formats and scan types
+  mxv "Mx2 H264 422 (2640)" mkv -c:v libx264 -preset ultrafast -pix_fmt yuv422p10le
+  mxv "Mx2 H264 444 (2641)" mkv -c:v libx264 -preset ultrafast -pix_fmt yuv444p
+  mxv "Mx2 H264 Gray (2642)" mkv -c:v libx264 -preset ultrafast -pix_fmt gray
+  mxv "Mx2 Hevc 12Bit (2643)" mkv -c:v libx265 -preset ultrafast -pix_fmt yuv420p12le -x265-params log-level=error
+  mxv "Mx2 H264 Tff (2644)" mkv -c:v libx264 -preset ultrafast -pix_fmt yuv420p -flags +ildct+ilme -x264opts tff=1
+  mxv "Mx2 H264 Bff (2645)" mp4 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -flags +ildct+ilme -x264opts bff=1
+  mxv "Mx2 H264 Baseline (2646)" mp4 -c:v libx264 -preset ultrafast -profile:v baseline -level 3.0 -pix_fmt yuv420p
+  mxv "Mx2 H264 High (2647)" mp4 -c:v libx264 -preset ultrafast -profile:v high -level 4.1 -pix_fmt yuv420p
+  # frame rates and sizes
+  MX2_RATE=24000/1001 mxv "Mx2 Fps 23976 (2650)" mkv -c:v libx264 -preset ultrafast -pix_fmt yuv420p
+  MX2_RATE=30000/1001 mxv "Mx2 Fps 29970 (2651)" mp4 -c:v libx264 -preset ultrafast -pix_fmt yuv420p
+  MX2_RATE=25 mxv "Mx2 Fps 25 (2652)" mkv -c:v libx264 -preset ultrafast -pix_fmt yuv420p
+  MX2_RATE=60000/1001 mxv "Mx2 Fps 59940 (2653)" mp4 -c:v libx264 -preset ultrafast -pix_fmt yuv420p
+  MX2_RATE=50 mxv "Mx2 Fps 50 (2654)" mkv -c:v libx264 -preset ultrafast -pix_fmt yuv420p
+  MX2_SIZE=240x320 mxv "Mx2 Portrait (2655)" mkv -c:v libx264 -preset ultrafast -pix_fmt yuv420p
+  MX2_SIZE=1280x720 mxv "Mx2 Hd (2656)" mp4 -c:v libx264 -preset ultrafast -pix_fmt yuv420p
+  MX2_SIZE=1920x1080 mxv "Mx2 Fhd (2657)" mkv -c:v libx264 -preset ultrafast -pix_fmt yuv420p
+
+  # containers (H.264 + AAC unless the container needs another codec)
+  mxv "Mx2 Box Avi (2690)" avi -c:v libx264 -preset ultrafast -pix_fmt yuv420p
+  mxv "Mx2 Box Ts (2691)" ts -c:v libx264 -preset ultrafast -pix_fmt yuv420p
+  mxv "Mx2 Box M2ts (2692)" m2ts -c:v libx264 -preset ultrafast -pix_fmt yuv420p
+  mxv "Mx2 Box Mov (2693)" mov -c:v libx264 -preset ultrafast -pix_fmt yuv420p
+  mxv "Mx2 Box M4v (2694)" m4v -c:v libx264 -preset ultrafast -pix_fmt yuv420p
+  mxv "Mx2 Box 3gp (2695)" 3gp -c:v libx264 -preset ultrafast -pix_fmt yuv420p
+  mxv "Mx2 Box Flv (2696)" flv -c:v libx264 -preset ultrafast -pix_fmt yuv420p
+  MX2_ACODEC=mp2 mxv "Mx2 Box Mpg (2697)" mpg -c:v mpeg2video -pix_fmt yuv420p
+  MX2_ACODEC=wmav2 mxv "Mx2 Box Wmv (2698)" wmv -c:v wmv2 -pix_fmt yuv420p
+  MX2_ACODEC=libvorbis mxv "Mx2 Box Ogv (2699)" ogv -c:v libtheora
+  if [ ! -f "$MX2/Mx2 Box Webm (2700)/Mx2 Box Webm (2700).webm" ]; then
+    jf -f lavfi -i "testsrc=duration=3:size=320x240:rate=12" -f lavfi -i "sine=frequency=440:duration=3" -c:v libvpx-vp9 -deadline realtime -cpu-used 8 -pix_fmt yuv420p -c:a libopus -shortest "$(out "Mx2 Box Webm (2700)" webm)"
+  fi
+  # stream mixes for the video bit rate: with a subtitle track, with two video tracks
+  if [ ! -f "$MX2/Mx2 Mix Sub (2701)/Mx2 Mix Sub (2701).mkv" ]; then
+    printf '1\n00:00:01,000 --> 00:00:02,000\nHello\n' >"$WORK/s.srt"
+    jf -f lavfi -i "testsrc=duration=3:size=1280x720:rate=12" -f lavfi -i "sine=frequency=440:duration=3" -f srt -i "$WORK/s.srt" \
+      -map 0:v -map 1:a -map 2:s -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -c:s srt -shortest "$(out "Mx2 Mix Sub (2701)" mkv)"
+  fi
+  if [ ! -f "$MX2/Mx2 Mix Two Video (2702)/Mx2 Mix Two Video (2702).mkv" ]; then
+    jf -f lavfi -i "testsrc=duration=3:size=1280x720:rate=12" -f lavfi -i "testsrc2=duration=3:size=640x360:rate=12" -f lavfi -i "sine=frequency=440:duration=3" \
+      -map 0:v -map 1:v -map 2:a -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "$(out "Mx2 Mix Two Video (2702)" mkv)"
+  fi
+  if [ ! -f "$MX2/Mx2 Mix No Audio (2703)/Mx2 Mix No Audio (2703).mkv" ]; then
+    jf -f lavfi -i "testsrc=duration=3:size=320x240:rate=12" -c:v libx264 -preset ultrafast -pix_fmt yuv420p "$(out "Mx2 Mix No Audio (2703)" mkv)"
+  fi
+
+  # audio: <dir> <ext> <codec:layout[:extra args with ~ for spaces]>... ; one AAC-free file per set of tracks
+  mxa() {
+    local o; o="$(out "$1" "$2")"; shift 2
+    [ -f "$o" ] && return 0
+    local args=(-f lavfi -i "testsrc=duration=3:size=320x240:rate=12") maps=(-map 0:v) enc=(-c:v libx264 -preset ultrafast -pix_fmt yuv420p)
+    local n=0 spec codec layout extra
+    for spec in "$@"; do
+      IFS=: read -r codec layout extra <<<"$spec"
+      args+=(-f lavfi -i "anullsrc=channel_layout=$layout:sample_rate=48000:d=3")
+      n=$((n + 1))
+      maps+=(-map "$n:a")
+      enc+=("-c:a:$((n - 1))" "$codec")
+      # shellcheck disable=SC2206
+      [ -n "$extra" ] && enc+=(${extra//~/ })
+    done
+    jf "${args[@]}" "${maps[@]}" "${enc[@]}" -strict -2 "$o" || { rm -f "$o"; echo "Matrix2: $1 failed" >&2; }
+  }
+  mxa "Mx2 Audio Aac (2670)" mkv aac:mono aac:stereo aac:3.0 aac:quad aac:5.0 aac:5.1 aac:6.1 aac:7.1
+  mxa "Mx2 Audio Ac3 (2671)" mkv ac3:mono ac3:stereo ac3:3.0 ac3:quad ac3:5.0 ac3:5.1 eac3:mono eac3:stereo eac3:3.0 eac3:quad eac3:5.0 eac3:5.1
+  mxa "Mx2 Audio Dts (2672)" mkv dca:mono dca:stereo dca:3.0 dca:quad dca:5.0 dca:5.1
+  mxa "Mx2 Audio Truehd (2673)" mkv truehd:mono truehd:stereo truehd:3.0 truehd:quad truehd:5.0 truehd:5.1 truehd:6.1 truehd:7.1
+  mxa "Mx2 Audio Opus (2674)" mkv libopus:mono libopus:stereo libopus:3.0 libopus:quad libopus:5.0 libopus:5.1 libopus:6.1 libopus:7.1
+  mxa "Mx2 Audio Vorbis (2675)" mkv libvorbis:mono libvorbis:stereo libvorbis:3.0 libvorbis:quad libvorbis:5.0 libvorbis:5.1 libvorbis:6.1 libvorbis:7.1
+  mxa "Mx2 Audio Flac (2676)" mkv flac:mono flac:stereo flac:3.0 flac:quad flac:5.0 flac:5.1 flac:6.1 flac:7.1
+  mxa "Mx2 Audio Alac (2677)" mkv alac:mono alac:stereo alac:3.0 alac:quad alac:5.0 alac:5.1 alac:6.1 alac:7.1
+  mxa "Mx2 Audio Mp3 (2678)" mkv libmp3lame:mono libmp3lame:stereo mp2:mono mp2:stereo
+  mxa "Mx2 Audio Pcm (2679)" mkv pcm_s16le:mono pcm_s16le:stereo pcm_s24le:stereo pcm_s24le:5.1 pcm_f32le:stereo pcm_u8:stereo
+  mxa "Mx2 Audio Misc (2680)" mkv wavpack:mono wavpack:stereo wavpack:5.1 tta:mono tta:stereo wmav2:stereo adpcm_ms:stereo
+  mxa "Mx2 Audio Mp4 Aac (2681)" mp4 aac:mono aac:stereo aac:5.1 libmp3lame:stereo ac3:stereo ac3:5.1 eac3:stereo eac3:5.1 flac:stereo alac:stereo libopus:stereo libopus:5.1
+  mxa "Mx2 Audio Mp4 Misc (2682)" mp4 truehd:stereo pcm_s16le:stereo pcm_s24le:stereo mp2:stereo
+  rm -rf "$WORK"
+}
+if mx2_tools; then mx2_make; fi
+
 echo "media tree ready under $ROOT"

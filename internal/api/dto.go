@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"strconv"
 	"strings"
 	"time"
 
@@ -665,9 +666,9 @@ type mediaStreamDto struct {
 	// The members every video / audio stream carries in the reference's
 	// listing (playback.offer.R9).
 	BitDepth           *int     `json:"BitDepth,omitempty"`
-	AverageFrameRate   *float64 `json:"AverageFrameRate,omitempty"`
-	RealFrameRate      *float64 `json:"RealFrameRate,omitempty"`
-	ReferenceFrameRate *float64 `json:"ReferenceFrameRate,omitempty"`
+	AverageFrameRate   *float32 `json:"AverageFrameRate,omitempty"`
+	RealFrameRate      *float32 `json:"RealFrameRate,omitempty"`
+	ReferenceFrameRate *float32 `json:"ReferenceFrameRate,omitempty"`
 	IsAnamorphic       *bool    `json:"IsAnamorphic,omitempty"`
 	IsAVC              *bool    `json:"IsAVC,omitempty"`
 	NalLengthSize      string   `json:"NalLengthSize,omitempty"`
@@ -678,7 +679,20 @@ type mediaStreamDto struct {
 	VideoRange         string   `json:"VideoRange"`
 	VideoRangeType     string   `json:"VideoRangeType"`
 	AudioSpatialFormat string   `json:"AudioSpatialFormat"`
-	LocalizedOriginal  string   `json:"LocalizedOriginal,omitempty"`
+	// The Dolby Vision configuration record of a video stream that has one,
+	// its title, and whether the first frame carries HDR10+ metadata
+	// (playback.offer.R13).
+	DvVersionMajor            *int   `json:"DvVersionMajor,omitempty"`
+	DvVersionMinor            *int   `json:"DvVersionMinor,omitempty"`
+	DvProfile                 *int   `json:"DvProfile,omitempty"`
+	DvLevel                   *int   `json:"DvLevel,omitempty"`
+	RpuPresentFlag            *int   `json:"RpuPresentFlag,omitempty"`
+	ElPresentFlag             *int   `json:"ElPresentFlag,omitempty"`
+	BlPresentFlag             *int   `json:"BlPresentFlag,omitempty"`
+	DvBlSignalCompatibilityID *int   `json:"DvBlSignalCompatibilityId,omitempty"`
+	VideoDoViTitle            string `json:"VideoDoViTitle,omitempty"`
+	Hdr10PlusPresentFlag      bool   `json:"Hdr10PlusPresentFlag,omitempty"`
+	LocalizedOriginal         string `json:"LocalizedOriginal,omitempty"`
 }
 
 // isAnamorphicSAR reports whether a sample aspect ratio ("4:3") is not square.
@@ -690,16 +704,38 @@ func isAnamorphicSAR(sar string) bool {
 	return true
 }
 
-// videoRangeOf is the VideoRange and VideoRangeType of a color transfer
-// function (PQ is HDR10, HLG is HLG, anything else SDR).
-func videoRangeOf(transfer string) (string, string) {
-	switch strings.ToLower(transfer) {
-	case "smpte2084":
-		return "HDR", "HDR10"
-	case "arib-std-b67":
-		return "HDR", "HLG"
+// videoRangeOf is storage.VideoRangeOf.
+func videoRangeOf(s storage.MediaStreamRef) (string, string) { return storage.VideoRangeOf(s) }
+
+// doviTitle is the title of a Dolby Vision record: "Dolby Vision Profile 8.1
+// (HDR10)", the compatibility id after the profile when it is not 0 and its
+// name (1 HDR10, 2 SDR, 4 HLG, 6 HDR10) when it has one.
+func doviTitle(dv *storage.DoViConfig) string {
+	if dv == nil {
+		return ""
 	}
-	return "SDR", "SDR"
+	t := "Dolby Vision Profile " + strconv.Itoa(dv.Profile)
+	if dv.CompatibilityID != 0 {
+		t += "." + strconv.Itoa(dv.CompatibilityID)
+	}
+	switch dv.CompatibilityID {
+	case 1, 6:
+		t += " (HDR10)"
+	case 2:
+		t += " (SDR)"
+	case 4:
+		t += " (HLG)"
+	}
+	return t
+}
+
+// float32Rate is a frame rate at the precision the reference writes it.
+func float32Rate(v *float64) *float32 {
+	if v == nil {
+		return nil
+	}
+	f := float32(*v)
+	return &f
 }
 
 // knownColorValue drops the "unknown" ffprobe prints for an undeclared color
@@ -752,11 +788,18 @@ func mediaStreamDtos(streams []storage.MediaStreamRef) []mediaStreamDto {
 		case storage.StreamTypeVideo:
 			anamorphic := isAnamorphicSAR(s.SampleAspectRatio)
 			d.IsAnamorphic = &anamorphic
-			d.AverageFrameRate, d.RealFrameRate, d.ReferenceFrameRate = s.FrameRate, s.RealFrameRate, s.RealFrameRate
-			d.VideoRange, d.VideoRangeType = videoRangeOf(s.ColorTransfer)
+			d.AverageFrameRate, d.RealFrameRate, d.ReferenceFrameRate = float32Rate(s.FrameRate), float32Rate(s.RealFrameRate), float32Rate(s.RealFrameRate)
+			d.VideoRange, d.VideoRangeType = videoRangeOf(s)
+			d.Hdr10PlusPresentFlag = s.Hdr10Plus
+			if dv := s.DoVi; dv != nil {
+				d.DvVersionMajor, d.DvVersionMinor, d.DvProfile, d.DvLevel = &dv.VersionMajor, &dv.VersionMinor, &dv.Profile, &dv.Level
+				d.RpuPresentFlag, d.ElPresentFlag, d.BlPresentFlag = &dv.RPUPresent, &dv.ELPresent, &dv.BLPresent
+				d.DvBlSignalCompatibilityID = &dv.CompatibilityID
+				d.VideoDoViTitle = doviTitle(dv)
+			}
 			d.ColorPrimaries, d.ColorSpace, d.ColorTransfer = s.ColorPrimaries, s.ColorSpace, knownColorValue(s.ColorTransfer)
-			if s.IsAVC {
-				avc := true
+			if s.NalLengthSize != "" {
+				avc := s.IsAVC
 				d.IsAVC, d.NalLengthSize = &avc, s.NalLengthSize
 			}
 		case storage.StreamTypeAudio:

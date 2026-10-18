@@ -33,6 +33,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/collection"
@@ -93,8 +94,11 @@ type Scanner struct {
 	concurrency int
 	probeSem    chan struct{}
 	forceProbe  bool
-	dataDir     string
-	httpClient  interface {
+	// noFirstFrame is set once the ffprobe build is found not to know
+	// -only_first_vframe.
+	noFirstFrame atomic.Bool
+	dataDir      string
+	httpClient   interface {
 		fetchImage(ctx context.Context, url string) ([]byte, error)
 	}
 }

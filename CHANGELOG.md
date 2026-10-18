@@ -27,6 +27,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   always `mkv`; a `.strm` that cannot be probed is transcoded for a user with `ForceRemoteSourceTranscoding`. `probeVersion` is
   2, so the next incremental scan probes files again. The conformance media has a `Matrix` library (Matroska, HDR, 10-bit,
   anamorphic, a served Matroska `.strm`).
+- Probe and offer parity, fourth pass (`playback.md#offer` R13-R18, `playback7.json`, 5 new scenarios): media streams carry
+  Dolby Vision (`DvVersionMajor`/`DvVersionMinor`/`DvProfile`/`DvLevel`/`RpuPresentFlag`/`ElPresentFlag`/`BlPresentFlag`/
+  `DvBlSignalCompatibilityId`, `VideoDoViTitle`), `Hdr10PlusPresentFlag` (read from the first frame) and the full
+  `VideoRangeType` set (`DOVI*`, `HDR10Plus`); the derived video bit rate, the channel layout label, `Level`, `CodecTag`
+  and `opus`/`vorbis` estimates above 2 channels follow the reference. The offer evaluates `Video` `CodecProfile` conditions
+  (`VideoRangeType`, `Width`, `VideoBitDepth`, ...) with their transcode reasons, ignores the audio codec when no audio track is
+  default, and names the source container after the probed format (`mkv,webm`, `ts`, `asf`, `mpeg`, `ogg`, 3gp in the MP4
+  family). `probeVersion` is 3. `scripts/conformance-media.sh` builds a `Matrix2` library (about 100 items; needs docker, the
+  jellyfin-ffmpeg image, `mkvmerge`, and downloads `dovi_tool` and `hdr10plus_tool`).
 - Picture subtitles (`docs/contract/specs/bitmap.md`, `bitmap.json`, 11 new scenarios, real PGS/DVD/DVB fixtures
   from `scripts/conformance-media.sh` and `scripts/conformance-pgs.py`): picture tracks carry the subtitle
   canvas `Width`/`Height`, `SupportsExternalStream` is false for DVB and `Score` follows the reference (none for an

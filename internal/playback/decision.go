@@ -164,8 +164,11 @@ func reasons(item storage.Item, profile deviceprofile.DeviceProfile, opts Option
 	}
 	if hasAudio && !anyEntry(func(dp deviceprofile.DirectPlayProfile) bool {
 		return dp.AudioCodec == "" || containsToken(dp.AudioCodec, ac)
-	}) || d.Mode == ModeDirectStream && len(out) == 0 {
+	}) || d.Mode == ModeDirectStream && len(out) == 0 || hasAudio && !hasDefaultAudio(item.MediaStreams) {
 		out = append(out, "AudioCodecNotSupported")
+	}
+	if hasVideo {
+		out = append(out, videoConditionFailures(video, normalizeToken(item.Container), profile)...)
 	}
 	if opts.BurnSubtitle || opts.NoDirectPlay {
 		out = append(out, "SubtitleCodecNotSupported")
@@ -187,9 +190,17 @@ func decide(item storage.Item, profile deviceprofile.DeviceProfile, opts Options
 	audio, hasAudio := pickAudio(item.MediaStreams, opts.AudioStreamIndex)
 	videoCodec := normalizeToken(video.Codec)
 	audioCodec := normalizeToken(audio.Codec)
+	// with no audio track flagged default the audio codec does not restrict
+	// direct play (playback.offer.R18)
+	dpAudio := hasAudio && hasDefaultAudio(item.MediaStreams)
 
+	if hasVideo && len(videoConditionFailures(video, container, profile)) > 0 {
+		// a CodecProfile condition the video does not meet rules out every
+		// way of sending it as is
+		return transcodeOrNone(profile)
+	}
 	if container != "" && !opts.BurnSubtitle {
-		if !opts.NoDirectPlay && matchDirectPlay(profile.DirectPlayProfiles, container, videoCodec, audioCodec, hasVideo, hasAudio) {
+		if !opts.NoDirectPlay && matchDirectPlay(profile.DirectPlayProfiles, container, videoCodec, audioCodec, hasVideo, dpAudio) {
 			return Decision{Mode: ModeDirectPlay, Container: container}
 		}
 		if hasVideo && hasAudio {
@@ -204,6 +215,10 @@ func decide(item storage.Item, profile deviceprofile.DeviceProfile, opts Options
 		}
 	}
 
+	return transcodeOrNone(profile)
+}
+
+func transcodeOrNone(profile deviceprofile.DeviceProfile) Decision {
 	if tp, ok := firstTranscodingProfile(profile.TranscodingProfiles); ok {
 		return Decision{
 			Mode:       ModeTranscode,
@@ -212,7 +227,6 @@ func decide(item storage.Item, profile deviceprofile.DeviceProfile, opts Options
 			AudioCodec: firstToken(tp.AudioCodec),
 		}
 	}
-
 	return Decision{Mode: ModeNone}
 }
 
@@ -399,4 +413,14 @@ func decideAudio(item storage.Item, container string, profile deviceprofile.Devi
 		return Decision{Mode: ModeDirectPlay, Container: container}
 	}
 	return Decision{Mode: ModeNone}
+}
+
+// hasDefaultAudio reports whether some audio stream is flagged default.
+func hasDefaultAudio(streams []storage.MediaStreamRef) bool {
+	for _, s := range streams {
+		if s.Type == storage.StreamTypeAudio && s.IsDefault {
+			return true
+		}
+	}
+	return false
 }

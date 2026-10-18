@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 802
+    "pass": 807
   },
   "scenarios": {
     "admin.backup.create": "pass",
@@ -339,7 +339,11 @@
     "playback.hls.query-first": "pass",
     "playback.hls.segment": "pass",
     "playback.hls.segment-seek": "pass",
+    "playback.offer.audio-estimates": "pass",
+    "playback.offer.codec-conditions": "pass",
+    "playback.offer.container-names": "pass",
     "playback.offer.container-only": "pass",
+    "playback.offer.default-audio": "pass",
     "playback.offer.http-profile": "pass",
     "playback.offer.mp4-container-names": "pass",
     "playback.offer.no-profile": "pass",
@@ -349,6 +353,7 @@
     "playback.offer.strm-mkv": "pass",
     "playback.offer.url-flags": "pass",
     "playback.offer.url-params": "pass",
+    "playback.offer.video-range": "pass",
     "playback.subtitle.encode": "pass",
     "playback.subtitle.hls": "pass",
     "playback.subtitle.no-transcode": "pass",

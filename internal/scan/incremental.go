@@ -25,7 +25,8 @@ type signatureStore interface {
 //
 //	1: stream BitRate and frame rate.
 //	2: stream bit rate from the Matroska statistics tags or the codec estimate, bit depth, colour description, sample aspect ratio, codec tag, H.264 framing and the raw frame rate.
-const probeVersion = 2
+//	3: Dolby Vision record, HDR10+ flag, level as printed, video bit rate from the container's, plain channel layout, audio bit depth of PCM, reference frames from the first frame.
+const probeVersion = 3
 
 // probeResult is what the process* functions need from the probe step.
 type probeResult struct {

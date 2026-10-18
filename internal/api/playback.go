@@ -352,11 +352,15 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	opts := playback.Options{AudioStreamIndex: audioIdx}
-	if item.Type != storage.ItemTypeAudio && isMP4Family(item.Container) {
-		// the container of an MP4-family file is the format name of the probe;
-		// a profile that lists any of its names gets that one (any of them
-		// matches a direct play entry)
-		item.Container = mp4SourceName(item.Container, profile, inline)
+	if item.Type != storage.ItemTypeAudio {
+		if isMP4Family(item.Container) {
+			// the container of an MP4-family file is the format name of the probe;
+			// a profile that lists any of its names gets that one (any of them
+			// matches a direct play entry)
+			item.Container = mp4SourceName(item.Container, profile, inline)
+		} else if n := formatSourceName(item.Container, profile); n != "" {
+			item.Container = n
+		}
 	}
 	subMethod := ""
 	subTrack, hasSub := subtitleStream(item.MediaStreams, subIdx)
@@ -910,10 +914,43 @@ const mp4FormatName = "mov,mp4,m4a,3gp,3g2,mj2"
 
 func isMP4Family(container string) bool {
 	switch strings.ToLower(container) {
-	case "mp4", "m4v", "mov":
+	case "mp4", "m4v", "mov", "3gp", "3g2":
 		return true
 	}
 	return false
+}
+
+// formatSourceName is the Container of a non-MP4 video source, named after the
+// format of the probe rather than the file extension: Matroska files are "mkv",
+// WebM files "mkv,webm" (or the one of the two a Video direct play entry lists),
+// MPEG-TS and M2TS files "ts", ASF and WMV files "asf". Empty keeps the
+// extension.
+func formatSourceName(ext string, profile deviceprofile.DeviceProfile) string {
+	switch strings.ToLower(ext) {
+	case "mkv":
+		return "mkv"
+	case "webm":
+		for _, dp := range profile.DirectPlayProfiles {
+			if dp.Type != "" && !strings.EqualFold(dp.Type, "Video") {
+				continue
+			}
+			for _, n := range splitCodecs(dp.Container) {
+				if n == "mkv" || n == "webm" {
+					return n
+				}
+			}
+		}
+		return "mkv,webm"
+	case "ts", "m2ts":
+		return "ts"
+	case "wmv", "asf":
+		return "asf"
+	case "mpg", "mpeg":
+		return "mpeg"
+	case "ogv", "ogg":
+		return "ogg"
+	}
+	return ""
 }
 
 // mp4SourceName is the Container of an MP4-family video source: the one of the
