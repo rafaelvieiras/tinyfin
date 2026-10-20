@@ -665,7 +665,7 @@ func estimatedAudioBitRate(codec string, channels int) *int64 {
 		if channels > 2 {
 			br = 320000
 		}
-	case "truehd":
+	case "truehd", "mlp":
 		br = 700000 * int64(channels)
 	default:
 		return nil
