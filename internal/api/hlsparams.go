@@ -142,6 +142,11 @@ func burnRequest(item storage.Item, idx int) *transcode.Subtitle {
 	if !found {
 		for _, st := range item.MediaStreams {
 			if st.Type == storage.StreamTypeSubtitle && st.IsExternal && st.Index == idx {
+				if !subtitle.IsTextCodec(st.Codec) {
+					// a picture sidecar (VobSub, PGS, Matroska with pictures): the
+					// transcoder reads it as a second input and probes its canvas
+					return &transcode.Subtitle{Path: st.Path, Bitmap: true, External: true}
+				}
 				return &transcode.Subtitle{Path: st.Path}
 			}
 		}

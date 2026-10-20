@@ -58,7 +58,7 @@ func (c Config) resolveBurn(req *Request, jobDir string) {
 	if sub == nil || req.VideoCodec == "" || req.VideoCodec == "copy" || req.VideoCodec == "none" {
 		return
 	}
-	if !sub.Embedded && !sub.Bitmap && sub.Path != "" &&
+	if !sub.Embedded && (!sub.Bitmap || sub.External) && sub.Path != "" &&
 		sidecarContainers[strings.ToLower(filepath.Ext(sub.Path))] {
 		for _, s := range c.probeStreams(sub.Path) {
 			if s.CodecType != "subtitle" {

@@ -71,10 +71,26 @@ FA="$S3/Font Attach (4003)/Font Attach (4003)"
 mkdir -p "$(dirname "$FA")"
 if [ ! -f "$FA.mkv" ]; then
   font="$(fc-match -f '%{file}' 'Ubuntu:style=Regular' 2>/dev/null || true)"
+  family="$(fc-match -f '%{family[0]}' 'Ubuntu:style=Regular' 2>/dev/null || echo Ubuntu)"
   if [ -n "$font" ] && [ -f "$font" ]; then
     cp "$font" "$work/Attached.ttf"
-    sed 's/Zzyzx Nonexistent Font/Ubuntu/' "$S3/Font Missing (4000)/Font Missing (4000).en.ass" >"$work/fa.ass"
+    sed "s/Zzyzx Nonexistent Font/$family/" "$S3/Font Missing (4000)/Font Missing (4000).en.ass" >"$work/fa.ass"
     "$FFMPEG" -v error -y -i "$S3/Font Missing (4000)/Font Missing (4000).mp4" -i "$work/fa.ass" -map 0 -map 1 \
       -c copy -attach "$work/Attached.ttf" -metadata:s:t mimetype=font/ttf -metadata:s:s:0 language=eng "$FA.mkv"
   fi
+fi
+
+# external picture subtitles beside an 4 s video: a PGS .sup file and a VobSub
+# .idx/.sub pair, both with the words BURN IN from 0.5 s to 3.5 s (the same
+# generator as the embedded fixtures, scripts/conformance-pgs.py)
+python3 "$HERE/conformance-pgs.py" "$work/a.sup" 320 240 "BURN IN" 0.5 3.5
+clip "$S3/Ext Sup (4020)/Ext Sup (4020).mp4"
+[ -f "$S3/Ext Sup (4020)/Ext Sup (4020).en.sup" ] || cp "$work/a.sup" "$S3/Ext Sup (4020)/Ext Sup (4020).en.sup"
+clip "$S3/Ext Vob (4021)/Ext Vob (4021).mp4"
+if [ ! -f "$S3/Ext Vob (4021)/Ext Vob (4021).en.idx" ]; then
+  "$FFMPEG" -v error -y -f lavfi -i "color=c=black:s=320x240:r=6:d=4" -i "$work/a.sup" -map 0 -map 1 \
+    -c:v libx264 -preset ultrafast -c:s dvdsub -t 4 "$work/dvd.mkv"
+  mkvextract tracks "$work/dvd.mkv" "1:$work/vob.idx" >/dev/null
+  cp "$work/vob.idx" "$S3/Ext Vob (4021)/Ext Vob (4021).en.idx"
+  cp "$work/vob.sub" "$S3/Ext Vob (4021)/Ext Vob (4021).en.sub"
 fi

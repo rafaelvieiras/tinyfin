@@ -1433,5 +1433,6 @@ if mx2_tools; then mx2_make; fi
 # Subtitle sidecars (VobSub pairs, Matroska subtitle files, odd content): own
 # script, library "Subs2" (lazy).
 FFMPEG="$FFMPEG" "$(dirname "$0")/conformance-subs2.sh" "$ROOT"
+FFMPEG="$FFMPEG" "$(dirname "$0")/conformance-subs3.sh" "$ROOT"
 
 echo "media tree ready under $ROOT"
