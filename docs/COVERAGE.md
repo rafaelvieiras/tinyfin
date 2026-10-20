@@ -158,11 +158,11 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [scan](contract/specs/scan.md) | 28 | 28 | 23 | 23 |
 | [search](contract/specs/search.md) | 16 | 16 | 14 | 14 |
 | [startup](contract/specs/startup.md) | 25 | 23 | 3 | 0 |
-| [subtitles](contract/specs/subtitles.md) | 47 | 46 | 23 | 23 |
+| [subtitles](contract/specs/subtitles.md) | 47 | 47 | 23 | 23 |
 | [trickplay](contract/specs/trickplay.md) | 11 | 11 | 10 | 10 |
 | [users](contract/specs/users.md) | 188 | 188 | 195 | 195 |
 | [wire](contract/specs/wire.md) | 15 | 14 | 14 | 14 |
-| **total** | 996 | 987 | 740 | 737 |
+| **total** | 996 | 988 | 740 | 737 |
 
 ## Biggest gaps (planned or not planned, web-client facing)
 
