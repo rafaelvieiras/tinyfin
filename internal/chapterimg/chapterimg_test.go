@@ -5,6 +5,7 @@ import (
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -256,5 +257,44 @@ func TestRender(t *testing.T) {
 	}
 	if w, h := size(file); w != 80 || h != 45 {
 		t.Errorf("png is %dx%d, want 80x45", w, h)
+	}
+}
+
+func TestPlanForOverlaysAndWebP(t *testing.T) {
+	f := func(v float64) *float64 { return &v }
+	nan := math.NaN()
+	cases := []struct {
+		name string
+		p    Params
+		pass bool
+		webp bool
+	}{
+		{"blur zero is still made again", Params{Blur: intp(0)}, false, false},
+		{"percent in range", Params{PercentPlayed: f(50)}, false, false},
+		{"percent 0", Params{PercentPlayed: f(0)}, true, false},
+		{"percent 100", Params{PercentPlayed: f(100)}, true, false},
+		{"percent NaN", Params{PercentPlayed: f(nan)}, false, false},
+		{"unplayed 0", Params{UnplayedCount: intp(0)}, true, false},
+		{"unplayed 1", Params{UnplayedCount: intp(1)}, false, false},
+		{"background hex", Params{BackgroundColor: "#ff0000"}, false, false},
+		{"background word", Params{BackgroundColor: "red"}, true, false},
+		{"foreground given", Params{ForegroundLayer: "zzz"}, false, false},
+		{"accept alone", Params{Webp: true}, true, false},
+		{"accept and a resize", Params{Webp: true, MaxWidth: intp(100)}, false, true},
+		{"accept, explicit jpg", Params{Webp: true, MaxWidth: intp(100), Format: "Jpg"}, false, false},
+		{"accept, explicit bmp", Params{Webp: true, MaxWidth: intp(100), Format: "Bmp"}, false, false},
+		{"format webp", Params{Format: "Webp"}, false, true},
+	}
+	for _, c := range cases {
+		got := PlanFor(c.p, 640, 360)
+		if got.Passthrough != c.pass || (!c.pass && got.WebP != c.webp) {
+			t.Errorf("%s: passthrough %v webp %v, want %v %v", c.name, got.Passthrough, got.WebP, c.pass, c.webp)
+		}
+	}
+	if o, _ := overlayOf(Params{ForegroundLayer: "80"}); o.Layer != 80 {
+		t.Errorf("layer 80: %d", o.Layer)
+	}
+	if o, _ := overlayOf(Params{ForegroundLayer: "300"}); o.Layer != 44 {
+		t.Errorf("layer 300: %d", o.Layer)
 	}
 }

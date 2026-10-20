@@ -1302,5 +1302,1441 @@
     }
    }
   ]
+ },
+ {
+  "id": "chapters.images.overlays",
+  "endpoint": "GET /Items/{itemId}/Images/Chapter/{imageIndex}",
+  "spec": "chapters.md#images",
+  "scope": "modern",
+  "tags": [
+   "chapters",
+   "chapter-images"
+  ],
+  "covers": [
+   "chapters.images.R15"
+  ],
+  "requires": [
+   "library:chapterimg3",
+   "item:chapter-noise",
+   "item:chapter-portrait",
+   "item:chapter-small"
+  ],
+  "steps": [
+   {
+    "name": "wait for the pictures",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-small.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Chapters[1].ImageTag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      }
+     ]
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "overlay (blur=1): made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "blur": "1"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "overlay (blur=0): made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "blur": "0"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "overlay (blur=-1): made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "blur": "-1"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "overlay (percentPlayed=50): made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "percentPlayed": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "overlay (percentPlayed=99.99): made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "percentPlayed": "99.99"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "overlay (percentPlayed=1e1): made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "percentPlayed": "1e1"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "overlay (percentPlayed=NaN): made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "percentPlayed": "NaN"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "overlay (unplayedCount=1): made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "unplayedCount": "1"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "overlay (backgroundColor=ff0000): made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "backgroundColor": "ff0000"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "overlay (backgroundColor=#ff0000): made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "backgroundColor": "#ff0000"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "overlay (backgroundColor=00000000): made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "backgroundColor": "00000000"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "overlay (foregroundLayer=80): made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "foregroundLayer": "80"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "overlay (foregroundLayer=0): made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "foregroundLayer": "0"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "overlay (foregroundLayer=zzz): made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "foregroundLayer": "zzz"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no overlay (blur=): as it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "blur": ""
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no overlay (percentPlayed=0): as it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "percentPlayed": "0"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no overlay (percentPlayed=100): as it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "percentPlayed": "100"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no overlay (percentPlayed=-1): as it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "percentPlayed": "-1"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no overlay (percentPlayed=100.5): as it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "percentPlayed": "100.5"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no overlay (unplayedCount=0): as it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "unplayedCount": "0"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no overlay (unplayedCount=-1): as it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "unplayedCount": "-1"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no overlay (backgroundColor=): as it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "backgroundColor": ""
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no overlay (backgroundColor=zzz): as it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "backgroundColor": "zzz"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no overlay (backgroundColor=red): as it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "backgroundColor": "red"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no overlay (foregroundLayer=): as it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "foregroundLayer": ""
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no overlay (addPlayedIndicator=true): as it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "addPlayedIndicator": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "no overlay (cropWhitespace=true): as it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "cropWhitespace": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "overlays that count even with the indicator flag (addPlayedIndicator=true percentPlayed=50 unplayedCount=3 maxWidth=100): made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "addPlayedIndicator": "true",
+      "percentPlayed": "50",
+      "unplayedCount": "3",
+      "maxWidth": "100"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "chapters.images.webp",
+  "endpoint": "GET /Items/{itemId}/Images/Chapter/{imageIndex}",
+  "spec": "chapters.md#images",
+  "scope": "modern",
+  "tags": [
+   "chapters",
+   "chapter-images"
+  ],
+  "covers": [
+   "chapters.images.R9",
+   "chapters.images.R16"
+  ],
+  "requires": [
+   "library:chapterimg3",
+   "item:chapter-noise",
+   "item:chapter-portrait",
+   "item:chapter-small"
+  ],
+  "steps": [
+   {
+    "name": "wait for the pictures",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-small.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Chapters[1].ImageTag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      }
+     ]
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "format Webp (format=Webp): made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "format": "Webp"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/webp",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "RIFF"
+      },
+      {
+       "op": "contains",
+       "value": "WEBPVP8L"
+      }
+     ]
+    }
+   },
+   {
+    "name": "format Webp, sized (format=Webp maxWidth=100): made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "format": "Webp",
+      "maxWidth": "100"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/webp",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "RIFF"
+      },
+      {
+       "op": "contains",
+       "value": "WEBPVP8L"
+      }
+     ]
+    }
+   },
+   {
+    "name": "format 4 (format=4 maxHeight=40): made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "format": "4",
+      "maxHeight": "40"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/webp",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "RIFF"
+      },
+      {
+       "op": "contains",
+       "value": "WEBPVP8L"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Webp wins over Accept png (format=Webp) Accept image/png: made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "format": "Webp"
+     },
+     "headers": {
+      "Accept": "image/png"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/webp",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "RIFF"
+      },
+      {
+       "op": "contains",
+       "value": "WEBPVP8L"
+      }
+     ]
+    }
+   },
+   {
+    "name": "accepted (maxWidth=100) Accept image/webp: made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "100"
+     },
+     "headers": {
+      "Accept": "image/webp"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/webp",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "RIFF"
+      },
+      {
+       "op": "contains",
+       "value": "WEBPVP8L"
+      }
+     ]
+    }
+   },
+   {
+    "name": "accepted (maxWidth=100) Accept image/webp,image/*;q=0.8: made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "100"
+     },
+     "headers": {
+      "Accept": "image/webp,image/*;q=0.8"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/webp",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "RIFF"
+      },
+      {
+       "op": "contains",
+       "value": "WEBPVP8L"
+      }
+     ]
+    }
+   },
+   {
+    "name": "accepted (maxWidth=100) Accept text/html, image/webp: made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "100"
+     },
+     "headers": {
+      "Accept": "text/html, image/webp"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/webp",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "RIFF"
+      },
+      {
+       "op": "contains",
+       "value": "WEBPVP8L"
+      }
+     ]
+    }
+   },
+   {
+    "name": "accepted (maxWidth=100) Accept image/webp;q=0: made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "100"
+     },
+     "headers": {
+      "Accept": "image/webp;q=0"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/webp",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "RIFF"
+      },
+      {
+       "op": "contains",
+       "value": "WEBPVP8L"
+      }
+     ]
+    }
+   },
+   {
+    "name": "quality only, accepted (quality=50) Accept image/webp: made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "quality": "50"
+     },
+     "headers": {
+      "Accept": "image/webp"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/webp",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "RIFF"
+      }
+     ]
+    }
+   },
+   {
+    "name": "not accepted (maxWidth=100) Accept image/png: made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "100"
+     },
+     "headers": {
+      "Accept": "image/png"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "not accepted (maxWidth=100) Accept IMAGE/WEBP: made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "100"
+     },
+     "headers": {
+      "Accept": "IMAGE/WEBP"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "not accepted (maxWidth=100) Accept image/webpx: made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "100"
+     },
+     "headers": {
+      "Accept": "image/webpx"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "not accepted (maxWidth=100) Accept image/*: made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "100"
+     },
+     "headers": {
+      "Accept": "image/*"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "not accepted (maxWidth=100) Accept */*: made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "100"
+     },
+     "headers": {
+      "Accept": "*/*"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "nothing to change, accepted Accept image/webp: as it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "headers": {
+      "Accept": "image/webp"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an explicit format wins over Accept (maxWidth=100 format=Jpg) Accept image/webp: made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "100",
+      "format": "Jpg"
+     },
+     "headers": {
+      "Accept": "image/webp"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an explicit format wins over Accept (maxWidth=100 format=Png) Accept image/webp: made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "100",
+      "format": "Png"
+     },
+     "headers": {
+      "Accept": "image/webp"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/png",
+      "Vary": "Accept"
+     }
+    }
+   },
+   {
+    "name": "an explicit format wins over Accept (maxWidth=100 format=Bmp) Accept image/webp: made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "100",
+      "format": "Bmp"
+     },
+     "headers": {
+      "Accept": "image/webp"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an explicit format wins over Accept (maxWidth=100 format=Gif) Accept image/webp: made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "100",
+      "format": "Gif"
+     },
+     "headers": {
+      "Accept": "image/webp"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an explicit format wins over Accept (maxWidth=100 format=2) Accept image/webp: made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "100",
+      "format": "2"
+     },
+     "headers": {
+      "Accept": "image/webp"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an unknown word is no format, so Accept applies (maxWidth=100 format=xyz) Accept image/webp: made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "100",
+      "format": "xyz"
+     },
+     "headers": {
+      "Accept": "image/webp"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/webp",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "RIFF"
+      },
+      {
+       "op": "contains",
+       "value": "WEBPVP8L"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an empty format is no format (maxWidth=100 format=) Accept image/webp: made again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "100",
+      "format": ""
+     },
+     "headers": {
+      "Accept": "image/webp"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/webp",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "RIFF"
+      },
+      {
+       "op": "contains",
+       "value": "WEBPVP8L"
+      }
+     ]
+    }
+   },
+   {
+    "name": "svg leaves it as it is whatever Accept says (maxWidth=100 format=Svg) Accept image/webp: as it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "100",
+      "format": "Svg"
+     },
+     "headers": {
+      "Accept": "image/webp"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a side that rounds to nothing stays a JPEG whatever the format (width=640 height=54 maxWidth=5 format=Webp): as it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "width": "640",
+      "height": "54",
+      "maxWidth": "5",
+      "format": "Webp"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg",
+      "Vary": "Accept"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   }
+  ]
  }
 ]

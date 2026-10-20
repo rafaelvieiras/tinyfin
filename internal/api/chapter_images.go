@@ -69,18 +69,30 @@ func (s *Server) handleChapterImage(w http.ResponseWriter, r *http.Request, item
 		}
 		*f.dst = v
 	}
-	for _, name := range []string{"blur", "unplayedCount"} {
-		if v := q[strings.ToLower(name)]; v != "" {
-			if _, _, ok := chapterimg.ParseInt(v); !ok {
-				bad(name, v)
+	for _, f := range []struct {
+		name string
+		dst  **int
+	}{{"blur", &p.Blur}, {"unplayedCount", &p.UnplayedCount}} {
+		if v := q[strings.ToLower(f.name)]; v != "" {
+			n, _, ok := chapterimg.ParseInt(v)
+			if !ok {
+				bad(f.name, v)
+				continue
 			}
+			*f.dst = n
 		}
 	}
 	if v := q["percentplayed"]; v != "" {
-		if _, err := strconv.ParseFloat(v, 64); err != nil {
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil {
 			bad("percentPlayed", v)
+		} else {
+			p.PercentPlayed = &f
 		}
 	}
+	p.BackgroundColor = q["backgroundcolor"]
+	p.ForegroundLayer = q["foregroundlayer"]
+	p.Webp = acceptsWebP(r.Header.Get("Accept"))
 	p.Format = q["format"]
 	if r.PathValue("format") != "" && !isImageFormatName(p.Format) {
 		bad("format", p.Format)
@@ -125,6 +137,7 @@ func (s *Server) handleChapterImage(w http.ResponseWriter, r *http.Request, item
 		w.Header().Set("Cache-Control", "public")
 	}
 	w.Header().Set("Content-Type", ctype)
+	w.Header().Set("Vary", "Accept")
 	// pictures are always sent whole
 	r.Header.Del("Range")
 	http.ServeFile(w, r, file)
@@ -143,3 +156,16 @@ func isImageFormatName(s string) bool {
 // isChapterImageType reports whether an image type path segment names chapter
 // pictures (case-insensitive).
 func isChapterImageType(t string) bool { return strings.EqualFold(t, "Chapter") }
+
+// acceptsWebP reports whether an Accept header lists image/webp as a media
+// type of its own (any parameters, q included, are not looked at; the match
+// is case-sensitive).
+func acceptsWebP(h string) bool {
+	for _, part := range strings.Split(h, ",") {
+		mt, _, _ := strings.Cut(part, ";")
+		if strings.TrimSpace(mt) == "image/webp" {
+			return true
+		}
+	}
+	return false
+}

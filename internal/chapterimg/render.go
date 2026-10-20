@@ -27,6 +27,15 @@ type Params struct {
 	Quality               *int
 	// Format is the requested output format as sent ("Png", "jpg", ...).
 	Format string
+	// Blur, PercentPlayed, UnplayedCount, BackgroundColor and ForegroundLayer
+	// are the overlay members (see overlay.go); a nil/empty one was not given.
+	Blur          *int
+	PercentPlayed *float64
+	UnplayedCount *int
+	// BackgroundColor and ForegroundLayer are the values as sent.
+	BackgroundColor, ForegroundLayer string
+	// Webp is true when the caller accepts image/webp (the Accept header).
+	Webp bool
 }
 
 const (
@@ -41,9 +50,11 @@ const (
 type outFormat int
 
 const (
-	fmtKeep outFormat = iota // serve the stored format (JPEG)
-	fmtJPEG                  // re-encode as JPEG
+	fmtKeep         outFormat = iota // serve the stored format (JPEG)
+	fmtJPEG                          // re-encode as JPEG
+	fmtExplicitJPEG                  // jpg asked for: the stored format, whatever Accept says
 	fmtPNG
+	fmtWebP
 	fmtSVG // never processed
 )
 
@@ -56,8 +67,12 @@ func formatOf(s string) outFormat {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "png", "3":
 		return fmtPNG
-	case "bmp", "gif", "webp", "0", "1", "4":
+	case "webp", "4":
+		return fmtWebP
+	case "bmp", "gif", "0", "1":
 		return fmtJPEG
+	case "jpg", "2":
+		return fmtExplicitJPEG
 	case "svg", "5":
 		return fmtSVG
 	}
@@ -78,12 +93,17 @@ type Plan struct {
 	W, H        int
 	Quality     int
 	PNG         bool
+	WebP        bool
+	Overlay     Overlay
 }
 
 // ContentType is the media type of the answer.
 func (p Plan) ContentType() string {
 	if p.PNG {
 		return "image/png"
+	}
+	if p.WebP {
+		return "image/webp"
 	}
 	return "image/jpeg"
 }
@@ -119,11 +139,15 @@ func PlanFor(p Params, srcW, srcH int) Plan {
 	plan := Plan{W: srcW, H: srcH, Quality: defaultQuality}
 	of := formatOf(p.Format)
 	plan.PNG = of == fmtPNG
+	plan.WebP = of == fmtWebP
 	if of == fmtSVG {
 		plan.Passthrough = true
 		return plan
 	}
-	need := of != fmtKeep
+	need := of != fmtKeep && of != fmtExplicitJPEG
+	ov, needOv := overlayOf(p)
+	plan.Overlay = ov
+	need = need || needOv
 	if q, ok := val(p.Quality); ok {
 		if q < 1 {
 			q = 1
@@ -146,6 +170,11 @@ func PlanFor(p Params, srcW, srcH int) Plan {
 	if !need {
 		plan.Passthrough = true
 		return plan
+	}
+	// no format asked for (or one that is not a name): a caller that takes
+	// WebP gets it once the picture is made again
+	if p.Webp && (of == fmtKeep) {
+		plan.WebP = true
 	}
 	cw, ch := float64(srcW), float64(srcH)
 	curW, curH := srcW, srcH
@@ -207,6 +236,7 @@ func PlanFor(p Params, srcW, srcH int) Plan {
 	if curW < 1 || curH < 1 {
 		// a side that rounds to nothing leaves the picture as it is
 		plan.Passthrough = true
+		plan.PNG, plan.WebP = false, false
 		return plan
 	}
 	plan.W, plan.H = curW, curH
@@ -233,8 +263,10 @@ func (g *Generator) Render(id storage.ItemID, path string, mod time.Time, p Para
 	ext := ".jpg"
 	if plan.PNG {
 		ext = ".png"
+	} else if plan.WebP {
+		ext = ".webp"
 	}
-	key := sha1.Sum([]byte(fmt.Sprintf("%s|%d|%d|%d|%d|%v", path, mod.UnixNano(), plan.W, plan.H, plan.Quality, plan.PNG)))
+	key := sha1.Sum([]byte(fmt.Sprintf("v2|%s|%d|%d|%d|%d|%v|%v|%+v", path, mod.UnixNano(), plan.W, plan.H, plan.Quality, plan.PNG, plan.WebP, plan.Overlay)))
 	dir := filepath.Join(g.Dir(id), "cache")
 	out := filepath.Join(dir, hex.EncodeToString(key[:8])+ext)
 	if st, err := os.Stat(out); err == nil && st.Size() > 0 {
@@ -250,6 +282,7 @@ func (g *Generator) Render(id storage.ItemID, path string, mod time.Time, p Para
 		return "", "", err
 	}
 	dst := resize(src, plan.W, plan.H)
+	plan.Overlay.draw(dst)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", "", err
 	}
@@ -259,6 +292,8 @@ func (g *Generator) Render(id storage.ItemID, path string, mod time.Time, p Para
 	}
 	if plan.PNG {
 		err = png.Encode(tmp, dst)
+	} else if plan.WebP {
+		err = encodeWebP(tmp, dst)
 	} else {
 		err = jpeg.Encode(tmp, dst, &jpeg.Options{Quality: plan.Quality})
 	}

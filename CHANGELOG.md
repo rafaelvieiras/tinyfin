@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Chapter pictures against the reference, round two (`chapters.md#images` R6, R15, R16, `chapters4.json`, 6 new
+  scenarios): the size rules follow the reference to the pixel (width and height, then `maxHeight` and `maxWidth` in
+  sequence, ties to the even number with the ratio worked out first, fill by a divisor rounded up, a negative fill
+  cancels it, a side that rounds to nothing serves the stored still); `blur`, `percentPlayed`, `unplayedCount`,
+  `foregroundLayer` and `backgroundColor` make the picture again and are drawn like the reference (the unplayed
+  digits use a built-in font); `format=Webp` and an `Accept: image/webp` caller get a lossless WebP (`Vary: Accept`
+  on every picture answer). `ImagePath` stays hidden on purpose.
 - Subtitle sidecars by content and the rest of the subtitle matrix (`subtitles.md#sidecar`, `subtitles2.json`,
   10 new scenarios, fixtures from `scripts/conformance-subs2.sh`): subtitle files are probed, not trusted by
   extension (a SubRip `.vtt` is `subrip`, an empty or unreadable file is no stream), VobSub `.idx`/`.sub` pairs
