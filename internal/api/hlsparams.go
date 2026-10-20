@@ -93,7 +93,9 @@ func hlsContainer(profile deviceprofile.DeviceProfile, fallback string) string {
 
 // hlsKeyParams are the query parameters that change what a transcode job
 // produces; two requests that agree on all of them share one job.
-var hlsKeyParams = []string{"mediasourceid", "videocodec", "audiocodec", "audiostreamindex", "subtitlestreamindex", "subtitlemethod"}
+var hlsKeyParams = []string{"mediasourceid", "videocodec", "audiocodec", "audiostreamindex", "subtitlestreamindex", "subtitlemethod",
+	"maxwidth", "maxheight", "width", "height", "videobitrate", "audiobitrate", "profile", "level",
+	"h264-profile", "h264-level", "hevc-profile", "maxaudiochannels", "audiochannels", "transcodingmaxaudiochannels"}
 
 // hlsJobKey names the transcode job a request belongs to. A request with
 // none of the parameters keeps the item id, the name jobs had before track

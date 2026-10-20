@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Encoded HLS segments match the reference (`playback.md#hls` R10-R13, `playback10.json`, 5 new scenarios,
+  fixtures from `scripts/conformance-hls3.sh`): an H.264 picture is encoded with the reference's own encoder
+  settings (`veryfast` at `crf` 23 under a rate cap held to ten times the source's picture rate, light motion
+  search, closed GOPs, BT.709 tags, High profile with B-frames unless the request pins a profile and level),
+  so the first picture of a segment has the reference's two-frame decode lead and a segment is byte-identical
+  to the reference's on the same encoder build; HEVC targets use `libx265` with the reference's settings. The
+  scale is written with the reference's display-size expressions (width, height, both, or the source's size
+  under a bit rate), `MaxHeight`/`Height` now limit the picture, and the 416 default width drops the height
+  limit. `Profile`/`Level` are read besides `h264-profile`/`h264-level`, `hevc-profile` pins HEVC Main. A
+  segment that opens less than 5 s before the end starts its picture 5 s before it (the copied sound is cut at
+  the position asked for when ffmpeg can). Output carries no metadata or chapters (no language descriptor in
+  the transport stream), and a transcode job is keyed by the size, bit rate and profile parameters too.
+
 - Subtitle sidecars by content and the rest of the subtitle matrix (`subtitles.md#sidecar`, `subtitles2.json`,
   10 new scenarios, fixtures from `scripts/conformance-subs2.sh`): subtitle files are probed, not trusted by
   extension (a SubRip `.vtt` is `subrip`, an empty or unreadable file is no stream), VobSub `.idx`/`.sub` pairs

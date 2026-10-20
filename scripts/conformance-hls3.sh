@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Pictures of other shapes for the encoded-HLS scenarios (library "Hls3", lazy):
+# a 642x362 picture with a 4:3 sample aspect ratio (odd sizes after scaling),
+# a 10-bit H.264 picture and an HEVC one, 8 s each at 24 fps with a mono tone.
+#
+#   scripts/conformance-hls3.sh /path/to/media-root
+set -euo pipefail
+ROOT="${1:?usage: conformance-hls3.sh <media-root>}"
+FFMPEG="${FFMPEG:-ffmpeg}"
+mk() { # <name> <size> <extra ffmpeg video args...>
+  local name="$1" size="$2"; shift 2
+  local out="$ROOT/Hls3/$name/$name.mp4"
+  [ -f "$out" ] && return 0
+  mkdir -p "$(dirname "$out")"
+  "$FFMPEG" -v error -y -f lavfi -i "testsrc=duration=8:size=$size:rate=24" \
+    -f lavfi -i "sine=frequency=330:duration=8" "$@" -c:a aac -shortest "$out" ||
+    { rm -f "$out"; echo "Hls3: $name failed" >&2; }
+}
+mk "Odd Clip (2401)" 642x362 -vf setsar=4/3 -c:v libx264 -preset ultrafast -pix_fmt yuv420p
+mk "Ten Bit (2402)" 640x360 -c:v libx264 -preset ultrafast -pix_fmt yuv420p10le -profile:v high10
+mk "Hevc Clip (2403)" 640x360 -c:v libx265 -x265-params log-level=error -preset ultrafast -pix_fmt yuv420p -tag:v hvc1

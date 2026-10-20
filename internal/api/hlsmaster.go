@@ -92,6 +92,57 @@ func effectiveMaxWidth(q url.Values) int {
 	return lim
 }
 
+// effectiveMaxSize is the width and height limits of a re-encoded picture. A
+// request without a video bit rate is held to the default width, and when that
+// default is what limits the picture the height limit is dropped.
+func effectiveMaxSize(q url.Values) (w, h int) {
+	w = numParam(q, "maxwidth", "width")
+	h = numParam(q, "maxheight", "height")
+	if numParam(q, "videobitrate") == 0 && (w == 0 || w > defaultTranscodeWidth) {
+		return defaultTranscodeWidth, 0
+	}
+	return w, h
+}
+
+// encoderProfile is what the request pins on the encoder (-profile:v, -level),
+// nothing when it names neither. Only the first profile of the list counts:
+// baseline and constrainedbaseline are the baseline profile, a name that
+// starts with high the high one, and an HEVC main10 is encoded as main; a name
+// the encoder does not know leaves the choice to it. The level is a number the
+// encoder takes as is, at most 51 and not for HEVC.
+func encoderProfile(q url.Values, codec string) (profile, level string) {
+	list := q.Get("profile")
+	if list == "" {
+		list = q.Get(codec + "-profile")
+	}
+	first, _, _ := strings.Cut(list, ",")
+	first = strings.ToLower(strings.TrimSpace(first))
+	switch {
+	case codec == "hevc":
+		if strings.HasPrefix(first, "main") {
+			profile = "main"
+		}
+		return profile, ""
+	case first == "baseline" || first == "constrainedbaseline":
+		profile = "baseline"
+	case first == "main":
+		profile = "main"
+	case strings.HasPrefix(first, "high"):
+		profile = "high"
+	}
+	lv := strings.TrimSpace(q.Get("level"))
+	if lv == "" {
+		lv = strings.TrimSpace(q.Get("h264-level"))
+	}
+	if f, err := strconv.ParseFloat(lv, 64); err == nil && lv != "" {
+		if f > 51 || f < 0 {
+			f = 51
+		}
+		level = strconv.FormatFloat(f, 'f', -1, 64)
+	}
+	return profile, level
+}
+
 // hlsMedia is what a master playlist says about the variant: the streams
 // the request plays and whether each is copied.
 type hlsMedia struct {

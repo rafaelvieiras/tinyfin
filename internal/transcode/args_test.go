@@ -17,6 +17,7 @@ func TestBuildArgs_Remux(t *testing.T) {
 
 	want := []string{
 		"-i", "/media/movie.mkv",
+		"-map_metadata", "-1", "-map_chapters", "-1",
 		"-map", "0:v:0", "-map", "0:a:0",
 		"-c:v", "copy",
 		"-c:a", "copy",
@@ -51,6 +52,7 @@ func TestBuildArgs_DirectStream_AudioOnlyEncode(t *testing.T) {
 
 	want := []string{
 		"-i", "/media/movie.mkv",
+		"-map_metadata", "-1", "-map_chapters", "-1",
 		"-map", "0:v:0", "-map", "0:a:0",
 		"-c:v", "copy",
 		"-c:a", "aac",
@@ -88,17 +90,18 @@ func TestBuildArgs_FullTranscode(t *testing.T) {
 	want := []string{
 		"-ss", "12.345",
 		"-i", "/media/movie.mkv",
+		"-map_metadata", "-1", "-map_chapters", "-1",
 		"-map", "0:v:0", "-map", "0:a:0",
-		"-c:v", "h264",
-		"-preset", "veryfast", "-profile:v", "high", "-level", "4.1",
-		"-b:v", "4000000",
+		"-c:v", "libx264",
+		"-preset", "veryfast", "-crf", "23",
 		"-maxrate", "4000000",
 		"-bufsize", "8000000",
-		"-vf", "scale=-2:720",
+		"-x264opts", "subme=0:me_range=16:rc_lookahead=10:me=hex:open_gop=0",
+		"-vf", `setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709,scale=trunc(oh*a/2)*2:min(max(iw/a\,ih)\,720),format=yuv420p`,
 		"-c:a", "aac",
 		"-b:a", "128000",
 		"-ac", "2",
-		"-force_key_frames", "expr:gte(t,n_forced*4)",
+		"-force_key_frames", "expr:gte(t,n_forced*4)", "-sc_threshold", "0",
 		"-muxdelay", "5", "-muxpreload", "0", "-output_ts_offset", "12.345",
 		"-f", "hls",
 		"-hls_time", "4",
@@ -174,7 +177,7 @@ func TestBuildArgs_NonH264TargetSkipsPresetFlags(t *testing.T) {
 	}
 	got := buildArgs(req)
 	for _, a := range got {
-		if a == "-preset" || a == "-profile:v" {
+		if a == "-x264opts" || a == "-profile:v" || a == "-level" {
 			t.Fatalf("did not expect H.264-specific flags for hevc target, got args: %#v", got)
 		}
 	}
@@ -185,6 +188,7 @@ func TestBuildArgs_EmptyVideoAudioCodecTreatedAsCopy(t *testing.T) {
 	got := buildArgs(req)
 	want := []string{
 		"-i", "in.mp4",
+		"-map_metadata", "-1", "-map_chapters", "-1",
 		"-map", "0:v:0", "-map", "0:a:0",
 		"-c:v", "copy",
 		"-c:a", "copy",
@@ -345,5 +349,44 @@ func TestSegmentCuts(t *testing.T) {
 	want = []int64{104400000, 200230000, 210230000, 334400000}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("cuts: got %v want %v", got, want)
+	}
+}
+
+func TestScaleFilterForms(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		req  Request
+		want string
+	}{
+		{"width", Request{MaxWidth: 320}, `scale=trunc(min(max(iw\,ih*a)\,320)/2)*2:trunc(ow/a/2)*2`},
+		{"height", Request{MaxHeight: 100}, `scale=trunc(oh*a/2)*2:min(max(iw/a\,ih)\,100)`},
+		{"both", Request{MaxWidth: 300, MaxHeight: 150}, `scale=trunc(min(max(iw\,ih*a)\,min(300\,150*a))/2)*2:trunc(min(max(iw/a\,ih)\,min(300/a\,150))/2)*2`},
+		{"source", Request{SourceWidth: 640, SourceHeight: 360}, `scale=trunc(min(max(iw\,ih*a)\,min(640\,360*a))/2)*2:trunc(min(max(iw/a\,ih)\,min(640/a\,360))/2)*2`},
+		{"unknown", Request{}, ``},
+	} {
+		if got := scaleFilter(c.req); got != c.want {
+			t.Errorf("%s: scaleFilter = %q, want %q", c.name, got, c.want)
+		}
+	}
+}
+
+func TestVideoEncodeArgsRateCapAndProfile(t *testing.T) {
+	got := videoEncodeArgs(Request{VideoCodec: "h264", VideoBitrate: 4_000_000, VideoSourceBitrate: 56966, H264Profile: "main", H264Level: "41"})
+	joined := strings.Join(got, " ")
+	for _, w := range []string{"-c:v libx264", "-crf 23", "-maxrate 569660 -bufsize 1139320", "-profile:v main -level 41"} {
+		if !strings.Contains(joined, w) {
+			t.Errorf("missing %q in %s", w, joined)
+		}
+	}
+	none := strings.Join(videoEncodeArgs(Request{VideoCodec: "h264"}), " ")
+	if !strings.Contains(none, "-maxrate 0 -bufsize 0") || strings.Contains(none, "-profile:v") || strings.Contains(none, "-level") {
+		t.Errorf("unpinned encode = %s", none)
+	}
+}
+
+func TestAudioDropWithCopiedSound(t *testing.T) {
+	got := strings.Join(buildArgs(Request{InputPath: "in.mp4", VideoCodec: "h264", AudioCodec: "copy", Container: "ts", StartTimeTicks: 150_000_000, AudioDropTicks: 30_000_000}), " ")
+	if !strings.Contains(got, `-bsf:a noise=drop='lt(pts*tb\,3.000)'`) || !strings.Contains(got, "-ss 15.000") {
+		t.Errorf("args = %s", got)
 	}
 }

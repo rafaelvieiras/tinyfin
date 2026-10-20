@@ -75,7 +75,8 @@
     {"key": "music2", "name": "Music2", "type": "music", "path": "Music2", "lazy": true},
     {"key": "music4", "name": "Music4", "type": "music", "path": "Music4", "lazy": true},
     {"key": "music5", "name": "Music5", "type": "music", "path": "Music5", "lazy": true},
-    {"key": "musicvideos", "name": "MusicVideos", "type": "musicvideos", "path": "MusicVideos", "lazy": true}
+    {"key": "musicvideos", "name": "MusicVideos", "type": "musicvideos", "path": "MusicVideos", "lazy": true},
+    {"key": "hls3", "name": "Hls3", "type": "movies", "path": "Hls3", "lazy": true}
   ],
   "items": [
     {"key": "alpha", "type": "Movie", "path": "Movies/Alpha Movie (2015)/Alpha Movie (2015).mp4"},
@@ -547,6 +548,9 @@
     {"key": "mvmixed", "type": "Folder", "library": "musicvideos", "path": "MusicVideos/Mixed"},
     {"key": "mvdocs", "type": "Folder", "library": "musicvideos", "path": "MusicVideos/Docs Dir"},
     {"key": "mvnest", "type": "Folder", "library": "musicvideos", "path": "MusicVideos/Nest"},
-    {"key": "mvverdir", "type": "Folder", "library": "musicvideos", "path": "MusicVideos/Ver Dir"}
+    {"key": "mvverdir", "type": "Folder", "library": "musicvideos", "path": "MusicVideos/Ver Dir"},
+    {"key": "oddclip", "type": "Movie", "library": "hls3", "path": "Hls3/Odd Clip (2401)/Odd Clip (2401).mp4"},
+    {"key": "tenbit", "type": "Movie", "library": "hls3", "path": "Hls3/Ten Bit (2402)/Ten Bit (2402).mp4"},
+    {"key": "hevcclip", "type": "Movie", "library": "hls3", "path": "Hls3/Hevc Clip (2403)/Hevc Clip (2403).mp4"}
   ]
 }
