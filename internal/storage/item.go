@@ -1,6 +1,9 @@
 package storage
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 // ItemType is the reference server's BaseItemKind (OpenAPI schema
 // BaseItemKind), narrowed to the kinds this project's scope actually
@@ -327,7 +330,13 @@ type Item struct {
 	// assembled at the API layer from this plus MediaStreams.
 	Path      string
 	Container string
-	Size      int64
+	// Format is the probed container format (ffprobe's format_name with
+	// Matroska named mkv and MPEG-TS named ts); empty when the file was not
+	// probed. TSTimestamp is the timestamp state of a transport stream
+	// (None, Zero, Valid), empty for other containers.
+	Format      string
+	TSTimestamp string
+	Size        int64
 	// BitRate is the container bit rate ffprobe reported for the address of
 	// a .strm item (nil when none was probed); a file's own rate is its size
 	// over its length.
@@ -459,4 +468,30 @@ type ChapterRef struct {
 	StartTicks int64
 	// Name is the chapter's title tag; empty when the file has none.
 	Name string
+}
+
+// SourceContainer is the Container of the media source listed for the item:
+// the extension of the file when it is one of the names of the probed format,
+// else the first of them ("mov" for an .m4v, "ts" for an .m2ts, "asf" for a
+// .wmv). An item that was not probed keeps its extension.
+func (i Item) SourceContainer() string {
+	if i.Format == "" {
+		return i.Container
+	}
+	names := strings.Split(i.Format, ",")
+	for _, n := range names {
+		if strings.EqualFold(n, i.Container) {
+			return i.Container
+		}
+	}
+	return names[0]
+}
+
+// DisplayContainer is the Container of the item itself: the probed format
+// as is (empty names the extension).
+func (i Item) DisplayContainer() string {
+	if i.Format != "" {
+		return i.Format
+	}
+	return i.Container
 }

@@ -36,12 +36,12 @@ func TestVideoConditions(t *testing.T) {
 		mode Mode
 	}{
 		{"range listed", deviceprofile.CodecProfile{Type: "Video", Conditions: []deviceprofile.ProfileCondition{cond("EqualsAny", "VideoRangeType", "SDR|HDR10", true)}}, nil, ModeDirectPlay},
-		{"range missing", deviceprofile.CodecProfile{Type: "Video", Conditions: []deviceprofile.ProfileCondition{cond("EqualsAny", "VideoRangeType", "SDR|HLG", true)}}, []string{"VideoRangeTypeNotSupported"}, ModeTranscode},
-		{"width", deviceprofile.CodecProfile{Type: "Video", Codec: "hevc", Conditions: []deviceprofile.ProfileCondition{cond("LessThanEqual", "Width", "1280", true)}}, []string{"VideoResolutionNotSupported"}, ModeTranscode},
+		{"range missing", deviceprofile.CodecProfile{Type: "Video", Conditions: []deviceprofile.ProfileCondition{cond("EqualsAny", "VideoRangeType", "SDR|HLG", true)}}, []string{"VideoCodecNotSupported", "VideoRangeTypeNotSupported"}, ModeTranscode},
+		{"width", deviceprofile.CodecProfile{Type: "Video", Codec: "hevc", Conditions: []deviceprofile.ProfileCondition{cond("LessThanEqual", "Width", "1280", true)}}, []string{"VideoCodecNotSupported", "VideoResolutionNotSupported"}, ModeTranscode},
 		{"other codec", deviceprofile.CodecProfile{Type: "Video", Codec: "h264", Conditions: []deviceprofile.ProfileCondition{cond("LessThanEqual", "Width", "100", true)}}, nil, ModeDirectPlay},
-		{"bit depth", deviceprofile.CodecProfile{Type: "Video", Conditions: []deviceprofile.ProfileCondition{cond("LessThanEqual", "VideoBitDepth", "8", true)}}, []string{"VideoBitDepthNotSupported"}, ModeTranscode},
+		{"bit depth", deviceprofile.CodecProfile{Type: "Video", Conditions: []deviceprofile.ProfileCondition{cond("LessThanEqual", "VideoBitDepth", "8", true)}}, []string{"VideoCodecNotSupported", "VideoBitDepthNotSupported"}, ModeTranscode},
 		{"absent optional", deviceprofile.CodecProfile{Type: "Video", Conditions: []deviceprofile.ProfileCondition{cond("Equals", "VideoProfile", "Main", false)}}, nil, ModeDirectPlay},
-		{"absent required", deviceprofile.CodecProfile{Type: "Video", Conditions: []deviceprofile.ProfileCondition{cond("Equals", "VideoProfile", "Main", true)}}, []string{"VideoProfileNotSupported"}, ModeTranscode},
+		{"absent required", deviceprofile.CodecProfile{Type: "Video", Conditions: []deviceprofile.ProfileCondition{cond("Equals", "VideoProfile", "Main", true)}}, []string{"VideoCodecNotSupported", "VideoProfileNotSupported"}, ModeTranscode},
 		{"apply conditions off", deviceprofile.CodecProfile{Type: "Video", ApplyConditions: []deviceprofile.ProfileCondition{cond("Equals", "Width", "640", true)}, Conditions: []deviceprofile.ProfileCondition{cond("LessThanEqual", "Width", "100", true)}}, nil, ModeDirectPlay},
 	}
 	for _, c := range cases {
@@ -62,10 +62,36 @@ func TestNoDefaultAudioDoesNotRestrictDirectPlay(t *testing.T) {
 	}
 	p.DirectPlayProfiles[0].Container = "mp4"
 	d := Decide(it, p)
-	if d.Mode != ModeTranscode || !reflect.DeepEqual(d.Reasons, []string{"ContainerNotSupported", "VideoCodecNotSupported", "AudioCodecNotSupported"}) {
-		// the video codec is listed, so only container and audio are named
-		if !reflect.DeepEqual(d.Reasons, []string{"ContainerNotSupported", "AudioCodecNotSupported"}) {
-			t.Fatalf("mode %v reasons %v", d.Mode, d.Reasons)
+	// the transcoding profile makes h264, the source is hevc: the picture is named too
+	if want := []string{"ContainerNotSupported", "VideoCodecNotSupported", "AudioCodecNotSupported"}; !reflect.DeepEqual(d.Reasons, want) {
+		t.Fatalf("mode %v reasons %v, want %v", d.Mode, d.Reasons, want)
+	}
+}
+
+// A transcode also names a codec that no transcoding profile meant for
+// streaming produces (the reference does, although the direct play entry lists
+// it); the sound is looked up among the profiles that take the picture.
+func TestTranscodeCodecReasons(t *testing.T) {
+	width := deviceprofile.CodecProfile{Type: "Video", Conditions: []deviceprofile.ProfileCondition{{Condition: "LessThanEqual", Property: "Width", Value: "100", IsRequired: true}}}
+	tp := func(ctx, vc, ac string) deviceprofile.TranscodingProfile {
+		return deviceprofile.TranscodingProfile{Container: "ts", Type: "Video", Protocol: "hls", Context: ctx, VideoCodec: vc, AudioCodec: ac}
+	}
+	for name, c := range map[string]struct {
+		tcs  []deviceprofile.TranscodingProfile
+		want []string
+	}{
+		"produced":             {[]deviceprofile.TranscodingProfile{tp("Streaming", "h264,hevc", "aac")}, []string{"VideoResolutionNotSupported"}},
+		"empty lists":          {[]deviceprofile.TranscodingProfile{tp("Streaming", "", "")}, []string{"VideoResolutionNotSupported"}},
+		"other picture":        {[]deviceprofile.TranscodingProfile{tp("Streaming", "vp9", "aac")}, []string{"VideoCodecNotSupported", "VideoResolutionNotSupported"}},
+		"static ignored":       {[]deviceprofile.TranscodingProfile{tp("Static", "hevc", "aac"), tp("Streaming", "vp9", "aac")}, []string{"VideoCodecNotSupported", "VideoResolutionNotSupported"}},
+		"other sound":          {[]deviceprofile.TranscodingProfile{tp("Streaming", "hevc", "opus")}, []string{"AudioCodecNotSupported", "VideoResolutionNotSupported"}},
+		"sound of other entry": {[]deviceprofile.TranscodingProfile{tp("Streaming", "hevc", "opus"), tp("Streaming", "h264", "aac")}, []string{"AudioCodecNotSupported", "VideoResolutionNotSupported"}},
+		"picture and sound":    {[]deviceprofile.TranscodingProfile{tp("Streaming", "vp9", "opus")}, []string{"VideoCodecNotSupported", "AudioCodecNotSupported", "VideoResolutionNotSupported"}},
+	} {
+		p := condProfile(width)
+		p.TranscodingProfiles = c.tcs
+		if d := Decide(condItem(), p); !reflect.DeepEqual(d.Reasons, c.want) {
+			t.Errorf("%s: %v, want %v", name, d.Reasons, c.want)
 		}
 	}
 }

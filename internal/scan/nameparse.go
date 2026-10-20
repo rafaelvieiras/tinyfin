@@ -166,6 +166,9 @@ var videoExtensions = map[string]bool{
 	".mkv": true, ".mp4": true, ".avi": true, ".webm": true, ".m4v": true, ".ts": true, ".mov": true,
 	".wmv": true, ".flv": true, ".mpg": true, ".mpeg": true, ".ogv": true, ".3gp": true, ".m2ts": true,
 	".vob": true, ".divx": true,
+	".3g2": true, ".amv": true, ".asf": true, ".dvr-ms": true, ".f4v": true, ".m2t": true, ".m2v": true,
+	".mk3d": true, ".mpe": true, ".mts": true, ".mxf": true, ".nsv": true, ".ogm": true, ".qt": true,
+	".rm": true, ".rmvb": true, ".tp": true, ".wtv": true, ".xvid": true,
 	// disc images (VideoType Iso)
 	".iso": true, ".img": true,
 	// a text file holding the address (or path) of the media

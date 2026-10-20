@@ -60,7 +60,7 @@ var specialFeatureTypes = []string{
 func (s *Server) versionSources(ctx context.Context, item storage.Item) []mediaSourceInfoDto {
 	var out []mediaSourceInfoDto
 	for _, v := range s.extrasOf(ctx, item.ID, storage.ExtraTypeVersion) {
-		src := baseMediaSourceInfo(v, v.Container)
+		src := baseMediaSourceInfo(v, v.SourceContainer())
 		s.applyStreamDefaults(ctx, &src, v.MediaStreams)
 		src.Name = v.Name
 		src.SupportsDirectPlay = true

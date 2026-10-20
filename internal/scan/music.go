@@ -438,7 +438,7 @@ func (s *Scanner) processTrack(ctx context.Context, pool *jobPool, lib storage.L
 	item := storage.Item{
 		ID: itemID, Type: storage.ItemTypeAudio, LibraryID: lib.ID, ParentID: parent,
 		Path: path, Container: videoExt(path), Size: info.Size(),
-		MediaStreams: pr.streams, RunTimeTicks: pr.ticks, DateCreated: pr.added,
+		MediaStreams: pr.streams, RunTimeTicks: pr.ticks, Format: pr.format, TSTimestamp: pr.tsTimestamp, DateCreated: pr.added,
 	}
 	if pr.tags == nil {
 		// Reused from an earlier probe: the tags are what the item holds.

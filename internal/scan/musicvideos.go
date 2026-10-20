@@ -175,7 +175,7 @@ func (s *Scanner) processMusicVideo(ctx context.Context, pool *jobPool, lib stor
 	item := storage.Item{
 		ID: itemID, Type: storage.ItemTypeMusicVideo, LibraryID: lib.ID, ParentID: parent,
 		Name: name, SortName: name, Path: path, Container: videoExt(path), Size: c.size,
-		MediaStreams: pr.streams, Chapters: pr.chapters, RunTimeTicks: pr.ticks, DateCreated: pr.added,
+		MediaStreams: pr.streams, Chapters: pr.chapters, RunTimeTicks: pr.ticks, Format: pr.format, TSTimestamp: pr.tsTimestamp, DateCreated: pr.added,
 	}
 	if pr.title != "" && optionsOf(ctx).embeddedTitles {
 		item.Name, item.SortName = pr.title, pr.title

@@ -26,7 +26,8 @@ type signatureStore interface {
 //	1: stream BitRate and frame rate.
 //	2: stream bit rate from the Matroska statistics tags or the codec estimate, bit depth, colour description, sample aspect ratio, codec tag, H.264 framing and the raw frame rate.
 //	3: Dolby Vision record, HDR10+ flag, level as printed, video bit rate from the container's, plain channel layout, audio bit depth of PCM, reference frames from the first frame.
-const probeVersion = 3
+//	4: the probed container format, the transport stream timestamp and the probe depth of the reference (200 MB / 1 GB: MPEG-TS stream bit rates).
+const probeVersion = 4
 
 // probeResult is what the process* functions need from the probe step.
 type probeResult struct {
@@ -42,6 +43,9 @@ type probeResult struct {
 	mtimeNS int64
 	// title is the title tag of the file, read when the file was probed.
 	title string
+	// format and tsTimestamp are the probed container format and the
+	// timestamp state of a transport stream (see storage.Item).
+	format, tsTimestamp string
 	// tags are the file's tags (lower-cased names) when it was freshly
 	// probed; nil when the probe was reused. embeddedArt is the picture
 	// attached to an audio file, found by the same probe.
@@ -93,6 +97,7 @@ func (s *Scanner) probeOrReuse(ctx context.Context, pool *jobPool, itemID storag
 				res.streams = withExternalSubtitles(stripExternalSubtitles(old.MediaStreams), external)
 				res.ticks = old.RunTimeTicks
 				res.chapters = old.Chapters
+				res.format, res.tsTimestamp = old.Format, old.TSTimestamp
 				pool.countSkipped()
 				return res
 			}
@@ -102,10 +107,15 @@ func (s *Scanner) probeOrReuse(ctx context.Context, pool *jobPool, itemID storag
 	info, err := s.probe(ctx, path)
 	pool.countProbed()
 	res.err = err
-	res.streams = withExternalSubtitles(mediaStreamsFromProbe(info), external)
+	probed := mediaStreamsFromProbe(info)
+	res.streams = withExternalSubtitles(probed, external)
 	res.ticks = runtimeTicksFromProbe(info)
 	res.chapters = chaptersFromProbe(info)
 	res.title = info.Format.title()
+	res.format = normalizeFormat(info.Format.FormatName, probed)
+	if err == nil && info.Format.FormatName == "mpegts" {
+		res.tsTimestamp = transportStreamTimestamp(path)
+	}
 	res.tags = audioTags(info)
 	res.embeddedArt = attachedPicture(info)
 	res.record = hasSigs && err == nil && statErr == nil

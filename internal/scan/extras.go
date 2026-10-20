@@ -366,7 +366,7 @@ func (s *Scanner) processExtra(ctx context.Context, pool *jobPool, lib storage.L
 	item := storage.Item{
 		ID: id, Type: extraItemType(extraType), LibraryID: lib.ID,
 		Name: name, SortName: name, Path: path, Container: videoExt(path), Size: size,
-		MediaStreams: pr.streams, Chapters: pr.chapters, RunTimeTicks: pr.ticks, DateCreated: pr.added,
+		MediaStreams: pr.streams, Chapters: pr.chapters, RunTimeTicks: pr.ticks, Format: pr.format, TSTimestamp: pr.tsTimestamp, DateCreated: pr.added,
 		ExtraType: extraType, OwnerID: &owner, ProductionYear: year,
 	}
 	if err := s.upsertItem(ctx, item); err != nil {

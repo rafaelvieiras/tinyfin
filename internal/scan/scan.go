@@ -493,8 +493,8 @@ func (s *Scanner) processHomeVideo(ctx context.Context, pool *jobPool, lib stora
 		Path: path, Container: videoExt(path), Size: size,
 		MediaStreams: pr.streams,
 		Chapters:     pr.chapters,
-		RunTimeTicks: pr.ticks,
-		DateCreated:  pr.added,
+		RunTimeTicks: pr.ticks, Format: pr.format, TSTimestamp: pr.tsTimestamp,
+		DateCreated: pr.added,
 	}
 	if pr.title != "" && optionsOf(ctx).embeddedTitles {
 		item.Name, item.SortName = pr.title, pr.title
@@ -885,7 +885,7 @@ func (s *Scanner) processMovie(ctx context.Context, pool *jobPool, lib storage.L
 		Size:         size,
 		MediaStreams: pr.streams,
 		Chapters:     pr.chapters,
-		RunTimeTicks: pr.ticks,
+		RunTimeTicks: pr.ticks, Format: pr.format, TSTimestamp: pr.tsTimestamp,
 		// .UTC(), not bare time.Now(): the sqlite driver stores a time.Time
 		// as its own t.String() text (modernc.org/sqlite's formatTime), so
 		// a non-UTC-zoned value serializes with its local offset instead of
@@ -1487,8 +1487,8 @@ func (s *Scanner) processEpisode(ctx context.Context, pool *jobPool, lib storage
 		Path:         episodePath, Container: videoExt(episodePath), Size: job.size,
 		MediaStreams: pr.streams,
 		Chapters:     pr.chapters,
-		RunTimeTicks: pr.ticks,
-		DateCreated:  pr.added,
+		RunTimeTicks: pr.ticks, Format: pr.format, TSTimestamp: pr.tsTimestamp,
+		DateCreated: pr.added,
 	}
 	if ef.Year > 0 {
 		y := ef.Year
