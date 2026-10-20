@@ -3372,7 +3372,8 @@
     "subtitles.delivery.no-profile",
     "subtitles2.delivery.bitmap-matrix",
     "subtitles2.delivery.embedded-matrix",
-    "subtitles2.delivery.external-matrix"
+    "subtitles2.delivery.external-matrix",
+    "subtitles3.delivery.mov-container"
    ]
   },
   {

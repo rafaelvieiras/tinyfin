@@ -52,6 +52,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   streaming transcoding profile produces the source codec (the open "reason lists with conditions" difference); `.3g2 .amv .asf
   .dvr-ms .f4v .m2t .m2v .mk3d .mpe .mts .mxf .nsv .ogm .qt .rm .rmvb .tp .wtv .xvid` files are scanned. `probeVersion` is 4, and
   the items table gains `format` and `ts_timestamp` (migration 40).
+- Subtitle burn-in, third pass (`bitmap.md#burnin` R5-R7, `subtitles3.json`, scenarios from `scripts/conformance-subs3.sh`):
+  the `charenc` of a burned-in external text file is detected for many more encodings (UTF-32 byte order marks, EUC-JP,
+  EUC-KR, Big5, GB18030 told from Korean, the Cyrillic, Greek, Hebrew, Arabic and Thai code pages and the Latin ones, a
+  short UTF-8 sample as the reference reads it), checked against a corpus of 84 samples the reference was observed to
+  answer for; the attachments (fonts) of the input file become libass' fonts directory like the reference; an external
+  picture sidecar (`.sup`, `.idx`/`.sub`, `.mks`) selected for burn-in is marked a picture track by the route, so its canvas
+  is probed and it is read from the seek position too.
+
 - Subtitle sidecars by content and the rest of the subtitle matrix (`subtitles.md#sidecar`, `subtitles2.json`,
   10 new scenarios, fixtures from `scripts/conformance-subs2.sh`): subtitle files are probed, not trusted by
   extension (a SubRip `.vtt` is `subrip`, an empty or unreadable file is no stream), VobSub `.idx`/`.sub` pairs

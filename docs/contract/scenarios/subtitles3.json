@@ -1,0 +1,688 @@
+[
+ {
+  "id": "subtitles3.burn.fonts",
+  "endpoint": "GET /Videos/{itemId}/hls1/{playlistId}/{segmentId}.{container}",
+  "spec": "bitmap.md#burnin",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "transcode"
+  ],
+  "covers": [
+   "bitmap.burnin.R4",
+   "bitmap.burnin.R6"
+  ],
+  "requires": [
+   "library:subs3",
+   "item:font-missing",
+   "item:font-arial",
+   "item:font-serif",
+   "item:font-attach"
+  ],
+  "steps": [
+   {
+    "name": "an ASS style font that is not installed falls back",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.font-missing.id}}/hls1/main/0.ts?MediaSourceId={{item.font-missing.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&AudioStreamIndex=1&SubtitleStreamIndex=0&SubtitleMethod=Encode&VideoBitrate=500000&PlaySessionId=s3-{{run.suffix}}-font-missing&runtimeTicks=0&actualSegmentLengthTicks=40000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a style font of Arial",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.font-arial.id}}/hls1/main/0.ts?MediaSourceId={{item.font-arial.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&AudioStreamIndex=1&SubtitleStreamIndex=0&SubtitleMethod=Encode&VideoBitrate=500000&PlaySessionId=s3-{{run.suffix}}-font-arial&runtimeTicks=0&actualSegmentLengthTicks=40000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a style font of Times New Roman",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.font-serif.id}}/hls1/main/0.ts?MediaSourceId={{item.font-serif.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&AudioStreamIndex=1&SubtitleStreamIndex=0&SubtitleMethod=Encode&VideoBitrate=500000&PlaySessionId=s3-{{run.suffix}}-font-serif&runtimeTicks=0&actualSegmentLengthTicks=40000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an embedded track whose font is attached to the file",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.font-attach.id}}/hls1/main/0.ts?MediaSourceId={{item.font-attach.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&AudioStreamIndex=1&SubtitleStreamIndex=2&SubtitleMethod=Encode&VideoBitrate=500000&PlaySessionId=s3-{{run.suffix}}-font-attach&runtimeTicks=0&actualSegmentLengthTicks=40000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles3.burn.charenc",
+  "endpoint": "GET /Videos/{itemId}/hls1/{playlistId}/{segmentId}.{container}",
+  "spec": "bitmap.md#burnin",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "transcode"
+  ],
+  "covers": [
+   "bitmap.burnin.R5"
+  ],
+  "requires": [
+   "library:subs3",
+   "item:enc-latin1",
+   "item:enc-cp1252",
+   "item:enc-cp1251",
+   "item:enc-gbk",
+   "item:enc-sjis",
+   "item:enc-utf16",
+   "item:enc-utf8",
+   "item:enc-short"
+  ],
+  "steps": [
+   {
+    "name": "latin1 text",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.enc-latin1.id}}/hls1/main/0.ts?MediaSourceId={{item.enc-latin1.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&AudioStreamIndex=1&SubtitleStreamIndex=0&SubtitleMethod=Encode&VideoBitrate=500000&PlaySessionId=s3-{{run.suffix}}-enc-latin1&runtimeTicks=0&actualSegmentLengthTicks=40000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "cp1252 text with typographic quotes",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.enc-cp1252.id}}/hls1/main/0.ts?MediaSourceId={{item.enc-cp1252.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&AudioStreamIndex=1&SubtitleStreamIndex=0&SubtitleMethod=Encode&VideoBitrate=500000&PlaySessionId=s3-{{run.suffix}}-enc-cp1252&runtimeTicks=0&actualSegmentLengthTicks=40000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "cp1251 text",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.enc-cp1251.id}}/hls1/main/0.ts?MediaSourceId={{item.enc-cp1251.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&AudioStreamIndex=1&SubtitleStreamIndex=0&SubtitleMethod=Encode&VideoBitrate=500000&PlaySessionId=s3-{{run.suffix}}-enc-cp1251&runtimeTicks=0&actualSegmentLengthTicks=40000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "GBK text",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.enc-gbk.id}}/hls1/main/0.ts?MediaSourceId={{item.enc-gbk.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&AudioStreamIndex=1&SubtitleStreamIndex=0&SubtitleMethod=Encode&VideoBitrate=500000&PlaySessionId=s3-{{run.suffix}}-enc-gbk&runtimeTicks=0&actualSegmentLengthTicks=40000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Shift-JIS text",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.enc-sjis.id}}/hls1/main/0.ts?MediaSourceId={{item.enc-sjis.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&AudioStreamIndex=1&SubtitleStreamIndex=0&SubtitleMethod=Encode&VideoBitrate=500000&PlaySessionId=s3-{{run.suffix}}-enc-sjis&runtimeTicks=0&actualSegmentLengthTicks=40000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "UTF-16 text with a byte order mark",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.enc-utf16.id}}/hls1/main/0.ts?MediaSourceId={{item.enc-utf16.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&AudioStreamIndex=1&SubtitleStreamIndex=0&SubtitleMethod=Encode&VideoBitrate=500000&PlaySessionId=s3-{{run.suffix}}-enc-utf16&runtimeTicks=0&actualSegmentLengthTicks=40000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "UTF-8 text with few multi-byte characters",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.enc-utf8.id}}/hls1/main/0.ts?MediaSourceId={{item.enc-utf8.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&AudioStreamIndex=1&SubtitleStreamIndex=0&SubtitleMethod=Encode&VideoBitrate=500000&PlaySessionId=s3-{{run.suffix}}-enc-utf8&runtimeTicks=0&actualSegmentLengthTicks=40000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a single high byte",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.enc-short.id}}/hls1/main/0.ts?MediaSourceId={{item.enc-short.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&AudioStreamIndex=1&SubtitleStreamIndex=0&SubtitleMethod=Encode&VideoBitrate=500000&PlaySessionId=s3-{{run.suffix}}-enc-short&runtimeTicks=0&actualSegmentLengthTicks=40000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles3.burn.bitmap-sidecar",
+  "endpoint": "GET /Videos/{itemId}/hls1/{playlistId}/{segmentId}.{container}",
+  "spec": "bitmap.md#burnin",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "transcode"
+  ],
+  "covers": [
+   "bitmap.burnin.R2",
+   "bitmap.burnin.R7"
+  ],
+  "requires": [
+   "library:subs3",
+   "item:ext-sup",
+   "item:ext-vob"
+  ],
+  "steps": [
+   {
+    "name": "a PGS .sup file beside the video",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.ext-sup.id}}/hls1/main/0.ts?MediaSourceId={{item.ext-sup.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&AudioStreamIndex=1&SubtitleStreamIndex=0&SubtitleMethod=Encode&VideoBitrate=500000&PlaySessionId=s3-{{run.suffix}}-ext-sup&runtimeTicks=0&actualSegmentLengthTicks=40000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the same after a seek",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.ext-sup.id}}/hls1/main/2.ts?MediaSourceId={{item.ext-sup.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=1&VideoCodec=h264&AudioCodec=aac&AudioStreamIndex=1&SubtitleStreamIndex=0&SubtitleMethod=Encode&VideoBitrate=500000&PlaySessionId=s3-{{run.suffix}}-seek-ext-sup&runtimeTicks=20000000&actualSegmentLengthTicks=10000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a VobSub pair beside the video",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.ext-vob.id}}/hls1/main/0.ts?MediaSourceId={{item.ext-vob.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&AudioStreamIndex=1&SubtitleStreamIndex=0&SubtitleMethod=Encode&VideoBitrate=500000&PlaySessionId=s3-{{run.suffix}}-ext-vob&runtimeTicks=0&actualSegmentLengthTicks=40000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the same after a seek",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.ext-vob.id}}/hls1/main/2.ts?MediaSourceId={{item.ext-vob.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=1&VideoCodec=h264&AudioCodec=aac&AudioStreamIndex=1&SubtitleStreamIndex=0&SubtitleMethod=Encode&VideoBitrate=500000&PlaySessionId=s3-{{run.suffix}}-seek-ext-vob&runtimeTicks=20000000&actualSegmentLengthTicks=10000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles3.delivery.mov-container",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "subtitles.md#delivery",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "playback"
+  ],
+  "covers": [
+   "subtitles.delivery.R8"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-mov"
+  ],
+  "steps": [
+   {
+    "name": "mov container, srt embedded",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-mov.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mov",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "srt",
+         "Method": "Embed"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryMethod",
+       "op": "eq",
+       "value": "Embed"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "mov container, mov_text embedded",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-mov.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mov",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "mov_text",
+         "Method": "Embed"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryMethod",
+       "op": "eq",
+       "value": "Embed"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "mov and mp4 containers, srt embedded",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-mov.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mov,mp4",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "srt",
+         "Method": "Embed"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryMethod",
+       "op": "eq",
+       "value": "Embed"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "mov container, srt external",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-mov.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mov",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "srt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryMethod",
+       "op": "eq",
+       "value": "External"
+      }
+     ]
+    }
+   },
+   {
+    "name": "mov container, ass embedded: not a format of the track",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-mov.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mov",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "ass",
+         "Method": "Embed"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      }
+     ]
+    }
+   }
+  ]
+ }
+]

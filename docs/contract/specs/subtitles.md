@@ -76,6 +76,7 @@ Scenarios: [`../scenarios/subtitles.json`](../scenarios/subtitles.json) and [`..
 
 - **subtitles.delivery.R6** The format of an entry is any name for a text stream: the reference does not check it against what it can write. `xyz`, `json`, `ttml`, `text`, `srt` and `subrip` all take a SubRip track for `External` (the URL ends in the name as the entry spells it, `Stream.xyz`), `Hls` and `Embed`. `External` refuses `ass`, `ssa`, `sub`, `sup`, `pgs`, `pgssub`, `vobsub`, `dvdsub`, `dvbsub` and `hdmv_pgs_subtitle` for a text stream; `Hls` and `Embed` refuse only `ass` and `ssa` (an embedded SubRip track is not embedded as ASS).
 - **subtitles.delivery.R7** An `Hls` entry serves a text stream only when the source is transcoded; an `Embed` entry only when it is served as it is (R4). A stream that is neither embedded nor in a text format (a picture stream in a text entry) is `Encode`.
+- **subtitles.delivery.R8** The container of the direct-play profile is matched against the format name of the file, not its extension: an MP4 holding a `mov_text` track is offered for a profile whose containers are `mov`, `mp4`, `mov,mp4` alike, and a text profile with `Embed` for `srt` or `mov_text` embeds it (`DeliveryMethod` `Embed`, no `DeliveryUrl`), one with `External` serves it as a file; a format the track cannot be converted to in the container (ASS in a profile that only embeds ASS where the file holds `mov_text`) is burned in and the source transcoded.
 
 ## <a id="manage"></a>Upload and delete
 
@@ -98,7 +99,7 @@ Observed on the reference and deliberately not reproduced (not asserted by a sce
 * **Queries on the same route.** The reference caches converted documents without all parameters in the key: a request with `copyTimestamps` can be answered with the document of an earlier one with the same index and offsets. Tinyfin has no cache.
 * **A dashed media source id.** The reference answers `500` for a `mediaSourceId` written with dashes (it compares the text); Tinyfin folds every id of a path to one spelling before routing (wire.id.R2) and serves it.
 * **Text named `.mks`.** A file named `.mks` whose content is plain text (not Matroska) is served by the reference unevenly: some positions answered `200` and others `404` for the same content. Tinyfin answers `404` for it unless its content is ASS or a plain-text track; not asserted.
-* **Content of another encoding.** The charset a burned-in external text file is read in (`bitmap.burnin.R5`) is detected by a short byte heuristic; the reference's detector may disagree on short or ambiguous samples.
+* **Content of another encoding.** The charset a burned-in external text file is read in (`bitmap.burnin.R5`) is detected by rules over the bytes; the reference's detector is statistical and disagrees on short or ambiguous samples (listed in `bitmap.md`).
 * **Providers.** There is no subtitle provider plugin system: search lists nothing, nothing can be downloaded.
 
 ## Rule → scenarios
@@ -125,6 +126,7 @@ Observed on the reference and deliberately not reproduced (not asserted by a sce
 | `subtitles.stream.R7` | `subtitles.stream.route-forms` |
 | `subtitles.stream.R8` | `subtitles.stream.errors` |
 | `subtitles.stream.R9` | `subtitles.stream.auth` |
+| `subtitles.delivery.R8` | `subtitles3.delivery.mov-container` |
 | `subtitles.stream.R10` | `subtitles2.embedded.route`, `subtitles2.mks.route` |
 | `subtitles.stream.R11` | `subtitles2.sidecar.odd-route`, `subtitles2.mks.route` |
 | `subtitles.stream.R12` | `subtitles2.vobsub.route`, `subtitles2.mks.route` |

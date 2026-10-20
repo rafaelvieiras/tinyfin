@@ -58,7 +58,7 @@ func (c Config) resolveBurn(req *Request, jobDir string) {
 	if sub == nil || req.VideoCodec == "" || req.VideoCodec == "copy" || req.VideoCodec == "none" {
 		return
 	}
-	if !sub.Embedded && !sub.Bitmap && sub.Path != "" &&
+	if !sub.Embedded && (!sub.Bitmap || sub.External) && sub.Path != "" &&
 		sidecarContainers[strings.ToLower(filepath.Ext(sub.Path))] {
 		for _, s := range c.probeStreams(sub.Path) {
 			if s.CodecType != "subtitle" {
@@ -150,6 +150,7 @@ func canvasArgs(sub *Subtitle) []string {
 // extraction fails the track is read from the container instead.
 func (c Config) resolveText(req *Request, jobDir string) {
 	sub := req.Subtitle
+	c.extractFonts(req, jobDir)
 	if !sub.Embedded {
 		if lang := sidecarLanguage(req.InputPath, sub.Path); lang != "" {
 			if data, err := os.ReadFile(sub.Path); err == nil {
@@ -201,4 +202,31 @@ func sidecarLanguage(videoPath, subPath string) string {
 		return ""
 	}
 	return sc.Language
+}
+
+// extractFonts writes the attachments of the input file (the fonts a Matroska
+// file carries for its ASS styles) to a directory of the job and has libass
+// read fonts from there, as the reference does with the attachments of the
+// file; without attachments the fonts directory stays as configured.
+func (c Config) extractFonts(req *Request, jobDir string) {
+	has := false
+	for _, s := range c.probeStreams(req.InputPath) {
+		if s.CodecType == "attachment" {
+			has = true
+			break
+		}
+	}
+	if !has {
+		return
+	}
+	dir := filepath.Join(jobDir, "fonts")
+	if os.MkdirAll(dir, 0o755) != nil {
+		return
+	}
+	cmd := exec.Command(c.ffmpegPath(), "-v", "error", "-dump_attachment:t", "", "-y", "-i", req.InputPath)
+	cmd.Dir = dir
+	_ = cmd.Run() // ffmpeg exits with an error: there is no output file to write
+	if entries, err := os.ReadDir(dir); err == nil && len(entries) > 0 {
+		req.FontsDir = dir
+	}
 }

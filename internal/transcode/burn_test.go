@@ -222,3 +222,43 @@ func TestBitmapBurnIn_RealFFmpeg(t *testing.T) {
 		})
 	}
 }
+
+// TestExtractFonts_Attachments: the attachments of a Matroska file are written
+// to a directory of the job and become libass' fonts directory; a file with
+// none leaves the configured one.
+func TestExtractFonts_Attachments(t *testing.T) {
+	ffmpeg, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		t.Skip("no ffmpeg on $PATH")
+	}
+	dir := t.TempDir()
+	font := filepath.Join(dir, "Face.ttf")
+	if err := os.WriteFile(font, []byte("not really a font"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	with := filepath.Join(dir, "with.mkv")
+	out, err := exec.Command(ffmpeg, "-v", "error", "-y", "-f", "lavfi", "-i", "color=c=black:s=64x64:r=2:d=1",
+		"-c:v", "mpeg4", "-attach", font, "-metadata:s:t", "mimetype=font/ttf", with).CombinedOutput()
+	if err != nil {
+		t.Skipf("cannot build the fixture: %v %s", err, out)
+	}
+	without := filepath.Join(dir, "without.mkv")
+	if out, err := exec.Command(ffmpeg, "-v", "error", "-y", "-f", "lavfi", "-i", "color=c=black:s=64x64:r=2:d=1",
+		"-c:v", "mpeg4", without).CombinedOutput(); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	c := Config{FFmpegPath: ffmpeg}
+	req := &Request{InputPath: with, FontsDir: "/configured"}
+	c.extractFonts(req, filepath.Join(dir, "job"))
+	if req.FontsDir != filepath.Join(dir, "job", "fonts") {
+		t.Fatalf("FontsDir = %q", req.FontsDir)
+	}
+	if _, err := os.Stat(filepath.Join(req.FontsDir, "Face.ttf")); err != nil {
+		t.Fatalf("attachment not written: %v", err)
+	}
+	req = &Request{InputPath: without, FontsDir: "/configured"}
+	c.extractFonts(req, filepath.Join(dir, "job2"))
+	if req.FontsDir != "/configured" {
+		t.Fatalf("FontsDir = %q, want the configured one", req.FontsDir)
+	}
+}
