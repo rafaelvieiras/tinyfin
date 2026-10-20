@@ -63,3 +63,18 @@ enc "Enc Utf16 (4015)" en.srt "($srt % 'Hello').encode('utf-16')"
 enc "Enc Utf16Nobom (4016)" en.srt "($srt % 'Hello').encode('utf-16-le')"
 enc "Enc Utf8 (4017)" en.srt "($srt % 'Olá').encode('utf-8')"
 enc "Enc Short (4018)" en.srt "b'1\n00:00:00,500 --> 00:00:03,500\n\xe9\n'"
+
+# a Matroska file with an embedded ASS track and the font file its style names
+# attached (Ubuntu Regular from the host when it has it: a family the reference's
+# container does not install, so only the attachment can supply it)
+FA="$S3/Font Attach (4003)/Font Attach (4003)"
+mkdir -p "$(dirname "$FA")"
+if [ ! -f "$FA.mkv" ]; then
+  font="$(fc-match -f '%{file}' 'Ubuntu:style=Regular' 2>/dev/null || true)"
+  if [ -n "$font" ] && [ -f "$font" ]; then
+    cp "$font" "$work/Attached.ttf"
+    sed 's/Zzyzx Nonexistent Font/Ubuntu/' "$S3/Font Missing (4000)/Font Missing (4000).en.ass" >"$work/fa.ass"
+    "$FFMPEG" -v error -y -i "$S3/Font Missing (4000)/Font Missing (4000).mp4" -i "$work/fa.ass" -map 0 -map 1 \
+      -c copy -attach "$work/Attached.ttf" -metadata:s:t mimetype=font/ttf -metadata:s:s:0 language=eng "$FA.mkv"
+  fi
+fi
