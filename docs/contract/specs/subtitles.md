@@ -76,6 +76,7 @@ Scenarios: [`../scenarios/subtitles.json`](../scenarios/subtitles.json) and [`..
 
 - **subtitles.delivery.R6** The format of an entry is any name for a text stream: the reference does not check it against what it can write. `xyz`, `json`, `ttml`, `text`, `srt` and `subrip` all take a SubRip track for `External` (the URL ends in the name as the entry spells it, `Stream.xyz`), `Hls` and `Embed`. `External` refuses `ass`, `ssa`, `sub`, `sup`, `pgs`, `pgssub`, `vobsub`, `dvdsub`, `dvbsub` and `hdmv_pgs_subtitle` for a text stream; `Hls` and `Embed` refuse only `ass` and `ssa` (an embedded SubRip track is not embedded as ASS).
 - **subtitles.delivery.R7** An `Hls` entry serves a text stream only when the source is transcoded; an `Embed` entry only when it is served as it is (R4). A stream that is neither embedded nor in a text format (a picture stream in a text entry) is `Encode`.
+- **subtitles.delivery.R8** The container of the direct-play profile is matched against the format name of the file, not its extension: an MP4 holding a `mov_text` track is offered for a profile whose containers are `mov`, `mp4`, `mov,mp4` alike, and a text profile with `Embed` for `srt` or `mov_text` embeds it (`DeliveryMethod` `Embed`, no `DeliveryUrl`), one with `External` serves it as a file; a format the track cannot be converted to in the container (ASS in a profile that only embeds ASS where the file holds `mov_text`) is burned in and the source transcoded.
 
 ## <a id="manage"></a>Upload and delete
 
@@ -125,6 +126,7 @@ Observed on the reference and deliberately not reproduced (not asserted by a sce
 | `subtitles.stream.R7` | `subtitles.stream.route-forms` |
 | `subtitles.stream.R8` | `subtitles.stream.errors` |
 | `subtitles.stream.R9` | `subtitles.stream.auth` |
+| `subtitles.delivery.R8` | `subtitles3.delivery.mov-container` |
 | `subtitles.stream.R10` | `subtitles2.embedded.route`, `subtitles2.mks.route` |
 | `subtitles.stream.R11` | `subtitles2.sidecar.odd-route`, `subtitles2.mks.route` |
 | `subtitles.stream.R12` | `subtitles2.vobsub.route`, `subtitles2.mks.route` |

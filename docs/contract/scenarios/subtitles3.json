@@ -388,5 +388,301 @@
     }
    }
   ]
+ },
+ {
+  "id": "subtitles3.delivery.mov-container",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "subtitles.md#delivery",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "playback"
+  ],
+  "covers": [
+   "subtitles.delivery.R13"
+  ],
+  "requires": [
+   "library:subfiles",
+   "item:sub-mov"
+  ],
+  "steps": [
+   {
+    "name": "mov container, srt embedded",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-mov.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mov",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "srt",
+         "Method": "Embed"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryMethod",
+       "op": "eq",
+       "value": "Embed"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "mov container, mov_text embedded",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-mov.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mov",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "mov_text",
+         "Method": "Embed"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryMethod",
+       "op": "eq",
+       "value": "Embed"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "mov and mp4 containers, srt embedded",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-mov.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mov,mp4",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "srt",
+         "Method": "Embed"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryMethod",
+       "op": "eq",
+       "value": "Embed"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryUrl",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "mov container, srt external",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-mov.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mov",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "srt",
+         "Method": "External"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryMethod",
+       "op": "eq",
+       "value": "External"
+      }
+     ]
+    }
+   },
+   {
+    "name": "mov container, ass embedded: not a format of the track",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.sub-mov.id}}/PlaybackInfo",
+     "body": {
+      "DeviceProfile": {
+       "Name": "conformance",
+       "MaxStreamingBitrate": 120000000,
+       "DirectPlayProfiles": [
+        {
+         "Container": "mov",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac"
+        }
+       ],
+       "TranscodingProfiles": [
+        {
+         "Container": "ts",
+         "Type": "Video",
+         "VideoCodec": "h264",
+         "AudioCodec": "aac",
+         "Protocol": "hls",
+         "Context": "Streaming"
+        }
+       ],
+       "SubtitleProfiles": [
+        {
+         "Format": "ass",
+         "Method": "Embed"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[2].DeliveryMethod",
+       "op": "eq",
+       "value": "Encode"
+      }
+     ]
+    }
+   }
+  ]
  }
 ]
