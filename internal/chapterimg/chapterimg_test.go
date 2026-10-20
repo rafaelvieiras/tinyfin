@@ -5,6 +5,7 @@ import (
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -160,6 +161,15 @@ func TestPlanFor(t *testing.T) {
 		{name: "fill covers", p: Params{FillWidth: intp(300), FillHeight: intp(300), Quality: intp(50)}, sw: 640, sh: 360, w: 534, h: 300},
 		{name: "fill above the size", p: Params{FillWidth: intp(900), FillHeight: intp(900), Quality: intp(50)}, sw: 640, sh: 360, w: 640, h: 360},
 		{name: "maximum wins over fill", p: Params{FillWidth: intp(300), FillHeight: intp(300), MaxWidth: intp(100)}, sw: 640, sh: 360, w: 100, h: 56},
+		{name: "caps in sequence", p: Params{MaxWidth: intp(72), MaxHeight: intp(71)}, sw: 640, sh: 360, w: 72, h: 41},
+		{name: "caps in sequence, odd", p: Params{MaxWidth: intp(33), MaxHeight: intp(20)}, sw: 640, sh: 360, w: 33, h: 18},
+		{name: "tie to the even, up", p: Params{Width: intp(24)}, sw: 640, sh: 360, w: 24, h: 14},
+		{name: "tie to the even, down", p: Params{Width: intp(56)}, sw: 640, sh: 360, w: 56, h: 31},
+		{name: "fill quotient not cleaned", p: Params{FillWidth: intp(245), Quality: intp(50)}, sw: 640, sh: 360, w: 246, h: 138},
+		{name: "fill, shorter side is one", p: Params{FillWidth: intp(1), Quality: intp(50)}, sw: 640, sh: 360, w: 2, h: 1},
+		{name: "fill, shorter side is one, portrait", p: Params{FillHeight: intp(1), Quality: intp(50)}, sw: 360, sh: 640, w: 1, h: 2},
+		{name: "negative fill cancels", p: Params{Height: intp(60), FillWidth: intp(-2), FillHeight: intp(30)}, sw: 640, sh: 360, w: 107, h: 60},
+		{name: "a side that rounds to nothing", p: Params{Width: intp(640), Height: intp(54), MaxWidth: intp(5)}, sw: 640, sh: 360, pass: true},
 		{name: "quality 90", p: Params{Quality: intp(90)}, sw: 640, sh: 360, pass: true},
 		{name: "quality 89", p: Params{Quality: intp(89)}, sw: 640, sh: 360, w: 640, h: 360, quality: 89, qualityCheck: true},
 		{name: "quality 0", p: Params{Quality: intp(0)}, sw: 640, sh: 360, w: 640, h: 360, quality: 1, qualityCheck: true},
@@ -247,5 +257,44 @@ func TestRender(t *testing.T) {
 	}
 	if w, h := size(file); w != 80 || h != 45 {
 		t.Errorf("png is %dx%d, want 80x45", w, h)
+	}
+}
+
+func TestPlanForOverlaysAndWebP(t *testing.T) {
+	f := func(v float64) *float64 { return &v }
+	nan := math.NaN()
+	cases := []struct {
+		name string
+		p    Params
+		pass bool
+		webp bool
+	}{
+		{"blur zero is still made again", Params{Blur: intp(0)}, false, false},
+		{"percent in range", Params{PercentPlayed: f(50)}, false, false},
+		{"percent 0", Params{PercentPlayed: f(0)}, true, false},
+		{"percent 100", Params{PercentPlayed: f(100)}, true, false},
+		{"percent NaN", Params{PercentPlayed: f(nan)}, false, false},
+		{"unplayed 0", Params{UnplayedCount: intp(0)}, true, false},
+		{"unplayed 1", Params{UnplayedCount: intp(1)}, false, false},
+		{"background hex", Params{BackgroundColor: "#ff0000"}, false, false},
+		{"background word", Params{BackgroundColor: "red"}, true, false},
+		{"foreground given", Params{ForegroundLayer: "zzz"}, false, false},
+		{"accept alone", Params{Webp: true}, true, false},
+		{"accept and a resize", Params{Webp: true, MaxWidth: intp(100)}, false, true},
+		{"accept, explicit jpg", Params{Webp: true, MaxWidth: intp(100), Format: "Jpg"}, false, false},
+		{"accept, explicit bmp", Params{Webp: true, MaxWidth: intp(100), Format: "Bmp"}, false, false},
+		{"format webp", Params{Format: "Webp"}, false, true},
+	}
+	for _, c := range cases {
+		got := PlanFor(c.p, 640, 360)
+		if got.Passthrough != c.pass || (!c.pass && got.WebP != c.webp) {
+			t.Errorf("%s: passthrough %v webp %v, want %v %v", c.name, got.Passthrough, got.WebP, c.pass, c.webp)
+		}
+	}
+	if o, _ := overlayOf(Params{ForegroundLayer: "80"}); o.Layer != 80 {
+		t.Errorf("layer 80: %d", o.Layer)
+	}
+	if o, _ := overlayOf(Params{ForegroundLayer: "300"}); o.Layer != 44 {
+		t.Errorf("layer 300: %d", o.Layer)
 	}
 }

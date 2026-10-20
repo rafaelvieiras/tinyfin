@@ -27,6 +27,15 @@ type Params struct {
 	Quality               *int
 	// Format is the requested output format as sent ("Png", "jpg", ...).
 	Format string
+	// Blur, PercentPlayed, UnplayedCount, BackgroundColor and ForegroundLayer
+	// are the overlay members (see overlay.go); a nil/empty one was not given.
+	Blur          *int
+	PercentPlayed *float64
+	UnplayedCount *int
+	// BackgroundColor and ForegroundLayer are the values as sent.
+	BackgroundColor, ForegroundLayer string
+	// Webp is true when the caller accepts image/webp (the Accept header).
+	Webp bool
 }
 
 const (
@@ -41,9 +50,11 @@ const (
 type outFormat int
 
 const (
-	fmtKeep outFormat = iota // serve the stored format (JPEG)
-	fmtJPEG                  // re-encode as JPEG
+	fmtKeep         outFormat = iota // serve the stored format (JPEG)
+	fmtJPEG                          // re-encode as JPEG
+	fmtExplicitJPEG                  // jpg asked for: the stored format, whatever Accept says
 	fmtPNG
+	fmtWebP
 	fmtSVG // never processed
 )
 
@@ -56,8 +67,12 @@ func formatOf(s string) outFormat {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "png", "3":
 		return fmtPNG
-	case "bmp", "gif", "webp", "0", "1", "4":
+	case "webp", "4":
+		return fmtWebP
+	case "bmp", "gif", "0", "1":
 		return fmtJPEG
+	case "jpg", "2":
+		return fmtExplicitJPEG
 	case "svg", "5":
 		return fmtSVG
 	}
@@ -78,12 +93,17 @@ type Plan struct {
 	W, H        int
 	Quality     int
 	PNG         bool
+	WebP        bool
+	Overlay     Overlay
 }
 
 // ContentType is the media type of the answer.
 func (p Plan) ContentType() string {
 	if p.PNG {
 		return "image/png"
+	}
+	if p.WebP {
+		return "image/webp"
 	}
 	return "image/jpeg"
 }
@@ -95,8 +115,13 @@ func val(p *int) (int, bool) {
 	return *p, true
 }
 
-// roundDown rounds to the nearest integer, a tie going down (22.5 is 22).
-func roundDown(f float64) int { return int(math.Ceil(f - 0.5)) }
+// follow is the side that goes with n when a side of size from becomes n: the
+// ratio n/from first, then the product with the other side, rounded to the
+// nearest integer with a tie going to the even one. The order of the two
+// operations matters (it decides the ties: 56 of 640x360 gives 31, 24 gives 14).
+func follow(other, from, n int) int {
+	return int(math.RoundToEven(float64(n) / float64(from) * float64(other)))
+}
 
 // PlanFor decides how a srcW x srcH picture is answered.
 //
@@ -105,19 +130,24 @@ func roundDown(f float64) int { return int(math.Ceil(f - 0.5)) }
 // it, a quality below 90 or a format that is not the stored one. Otherwise
 // the size is worked out step by step: width and height set the size (both:
 // exactly, the aspect ratio is dropped; one: the other follows the ratio),
-// maxWidth and maxHeight then cap the result, fillWidth and fillHeight make
-// it cover that box (never by enlarging it), and last the picture is brought
-// back inside its own size, keeping the ratio: a stored picture is never
-// enlarged.
+// maxHeight then maxWidth cap the result (each on the size before it),
+// fillWidth and fillHeight make it cover that box (never by enlarging it),
+// and last the picture is brought back inside its own size, keeping the
+// ratio: a stored picture is never enlarged. A side that comes out as 0
+// before that last step leaves the picture as it is.
 func PlanFor(p Params, srcW, srcH int) Plan {
 	plan := Plan{W: srcW, H: srcH, Quality: defaultQuality}
 	of := formatOf(p.Format)
 	plan.PNG = of == fmtPNG
+	plan.WebP = of == fmtWebP
 	if of == fmtSVG {
 		plan.Passthrough = true
 		return plan
 	}
-	need := of != fmtKeep
+	need := of != fmtKeep && of != fmtExplicitJPEG
+	ov, needOv := overlayOf(p)
+	plan.Overlay = ov
+	need = need || needOv
 	if q, ok := val(p.Quality); ok {
 		if q < 1 {
 			q = 1
@@ -141,58 +171,73 @@ func PlanFor(p Params, srcW, srcH int) Plan {
 		plan.Passthrough = true
 		return plan
 	}
+	// no format asked for (or one that is not a name): a caller that takes
+	// WebP gets it once the picture is made again
+	if p.Webp && (of == fmtKeep) {
+		plan.WebP = true
+	}
 	cw, ch := float64(srcW), float64(srcH)
 	curW, curH := srcW, srcH
 	set := func(nw, nh int) {
-		curW, curH = max(nw, 1), max(nh, 1)
+		curW, curH = nw, nh
 		cw, ch = float64(curW), float64(curH)
 	}
 	switch {
 	case hasW && hasH && w > 0 && h > 0:
 		set(w, h)
 	case hasW && w > 0:
-		set(w, roundDown(float64(srcH)*float64(w)/float64(srcW)))
+		set(w, follow(srcH, srcW, w))
 	case hasH && h > 0:
-		set(roundDown(float64(srcW)*float64(h)/float64(srcH)), h)
+		set(follow(srcW, srcH, h), h)
 	}
-	// maxWidth and maxHeight: one scale for both axes, from the size the
-	// steps above gave (the picture's own when width and height were not
-	// asked), so the tighter limit holds exactly and the other axis follows.
-	if (hasMW && mw > 0 && curW > mw) || (hasMH && mh > 0 && curH > mh) {
-		sw, sh := math.Inf(1), math.Inf(1)
-		if hasMW && mw > 0 {
-			sw = float64(mw) / cw
-		}
-		if hasMH && mh > 0 {
-			sh = float64(mh) / ch
-		}
-		if sw <= sh {
-			set(mw, roundDown(ch*sw))
-		} else {
-			set(roundDown(cw*sh), mh)
-		}
+	// maxHeight then maxWidth, each on the size the step before gave: a side
+	// above its cap is set to the cap and the other follows the ratio of the
+	// size at that point, rounded to the nearest integer (a tie going to the even one).
+	if hasMH && mh > 0 && mh < curH {
+		set(follow(curW, curH, mh), mh)
+	}
+	if hasMW && mw > 0 && mw < curW {
+		set(mw, follow(curH, curW, mw))
 	}
 	fw, hasFW := val(p.FillWidth)
 	fh, hasFH := val(p.FillHeight)
-	hasFW = hasFW && fw > 0
-	hasFH = hasFH && fh > 0
-	if hasFW || hasFH {
-		var scale float64
-		switch {
-		case hasFW && hasFH:
-			scale = math.Max(float64(fw)/cw, float64(fh)/ch)
-		case hasFW:
-			scale = float64(fw) / cw
-		default:
-			scale = float64(fh) / ch
+	hasFW = hasFW && fw != 0
+	hasFH = hasFH && fh != 0
+	// a negative fill value cancels the fill altogether
+	if (hasFW || hasFH) && fw >= 0 && fh >= 0 {
+		// the divisor is worked out first (the smaller of the ratios of the
+		// current size to the asked one, so the box is covered) and the sides
+		// are divided by it and rounded up
+		div := math.Inf(1)
+		if hasFW {
+			div = math.Min(div, cw/float64(fw))
 		}
-		if scale < 1 {
-			set(int(math.Ceil(cw*scale-1e-9)), int(math.Ceil(ch*scale-1e-9)))
+		if hasFH {
+			div = math.Min(div, ch/float64(fh))
+		}
+		if div > 1 {
+			nw, nh := int(math.Ceil(cw/div)), int(math.Ceil(ch/div))
+			// the shorter side coming out as 1 takes the longer one from the
+			// shape (rounded up), whatever was asked for it
+			if min(nw, nh) == 1 {
+				if cw >= ch {
+					nw, nh = int(math.Ceil(cw/ch)), 1
+				} else {
+					nw, nh = 1, int(math.Ceil(ch/cw))
+				}
+			}
+			set(nw, nh)
 		}
 	}
 	if curW > srcW || curH > srcH {
 		f := math.Min(float64(srcW)/cw, float64(srcH)/ch)
-		set(roundDown(cw*f), roundDown(ch*f))
+		set(max(roundHalfEven(cw*f), 1), max(roundHalfEven(ch*f), 1))
+	}
+	if curW < 1 || curH < 1 {
+		// a side that rounds to nothing leaves the picture as it is
+		plan.Passthrough = true
+		plan.PNG, plan.WebP = false, false
+		return plan
 	}
 	plan.W, plan.H = curW, curH
 	return plan
@@ -218,8 +263,10 @@ func (g *Generator) Render(id storage.ItemID, path string, mod time.Time, p Para
 	ext := ".jpg"
 	if plan.PNG {
 		ext = ".png"
+	} else if plan.WebP {
+		ext = ".webp"
 	}
-	key := sha1.Sum([]byte(fmt.Sprintf("%s|%d|%d|%d|%d|%v", path, mod.UnixNano(), plan.W, plan.H, plan.Quality, plan.PNG)))
+	key := sha1.Sum([]byte(fmt.Sprintf("v2|%s|%d|%d|%d|%d|%v|%v|%+v", path, mod.UnixNano(), plan.W, plan.H, plan.Quality, plan.PNG, plan.WebP, plan.Overlay)))
 	dir := filepath.Join(g.Dir(id), "cache")
 	out := filepath.Join(dir, hex.EncodeToString(key[:8])+ext)
 	if st, err := os.Stat(out); err == nil && st.Size() > 0 {
@@ -235,6 +282,7 @@ func (g *Generator) Render(id storage.ItemID, path string, mod time.Time, p Para
 		return "", "", err
 	}
 	dst := resize(src, plan.W, plan.H)
+	plan.Overlay.draw(dst)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", "", err
 	}
@@ -244,6 +292,8 @@ func (g *Generator) Render(id storage.ItemID, path string, mod time.Time, p Para
 	}
 	if plan.PNG {
 		err = png.Encode(tmp, dst)
+	} else if plan.WebP {
+		err = encodeWebP(tmp, dst)
 	} else {
 		err = jpeg.Encode(tmp, dst, &jpeg.Options{Quality: plan.Quality})
 	}
@@ -384,3 +434,5 @@ func ParseInt(s string) (v *int, given bool, ok bool) {
 	i := int(n)
 	return &i, true, true
 }
+
+func roundHalfEven(f float64) int { return int(math.RoundToEven(f)) }
