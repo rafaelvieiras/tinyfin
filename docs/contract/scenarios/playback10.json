@@ -1,0 +1,772 @@
+[
+ {
+  "id": "playback.hls.encoded-reorder",
+  "endpoint": "GET /Videos/{itemId}/hls1/{playlistId}/{segmentId}.{container}",
+  "spec": "playback.md#hls",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "transcode"
+  ],
+  "covers": [
+   "playback.hls.R10"
+  ],
+  "requires": [
+   "library:hls3",
+   "item:alpha",
+   "item:oddclip"
+  ],
+  "steps": [
+   {
+    "name": "an encoded picture at 24 fps carries a decode time two frames before its presentation time",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.alpha.id}}/hls1/main/0.ts?MediaSourceId={{item.alpha.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&PlaySessionId=h3-{{run.suffix}}-0&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x00\\x01gd\\x00\\x0b..B.\\~\\\\\\x05"
+      },
+      {
+       "op": "matches",
+       "value": "(?s)\\x0a1\\x007..\\x11\\x007wA"
+      }
+     ]
+    }
+   },
+   {
+    "name": "pinning the baseline profile leaves no reordering",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.oddclip.id}}/hls1/main/0.ts?MediaSourceId={{item.oddclip.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxWidth=300&h264-profile=baseline,constrainedbaseline&PlaySessionId=h3-{{run.suffix}}-1&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x00\\x01gB.\\x0c.\\x04...."
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.hls.encoded-profile",
+  "endpoint": "GET /Videos/{itemId}/hls1/{playlistId}/{segmentId}.{container}",
+  "spec": "playback.md#hls",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "transcode"
+  ],
+  "covers": [
+   "playback.hls.R10"
+  ],
+  "requires": [
+   "library:hls3",
+   "item:oddclip"
+  ],
+  "steps": [
+   {
+    "name": "main profile at level 4.0",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.oddclip.id}}/hls1/main/0.ts?MediaSourceId={{item.oddclip.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxWidth=300&h264-profile=main&h264-level=40&PlaySessionId=h3-{{run.suffix}}-2&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x00\\x01gM@\\(..r.."
+      },
+      {
+       "op": "matches",
+       "value": "(?s)\\x0a1\\x007..\\x11\\x007wA"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Profile and Level are read as well, and win over the codec-specific names",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.oddclip.id}}/hls1/main/0.ts?MediaSourceId={{item.oddclip.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxWidth=300&Profile=main&Level=30&h264-profile=high&h264-level=51&PlaySessionId=h3-{{run.suffix}}-3&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x00\\x01gM@\\x1e..r.."
+      },
+      {
+       "op": "matches",
+       "value": "(?s)\\x0a1\\x007..\\x11\\x007wA"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the first profile of the list is the one used, an unknown name leaves the choice to the encoder",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.oddclip.id}}/hls1/main/0.ts?MediaSourceId={{item.oddclip.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxWidth=300&h264-profile=nosuch,main&PlaySessionId=h3-{{run.suffix}}-4&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x00\\x01gd\\x00\\x0c..A1\\~.."
+      },
+      {
+       "op": "matches",
+       "value": "(?s)\\x0a1\\x007..\\x11\\x007wA"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.hls.encoded-scale",
+  "endpoint": "GET /Videos/{itemId}/hls1/{playlistId}/{segmentId}.{container}",
+  "spec": "playback.md#hls",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "transcode"
+  ],
+  "covers": [
+   "playback.hls.R11"
+  ],
+  "requires": [
+   "library:hls3",
+   "item:hevcclip",
+   "item:oddclip",
+   "item:tenbit"
+  ],
+  "steps": [
+   {
+    "name": "a width limit scales to the display size",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.oddclip.id}}/hls1/main/0.ts?MediaSourceId={{item.oddclip.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxWidth=300&PlaySessionId=h3-{{run.suffix}}-5&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x00\\x01gd\\x00\\x0c..A1\\~.."
+      },
+      {
+       "op": "matches",
+       "value": "(?s)\\x0a1\\x007..\\x11\\x007wA"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a height limit alone needs a video bit rate and scales to the display size",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.oddclip.id}}/hls1/main/0.ts?MediaSourceId={{item.oddclip.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxHeight=100&VideoBitrate=2000000&PlaySessionId=h3-{{run.suffix}}-6&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x00\\x01gd\\x00\\x15..B...."
+      },
+      {
+       "op": "matches",
+       "value": "(?s)\\x0a1\\x007..\\x11\\x007wA"
+      }
+     ]
+    }
+   },
+   {
+    "name": "width and height limits together",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.oddclip.id}}/hls1/main/0.ts?MediaSourceId={{item.oddclip.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxWidth=300&MaxHeight=150&PlaySessionId=h3-{{run.suffix}}-7&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x00\\x01gd\\x00\\x0c..A\\x11\\^I.."
+      },
+      {
+       "op": "matches",
+       "value": "(?s)\\x0a1\\x007..\\x11\\x007wA"
+      }
+     ]
+    }
+   },
+   {
+    "name": "without a video bit rate the width is held to 416 and the height limit is dropped",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.oddclip.id}}/hls1/main/0.ts?MediaSourceId={{item.oddclip.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxHeight=100&PlaySessionId=h3-{{run.suffix}}-8&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x00\\x01gd\\x00\\x0d..A...."
+      },
+      {
+       "op": "matches",
+       "value": "(?s)\\x0a1\\x007..\\x11\\x007wA"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a video bit rate alone keeps the size of the source",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.hevcclip.id}}/hls1/main/0.ts?MediaSourceId={{item.hevcclip.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&VideoBitrate=90000000&PlaySessionId=h3-{{run.suffix}}-9&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x00\\x01gd\\x00\\x1e..@./.p\\x16"
+      },
+      {
+       "op": "matches",
+       "value": "(?s)\\x0a1\\x007..\\x11\\x007wA"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a 10-bit picture is encoded as 8-bit High",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tenbit.id}}/hls1/main/0.ts?MediaSourceId={{item.tenbit.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxWidth=320&PlaySessionId=h3-{{run.suffix}}-10&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x00\\x01gd\\x00\\x0c..AA..\\x01"
+      },
+      {
+       "op": "matches",
+       "value": "(?s)\\x0a1\\x007..\\x11\\x007wA"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.hls.encoded-hevc",
+  "endpoint": "GET /Videos/{itemId}/hls1/{playlistId}/{segmentId}.{container}",
+  "spec": "playback.md#hls",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "transcode"
+  ],
+  "covers": [
+   "playback.hls.R12"
+  ],
+  "requires": [
+   "library:hls3",
+   "item:tenbit"
+  ],
+  "steps": [
+   {
+    "name": "an HEVC target is encoded as 8-bit Main",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tenbit.id}}/hls1/main/0.ts?MediaSourceId={{item.tenbit.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=hevc&AudioCodec=aac&MaxWidth=320&PlaySessionId=h3-{{run.suffix}}-11&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x00\\x01B\\x01\\x01\\x01`\\x00\\x00\\x03\\x00.\\x00\\x00"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.hls.encoded-near-end",
+  "endpoint": "GET /Videos/{itemId}/hls1/{playlistId}/{segmentId}.{container}",
+  "spec": "playback.md#hls",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "transcode"
+  ],
+  "covers": [
+   "playback.hls.R13"
+  ],
+  "requires": [
+   "library:long",
+   "item:long"
+  ],
+  "steps": [
+   {
+    "name": "a segment that opens less than 5 s before the end starts the picture 5 s before it",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.long.id}}/hls1/main/54.ts?MediaSourceId={{item.long.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&PlaySessionId=h3-{{run.suffix}}-12&runtimeTicks=3260000000&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x00\\x01gd\\x00\\x0a..B.\\~\\\\\\x05"
+      },
+      {
+       "op": "matches",
+       "value": "(?s)\\x0a1\\x071\\x1a.\\x11\\x07\\+\\[."
+      }
+     ]
+    }
+   },
+   {
+    "name": "past the end it is the same 5 s",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.long.id}}/hls1/main/54.ts?MediaSourceId={{item.long.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxWidth=161&PlaySessionId=h3-{{run.suffix}}-13&runtimeTicks=4200000000&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x00\\x01gd\\x00\\x0a..B.\\~\\\\\\x05"
+      },
+      {
+       "op": "matches",
+       "value": "(?s)\\x0a1\\x071\\x1a.\\x11\\x07\\+\\[."
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.hls.encoded-audio",
+  "endpoint": "GET /Videos/{itemId}/hls1/{playlistId}/{segmentId}.{container}",
+  "spec": "playback.md#hls",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "transcode"
+  ],
+  "covers": [
+   "playback.hls.R14"
+  ],
+  "requires": [
+   "library:hls3",
+   "item:sixchan"
+  ],
+  "steps": [
+   {
+    "name": "a 5.1 source keeps six channels when re-encoded to AAC",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sixchan.id}}/hls1/main/0.ts?MediaSourceId={{item.sixchan.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&MaxWidth=160&AudioCodec=aac&PlaySessionId=h3a-{{run.suffix}}-0&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x01.{4,16}?\\x{fffd}\\x{fffd}M\\x{fffd}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a channel limit of two downmixes to stereo",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sixchan.id}}/hls1/main/0.ts?MediaSourceId={{item.sixchan.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&MaxWidth=160&AudioCodec=aac&MaxAudioChannels=2&PlaySessionId=h3a-{{run.suffix}}-1&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x01.{4,16}?\\x{fffd}\\x{fffd}L\\x{fffd}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a transcoding limit of three also ends at stereo",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sixchan.id}}/hls1/main/0.ts?MediaSourceId={{item.sixchan.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&MaxWidth=160&AudioCodec=aac&TranscodingMaxAudioChannels=3&PlaySessionId=h3a-{{run.suffix}}-2&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x01.{4,16}?\\x{fffd}\\x{fffd}L\\x{fffd}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a requested single channel is honoured",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sixchan.id}}/hls1/main/0.ts?MediaSourceId={{item.sixchan.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&MaxWidth=160&AudioCodec=aac&AudioChannels=1&PlaySessionId=h3a-{{run.suffix}}-3&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x01.{4,16}?\\x{fffd}\\x{fffd}L@"
+      }
+     ]
+    }
+   },
+   {
+    "name": "MP3 is always stereo",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sixchan.id}}/hls1/main/0.ts?MediaSourceId={{item.sixchan.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&MaxWidth=160&AudioCodec=mp3&PlaySessionId=h3a-{{run.suffix}}-4&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x01.{4,16}?\\x{fffd}\\x{fffd}\\x{fffd}d"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.hls.copy-limits",
+  "endpoint": "GET /Videos/{itemId}/master.m3u8",
+  "spec": "playback.md#hls",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "transcode"
+  ],
+  "covers": [
+   "playback.hls.R15"
+  ],
+  "requires": [
+   "library:hls3",
+   "item:oddclip",
+   "item:tenbit",
+   "item:hevcclip"
+  ],
+  "steps": [
+   {
+    "name": "a level above the limit is encoded (default width, level written)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.oddclip.id}}/master.m3u8?MediaSourceId={{item.oddclip.id}}&DeviceId=conf&PlaySessionId=h3c-{{run.suffix}}-0&AudioCodec=aac&SegmentContainer=ts&VideoCodec=h264&h264-level=29"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "CODECS=\"avc1.42401D,mp4a.40.2\",RESOLUTION=416x235"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a level at the limit is copied",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.oddclip.id}}/master.m3u8?MediaSourceId={{item.oddclip.id}}&DeviceId=conf&PlaySessionId=h3c-{{run.suffix}}-1&AudioCodec=aac&SegmentContainer=ts&VideoCodec=h264&h264-level=30"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "CODECS=\"avc1.42401E,mp4a.40.2\",RESOLUTION=642x362"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a baseline picture passes a high profile request",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.oddclip.id}}/master.m3u8?MediaSourceId={{item.oddclip.id}}&DeviceId=conf&PlaySessionId=h3c-{{run.suffix}}-2&AudioCodec=aac&SegmentContainer=ts&VideoCodec=h264&h264-profile=high"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "CODECS=\"avc1.42401E,mp4a.40.2\",RESOLUTION=642x362"
+      }
+     ]
+    }
+   },
+   {
+    "name": "RequireNonAnamorphic encodes an anamorphic picture",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.oddclip.id}}/master.m3u8?MediaSourceId={{item.oddclip.id}}&DeviceId=conf&PlaySessionId=h3c-{{run.suffix}}-3&AudioCodec=aac&SegmentContainer=ts&VideoCodec=h264&RequireNonAnamorphic=true"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "CODECS=\"avc1.424029,mp4a.40.2\",RESOLUTION=416x235"
+      }
+     ]
+    }
+   },
+   {
+    "name": "AllowVideoStreamCopy=false encodes",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.oddclip.id}}/master.m3u8?MediaSourceId={{item.oddclip.id}}&DeviceId=conf&PlaySessionId=h3c-{{run.suffix}}-4&AudioCodec=aac&SegmentContainer=ts&VideoCodec=h264&AllowVideoStreamCopy=false"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "CODECS=\"avc1.424029,mp4a.40.2\",RESOLUTION=416x235"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a High 10 picture is copied without limits and written as constrained baseline",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tenbit.id}}/master.m3u8?MediaSourceId={{item.tenbit.id}}&DeviceId=conf&PlaySessionId=h3c-{{run.suffix}}-5&AudioCodec=aac&SegmentContainer=ts&VideoCodec=h264"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "CODECS=\"avc1.42401E,mp4a.40.2\",RESOLUTION=640x360"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a High 10 picture is encoded under a high profile request",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tenbit.id}}/master.m3u8?MediaSourceId={{item.tenbit.id}}&DeviceId=conf&PlaySessionId=h3c-{{run.suffix}}-6&AudioCodec=aac&SegmentContainer=ts&VideoCodec=h264&h264-profile=high"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "CODECS=\"avc1.640029,mp4a.40.2\",RESOLUTION=416x234"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a bit depth above MaxVideoBitDepth is encoded",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tenbit.id}}/master.m3u8?MediaSourceId={{item.tenbit.id}}&DeviceId=conf&PlaySessionId=h3c-{{run.suffix}}-7&AudioCodec=aac&SegmentContainer=ts&VideoCodec=h264&MaxVideoBitDepth=8"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "CODECS=\"avc1.424029,mp4a.40.2\",RESOLUTION=416x234"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a bit depth within MaxVideoBitDepth is copied",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.tenbit.id}}/master.m3u8?MediaSourceId={{item.tenbit.id}}&DeviceId=conf&PlaySessionId=h3c-{{run.suffix}}-8&AudioCodec=aac&SegmentContainer=ts&VideoCodec=h264&MaxVideoBitDepth=10"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "CODECS=\"avc1.42401E,mp4a.40.2\",RESOLUTION=640x360"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Level and Profile steer an encode of another codec's picture",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.hevcclip.id}}/master.m3u8?MediaSourceId={{item.hevcclip.id}}&DeviceId=conf&PlaySessionId=h3c-{{run.suffix}}-9&AudioCodec=aac&SegmentContainer=ts&VideoCodec=h264&Level=20"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "CODECS=\"avc1.424014,mp4a.40.2\",RESOLUTION=416x234"
+      }
+     ]
+    }
+   },
+   {
+    "name": "Profile baseline is written as baseline",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.hevcclip.id}}/master.m3u8?MediaSourceId={{item.hevcclip.id}}&DeviceId=conf&PlaySessionId=h3c-{{run.suffix}}-10&AudioCodec=aac&SegmentContainer=ts&VideoCodec=h264&Profile=baseline"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "CODECS=\"avc1.42E029,mp4a.40.2\",RESOLUTION=416x234"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a copied main-profile HEVC picture is written as profile 1 whatever the request lists",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.hevcclip.id}}/master.m3u8?MediaSourceId={{item.hevcclip.id}}&DeviceId=conf&PlaySessionId=h3c-{{run.suffix}}-99&AudioCodec=aac&SegmentContainer=ts&VideoCodec=hevc&hevc-profile=main10"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "CODECS=\"hvc1.1.4."
+      }
+     ]
+    }
+   }
+  ]
+ }
+]

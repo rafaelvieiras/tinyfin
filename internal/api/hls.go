@@ -102,17 +102,21 @@ func (s *Server) resolveHLS(r *http.Request, item storage.Item) hlsRequest {
 		SegmentSeconds: hlsSegmentSeconds(q),
 	}
 	if dec.VideoCodec != "copy" && dec.VideoCodec != "none" {
-		out.req.MaxWidth = effectiveMaxWidth(q)
+		out.req.MaxWidth, out.req.MaxHeight = effectiveMaxSize(q)
+		if v, _ := streamsFor(item, audioIdx); v != nil {
+			if v.Width != nil && v.Height != nil {
+				out.req.SourceWidth, out.req.SourceHeight = *v.Width, *v.Height
+			}
+			if v.BitRate != nil {
+				out.req.VideoSourceBitrate = int(*v.BitRate)
+			}
+			out.req.VideoSourceCodec = v.Codec
+		}
+		out.req.H264Profile, out.req.H264Level = encoderProfile(q, dec.VideoCodec)
 	}
-	if dec.VideoCodec == "h264" {
-		out.req.H264Profile = firstKnownProfile(q.Get("h264-profile"), "baseline", "constrainedbaseline", "main", "high")
-		if out.req.H264Profile == "" {
-			out.req.H264Profile = "constrainedbaseline"
-		}
-		out.req.H264Level = numParam(q, "h264-level")
-		if out.req.H264Level == 0 {
-			out.req.H264Level = 41
-		}
+	if dec.AudioCodec != "copy" && dec.AudioCodec != "" {
+		_, a := streamsFor(item, audioIdx)
+		out.req.AudioChannels, out.req.AudioBitrate, out.req.AudioBoost = audioPlan(a, q)
 	}
 	if audioIdx != nil && streamOfType(item.MediaStreams, *audioIdx, storage.StreamTypeAudio) {
 		f := fileStreamIndex(item, *audioIdx)
@@ -409,10 +413,20 @@ func (s *Server) segmentJob(r *http.Request, h hlsRequest, n int, startTicks int
 	}
 	// a position at or past the end is the last few seconds of the file (the
 	// reference answers such a segment with them, not with a failure)
-	if rt := h.item.RunTimeTicks; rt != nil && *rt > 0 && startTicks >= *rt {
+	if rt := h.item.RunTimeTicks; rt != nil && *rt > 0 && startTicks >= *rt && h.decision.VideoCodec == "copy" {
 		startTicks = max(0, *rt-hlsPastEndTicks)
 	}
 	req := h.req
+	if h.decision.VideoCodec != "copy" && h.decision.VideoCodec != "none" {
+		// an encoded picture never starts less than 5 s before the end of the
+		// file; a copied sound still starts at the position asked for
+		if rt := h.item.RunTimeTicks; rt != nil && *rt > 0 {
+			if limit := max(0, *rt-hlsPastEndTicks); startTicks > limit {
+				req.AudioDropTicks = startTicks - limit
+				startTicks = limit
+			}
+		}
+	}
 	req.StartTimeTicks, req.StartNumber, req.Cuts = startTicks, n, cuts
 	return s.transcode.Start(context.Background(), h.key, req)
 }

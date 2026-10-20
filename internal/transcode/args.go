@@ -2,6 +2,7 @@ package transcode
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -41,6 +42,10 @@ func buildArgs(req Request) []string {
 			seg = defaultSegmentSeconds
 		}
 		args = append(args, "-force_key_frames", fmt.Sprintf("expr:gte(t,n_forced*%d)", seg))
+		if v == "h264" || v == "hevc" {
+			// no extra key frames on a scene change: the segment grid is the plan
+			args = append(args, "-sc_threshold", "0")
+		}
 	}
 	return append(args, hlsOutputArgs(req)...)
 }
@@ -50,7 +55,6 @@ func buildArgs(req Request) []string {
 // mapping and codecs as an HLS job, then the muxer.
 func ProgressiveArgs(req Request, format string) []string {
 	args := append([]string{"-v", "error", "-nostdin"}, encodeArgs(req)...)
-	args = append(args, "-map_metadata", "-1")
 	if format == "mp4" {
 		// a non-seekable output: fragments instead of a trailing index
 		args = append(args, "-movflags", "frag_keyframe+empty_moov+default_base_moof")
@@ -89,6 +93,9 @@ func encodeArgs(req Request) []string {
 		subInput = 1
 	}
 
+	// no tags, language names or chapters in the output: the transport stream's
+	// stream table carries no language descriptor
+	args = append(args, "-map_metadata", "-1", "-map_chapters", "-1")
 	// Burn-in (docs/contract/specs/subtitles.md, "Burned-in subtitles") is a
 	// filter on the video, so it needs a re-encode: a copied video stream
 	// cannot be filtered (the caller promotes the mode, see
@@ -121,35 +128,7 @@ func encodeArgs(req Request) []string {
 	} else if videoCopy {
 		args = append(args, "-c:v", "copy")
 	} else {
-		args = append(args, "-c:v", req.VideoCodec)
-		// The preset/profile/level triple is specifically an H.264
-		// encode-quality/compatibility knob (docs/07's confirmed-good HLS
-		// pattern); a non-H.264 target codec (hevc, etc.) doesn't share
-		// this flag set and is left to its own codec-specific defaults —
-		// out of scope until a broader hardware-accelerated ladder lands.
-		if req.VideoCodec == "h264" {
-			profile, level := "high", "4.1"
-			switch req.H264Profile {
-			case "baseline", "constrainedbaseline":
-				profile = "baseline"
-			case "main", "high":
-				profile = req.H264Profile
-			}
-			if req.H264Level > 0 {
-				level = fmt.Sprintf("%.1f", float64(min(req.H264Level, 51))/10)
-			}
-			args = append(args, "-preset", "veryfast", "-profile:v", profile, "-level", level)
-		}
-		if req.VideoBitrate > 0 {
-			bitrate := strconv.Itoa(req.VideoBitrate)
-			args = append(args, "-b:v", bitrate)
-			args = append(args, "-maxrate", bitrate)
-			args = append(args, "-bufsize", strconv.Itoa(2*req.VideoBitrate))
-		}
-		// Scaling only makes sense alongside a re-encode — a stream copy
-		// can't be filtered, so this is nested under the videoCopy==false
-		// branch rather than applied unconditionally whenever MaxHeight is
-		// set.
+		args = append(args, videoEncodeArgs(req)...)
 		if vf := videoFilter(req, burn); vf != "" {
 			args = append(args, "-vf", vf)
 		}
@@ -161,17 +140,37 @@ func encodeArgs(req Request) []string {
 			// after a seek the copied sound would start at the key frame before
 			// the position, ahead of the re-encoded picture
 			args = append(args, "-copypriorss:a", "0")
+			if req.AudioDropTicks > 0 {
+				// the picture of a seek close to the end of the file begins before
+				// the position asked for, the sound does not
+				args = append(args, "-bsf:a", fmt.Sprintf("noise=drop='lt(pts*tb\\,%s)'", strconv.FormatFloat(float64(req.AudioDropTicks)/ticksPerSecond, 'f', 3, 64)))
+			}
 		}
 	} else {
-		args = append(args, "-c:a", req.AudioCodec)
+		enc := req.AudioEncoder
+		if enc == "" {
+			enc = req.AudioCodec
+		}
+		args = append(args, "-c:a", enc)
+		if enc == "libopus" {
+			args = append(args, "-strict", "-2")
+		}
+		// Without a channel plan from the caller the sound is downmixed to
+		// stereo: the common case for a client that needed audio transcoded in
+		// the first place is a browser/mobile decoder without multichannel
+		// support.
+		ch := req.AudioChannels
+		if ch <= 0 {
+			ch = 2
+		}
+		args = append(args, "-ac", strconv.Itoa(ch))
 		if req.AudioBitrate > 0 {
 			args = append(args, "-b:a", strconv.Itoa(req.AudioBitrate))
 		}
-		// Downmix to stereo: the common case for a client that needed
-		// audio transcoded in the first place is a browser/mobile
-		// decoder without multichannel support, not a surround-capable
-		// target that just happens to want a different codec.
-		args = append(args, "-ac", "2")
+		if req.AudioBoost {
+			// a surround mix folded down to stereo comes out quieter
+			args = append(args, "-af", "volume=2")
+		}
 	}
 
 	return args
@@ -297,14 +296,73 @@ func videoFilter(req Request, burn bool) string {
 		}
 		return strings.Join(chain, ",")
 	}
-	var chain []string
-	if req.MaxWidth > 0 && !(burn && req.Subtitle.Bitmap) {
-		chain = append(chain, fmt.Sprintf("scale='min(iw,%d)':-2", req.MaxWidth))
+	if burn && req.Subtitle.Bitmap {
+		return ""
 	}
-	if req.MaxHeight > 0 && !(burn && req.Subtitle.Bitmap) {
-		chain = append(chain, fmt.Sprintf("scale=-2:%d", req.MaxHeight))
+	chain := []string{"setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709"}
+	if sc := scaleFilter(req); sc != "" {
+		chain = append(chain, sc)
 	}
+	chain = append(chain, "format=yuv420p")
 	return strings.Join(chain, ",")
+}
+
+// scaleFilter is the scale of a re-encoded picture, written the way the
+// reference writes it: the width and height are limits on the picture's
+// display size (the pixel size times the sample aspect ratio, "a"), rounded
+// down to even numbers, and the other side follows from the aspect. A limit
+// on the width alone, on the height alone, and on both have each their own
+// form; a request with no limit at all is held to the size of the source.
+func scaleFilter(req Request) string {
+	w, h := req.MaxWidth, req.MaxHeight
+	if w <= 0 && h <= 0 {
+		w, h = req.SourceWidth, req.SourceHeight
+	}
+	switch {
+	case w > 0 && h > 0:
+		return fmt.Sprintf(`scale=trunc(min(max(iw\,ih*a)\,min(%d\,%d*a))/2)*2:trunc(min(max(iw/a\,ih)\,min(%d/a\,%d))/2)*2`, w, h, w, h)
+	case w > 0:
+		return fmt.Sprintf(`scale=trunc(min(max(iw\,ih*a)\,%d)/2)*2:trunc(ow/a/2)*2`, w)
+	case h > 0:
+		return fmt.Sprintf(`scale=trunc(oh*a/2)*2:min(max(iw/a\,ih)\,%d)`, h)
+	}
+	return ""
+}
+
+// videoEncodeArgs is the encoder part of a re-encoded picture. H.264 and HEVC
+// are written with the reference's encoder settings: constant quality capped
+// by the requested bit rate, the "veryfast" preset with a light motion search,
+// closed GOPs, and the profile and level only when the request names them. The
+// B-frames of those presets are what puts the decode time of the first picture
+// of a segment ahead of its presentation time.
+func videoEncodeArgs(req Request) []string {
+	maxrate := CapVideoBitrate(req.VideoBitrate, req.VideoSourceBitrate, req.VideoSourceCodec, req.VideoCodec)
+	rate := []string{"-maxrate", strconv.Itoa(maxrate), "-bufsize", strconv.Itoa(2 * maxrate)}
+	switch req.VideoCodec {
+	case "h264":
+		args := []string{"-c:v", "libx264", "-preset", "veryfast", "-crf", "23"}
+		args = append(args, rate...)
+		if req.H264Profile != "" {
+			args = append(args, "-profile:v", req.H264Profile)
+		}
+		if req.H264Level != "" {
+			args = append(args, "-level", req.H264Level)
+		}
+		return append(args, "-x264opts", "subme=0:me_range=16:rc_lookahead=10:me=hex:open_gop=0")
+	case "hevc":
+		args := []string{"-c:v", "libx265", "-tag:v", "hvc1", "-preset", "veryfast", "-crf", "28"}
+		args = append(args, rate...)
+		if req.H264Profile != "" {
+			args = append(args, "-profile:v", req.H264Profile)
+		}
+		return append(args, "-x265-params", "no-scenecut=1:no-open-gop=1:no-info=1:subme=3:merange=25:rc-lookahead=10:me=star:ctu=32:max-tu-size=32:min-cu-size=16:rskip=2:rskip-edge-threshold=2:no-sao=1:no-strong-intra-smoothing=1")
+	}
+	args := []string{"-c:v", req.VideoCodec}
+	if req.VideoBitrate > 0 {
+		b := strconv.Itoa(req.VideoBitrate)
+		args = append(args, "-b:v", b, "-maxrate", b, "-bufsize", strconv.Itoa(2*req.VideoBitrate))
+	}
+	return args
 }
 
 // quoteFilterValue escapes v for use as a filter option value inside a
@@ -324,4 +382,46 @@ func quoteFilterValue(v string) string {
 		return b.String()
 	}
 	return esc(esc(v, `':`), `'[],;`)
+}
+
+// CapVideoBitrate is the rate the reference holds an encoded picture to: the
+// requested rate, lowered to what the source's own picture is judged to need.
+// A source at up to 2 Mb/s counts 2.5 times, up to 3 Mb/s twice, anything
+// above once; that figure is then scaled by 4 up to 500 kb/s, 3 up to 1 Mb/s,
+// 2.5 up to 2 Mb/s and 2 up to 3 Mb/s (at least the ratio of the two codecs'
+// efficiency, hevc and av1 counting 0.6), and never exceeds the request.
+// Without a request (0) or a known source rate the request stands.
+func CapVideoBitrate(requested, source int, sourceCodec, outCodec string) int {
+	if requested <= 0 || source <= 0 {
+		return requested
+	}
+	// (each step rounds to a whole number, halves to even)
+	x := float64(source)
+	switch {
+	case source <= 2000000:
+		x = math.RoundToEven(x * 2.5)
+	case source <= 3000000:
+		x = math.RoundToEven(x * 2)
+	}
+	x = min(x, float64(requested))
+	f := codecEfficiency(outCodec) / codecEfficiency(sourceCodec)
+	switch {
+	case x <= 500000:
+		f = max(f, 4)
+	case x <= 1000000:
+		f = max(f, 3)
+	case x <= 2000000:
+		f = max(f, 2.5)
+	case x <= 3000000:
+		f = max(f, 2)
+	}
+	return min(int(math.RoundToEven(f*x)), requested)
+}
+
+func codecEfficiency(codec string) float64 {
+	switch strings.ToLower(codec) {
+	case "hevc", "h265", "av1":
+		return 0.6
+	}
+	return 1
 }

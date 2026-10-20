@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- HLS copy decisions and announced rates follow the reference (`playback.md#hls` R15-R16, scenario
+  `playback.hls.copy-limits`): a picture is copied only when its profile, level, reference frames, bit depth
+  and sample aspect also fit `h264-profile`/`hevc-profile`/`Profile`, `h264-level`/`hevc-level`/`Level`,
+  `MaxRefFrames`, `MaxVideoBitDepth` and `RequireNonAnamorphic`, and `AllowVideoStreamCopy` is not false; a copied
+  High 10 picture is written as constrained baseline, a copied 8-bit HEVC one as profile 1; the rate cap and
+  the variant bandwidth use the reference's source-rate ladder instead of a flat ten times (a file without sound
+  adds no sound bandwidth).
+- A re-encoded HLS sound follows the reference (`playback.md#hls` R14, scenario `playback.hls.encoded-audio`):
+  the channel count is the source's (five-or-more-channel sources are no longer folded to stereo by default),
+  capped by `AudioChannels`/`MaxAudioChannels`/`TranscodingMaxAudioChannels`, three or four channels become
+  two, MP3 stays stereo; rate 128 kb/s a channel (256 kb/s for three or four, 640 kb/s for six) lowered to
+  `AudioBitrate`; a six-channel source folded to two gets `volume=2`; `libfdk_aac`, `libmp3lame`, `libopus`
+  are used when the ffmpeg has them.
+- Encoded HLS segments match the reference (`playback.md#hls` R10-R13, `playback10.json`, 5 new scenarios,
+  fixtures from `scripts/conformance-hls3.sh`): an H.264 picture is encoded with the reference's own encoder
+  settings (`veryfast` at `crf` 23 under a rate cap held to ten times the source's picture rate, light motion
+  search, closed GOPs, BT.709 tags, High profile with B-frames unless the request pins a profile and level),
+  so the first picture of a segment has the reference's two-frame decode lead and a segment is byte-identical
+  to the reference's on the same encoder build; HEVC targets use `libx265` with the reference's settings. The
+  scale is written with the reference's display-size expressions (width, height, both, or the source's size
+  under a bit rate), `MaxHeight`/`Height` now limit the picture, and the 416 default width drops the height
+  limit. `Profile`/`Level` are read besides `h264-profile`/`h264-level`, `hevc-profile` pins HEVC Main. A
+  segment that opens less than 5 s before the end starts its picture 5 s before it (the copied sound is cut at
+  the position asked for when ffmpeg can). Output carries no metadata or chapters (no language descriptor in
+  the transport stream), and a transcode job is keyed by the size, bit rate and profile parameters too.
+
 - Subtitle sidecars by content and the rest of the subtitle matrix (`subtitles.md#sidecar`, `subtitles2.json`,
   10 new scenarios, fixtures from `scripts/conformance-subs2.sh`): subtitle files are probed, not trusted by
   extension (a SubRip `.vtt` is `subrip`, an empty or unreadable file is no stream), VobSub `.idx`/`.sub` pairs

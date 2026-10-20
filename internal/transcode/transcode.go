@@ -34,6 +34,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 )
 
 // jobDirName is the fixed subdirectory name under Config.WorkDir (or
@@ -106,11 +107,25 @@ type Request struct {
 	AudioBitrate int    // bits/sec, 0 = unset/unbounded
 	MaxHeight    int    // 0 = no scaling
 	MaxWidth     int    // 0 = no width limit (the picture is scaled down to it)
-	// H264Profile ("baseline", "constrainedbaseline", "main", "high") and
-	// H264Level (the level times ten, 41 = 4.1) pin the encoder to what the
-	// playlists announce; empty/0 keeps the default (high, 4.1).
-	H264Profile    string
-	H264Level      int
+	// H264Profile ("baseline", "main", "high"; "main" for HEVC) and H264Level
+	// (the text of -level, "41" for 4.1) pin the encoder when the request names
+	// them; empty leaves the choice to the encoder (High, the level that fits).
+	H264Profile string
+	H264Level   string
+	// VideoSourceBitrate is the bit rate of the source's picture (bits/s, 0 =
+	// unknown): the video bit rate is held to ten times it.
+	VideoSourceBitrate int
+	VideoSourceCodec   string
+	// AudioChannels is the channel count of a re-encoded sound (0: stereo),
+	// AudioBoost doubles its volume (a surround mix folded down to stereo) and
+	// AudioEncoder, when set, is the encoder named in place of AudioCodec.
+	AudioChannels int
+	AudioBoost    bool
+	AudioEncoder  string
+	// AudioDropTicks, with a copied sound, is how far past the seek offset the
+	// sound starts: the picture of a seek close to the end of the file begins
+	// earlier than the position asked for, the sound does not.
+	AudioDropTicks int64
 	StartTimeTicks int64 // seek offset, 100ns ticks (Jellyfin's tick unit), 0 = from start
 	SegmentSeconds int   // HLS segment target duration, 0 = package default (6s)
 	// StartNumber numbers the first segment the job writes (the segment the
@@ -170,6 +185,12 @@ type Manager struct {
 	mu   sync.Mutex
 	jobs map[string]*Job
 	kf   kfCache
+
+	encOnce  sync.Once
+	encoders map[string]bool
+
+	dropOnce sync.Once
+	dropOK   bool
 }
 
 // New constructs a Manager from cfg. cfg is copied; later mutation of a cfg
@@ -208,6 +229,12 @@ func (m *Manager) Start(ctx context.Context, sessionID string, req Request) (*Jo
 
 	if req.FontsDir == "" {
 		req.FontsDir = m.cfg.FontsDir
+	}
+	if req.AudioEncoder == "" && req.AudioCodec != "" && req.AudioCodec != "copy" {
+		req.AudioEncoder = m.audioEncoder(req.AudioCodec)
+	}
+	if req.AudioDropTicks > 0 && !m.audioDropSupported() {
+		req.AudioDropTicks = 0
 	}
 
 	// Stop+replace (see doc comment above). Safe even if no job exists yet
@@ -283,6 +310,47 @@ func (m *Manager) Start(ctx context.Context, sessionID string, req Request) (*Jo
 	}()
 
 	return job, nil
+}
+
+// audioEncoder is the ffmpeg encoder that writes codec: the external library
+// the reference uses when the build has it (libfdk_aac for AAC, libopus,
+// libvorbis and libmp3lame), else the codec's own name.
+func (m *Manager) audioEncoder(codec string) string {
+	m.encOnce.Do(func() {
+		m.encoders = map[string]bool{}
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		out, err := exec.CommandContext(ctx, m.cfg.ffmpegPath(), "-hide_banner", "-encoders").CombinedOutput()
+		if err != nil {
+			return
+		}
+		for _, line := range strings.Split(string(out), "\n") {
+			if f := strings.Fields(line); len(f) > 1 && strings.HasPrefix(f[0], "A") {
+				m.encoders[f[1]] = true
+			}
+		}
+	})
+	for _, lib := range map[string][]string{"aac": {"libfdk_aac"}, "opus": {"libopus"}, "vorbis": {"libvorbis"}, "mp3": {"libmp3lame"}}[strings.ToLower(codec)] {
+		if m.encoders[lib] {
+			return lib
+		}
+	}
+	return codec
+}
+
+// audioDropSupported tells whether the ffmpeg binary can drop the packets of a
+// copied sound before a time (the "drop" option of the noise bit stream
+// filter, which ffmpeg builds older than jellyfin-ffmpeg's do not have):
+// without it the sound of a seek close to the end of the file starts with the
+// picture.
+func (m *Manager) audioDropSupported() bool {
+	m.dropOnce.Do(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		out, err := exec.CommandContext(ctx, m.cfg.ffmpegPath(), "-hide_banner", "-h", "bsf=noise").CombinedOutput()
+		m.dropOK = err == nil && strings.Contains(string(out), "-drop ")
+	})
+	return m.dropOK
 }
 
 // Get returns the running/finished job for sessionID, if any.

@@ -89,3 +89,29 @@ func TestCutDurations(t *testing.T) {
 		}
 	}
 }
+
+func TestAudioPlanReference(t *testing.T) {
+	ch := func(n int) *storage.MediaStreamRef { return &storage.MediaStreamRef{Channels: &n} }
+	cases := []struct {
+		src      int
+		query    string
+		channels int
+		bitrate  int
+		boost    bool
+	}{
+		{6, "", 6, 640000, false},
+		{6, "MaxAudioChannels=2", 2, 256000, true},
+		{6, "TranscodingMaxAudioChannels=3", 2, 256000, true},
+		{6, "AudioChannels=1", 1, 128000, false},
+		{6, "AudioCodec=mp3", 2, 256000, true},
+		{6, "AudioBitrate=96000", 6, 96000, false},
+		{2, "", 2, 256000, false},
+	}
+	for _, c := range cases {
+		q, _ := url.ParseQuery(strings.ToLower(c.query))
+		gotC, gotB, gotBoost := audioPlan(ch(c.src), q)
+		if gotC != c.channels || gotB != c.bitrate || gotBoost != c.boost {
+			t.Errorf("src %d %q: got %d/%d/%v want %d/%d/%v", c.src, c.query, gotC, gotB, gotBoost, c.channels, c.bitrate, c.boost)
+		}
+	}
+}
