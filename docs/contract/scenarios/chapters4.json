@@ -1,0 +1,1306 @@
+[
+ {
+  "id": "chapters.images.round-caps",
+  "endpoint": "GET /Items/{itemId}/Images/Chapter/{imageIndex}",
+  "spec": "chapters.md#images",
+  "scope": "modern",
+  "tags": [
+   "chapters",
+   "chapter-images"
+  ],
+  "covers": [
+   "chapters.images.R6"
+  ],
+  "requires": [
+   "library:chapterimg3",
+   "item:chapter-noise",
+   "item:chapter-portrait",
+   "item:chapter-small"
+  ],
+  "steps": [
+   {
+    "name": "wait for the pictures",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-small.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Chapters[1].ImageTag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      }
+     ]
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "both maxima, the width the tighter (maxWidth=33 maxHeight=20): 33x18",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "33",
+      "maxHeight": "20"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000\u0012\u0000!"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "both maxima, the width the tighter (maxWidth=33 maxHeight=37): 33x18",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "33",
+      "maxHeight": "37"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000\u0012\u0000!"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "both maxima, the width the tighter (maxWidth=72 maxHeight=71): 72x41",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "72",
+      "maxHeight": "71"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000)\u0000H"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "both maxima, the width the tighter (maxWidth=72 maxHeight=139): 72x41",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "72",
+      "maxHeight": "139"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000)\u0000H"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "both maxima, the width the tighter (maxWidth=72 maxHeight=292): 72x41",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "72",
+      "maxHeight": "292"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000)\u0000H"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "both maxima, the width the tighter (maxWidth=111 maxHeight=71): 111x63",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "111",
+      "maxHeight": "71"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000?\u0000o"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "both maxima, the width the tighter (maxWidth=111 maxHeight=156): 111x63",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "111",
+      "maxHeight": "156"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000?\u0000o"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "both maxima, the height the tighter (maxWidth=111 maxHeight=111): 111x63",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "111",
+      "maxHeight": "111"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000?\u0000o"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "both maxima, the height the tighter (maxWidth=100 maxHeight=30): 53x30",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "100",
+      "maxHeight": "30"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000\u001e\u00005"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "both maxima, the height the tighter (maxWidth=127 maxHeight=60): 107x60",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "127",
+      "maxHeight": "60"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000<\u0000k"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "both maxima, portrait (maxWidth=40 maxHeight=111): 40x72",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-portrait.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "40",
+      "maxHeight": "111"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000H\u0000("
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "both maxima, portrait (maxWidth=33 maxHeight=60): 33x58",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-portrait.id}}/Images/Chapter/0",
+     "query": {
+      "maxWidth": "33",
+      "maxHeight": "60"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000:\u0000!"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "chapters.images.round-ties",
+  "endpoint": "GET /Items/{itemId}/Images/Chapter/{imageIndex}",
+  "spec": "chapters.md#images",
+  "scope": "modern",
+  "tags": [
+   "chapters",
+   "chapter-images"
+  ],
+  "covers": [
+   "chapters.images.R6"
+  ],
+  "requires": [
+   "library:chapterimg3",
+   "item:chapter-noise",
+   "item:chapter-portrait",
+   "item:chapter-small"
+  ],
+  "steps": [
+   {
+    "name": "wait for the pictures",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-small.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Chapters[1].ImageTag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      }
+     ]
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "width, a tie (width=8): 8x4",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "width": "8"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000\u0004\u0000\b"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "width, a tie (width=24): 24x14",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "width": "24"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000\u000e\u0000\u0018"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "width, a tie (width=40): 40x22",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "width": "40"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000\u0016\u0000("
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "width, a tie (width=56): 56x31",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "width": "56"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000\u001f\u00008"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "width, a tie (width=72): 72x40",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "width": "72"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000(\u0000H"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "width, a tie (width=88): 88x50",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "width": "88"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u00002\u0000X"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "height, a tie (height=24): 14x24",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-portrait.id}}/Images/Chapter/0",
+     "query": {
+      "height": "24"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000\u0018\u0000\u000e"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "height, a tie (height=56): 31x56",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-portrait.id}}/Images/Chapter/0",
+     "query": {
+      "height": "56"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u00008\u0000\u001f"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "height, a tie (height=88): 50x88",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-portrait.id}}/Images/Chapter/0",
+     "query": {
+      "height": "88"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000X\u00002"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "width then a maximum (width=100 maxHeight=28): 50x28",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "width": "100",
+      "maxHeight": "28"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000\u001c\u00002"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "width then a maximum (width=70 maxHeight=30): 54x30",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "width": "70",
+      "maxHeight": "30"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000\u001e\u00006"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "chapters.images.fill",
+  "endpoint": "GET /Items/{itemId}/Images/Chapter/{imageIndex}",
+  "spec": "chapters.md#images",
+  "scope": "modern",
+  "tags": [
+   "chapters",
+   "chapter-images"
+  ],
+  "covers": [
+   "chapters.images.R6",
+   "chapters.images.R7"
+  ],
+  "requires": [
+   "library:chapterimg3",
+   "item:chapter-noise",
+   "item:chapter-portrait",
+   "item:chapter-small"
+  ],
+  "steps": [
+   {
+    "name": "wait for the pictures",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-small.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Chapters[1].ImageTag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      }
+     ]
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "fill: the divisor, then the sides rounded up (fillWidth=61 quality=50): 62x35",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "fillWidth": "61",
+      "quality": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000#\u0000>"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "fill: the divisor, then the sides rounded up (fillWidth=77 quality=50): 78x44",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "fillWidth": "77",
+      "quality": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000,\u0000N"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "fill: the divisor, then the sides rounded up (fillWidth=100 quality=50): 100x57",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "fillWidth": "100",
+      "quality": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u00009\u0000d"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "fill: the divisor, then the sides rounded up (fillWidth=624 quality=50): 624x352",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "fillWidth": "624",
+      "quality": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0001`\u0002p"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "fill: the divisor, then the sides rounded up (fillWidth=1 quality=50): 2x1",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "fillWidth": "1",
+      "quality": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000\u0001\u0000\u0002"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "fill: the divisor, then the sides rounded up (fillWidth=64 fillHeight=20 quality=50): 64x36",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "fillWidth": "64",
+      "fillHeight": "20",
+      "quality": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000$\u0000@"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "fill, portrait (fillHeight=1 quality=50): 1x2",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-portrait.id}}/Images/Chapter/0",
+     "query": {
+      "fillHeight": "1",
+      "quality": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000\u0002\u0000\u0001"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "fill, portrait (fillHeight=61 quality=50): 35x62",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-portrait.id}}/Images/Chapter/0",
+     "query": {
+      "fillHeight": "61",
+      "quality": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000>\u0000#"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "fill, portrait (fillHeight=77 quality=50): 44x78",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-portrait.id}}/Images/Chapter/0",
+     "query": {
+      "fillHeight": "77",
+      "quality": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000N\u0000,"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "fill after a width and a height (width=327 height=29 fillWidth=5 quality=50): 12x1",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "width": "327",
+      "height": "29",
+      "fillWidth": "5",
+      "quality": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000\u0001\u0000\f"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "fill after a width and a height (width=31 height=287 fillHeight=8 quality=50): 1x10",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "width": "31",
+      "height": "287",
+      "fillHeight": "8",
+      "quality": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000\n\u0000\u0001"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "fill after a width and a height (width=6 height=112 fillHeight=15 quality=50): 1x19",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "width": "6",
+      "height": "112",
+      "fillHeight": "15",
+      "quality": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000\u0013\u0000\u0001"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a negative fill cancels it (height=60 fillWidth=-2 fillHeight=30): 107x60",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "height": "60",
+      "fillWidth": "-2",
+      "fillHeight": "30"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000<\u0000k"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a negative fill cancels it (height=60 fillHeight=-1 fillWidth=30): 107x60",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "height": "60",
+      "fillHeight": "-1",
+      "fillWidth": "30"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000<\u0000k"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "chapters.images.zero-side",
+  "endpoint": "GET /Items/{itemId}/Images/Chapter/{imageIndex}",
+  "spec": "chapters.md#images",
+  "scope": "modern",
+  "tags": [
+   "chapters",
+   "chapter-images"
+  ],
+  "covers": [
+   "chapters.images.R6",
+   "chapters.images.R8"
+  ],
+  "requires": [
+   "library:chapterimg3",
+   "item:chapter-noise",
+   "item:chapter-portrait",
+   "item:chapter-small"
+  ],
+  "steps": [
+   {
+    "name": "wait for the pictures",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-small.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Chapters[1].ImageTag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      }
+     ]
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "a side that rounds to nothing leaves the picture (width=640 height=54 maxWidth=5): as it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "width": "640",
+      "height": "54",
+      "maxWidth": "5"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a side that rounds to nothing leaves the picture (width=62 maxWidth=1 maxHeight=1): as it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "width": "62",
+      "maxWidth": "1",
+      "maxHeight": "1"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a side that rounds to nothing leaves the picture (width=640 height=54 maxWidth=5 format=Png): as it is",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "width": "640",
+      "height": "54",
+      "maxWidth": "5",
+      "format": "Png"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the clamp keeps one (width=4 height=671 maxWidth=-3 fillHeight=645): 1x68",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-small.id}}/Images/Chapter/0",
+     "query": {
+      "width": "4",
+      "height": "671",
+      "maxWidth": "-3",
+      "fillHeight": "645"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/jpeg"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "\u0000\u0011\b\u0000D\u0000\u0001"
+      },
+      {
+       "op": "notcontains",
+       "value": "Lavc"
+      }
+     ]
+    }
+   }
+  ]
+ }
+]
