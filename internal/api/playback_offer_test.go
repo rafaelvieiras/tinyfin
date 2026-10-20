@@ -96,17 +96,33 @@ func TestMP4SourceName(t *testing.T) {
 	}
 }
 
-func TestFormatSourceName(t *testing.T) {
+func TestExtFormatSourceName(t *testing.T) {
 	webm := deviceprofile.DeviceProfile{DirectPlayProfiles: []deviceprofile.DirectPlayProfile{{Container: "webm", Type: "Video"}}}
 	for ext, want := range map[string]string{"mkv": "mkv", "m2ts": "ts", "ts": "ts", "wmv": "asf", "mpg": "mpeg", "ogv": "ogg", "mp4": ""} {
-		if got := formatSourceName(ext, deviceprofile.DeviceProfile{}); got != want {
+		if got := extFormatSourceName(ext, deviceprofile.DeviceProfile{}); got != want {
 			t.Errorf("%s: %q, want %q", ext, got, want)
 		}
 	}
-	if got := formatSourceName("webm", deviceprofile.DeviceProfile{}); got != "mkv,webm" {
+	if got := extFormatSourceName("webm", deviceprofile.DeviceProfile{}); got != "mkv,webm" {
 		t.Errorf("webm: %q", got)
 	}
-	if got := formatSourceName("webm", webm); got != "webm" {
+	if got := extFormatSourceName("webm", webm); got != "webm" {
 		t.Errorf("webm with profile: %q", got)
+	}
+}
+
+func TestFormatSourceName(t *testing.T) {
+	webm := deviceprofile.DeviceProfile{DirectPlayProfiles: []deviceprofile.DirectPlayProfile{{Container: "webm", Type: "Video"}}}
+	if got := formatSourceName("mkv,webm", deviceprofile.DeviceProfile{}); got != "mkv,webm" {
+		t.Errorf("no profile: %q", got)
+	}
+	if got := formatSourceName("mkv,webm", webm); got != "webm" {
+		t.Errorf("webm with profile: %q", got)
+	}
+	if got := formatSourceName("ts", webm); got != "ts" {
+		t.Errorf("single name: %q", got)
+	}
+	if got := formatSourceName("mov,mp4,m4a,3gp,3g2,mj2", webm); got != "mov,mp4,m4a,3gp,3g2,mj2" {
+		t.Errorf("no listed name: %q", got)
 	}
 }

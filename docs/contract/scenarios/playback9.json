@@ -1,0 +1,1576 @@
+[
+  {
+    "id": "playback.offer.item-container",
+    "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+    "spec": "playback.md#offer",
+    "scope": "modern",
+    "tags": [
+      "playback",
+      "items"
+    ],
+    "covers": [
+      "playback.offer.R19"
+    ],
+    "requires": [
+      "library:probe3",
+      "item:p3-ts-aac",
+      "item:p3-m2ts",
+      "item:p3-mts",
+      "item:p3-webm-streams",
+      "item:p3-vp9-aac",
+      "item:p3-vp9-sub",
+      "item:p3-mp4",
+      "item:p3-mp4-as-mkv",
+      "item:p3-mp4-as-m4v",
+      "item:p3-avi-as-mp4",
+      "item:p3-mpg"
+    ],
+    "steps": [
+      {
+        "name": "p3-ts-aac: item ts, source ts",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items",
+          "query": {
+            "Ids": "{{item.p3-ts-aac.id}}",
+            "Fields": "MediaSources"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Container",
+              "op": "eq",
+              "value": "ts"
+            },
+            {
+              "path": "$.Items[0].MediaSources[0].Container",
+              "op": "eq",
+              "value": "ts"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-m2ts: item ts, source ts",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items",
+          "query": {
+            "Ids": "{{item.p3-m2ts.id}}",
+            "Fields": "MediaSources"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Container",
+              "op": "eq",
+              "value": "ts"
+            },
+            {
+              "path": "$.Items[0].MediaSources[0].Container",
+              "op": "eq",
+              "value": "ts"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-mts: item ts, source ts",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items",
+          "query": {
+            "Ids": "{{item.p3-mts.id}}",
+            "Fields": "MediaSources"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Container",
+              "op": "eq",
+              "value": "ts"
+            },
+            {
+              "path": "$.Items[0].MediaSources[0].Container",
+              "op": "eq",
+              "value": "ts"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-webm-streams: item mkv,webm, source mkv",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items",
+          "query": {
+            "Ids": "{{item.p3-webm-streams.id}}",
+            "Fields": "MediaSources"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Container",
+              "op": "eq",
+              "value": "mkv,webm"
+            },
+            {
+              "path": "$.Items[0].MediaSources[0].Container",
+              "op": "eq",
+              "value": "mkv"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-vp9-aac: item mkv, source mkv",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items",
+          "query": {
+            "Ids": "{{item.p3-vp9-aac.id}}",
+            "Fields": "MediaSources"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Container",
+              "op": "eq",
+              "value": "mkv"
+            },
+            {
+              "path": "$.Items[0].MediaSources[0].Container",
+              "op": "eq",
+              "value": "mkv"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-vp9-sub: item mkv, source mkv",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items",
+          "query": {
+            "Ids": "{{item.p3-vp9-sub.id}}",
+            "Fields": "MediaSources"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Container",
+              "op": "eq",
+              "value": "mkv"
+            },
+            {
+              "path": "$.Items[0].MediaSources[0].Container",
+              "op": "eq",
+              "value": "mkv"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-mp4: item mov,mp4,m4a,3gp,3g2,mj2, source mp4",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items",
+          "query": {
+            "Ids": "{{item.p3-mp4.id}}",
+            "Fields": "MediaSources"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Container",
+              "op": "eq",
+              "value": "mov,mp4,m4a,3gp,3g2,mj2"
+            },
+            {
+              "path": "$.Items[0].MediaSources[0].Container",
+              "op": "eq",
+              "value": "mp4"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-mp4-as-mkv: item mov,mp4,m4a,3gp,3g2,mj2, source mov",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items",
+          "query": {
+            "Ids": "{{item.p3-mp4-as-mkv.id}}",
+            "Fields": "MediaSources"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Container",
+              "op": "eq",
+              "value": "mov,mp4,m4a,3gp,3g2,mj2"
+            },
+            {
+              "path": "$.Items[0].MediaSources[0].Container",
+              "op": "eq",
+              "value": "mov"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-mp4-as-m4v: item mov,mp4,m4a,3gp,3g2,mj2, source mov",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items",
+          "query": {
+            "Ids": "{{item.p3-mp4-as-m4v.id}}",
+            "Fields": "MediaSources"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Container",
+              "op": "eq",
+              "value": "mov,mp4,m4a,3gp,3g2,mj2"
+            },
+            {
+              "path": "$.Items[0].MediaSources[0].Container",
+              "op": "eq",
+              "value": "mov"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-avi-as-mp4: item avi, source avi",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items",
+          "query": {
+            "Ids": "{{item.p3-avi-as-mp4.id}}",
+            "Fields": "MediaSources"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Container",
+              "op": "eq",
+              "value": "avi"
+            },
+            {
+              "path": "$.Items[0].MediaSources[0].Container",
+              "op": "eq",
+              "value": "avi"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-mpg: item mpeg, source mpeg",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items",
+          "query": {
+            "Ids": "{{item.p3-mpg.id}}",
+            "Fields": "MediaSources"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].Container",
+              "op": "eq",
+              "value": "mpeg"
+            },
+            {
+              "path": "$.Items[0].MediaSources[0].Container",
+              "op": "eq",
+              "value": "mpeg"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "playback.offer.probed-container",
+    "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+    "spec": "playback.md#offer",
+    "scope": "modern",
+    "tags": [
+      "playback"
+    ],
+    "covers": [
+      "playback.offer.R19"
+    ],
+    "requires": [
+      "library:probe3",
+      "item:p3-webm-streams",
+      "item:p3-vp9-aac",
+      "item:p3-mp4-as-mkv",
+      "item:p3-avi-as-mp4",
+      "item:p3-m2ts",
+      "item:p3-mpg"
+    ],
+    "steps": [
+      {
+        "name": "p3-webm-streams offered as mkv,webm",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-webm-streams.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-webm-streams.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].Container",
+              "op": "eq",
+              "value": "mkv,webm"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-vp9-aac offered as mkv",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-vp9-aac.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-vp9-aac.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].Container",
+              "op": "eq",
+              "value": "mkv"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-mp4-as-mkv offered as mov,mp4,m4a,3gp,3g2,mj2",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-mp4-as-mkv.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-mp4-as-mkv.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].Container",
+              "op": "eq",
+              "value": "mov,mp4,m4a,3gp,3g2,mj2"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-avi-as-mp4 offered as avi",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-avi-as-mp4.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-avi-as-mp4.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].Container",
+              "op": "eq",
+              "value": "avi"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-m2ts offered as ts",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-m2ts.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-m2ts.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].Container",
+              "op": "eq",
+              "value": "ts"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-mpg offered as mpeg",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-mpg.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-mpg.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].Container",
+              "op": "eq",
+              "value": "mpeg"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a profile listing webm gets that name",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-webm-streams.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-webm-streams.id}}"
+          },
+          "body": {
+            "DeviceProfile": {
+              "DirectPlayProfiles": [
+                {
+                  "Container": "webm",
+                  "Type": "Video",
+                  "VideoCodec": "vp9",
+                  "AudioCodec": "opus"
+                }
+              ],
+              "TranscodingProfiles": [
+                {
+                  "Container": "ts",
+                  "Type": "Video",
+                  "Protocol": "hls",
+                  "VideoCodec": "h264",
+                  "AudioCodec": "aac",
+                  "Context": "Streaming"
+                }
+              ]
+            }
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].Container",
+              "op": "eq",
+              "value": "webm"
+            },
+            {
+              "path": "$.MediaSources[0].SupportsDirectPlay",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "playback.offer.ts-timestamp",
+    "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+    "spec": "playback.md#offer",
+    "scope": "modern",
+    "tags": [
+      "playback"
+    ],
+    "covers": [
+      "playback.offer.R20"
+    ],
+    "requires": [
+      "library:probe3",
+      "item:p3-ts-aac",
+      "item:p3-mts",
+      "item:p3-m2ts",
+      "item:p3-m2ts-zero",
+      "item:p3-ts-plain-m2ts",
+      "item:p3-m2ts-as-ts",
+      "item:p3-mp4"
+    ],
+    "steps": [
+      {
+        "name": "p3-ts-aac: None in the item",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items",
+          "query": {
+            "Ids": "{{item.p3-ts-aac.id}}",
+            "Fields": "MediaSources"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].MediaSources[0].Timestamp",
+              "op": "eq",
+              "value": "None"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-ts-aac: None in PlaybackInfo",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-ts-aac.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-ts-aac.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].Timestamp",
+              "op": "eq",
+              "value": "None"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-mts: None in the item",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items",
+          "query": {
+            "Ids": "{{item.p3-mts.id}}",
+            "Fields": "MediaSources"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].MediaSources[0].Timestamp",
+              "op": "eq",
+              "value": "None"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-mts: None in PlaybackInfo",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-mts.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-mts.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].Timestamp",
+              "op": "eq",
+              "value": "None"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-m2ts: Valid in the item",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items",
+          "query": {
+            "Ids": "{{item.p3-m2ts.id}}",
+            "Fields": "MediaSources"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].MediaSources[0].Timestamp",
+              "op": "eq",
+              "value": "Valid"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-m2ts: Valid in PlaybackInfo",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-m2ts.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-m2ts.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].Timestamp",
+              "op": "eq",
+              "value": "Valid"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-m2ts-zero: Zero in the item",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items",
+          "query": {
+            "Ids": "{{item.p3-m2ts-zero.id}}",
+            "Fields": "MediaSources"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].MediaSources[0].Timestamp",
+              "op": "eq",
+              "value": "Zero"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-m2ts-zero: Zero in PlaybackInfo",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-m2ts-zero.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-m2ts-zero.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].Timestamp",
+              "op": "eq",
+              "value": "Zero"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-ts-plain-m2ts: None in the item",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items",
+          "query": {
+            "Ids": "{{item.p3-ts-plain-m2ts.id}}",
+            "Fields": "MediaSources"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].MediaSources[0].Timestamp",
+              "op": "eq",
+              "value": "None"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-ts-plain-m2ts: None in PlaybackInfo",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-ts-plain-m2ts.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-ts-plain-m2ts.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].Timestamp",
+              "op": "eq",
+              "value": "None"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-m2ts-as-ts: Valid in the item",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items",
+          "query": {
+            "Ids": "{{item.p3-m2ts-as-ts.id}}",
+            "Fields": "MediaSources"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[0].MediaSources[0].Timestamp",
+              "op": "eq",
+              "value": "Valid"
+            }
+          ]
+        }
+      },
+      {
+        "name": "p3-m2ts-as-ts: Valid in PlaybackInfo",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-m2ts-as-ts.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-m2ts-as-ts.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].Timestamp",
+              "op": "eq",
+              "value": "Valid"
+            }
+          ]
+        }
+      },
+      {
+        "name": "an MP4 file has none",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-mp4.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-mp4.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].Timestamp",
+              "op": "absent"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "playback.offer.ts-bitrate",
+    "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+    "spec": "playback.md#offer",
+    "scope": "modern",
+    "tags": [
+      "playback"
+    ],
+    "covers": [
+      "playback.offer.R21"
+    ],
+    "requires": [
+      "library:probe3",
+      "item:p3-ts-aac",
+      "item:p3-m2ts",
+      "item:p3-mts"
+    ],
+    "steps": [
+      {
+        "name": "ts: the sound as ffprobe measures it, the rest to the picture",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-ts-aac.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-ts-aac.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].MediaStreams[0].BitRate",
+              "op": "eq",
+              "value": 118807
+            },
+            {
+              "path": "$.MediaSources[0].MediaStreams[1].BitRate",
+              "op": "eq",
+              "value": 130089
+            }
+          ]
+        }
+      },
+      {
+        "name": "m2ts: likewise",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-m2ts.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-m2ts.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].MediaStreams[0].BitRate",
+              "op": "eq",
+              "value": 130204
+            },
+            {
+              "path": "$.MediaSources[0].MediaStreams[1].BitRate",
+              "op": "eq",
+              "value": 130089
+            }
+          ]
+        }
+      },
+      {
+        "name": "mts with ac3 states the rate",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-mts.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-mts.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].MediaStreams[0].BitRate",
+              "op": "eq",
+              "value": 120500
+            },
+            {
+              "path": "$.MediaSources[0].MediaStreams[1].BitRate",
+              "op": "eq",
+              "value": 192000
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "playback.offer.pixel-depth",
+    "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+    "spec": "playback.md#offer",
+    "scope": "modern",
+    "tags": [
+      "playback"
+    ],
+    "covers": [
+      "playback.offer.R22",
+      "playback.offer.R23"
+    ],
+    "requires": [
+      "library:probe3",
+      "item:p3-gbrp9",
+      "item:p3-yuv444p16",
+      "item:p3-vp9-gbrp",
+      "item:p3-h264-mp4",
+      "item:p3-mlp"
+    ],
+    "steps": [
+      {
+        "name": "gbrp9le: 9 bits",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-gbrp9.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-gbrp9.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].MediaStreams[0].BitDepth",
+              "op": "eq",
+              "value": 9
+            }
+          ]
+        }
+      },
+      {
+        "name": "yuv444p16le: 16 bits",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-yuv444p16.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-yuv444p16.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].MediaStreams[0].BitDepth",
+              "op": "eq",
+              "value": 16
+            }
+          ]
+        }
+      },
+      {
+        "name": "gbrp: no depth",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-vp9-gbrp.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-vp9-gbrp.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].MediaStreams[0].BitDepth",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "yuv420p: 8 bits",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-h264-mp4.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-h264-mp4.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].MediaStreams[0].BitDepth",
+              "op": "eq",
+              "value": 8
+            }
+          ]
+        }
+      },
+      {
+        "name": "mlp stereo: 700000 per channel",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-mlp.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-mlp.id}}"
+          },
+          "body": {}
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].MediaStreams[0].BitRate",
+              "op": "absent"
+            },
+            {
+              "path": "$.MediaSources[0].MediaStreams[1].BitRate",
+              "op": "eq",
+              "value": 1400000
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "playback.offer.transcode-codec-reasons",
+    "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+    "spec": "playback.md#offer",
+    "scope": "modern",
+    "tags": [
+      "playback"
+    ],
+    "covers": [
+      "playback.offer.R24"
+    ],
+    "requires": [
+      "library:probe3",
+      "item:p3-hevc-mp4",
+      "item:p3-h264-mp4"
+    ],
+    "steps": [
+      {
+        "name": "HEVC, condition fails, the profile transcodes to h264: the picture is named first",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-hevc-mp4.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-hevc-mp4.id}}"
+          },
+          "body": {
+            "DeviceProfile": {
+              "DirectPlayProfiles": [
+                {
+                  "Container": "mp4",
+                  "Type": "Video",
+                  "VideoCodec": "h264,hevc",
+                  "AudioCodec": "aac"
+                }
+              ],
+              "TranscodingProfiles": [
+                {
+                  "Container": "ts",
+                  "Type": "Video",
+                  "Protocol": "hls",
+                  "VideoCodec": "h264",
+                  "AudioCodec": "aac",
+                  "Context": "Streaming"
+                }
+              ],
+              "CodecProfiles": [
+                {
+                  "Type": "Video",
+                  "Conditions": [
+                    {
+                      "Condition": "LessThanEqual",
+                      "Property": "Width",
+                      "Value": "100",
+                      "IsRequired": true
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].TranscodingUrl",
+              "op": "contains",
+              "value": "TranscodeReasons=VideoCodecNotSupported,VideoResolutionNotSupported"
+            }
+          ]
+        }
+      },
+      {
+        "name": "H.264 is produced: the condition only",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-h264-mp4.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-h264-mp4.id}}"
+          },
+          "body": {
+            "DeviceProfile": {
+              "DirectPlayProfiles": [
+                {
+                  "Container": "mp4",
+                  "Type": "Video",
+                  "VideoCodec": "h264,hevc",
+                  "AudioCodec": "aac"
+                }
+              ],
+              "TranscodingProfiles": [
+                {
+                  "Container": "ts",
+                  "Type": "Video",
+                  "Protocol": "hls",
+                  "VideoCodec": "h264",
+                  "AudioCodec": "aac",
+                  "Context": "Streaming"
+                }
+              ],
+              "CodecProfiles": [
+                {
+                  "Type": "Video",
+                  "Conditions": [
+                    {
+                      "Condition": "LessThanEqual",
+                      "Property": "Width",
+                      "Value": "100",
+                      "IsRequired": true
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].TranscodingUrl",
+              "op": "contains",
+              "value": "TranscodeReasons=VideoResolutionNotSupported"
+            },
+            {
+              "path": "$.MediaSources[0].TranscodingUrl",
+              "op": "notcontains",
+              "value": "VideoCodecNotSupported"
+            }
+          ]
+        }
+      },
+      {
+        "name": "HEVC is produced too: the condition only",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-hevc-mp4.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-hevc-mp4.id}}"
+          },
+          "body": {
+            "DeviceProfile": {
+              "DirectPlayProfiles": [
+                {
+                  "Container": "mp4",
+                  "Type": "Video",
+                  "VideoCodec": "h264,hevc",
+                  "AudioCodec": "aac"
+                }
+              ],
+              "TranscodingProfiles": [
+                {
+                  "Container": "ts",
+                  "Type": "Video",
+                  "Protocol": "hls",
+                  "VideoCodec": "h264,hevc",
+                  "AudioCodec": "aac",
+                  "Context": "Streaming"
+                }
+              ],
+              "CodecProfiles": [
+                {
+                  "Type": "Video",
+                  "Conditions": [
+                    {
+                      "Condition": "LessThanEqual",
+                      "Property": "Width",
+                      "Value": "100",
+                      "IsRequired": true
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].TranscodingUrl",
+              "op": "contains",
+              "value": "TranscodeReasons=VideoResolutionNotSupported"
+            },
+            {
+              "path": "$.MediaSources[0].TranscodingUrl",
+              "op": "notcontains",
+              "value": "VideoCodecNotSupported"
+            }
+          ]
+        }
+      },
+      {
+        "name": "container mismatch only, HEVC not produced",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-hevc-mp4.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-hevc-mp4.id}}"
+          },
+          "body": {
+            "DeviceProfile": {
+              "DirectPlayProfiles": [
+                {
+                  "Container": "mkv",
+                  "Type": "Video",
+                  "VideoCodec": "h264,hevc",
+                  "AudioCodec": "aac"
+                }
+              ],
+              "TranscodingProfiles": [
+                {
+                  "Container": "ts",
+                  "Type": "Video",
+                  "Protocol": "hls",
+                  "VideoCodec": "h264",
+                  "AudioCodec": "aac",
+                  "Context": "Streaming"
+                }
+              ]
+            }
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].TranscodingUrl",
+              "op": "contains",
+              "value": "TranscodeReasons=ContainerNotSupported,VideoCodecNotSupported"
+            }
+          ]
+        }
+      },
+      {
+        "name": "AAC not produced",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-h264-mp4.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-h264-mp4.id}}"
+          },
+          "body": {
+            "DeviceProfile": {
+              "DirectPlayProfiles": [
+                {
+                  "Container": "mkv",
+                  "Type": "Video",
+                  "VideoCodec": "h264,hevc",
+                  "AudioCodec": "aac"
+                }
+              ],
+              "TranscodingProfiles": [
+                {
+                  "Container": "ts",
+                  "Type": "Video",
+                  "Protocol": "hls",
+                  "VideoCodec": "h264",
+                  "AudioCodec": "opus",
+                  "Context": "Streaming"
+                }
+              ]
+            }
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].TranscodingUrl",
+              "op": "contains",
+              "value": "TranscodeReasons=ContainerNotSupported,AudioCodecNotSupported"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a second entry produces both",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-h264-mp4.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-h264-mp4.id}}"
+          },
+          "body": {
+            "DeviceProfile": {
+              "DirectPlayProfiles": [
+                {
+                  "Container": "mkv",
+                  "Type": "Video",
+                  "VideoCodec": "h264,hevc",
+                  "AudioCodec": "aac"
+                }
+              ],
+              "TranscodingProfiles": [
+                {
+                  "Container": "ts",
+                  "Type": "Video",
+                  "Protocol": "hls",
+                  "VideoCodec": "h264",
+                  "AudioCodec": "opus",
+                  "Context": "Streaming"
+                },
+                {
+                  "Container": "mp4",
+                  "Type": "Video",
+                  "Protocol": "hls",
+                  "VideoCodec": "h264",
+                  "AudioCodec": "aac",
+                  "Context": "Streaming"
+                }
+              ]
+            }
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].TranscodingUrl",
+              "op": "contains",
+              "value": "TranscodeReasons=ContainerNotSupported"
+            },
+            {
+              "path": "$.MediaSources[0].TranscodingUrl",
+              "op": "notcontains",
+              "value": "AudioCodecNotSupported"
+            },
+            {
+              "path": "$.MediaSources[0].TranscodingUrl",
+              "op": "notcontains",
+              "value": "VideoCodecNotSupported"
+            }
+          ]
+        }
+      },
+      {
+        "name": "the sound is looked up among the entries that take the picture",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-hevc-mp4.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-hevc-mp4.id}}"
+          },
+          "body": {
+            "DeviceProfile": {
+              "DirectPlayProfiles": [
+                {
+                  "Container": "mkv",
+                  "Type": "Video",
+                  "VideoCodec": "h264,hevc",
+                  "AudioCodec": "aac"
+                }
+              ],
+              "TranscodingProfiles": [
+                {
+                  "Container": "ts",
+                  "Type": "Video",
+                  "Protocol": "hls",
+                  "VideoCodec": "hevc",
+                  "AudioCodec": "opus",
+                  "Context": "Streaming"
+                },
+                {
+                  "Container": "mp4",
+                  "Type": "Video",
+                  "Protocol": "hls",
+                  "VideoCodec": "h264",
+                  "AudioCodec": "aac",
+                  "Context": "Streaming"
+                }
+              ]
+            }
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].TranscodingUrl",
+              "op": "contains",
+              "value": "TranscodeReasons=ContainerNotSupported,AudioCodecNotSupported"
+            },
+            {
+              "path": "$.MediaSources[0].TranscodingUrl",
+              "op": "notcontains",
+              "value": "VideoCodecNotSupported"
+            }
+          ]
+        }
+      },
+      {
+        "name": "an entry for the Static context does not count",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-h264-mp4.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-h264-mp4.id}}"
+          },
+          "body": {
+            "DeviceProfile": {
+              "DirectPlayProfiles": [
+                {
+                  "Container": "mkv",
+                  "Type": "Video",
+                  "VideoCodec": "h264,hevc",
+                  "AudioCodec": "aac"
+                }
+              ],
+              "TranscodingProfiles": [
+                {
+                  "Container": "mp4",
+                  "Type": "Video",
+                  "Protocol": "hls",
+                  "VideoCodec": "h264",
+                  "AudioCodec": "aac",
+                  "Context": "Static"
+                },
+                {
+                  "Container": "ts",
+                  "Type": "Video",
+                  "Protocol": "hls",
+                  "VideoCodec": "vp9",
+                  "AudioCodec": "aac",
+                  "Context": "Streaming"
+                }
+              ]
+            }
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].TranscodingUrl",
+              "op": "contains",
+              "value": "TranscodeReasons=ContainerNotSupported,VideoCodecNotSupported"
+            }
+          ]
+        }
+      },
+      {
+        "name": "empty codec lists take any codec",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Items/{{item.p3-h264-mp4.id}}/PlaybackInfo",
+          "query": {
+            "MediaSourceId": "{{item.p3-h264-mp4.id}}"
+          },
+          "body": {
+            "DeviceProfile": {
+              "DirectPlayProfiles": [
+                {
+                  "Container": "mkv",
+                  "Type": "Video",
+                  "VideoCodec": "h264,hevc",
+                  "AudioCodec": "aac"
+                }
+              ],
+              "TranscodingProfiles": [
+                {
+                  "Container": "ts",
+                  "Type": "Video",
+                  "Protocol": "hls",
+                  "VideoCodec": "",
+                  "AudioCodec": "",
+                  "Context": "Streaming"
+                }
+              ]
+            }
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.MediaSources[0].TranscodingUrl",
+              "op": "contains",
+              "value": "TranscodeReasons=ContainerNotSupported"
+            },
+            {
+              "path": "$.MediaSources[0].TranscodingUrl",
+              "op": "notcontains",
+              "value": "CodecNotSupported"
+            }
+          ]
+        }
+      }
+    ]
+  }
+]

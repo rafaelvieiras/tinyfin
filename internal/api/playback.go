@@ -73,7 +73,9 @@ type mediaSourceInfoDto struct {
 	RequiresLooping       bool   `json:"RequiresLooping"`
 	SupportsProbing       bool   `json:"SupportsProbing"`
 	VideoType             string `json:"VideoType,omitempty"`
-	IsoType               string `json:"IsoType,omitempty"`
+	// Timestamp is the timestamp state of a transport stream (None, Zero, Valid).
+	Timestamp string `json:"Timestamp,omitempty"`
+	IsoType   string `json:"IsoType,omitempty"`
 	// TranscodingUrl/TranscodingContainer are set only for Remux/Direct
 	// Stream/Transcode (docs/07) — empty (omitted) for Direct Play, which
 	// needs no transcode-worker involvement at all.
@@ -217,6 +219,7 @@ func baseMediaSourceInfo(item storage.Item, container string) mediaSourceInfoDto
 	switch item.Type {
 	case storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeVideo, storage.ItemTypeMusicVideo, storage.ItemTypeTrailer:
 		src.VideoType = "VideoFile"
+		src.Timestamp = item.TSTimestamp
 		if item.RemoteURL == "" && item.VideoType == "" {
 			if br := audioSourceBitrate(item); br > 0 {
 				src.Bitrate = &br
@@ -365,12 +368,18 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 
 	opts := playback.Options{AudioStreamIndex: audioIdx}
 	if item.Type != storage.ItemTypeAudio {
-		if isMP4Family(item.Container) {
-			// the container of an MP4-family file is the format name of the probe;
-			// a profile that lists any of its names gets that one (any of them
-			// matches a direct play entry)
+		if item.Format != "" && item.VideoType == "" {
+			// the container of a probed file is the format of the probe; a
+			// profile that lists any of the names of a format with several
+			// ("mkv,webm", "mov,mp4,m4a,3gp,3g2,mj2") gets that one (any of
+			// them matches a direct play entry)
+			item.Container = item.Format
+			if inline {
+				item.Container = formatSourceName(item.Format, profile)
+			}
+		} else if isMP4Family(item.Container) {
 			item.Container = mp4SourceName(item.Container, profile, inline)
-		} else if n := formatSourceName(item.Container, profile); n != "" {
+		} else if n := extFormatSourceName(item.Container, profile); n != "" {
 			item.Container = n
 		}
 	}
@@ -941,12 +950,13 @@ func isMP4Family(container string) bool {
 	return false
 }
 
-// formatSourceName is the Container of a non-MP4 video source, named after the
+// extFormatSourceName is the Container of a non-MP4 video source that was not probed (a
+// .strm address), named after the
 // format of the probe rather than the file extension: Matroska files are "mkv",
 // WebM files "mkv,webm" (or the one of the two a Video direct play entry lists),
 // MPEG-TS and M2TS files "ts", ASF and WMV files "asf". Empty keeps the
 // extension.
-func formatSourceName(ext string, profile deviceprofile.DeviceProfile) string {
+func extFormatSourceName(ext string, profile deviceprofile.DeviceProfile) string {
 	switch strings.ToLower(ext) {
 	case "mkv":
 		return "mkv"
@@ -972,6 +982,27 @@ func formatSourceName(ext string, profile deviceprofile.DeviceProfile) string {
 		return "ogg"
 	}
 	return ""
+}
+
+// formatSourceName is the Container of a probed video source: its format name,
+// or the one of its names that a Video direct play entry of the profile lists
+// when the format has several.
+func formatSourceName(format string, profile deviceprofile.DeviceProfile) string {
+	names := splitCodecs(format)
+	if len(names) < 2 {
+		return format
+	}
+	for _, dp := range profile.DirectPlayProfiles {
+		if dp.Type != "" && !strings.EqualFold(dp.Type, "Video") {
+			continue
+		}
+		for _, n := range splitCodecs(dp.Container) {
+			if inList(names, n) {
+				return n
+			}
+		}
+	}
+	return format
 }
 
 // mp4SourceName is the Container of an MP4-family video source: the one of the

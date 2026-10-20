@@ -1436,5 +1436,7 @@ FFMPEG="$FFMPEG" "$(dirname "$0")/conformance-subs2.sh" "$ROOT"
 
 # Pictures of other shapes for the encoded-HLS scenarios (library "Hls3", lazy).
 FFMPEG="$FFMPEG" "$(dirname "$0")/conformance-hls3.sh" "$ROOT"
+# Containers, transport stream framings and probe oddities: library "Probe3" (lazy).
+FFMPEG="$FFMPEG" "$(dirname "$0")/conformance-probe3.sh" "$ROOT"
 
 echo "media tree ready under $ROOT"

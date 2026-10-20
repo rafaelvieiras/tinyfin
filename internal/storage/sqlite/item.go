@@ -26,7 +26,8 @@ const itemColumns = `items.id, items.type, items.library_id, items.parent_id, it
 	items.people,
 	items.set_name,
 	items.date_created, items.extra_type, items.owner_id,
-	items.video_type, items.iso_type, items.remote_url, items.bit_rate`
+	items.video_type, items.iso_type, items.remote_url, items.bit_rate,
+	items.format, items.ts_timestamp`
 
 // rowScanner is satisfied by both *sql.Row and *sql.Rows, so scanItem works
 // for both GetItem (a single row) and QueryItems (a cursor).
@@ -64,6 +65,7 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 		ownerID                                 sql.NullString
 		videoType, isoType, remoteURL           string
 		bitRate                                 sql.NullInt64
+		format, tsTimestamp                     string
 	)
 
 	if err := rs.Scan(
@@ -83,6 +85,7 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 		&dateCreated,
 		&extraType, &ownerID,
 		&videoType, &isoType, &remoteURL, &bitRate,
+		&format, &tsTimestamp,
 	); err != nil {
 		return storage.Item{}, err
 	}
@@ -108,6 +111,8 @@ func scanItem(rs rowScanner) (storage.Item, error) {
 		VideoType:      videoType,
 		IsoType:        isoType,
 		RemoteURL:      remoteURL,
+		Format:         format,
+		TSTimestamp:    tsTimestamp,
 	}
 	if bitRate.Valid {
 		item.BitRate = &bitRate.Int64
@@ -308,8 +313,9 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 		search_text,
 		date_created,
 		extra_type, owner_id,
-		video_type, iso_type, remote_url, bit_rate
-	) VALUES (?,?,?,?,?,?,?,?, ?,?,?,?, ?,?,?,?,?,?,?, ?,?,?, ?,?, ?,?,?, ?, ?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		video_type, iso_type, remote_url, bit_rate,
+		format, ts_timestamp
+	) VALUES (?,?,?,?,?,?,?,?, ?,?,?,?, ?,?,?,?,?,?,?, ?,?,?, ?,?, ?,?,?, ?, ?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(id) DO UPDATE SET
 		type=excluded.type, library_id=excluded.library_id, parent_id=excluded.parent_id, name=excluded.name,
 		original_title=excluded.original_title, sort_name=excluded.sort_name, overview=excluded.overview,
@@ -328,7 +334,8 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 		set_name=excluded.set_name,
 		search_text=excluded.search_text,
 		extra_type=excluded.extra_type, owner_id=excluded.owner_id,
-		video_type=excluded.video_type, iso_type=excluded.iso_type, remote_url=excluded.remote_url, bit_rate=excluded.bit_rate`
+		video_type=excluded.video_type, iso_type=excluded.iso_type, remote_url=excluded.remote_url, bit_rate=excluded.bit_rate,
+		format=excluded.format, ts_timestamp=excluded.ts_timestamp`
 
 	// The stored sort name is the normalized ordering key, not the raw
 	// title (items.sort.R8). Search text still sees the title as given.
@@ -354,6 +361,7 @@ func (s *Store) UpsertItem(ctx context.Context, item storage.Item) error {
 			item.DateCreated,
 			item.ExtraType, idPtrToAny(item.OwnerID),
 			item.VideoType, item.IsoType, item.RemoteURL, ptrToAny(item.BitRate),
+			item.Format, item.TSTimestamp,
 		); err != nil {
 			return fmt.Errorf("sqlite: upserting item %q: %w", item.ID, err)
 		}

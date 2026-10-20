@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"math"
+	"os"
 	"os/exec"
 	"sort"
 	"strconv"
@@ -230,10 +232,17 @@ func (s *Scanner) probe(ctx context.Context, path string) (ffprobeOutput, error)
 // runProbe runs ffprobe against path; withFrame adds the first video frame to
 // its output.
 func (s *Scanner) runProbe(ctx context.Context, path string, withFrame bool) ([]byte, error) {
-	// -probesize/-analyzeduration are pinned to FFmpeg's own defaults (5 MB,
-	// 5 s) so a remote file is never read further than that by a build with
-	// different defaults; output fields are unchanged.
-	args := []string{"-v", "error", "-probesize", "5000000", "-analyzeduration", "5000000",
+	// A local file is read as the reference does (200 MB of analysis, 1 GB
+	// probe size, decoder threads chosen by ffmpeg): the per-stream bit rate
+	// ffprobe derives for formats that do not state one (MPEG-TS) depends on
+	// how much is read. An
+	// address (a .strm target) stays at FFmpeg's own defaults (5 MB, 5 s) so a
+	// remote file is never read further than that.
+	probesize, analyze := "1000000000", "200000000"
+	if strings.Contains(path, "://") {
+		probesize, analyze = "5000000", "5000000"
+	}
+	args := []string{"-v", "error", "-threads", "0", "-probesize", probesize, "-analyzeduration", analyze,
 		"-print_format", "json", "-show_format", "-show_streams", "-show_chapters"}
 	if withFrame {
 		args = append(args, "-show_frames", "-only_first_vframe")
@@ -559,15 +568,30 @@ func codecTagOf(v string) string {
 }
 
 // bitDepthOfPixFmt reads the bit depth of an ffprobe pixel format name
-// (yuv420p10le -> 10, yuv420p -> 8); 0 for no format.
+// (yuv420p10le -> 10, gray12le -> 12, yuv420p -> 8); 0 for no format and for
+// the planar RGB formats of 8 bits (gbrp), which the reference gives no depth.
 func bitDepthOfPixFmt(pixFmt string) int {
 	switch {
 	case pixFmt == "":
 		return 0
-	case strings.Contains(pixFmt, "12le"), strings.Contains(pixFmt, "12be"):
-		return 12
-	case strings.Contains(pixFmt, "10le"), strings.Contains(pixFmt, "10be"), strings.Contains(pixFmt, "p010"):
+	case pixFmt == "gbrp" || pixFmt == "gbrap":
+		return 0
+	case pixFmt == "p010" || strings.HasPrefix(pixFmt, "p010"):
 		return 10
+	case strings.HasPrefix(pixFmt, "p012"):
+		return 12
+	case strings.HasPrefix(pixFmt, "p016"):
+		return 16
+	}
+	if strings.HasSuffix(pixFmt, "le") || strings.HasSuffix(pixFmt, "be") {
+		t := strings.TrimRight(pixFmt[:len(pixFmt)-2], "abcdefghijklmnopqrstuvwxyz")
+		i := len(t)
+		for i > 0 && t[i-1] >= '0' && t[i-1] <= '9' {
+			i--
+		}
+		if d, err := strconv.Atoi(t[i:]); err == nil && d >= 9 && d <= 16 {
+			return d
+		}
 	}
 	return 8
 }
@@ -641,7 +665,7 @@ func estimatedAudioBitRate(codec string, channels int) *int64 {
 		if channels > 2 {
 			br = 320000
 		}
-	case "truehd":
+	case "truehd", "mlp":
 		br = 700000 * int64(channels)
 	default:
 		return nil
@@ -650,4 +674,62 @@ func estimatedAudioBitRate(codec string, channels int) *int64 {
 		return nil
 	}
 	return &br
+}
+
+// normalizeFormat names the container of a probed file the way the reference
+// does for the Container of an item: ffprobe's format_name with MPEG-TS called
+// ts, and Matroska told apart from WebM by what it holds: "mkv,webm" when every
+// stream is a VP8, VP9 or AV1 picture or a Vorbis or Opus sound (and nothing
+// else, subtitles included), "mkv" otherwise. Every other name is kept as
+// ffprobe prints it ("mov,mp4,m4a,3gp,3g2,mj2", "asf", "mpeg", "ogg", "avi",
+// ...).
+func normalizeFormat(formatName string, streams []storage.MediaStreamRef) string {
+	switch formatName {
+	case "":
+		return ""
+	case "mpegts":
+		return "ts"
+	case "matroska,webm":
+		if len(streams) == 0 {
+			return "mkv"
+		}
+		for _, st := range streams {
+			switch {
+			case st.Type == storage.StreamTypeVideo && (st.Codec == "vp8" || st.Codec == "vp9" || st.Codec == "av1"):
+			case st.Type == storage.StreamTypeAudio && (st.Codec == "vorbis" || st.Codec == "opus"):
+			default:
+				return "mkv"
+			}
+		}
+		return "mkv,webm"
+	}
+	return formatName
+}
+
+// Timestamp states of a transport stream.
+const (
+	tsNone  = "None"
+	tsZero  = "Zero"
+	tsValid = "Valid"
+)
+
+// transportStreamTimestamp tells how the packets of an MPEG transport stream
+// file are framed: plain 188-byte packets carry no timestamp (None); the
+// 192-byte packets of an M2TS file start with a 4-byte header, whose first
+// packet is all zero (Zero) or not (Valid).
+func transportStreamTimestamp(path string) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+	var b [197]byte
+	n, _ := io.ReadFull(f, b[:])
+	if n >= 197 && b[4] == 0x47 && b[196] == 0x47 && !(b[0] == 0x47 && b[188] == 0x47) {
+		if b[0]|b[1]|b[2]|b[3] == 0 {
+			return tsZero
+		}
+		return tsValid
+	}
+	return tsNone
 }

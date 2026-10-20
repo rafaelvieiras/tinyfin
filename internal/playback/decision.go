@@ -157,14 +157,19 @@ func reasons(item storage.Item, profile deviceprofile.DeviceProfile, opts Option
 	}) {
 		out = append(out, "ContainerNotSupported")
 	}
-	if hasVideo && !anyEntry(func(dp deviceprofile.DirectPlayProfile) bool {
+	// A transcode also names a codec the transcoding profiles do not produce,
+	// even one the direct play entries list: the picture that cannot be copied
+	// into a stream the device takes, and the sound likewise.
+	tcVideoBad, tcAudioBad := false, false
+	tcVideoBad, tcAudioBad = transcodeCodecGaps(profile.TranscodingProfiles, vc, ac, hasVideo, hasAudio)
+	if hasVideo && (tcVideoBad || !anyEntry(func(dp deviceprofile.DirectPlayProfile) bool {
 		return dp.VideoCodec == "" || containsToken(dp.VideoCodec, vc)
-	}) {
+	})) {
 		out = append(out, "VideoCodecNotSupported")
 	}
-	if hasAudio && !anyEntry(func(dp deviceprofile.DirectPlayProfile) bool {
+	if hasAudio && (tcAudioBad || !anyEntry(func(dp deviceprofile.DirectPlayProfile) bool {
 		return dp.AudioCodec == "" || containsToken(dp.AudioCodec, ac)
-	}) || d.Mode == ModeDirectStream && len(out) == 0 || hasAudio && !hasDefaultAudio(item.MediaStreams) {
+	})) || d.Mode == ModeDirectStream && len(out) == 0 || hasAudio && !hasDefaultAudio(item.MediaStreams) {
 		out = append(out, "AudioCodecNotSupported")
 	}
 	if hasVideo {
@@ -179,6 +184,46 @@ func reasons(item storage.Item, profile deviceprofile.DeviceProfile, opts Option
 		out = append(out, "ContainerNotSupported")
 	}
 	return out
+}
+
+// transcodeCodecGaps tells whether the video codec, and then the audio codec,
+// of a source is missing from the transcoding profiles meant for streaming (a
+// Video entry that is not for the Static context; an empty codec list takes
+// any codec): the audio is looked up among the profiles that take the video
+// when some do.
+func transcodeCodecGaps(profiles []deviceprofile.TranscodingProfile, vc, ac string, hasVideo, hasAudio bool) (video, audio bool) {
+	var cands []deviceprofile.TranscodingProfile
+	for _, tp := range profiles {
+		if (tp.Type == "" || tp.Type == "Video") && !strings.EqualFold(tp.Context, "Static") {
+			cands = append(cands, tp)
+		}
+	}
+	if len(cands) == 0 {
+		return false, false
+	}
+	if hasVideo {
+		var ok []deviceprofile.TranscodingProfile
+		for _, tp := range cands {
+			if tp.VideoCodec == "" || containsToken(tp.VideoCodec, vc) {
+				ok = append(ok, tp)
+			}
+		}
+		if len(ok) == 0 {
+			video = true
+		} else {
+			cands = ok
+		}
+	}
+	if hasAudio {
+		audio = true
+		for _, tp := range cands {
+			if tp.AudioCodec == "" || containsToken(tp.AudioCodec, ac) {
+				audio = false
+				break
+			}
+		}
+	}
+	return video, audio
 }
 
 func decide(item storage.Item, profile deviceprofile.DeviceProfile, opts Options) Decision {

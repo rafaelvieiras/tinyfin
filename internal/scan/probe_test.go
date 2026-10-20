@@ -370,7 +370,7 @@ func TestEstimatedAudioBitRateMultichannel(t *testing.T) {
 		codec string
 		ch    int
 		want  int64
-	}{{"opus", 2, 128000}, {"opus", 6, 256000}, {"vorbis", 1, 160000}, {"vorbis", 6, 320000}, {"aac", 6, 320000}} {
+	}{{"opus", 2, 128000}, {"opus", 6, 256000}, {"vorbis", 1, 160000}, {"vorbis", 6, 320000}, {"aac", 6, 320000}, {"mlp", 1, 700000}, {"mlp", 6, 4200000}} {
 		if got := estimatedAudioBitRate(tc.codec, tc.ch); got == nil || *got != tc.want {
 			t.Errorf("estimatedAudioBitRate(%s, %d) = %v, want %d", tc.codec, tc.ch, got, tc.want)
 		}

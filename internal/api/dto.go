@@ -542,7 +542,7 @@ func (s *Server) mediaSourcesFor(ctx context.Context, item storage.Item) []media
 	if !item.HasMediaFile() {
 		return nil
 	}
-	source := baseMediaSourceInfo(item, item.Container)
+	source := baseMediaSourceInfo(item, item.SourceContainer())
 	s.applyStreamDefaults(ctx, &source, item.MediaStreams)
 	// No device profile to negotiate against here (this function's doc
 	// comment) — SupportsDirectPlay/TranscodingSubProtocol mirror
@@ -1194,7 +1194,7 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		ServerID:                s.cfg.ServerID,
 		ID:                      string(item.ID),
 		DateCreated:             wireTime{item.DateCreated},
-		Container:               item.Container,
+		Container:               item.DisplayContainer(),
 		SortName:                item.SortName,
 		PremiereDate:            wireTimePtr(item.PremiereDate),
 		EndDate:                 wireTimePtr(item.EndDate),
