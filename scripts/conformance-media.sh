@@ -1434,4 +1434,7 @@ if mx2_tools; then mx2_make; fi
 # script, library "Subs2" (lazy).
 FFMPEG="$FFMPEG" "$(dirname "$0")/conformance-subs2.sh" "$ROOT"
 
+# Containers, transport stream framings and probe oddities: library "Probe3" (lazy).
+FFMPEG="$FFMPEG" "$(dirname "$0")/conformance-probe3.sh" "$ROOT"
+
 echo "media tree ready under $ROOT"

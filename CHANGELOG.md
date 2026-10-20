@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Probe and container parity, fifth pass (`playback.md#offer` R19-R24, `playback9.json`, 5 new scenarios, `Probe3` library from
+  `scripts/conformance-probe3.sh`): the `Container` of a video item and of its listed sources is named after the probed format
+  (Matroska told from WebM by its streams, `ts`, `asf`, `mpeg`, `ogg`, the MP4 family under one name; the listed source keeps the
+  extension when it is one of the names), whatever the extension; MPEG-TS sources carry `Timestamp` (`None`, `Zero`, `Valid` from
+  the 192-byte M2TS header); files are probed as deeply as the reference does (`-analyzeduration 200M -probesize 1G -threads 0`),
+  which fixes the stream bit rates of transport streams; the bit depth follows the pixel format (9 to 16 bits, none for `gbrp`);
+  `mlp` tracks are estimated like `truehd`; a transcode names `VideoCodecNotSupported` / `AudioCodecNotSupported` when no
+  streaming transcoding profile produces the source codec (the open "reason lists with conditions" difference); `.3g2 .amv .asf
+  .dvr-ms .f4v .m2t .m2v .mk3d .mpe .mts .mxf .nsv .ogm .qt .rm .rmvb .tp .wtv .xvid` files are scanned. `probeVersion` is 4, and
+  the items table gains `format` and `ts_timestamp` (migration 40).
 - Subtitle sidecars by content and the rest of the subtitle matrix (`subtitles.md#sidecar`, `subtitles2.json`,
   10 new scenarios, fixtures from `scripts/conformance-subs2.sh`): subtitle files are probed, not trusted by
   extension (a SubRip `.vtt` is `subrip`, an empty or unreadable file is no stream), VobSub `.idx`/`.sub` pairs
