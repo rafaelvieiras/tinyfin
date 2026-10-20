@@ -98,7 +98,7 @@ Observed on the reference and deliberately not reproduced (not asserted by a sce
 * **Queries on the same route.** The reference caches converted documents without all parameters in the key: a request with `copyTimestamps` can be answered with the document of an earlier one with the same index and offsets. Tinyfin has no cache.
 * **A dashed media source id.** The reference answers `500` for a `mediaSourceId` written with dashes (it compares the text); Tinyfin folds every id of a path to one spelling before routing (wire.id.R2) and serves it.
 * **Text named `.mks`.** A file named `.mks` whose content is plain text (not Matroska) is served by the reference unevenly: some positions answered `200` and others `404` for the same content. Tinyfin answers `404` for it unless its content is ASS or a plain-text track; not asserted.
-* **Content of another encoding.** The charset a burned-in external text file is read in (`bitmap.burnin.R5`) is detected by a short byte heuristic; the reference's detector may disagree on short or ambiguous samples.
+* **Content of another encoding.** The charset a burned-in external text file is read in (`bitmap.burnin.R5`) is detected by rules over the bytes; the reference's detector is statistical and disagrees on short or ambiguous samples (listed in `bitmap.md`).
 * **Providers.** There is no subtitle provider plugin system: search lists nothing, nothing can be downloaded.
 
 ## Rule → scenarios
