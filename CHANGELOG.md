@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- HLS copy decisions and announced rates follow the reference (`playback.md#hls` R15-R16, scenario
+  `playback.hls.copy-limits`): a picture is copied only when its profile, level, reference frames, bit depth
+  and sample aspect also fit `h264-profile`/`hevc-profile`/`Profile`, `h264-level`/`hevc-level`/`Level`,
+  `MaxRefFrames`, `MaxVideoBitDepth` and `RequireNonAnamorphic`, and `AllowVideoStreamCopy` is not false; a copied
+  High 10 picture is written as constrained baseline, a copied 8-bit HEVC one as profile 1; the rate cap and
+  the variant bandwidth use the reference's source-rate ladder instead of a flat ten times (a file without sound
+  adds no sound bandwidth).
 - A re-encoded HLS sound follows the reference (`playback.md#hls` R14, scenario `playback.hls.encoded-audio`):
   the channel count is the source's (five-or-more-channel sources are no longer folded to stereo by default),
   capped by `AudioChannels`/`MaxAudioChannels`/`TranscodingMaxAudioChannels`, three or four channels become

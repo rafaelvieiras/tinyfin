@@ -390,3 +390,33 @@ func TestAudioDropWithCopiedSound(t *testing.T) {
 		t.Errorf("args = %s", got)
 	}
 }
+
+func TestCapVideoBitrateLadder(t *testing.T) {
+	// source rate -> rate the reference holds an h264 picture to (measured)
+	for _, c := range []struct {
+		src       int
+		codec     string
+		requested int
+		want      int
+	}{
+		{39732, "h264", 50000000, 397320},
+		{81341, "h264", 50000000, 813408},
+		{148676, "h264", 50000000, 1486760},
+		{295432, "h264", 50000000, 2215740},
+		{494932, "h264", 50000000, 3093325},
+		{785910, "h264", 50000000, 4911938},
+		{986696, "h264", 50000000, 4933480},
+		{1491216, "h264", 50000000, 3728040},
+		{2130706, "h264", 50000000, 4261412},
+		{3045757, "h264", 50000000, 3045757},
+		{298865, "hevc", 50000000, 2241486},
+		{30962, "hevc", 500000, 309620},
+		{122994, "h264", 500000, 500000},
+		{122994, "h264", 0, 0},
+		{0, "h264", 800000, 800000},
+	} {
+		if got := CapVideoBitrate(c.requested, c.src, c.codec, "h264"); got != c.want {
+			t.Errorf("CapVideoBitrate(%d, %d, %s) = %d, want %d", c.requested, c.src, c.codec, got, c.want)
+		}
+	}
+}

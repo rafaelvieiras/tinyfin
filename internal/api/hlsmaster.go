@@ -9,6 +9,7 @@ import (
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 	"github.com/rafaelvieiras/tinyfin/internal/subtitle"
+	"github.com/rafaelvieiras/tinyfin/internal/transcode"
 )
 
 // This file builds the two playlists a video HLS request answers with, in
@@ -240,7 +241,90 @@ func videoCopyAllowed(v *storage.MediaStreamRef, q url.Values) bool {
 	if m := floatParam(q, "maxframerate"); m > 0 && v.FrameRate != nil && *v.FrameRate > m+0.01 {
 		return false
 	}
+	return videoCopyFits(v, q)
+}
+
+// videoCopyFits are the checks on the picture's coding: profile, level,
+// reference frames, bit depth and sample aspect, and the switch that forbids
+// copying at all. The profile counts as fitting when it is not above the
+// highest one the request names (a Main source passes a High request, a
+// High 10 source does not).
+func videoCopyFits(v *storage.MediaStreamRef, q url.Values) bool {
+	if strings.EqualFold(strings.TrimSpace(q.Get("allowvideostreamcopy")), "false") {
+		return false
+	}
+	codec := strings.ToLower(v.Codec)
+	profiles, level := q.Get("profile"), q.Get("level")
+	switch codec {
+	case "h264":
+		if p := q.Get("h264-profile"); p != "" {
+			profiles = p
+		}
+		if l := q.Get("h264-level"); l != "" {
+			level = l
+		}
+	case "hevc":
+		if p := q.Get("hevc-profile"); p != "" {
+			profiles = p
+		}
+		if l := q.Get("hevc-level"); l != "" {
+			level = l
+		}
+	default:
+		profiles, level = "", ""
+	}
+	if limit, ok := highestProfileRank(codec, profiles); ok {
+		if r, known := profileRank(codec, v.Profile); !known || r > limit {
+			return false
+		}
+	}
+	if l, err := strconv.ParseFloat(strings.TrimSpace(level), 64); err == nil && v.Level != nil && *v.Level > l {
+		return false
+	}
+	if raw := strings.TrimSpace(q.Get("maxrefframes")); raw != "" && v.RefFrames != nil {
+		if n, err := strconv.Atoi(raw); err == nil && *v.RefFrames > n {
+			return false
+		}
+	}
+	if raw := strings.TrimSpace(q.Get("maxvideobitdepth")); raw != "" && v.BitDepth != nil {
+		if n, err := strconv.Atoi(raw); err == nil && *v.BitDepth > n {
+			return false
+		}
+	}
+	if strings.EqualFold(strings.TrimSpace(q.Get("requirenonanamorphic")), "true") && isAnamorphicSAR(v.SampleAspectRatio) {
+		return false
+	}
 	return true
+}
+
+var profileRanks = map[string][]string{
+	"h264": {"baseline|constrainedbaseline", "extended|main", "high", "high10|high10intra", "high422|high422intra", "high444|high444predictive|high444intra"},
+	"hevc": {"main|mainstillpicture", "main10"},
+}
+
+// profileRank orders a profile name ("High 10", "main10") among the ones of
+// its codec; known is false for a name the codec's list does not have.
+func profileRank(codec, name string) (rank int, known bool) {
+	name = strings.ToLower(strings.NewReplacer(" ", "", ":", "", "-", "", "_", "").Replace(name))
+	for i, group := range profileRanks[codec] {
+		for _, n := range strings.Split(group, "|") {
+			if n == name {
+				return i, true
+			}
+		}
+	}
+	return 0, false
+}
+
+// highestProfileRank is the rank of the highest profile a "a|b,c" list names
+// (ok is false when it names none the codec knows).
+func highestProfileRank(codec, list string) (rank int, ok bool) {
+	for _, p := range strings.FieldsFunc(list, func(r rune) bool { return r == '|' || r == ',' }) {
+		if r, known := profileRank(codec, p); known && (!ok || r > rank) {
+			rank, ok = r, true
+		}
+	}
+	return rank, ok
 }
 
 // audioChannels is the channel count the audio leaves with: the source's,
@@ -333,8 +417,6 @@ func h264CodecString(profile string, level int) string {
 		prof = "4D40"
 	case "high":
 		prof = "6400"
-	case "high10":
-		prof = "6E00"
 	case "extended":
 		prof = "5840"
 	}
@@ -383,6 +465,7 @@ func videoCodecString(m hlsMedia) string {
 			prof = 2
 		}
 		if m.videoCopy && m.video != nil {
+			prof = 1
 			if strings.Contains(strings.ToLower(m.video.Profile), "10") {
 				prof = 2
 			}
@@ -434,8 +517,8 @@ func formatFrameRate(f float64) string {
 func describeHLS(item storage.Item, q url.Values, vc, ac string, audioIdx *int) hlsMedia {
 	v, a := streamsFor(item, audioIdx)
 	m := hlsMedia{video: v, audio: a, videoCopy: vc == "copy", audioCopy: ac == "copy"}
-	m.h264Profile, m.h264Level = q.Get("h264-profile"), q.Get("h264-level")
-	m.hevcProfile, m.hevcLevel = q.Get("hevc-profile"), q.Get("hevc-level")
+	m.h264Profile, m.h264Level = firstNonEmpty(q.Get("h264-profile"), q.Get("profile")), firstNonEmpty(q.Get("h264-level"), q.Get("level"))
+	m.hevcProfile, m.hevcLevel = q.Get("hevc-profile"), firstNonEmpty(q.Get("hevc-level"), q.Get("level"))
 
 	m.vcodec = vc
 	if m.videoCopy && v != nil {
@@ -479,6 +562,9 @@ func describeHLS(item storage.Item, q url.Values, vc, ac string, audioIdx *int) 
 	vbr := 0
 	if !m.videoCopy || numParam(q, "videobitrate") > 0 {
 		vbr = numParam(q, "videobitrate")
+		if v != nil && v.BitRate != nil {
+			vbr = transcode.CapVideoBitrate(vbr, int(*v.BitRate), v.Codec, m.vcodec)
+		}
 	}
 	ch := audioChannels(a, q)
 	src := 0
@@ -503,6 +589,9 @@ func describeHLS(item storage.Item, q url.Values, vc, ac string, audioIdx *int) 
 		}
 	} else if p := numParam(q, "audiobitrate"); p > 0 && p < abr {
 		abr = p
+	}
+	if a == nil {
+		abr = 0 // a file without sound adds nothing for it
 	}
 	m.bandwidth = vbr + abr
 	return m
@@ -631,4 +720,13 @@ func playlistDurations(playlist []byte) []float64 {
 		}
 	}
 	return out
+}
+
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }

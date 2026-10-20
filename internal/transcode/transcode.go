@@ -115,6 +115,7 @@ type Request struct {
 	// VideoSourceBitrate is the bit rate of the source's picture (bits/s, 0 =
 	// unknown): the video bit rate is held to ten times it.
 	VideoSourceBitrate int
+	VideoSourceCodec   string
 	// AudioChannels is the channel count of a re-encoded sound (0: stereo),
 	// AudioBoost doubles its volume (a surround mix folded down to stereo) and
 	// AudioEncoder, when set, is the encoder named in place of AudioCodec.

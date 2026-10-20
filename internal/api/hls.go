@@ -110,6 +110,7 @@ func (s *Server) resolveHLS(r *http.Request, item storage.Item) hlsRequest {
 			if v.BitRate != nil {
 				out.req.VideoSourceBitrate = int(*v.BitRate)
 			}
+			out.req.VideoSourceCodec = v.Codec
 		}
 		out.req.H264Profile, out.req.H264Level = encoderProfile(q, dec.VideoCodec)
 	}

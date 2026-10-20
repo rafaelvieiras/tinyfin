@@ -2,6 +2,7 @@ package transcode
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -335,11 +336,7 @@ func scaleFilter(req Request) string {
 // B-frames of those presets are what puts the decode time of the first picture
 // of a segment ahead of its presentation time.
 func videoEncodeArgs(req Request) []string {
-	maxrate := req.VideoBitrate
-	if maxrate > 0 && req.VideoSourceBitrate > 0 && maxrate > 10*req.VideoSourceBitrate {
-		// never more than ten times what the source's own picture takes
-		maxrate = 10 * req.VideoSourceBitrate
-	}
+	maxrate := CapVideoBitrate(req.VideoBitrate, req.VideoSourceBitrate, req.VideoSourceCodec, req.VideoCodec)
 	rate := []string{"-maxrate", strconv.Itoa(maxrate), "-bufsize", strconv.Itoa(2 * maxrate)}
 	switch req.VideoCodec {
 	case "h264":
@@ -385,4 +382,46 @@ func quoteFilterValue(v string) string {
 		return b.String()
 	}
 	return esc(esc(v, `':`), `'[],;`)
+}
+
+// CapVideoBitrate is the rate the reference holds an encoded picture to: the
+// requested rate, lowered to what the source's own picture is judged to need.
+// A source at up to 2 Mb/s counts 2.5 times, up to 3 Mb/s twice, anything
+// above once; that figure is then scaled by 4 up to 500 kb/s, 3 up to 1 Mb/s,
+// 2.5 up to 2 Mb/s and 2 up to 3 Mb/s (at least the ratio of the two codecs'
+// efficiency, hevc and av1 counting 0.6), and never exceeds the request.
+// Without a request (0) or a known source rate the request stands.
+func CapVideoBitrate(requested, source int, sourceCodec, outCodec string) int {
+	if requested <= 0 || source <= 0 {
+		return requested
+	}
+	// (each step rounds to a whole number, halves to even)
+	x := float64(source)
+	switch {
+	case source <= 2000000:
+		x = math.RoundToEven(x * 2.5)
+	case source <= 3000000:
+		x = math.RoundToEven(x * 2)
+	}
+	x = min(x, float64(requested))
+	f := codecEfficiency(outCodec) / codecEfficiency(sourceCodec)
+	switch {
+	case x <= 500000:
+		f = max(f, 4)
+	case x <= 1000000:
+		f = max(f, 3)
+	case x <= 2000000:
+		f = max(f, 2.5)
+	case x <= 3000000:
+		f = max(f, 2)
+	}
+	return min(int(math.RoundToEven(f*x)), requested)
+}
+
+func codecEfficiency(codec string) float64 {
+	switch strings.ToLower(codec) {
+	case "hevc", "h265", "av1":
+		return 0.6
+	}
+	return 1
 }
