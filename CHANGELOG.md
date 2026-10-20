@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A re-encoded HLS sound follows the reference (`playback.md#hls` R14, scenario `playback.hls.encoded-audio`):
+  the channel count is the source's (five-or-more-channel sources are no longer folded to stereo by default),
+  capped by `AudioChannels`/`MaxAudioChannels`/`TranscodingMaxAudioChannels`, three or four channels become
+  two, MP3 stays stereo; rate 128 kb/s a channel (256 kb/s for three or four, 640 kb/s for six) lowered to
+  `AudioBitrate`; a six-channel source folded to two gets `volume=2`; `libfdk_aac`, `libmp3lame`, `libopus`
+  are used when the ffmpeg has them.
 - Encoded HLS segments match the reference (`playback.md#hls` R10-R13, `playback10.json`, 5 new scenarios,
   fixtures from `scripts/conformance-hls3.sh`): an H.264 picture is encoded with the reference's own encoder
   settings (`veryfast` at `crf` 23 under a rate cap held to ten times the source's picture rate, light motion

@@ -551,6 +551,7 @@
     {"key": "mvverdir", "type": "Folder", "library": "musicvideos", "path": "MusicVideos/Ver Dir"},
     {"key": "oddclip", "type": "Movie", "library": "hls3", "path": "Hls3/Odd Clip (2401)/Odd Clip (2401).mp4"},
     {"key": "tenbit", "type": "Movie", "library": "hls3", "path": "Hls3/Ten Bit (2402)/Ten Bit (2402).mp4"},
-    {"key": "hevcclip", "type": "Movie", "library": "hls3", "path": "Hls3/Hevc Clip (2403)/Hevc Clip (2403).mp4"}
+    {"key": "hevcclip", "type": "Movie", "library": "hls3", "path": "Hls3/Hevc Clip (2403)/Hevc Clip (2403).mp4"},
+    {"key": "sixchan", "type": "Movie", "library": "hls3", "path": "Hls3/Six Chan (2404)/Six Chan (2404).mkv"}
   ]
 }

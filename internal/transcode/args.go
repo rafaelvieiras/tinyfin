@@ -146,15 +146,30 @@ func encodeArgs(req Request) []string {
 			}
 		}
 	} else {
-		args = append(args, "-c:a", req.AudioCodec)
+		enc := req.AudioEncoder
+		if enc == "" {
+			enc = req.AudioCodec
+		}
+		args = append(args, "-c:a", enc)
+		if enc == "libopus" {
+			args = append(args, "-strict", "-2")
+		}
+		// Without a channel plan from the caller the sound is downmixed to
+		// stereo: the common case for a client that needed audio transcoded in
+		// the first place is a browser/mobile decoder without multichannel
+		// support.
+		ch := req.AudioChannels
+		if ch <= 0 {
+			ch = 2
+		}
+		args = append(args, "-ac", strconv.Itoa(ch))
 		if req.AudioBitrate > 0 {
 			args = append(args, "-b:a", strconv.Itoa(req.AudioBitrate))
 		}
-		// Downmix to stereo: the common case for a client that needed
-		// audio transcoded in the first place is a browser/mobile
-		// decoder without multichannel support, not a surround-capable
-		// target that just happens to want a different codec.
-		args = append(args, "-ac", "2")
+		if req.AudioBoost {
+			// a surround mix folded down to stereo comes out quieter
+			args = append(args, "-af", "volume=2")
+		}
 	}
 
 	return args

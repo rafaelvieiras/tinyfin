@@ -424,5 +424,124 @@
     }
    }
   ]
+ },
+ {
+  "id": "playback.hls.encoded-audio",
+  "endpoint": "GET /Videos/{itemId}/hls1/{playlistId}/{segmentId}.{container}",
+  "spec": "playback.md#hls",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "transcode"
+  ],
+  "covers": [
+   "playback.hls.R14"
+  ],
+  "requires": [
+   "library:hls3",
+   "item:sixchan"
+  ],
+  "steps": [
+   {
+    "name": "a 5.1 source keeps six channels when re-encoded to AAC",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sixchan.id}}/hls1/main/0.ts?MediaSourceId={{item.sixchan.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&MaxWidth=160&AudioCodec=aac&PlaySessionId=h3a-{{run.suffix}}-0&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x01.{4,16}?\\x{fffd}\\x{fffd}M\\x{fffd}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a channel limit of two downmixes to stereo",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sixchan.id}}/hls1/main/0.ts?MediaSourceId={{item.sixchan.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&MaxWidth=160&AudioCodec=aac&MaxAudioChannels=2&PlaySessionId=h3a-{{run.suffix}}-1&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x01.{4,16}?\\x{fffd}\\x{fffd}L\\x{fffd}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a transcoding limit of three also ends at stereo",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sixchan.id}}/hls1/main/0.ts?MediaSourceId={{item.sixchan.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&MaxWidth=160&AudioCodec=aac&TranscodingMaxAudioChannels=3&PlaySessionId=h3a-{{run.suffix}}-2&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x01.{4,16}?\\x{fffd}\\x{fffd}L\\x{fffd}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a requested single channel is honoured",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sixchan.id}}/hls1/main/0.ts?MediaSourceId={{item.sixchan.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&MaxWidth=160&AudioCodec=aac&AudioChannels=1&PlaySessionId=h3a-{{run.suffix}}-3&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x01.{4,16}?\\x{fffd}\\x{fffd}L@"
+      }
+     ]
+    }
+   },
+   {
+    "name": "MP3 is always stereo",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.sixchan.id}}/hls1/main/0.ts?MediaSourceId={{item.sixchan.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&MaxWidth=160&AudioCodec=mp3&PlaySessionId=h3a-{{run.suffix}}-4&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)\\x00\\x00\\x01.{4,16}?\\x{fffd}\\x{fffd}\\x{fffd}d"
+      }
+     ]
+    }
+   }
+  ]
  }
 ]

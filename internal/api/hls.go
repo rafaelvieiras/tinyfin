@@ -113,6 +113,10 @@ func (s *Server) resolveHLS(r *http.Request, item storage.Item) hlsRequest {
 		}
 		out.req.H264Profile, out.req.H264Level = encoderProfile(q, dec.VideoCodec)
 	}
+	if dec.AudioCodec != "copy" && dec.AudioCodec != "" {
+		_, a := streamsFor(item, audioIdx)
+		out.req.AudioChannels, out.req.AudioBitrate, out.req.AudioBoost = audioPlan(a, q)
+	}
 	if audioIdx != nil && streamOfType(item.MediaStreams, *audioIdx, storage.StreamTypeAudio) {
 		f := fileStreamIndex(item, *audioIdx)
 		out.req.AudioStreamIndex = &f

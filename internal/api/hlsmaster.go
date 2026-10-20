@@ -258,6 +258,36 @@ func audioChannels(a *storage.MediaStreamRef, q url.Values) int {
 	return ch
 }
 
+// audioPlan is how the sound is re-encoded: the channel count (the limits
+// of the request, three and four channels fold down to two, and five channels
+// are written as six when the source has more), the bit rate (the request's
+// when it is lower than the default for those channels) and whether a surround
+// mix folded down to stereo is made louder.
+func audioPlan(a *storage.MediaStreamRef, q url.Values) (channels, bitrate int, boost bool) {
+	src := 2
+	if a != nil && a.Channels != nil && *a.Channels > 0 {
+		src = *a.Channels
+	}
+	channels = audioChannels(a, q)
+	switch {
+	case channels == 3 || channels == 4:
+		channels = 2
+	case channels == 5 && src > 5:
+		channels = src
+		if src > 6 {
+			channels = 6
+		}
+	}
+	if channels > 2 && strings.HasPrefix(strings.ToLower(q.Get("audiocodec")), "mp3") {
+		channels = 2 // MP3 carries two channels at most
+	}
+	bitrate = defaultAudioBandwidth(channels, src)
+	if br := numParam(q, "audiobitrate"); br > 0 && br < bitrate {
+		bitrate = br
+	}
+	return channels, bitrate, channels == 2 && src > 5
+}
+
 func audioCopyAllowed(a *storage.MediaStreamRef, q url.Values) bool {
 	if a == nil {
 		return false
