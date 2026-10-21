@@ -415,8 +415,48 @@ func TestCapVideoBitrateLadder(t *testing.T) {
 		{122994, "h264", 0, 0},
 		{0, "h264", 800000, 800000},
 	} {
-		if got := CapVideoBitrate(c.requested, c.src, c.codec, "h264"); got != c.want {
+		if got := CapVideoBitrate(c.requested, c.src, c.codec, "h264", 8); got != c.want {
 			t.Errorf("CapVideoBitrate(%d, %d, %s) = %d, want %d", c.requested, c.src, c.codec, got, c.want)
 		}
+	}
+}
+
+func TestCapVideoBitrateBitDepth(t *testing.T) {
+	// 10-bit sources: source rate -> rate the reference holds an h264 picture
+	// to (measured; the factor steps at 4, 8 and 12 Mb/s)
+	for _, c := range []struct {
+		src   int
+		codec string
+		want  int
+	}{
+		{43224, "h264", 648360},
+		{155968, "h264", 1754640},
+		{318824, "h264", 2988975},
+		{804936, "h264", 3018510},
+		{979306, "h264", 3672398},
+		{1497324, "h264", 5614965},
+		{2525014, "h264", 7575042},
+		{3146858, "h264", 4720287},
+		{3980845, "h264", 5971268},
+		{4000309, "h264", 4800371},
+		{4122108, "h264", 4946530},
+		{6531732, "h264", 7838078},
+		{7969504, "h264", 9563405},
+		{8013330, "h264", 8814663},
+		{8728598, "h264", 9601458},
+		{11913616, "h264", 13104978},
+		{12006024, "h264", 12606325},
+		{13213392, "h264", 13874062},
+		{805306, "hevc", 5033163},
+		{4060376, "hevc", 8120752},
+		{12406502, "hevc", 21711378},
+	} {
+		if got := CapVideoBitrate(50000000, c.src, c.codec, "h264", 10); got != c.want {
+			t.Errorf("CapVideoBitrate(50M, %d, %s, 10 bits) = %d, want %d", c.src, c.codec, got, c.want)
+		}
+	}
+	// 8 bits and an unknown depth keep the plain ladder
+	if a, b := CapVideoBitrate(50000000, 804936, "h264", "h264", 8), CapVideoBitrate(50000000, 804936, "h264", "h264", 0); a != b || a != 4024680 {
+		t.Errorf("plain ladder = %d / %d, want 4024680", a, b)
 	}
 }

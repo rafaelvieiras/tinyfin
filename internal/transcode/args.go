@@ -336,7 +336,7 @@ func scaleFilter(req Request) string {
 // B-frames of those presets are what puts the decode time of the first picture
 // of a segment ahead of its presentation time.
 func videoEncodeArgs(req Request) []string {
-	maxrate := CapVideoBitrate(req.VideoBitrate, req.VideoSourceBitrate, req.VideoSourceCodec, req.VideoCodec)
+	maxrate := CapVideoBitrate(req.VideoBitrate, req.VideoSourceBitrate, req.VideoSourceCodec, req.VideoCodec, req.VideoSourceBitDepth)
 	rate := []string{"-maxrate", strconv.Itoa(maxrate), "-bufsize", strconv.Itoa(2 * maxrate)}
 	switch req.VideoCodec {
 	case "h264":
@@ -390,8 +390,10 @@ func quoteFilterValue(v string) string {
 // above once; that figure is then scaled by 4 up to 500 kb/s, 3 up to 1 Mb/s,
 // 2.5 up to 2 Mb/s and 2 up to 3 Mb/s (at least the ratio of the two codecs'
 // efficiency, hevc and av1 counting 0.6), and never exceeds the request.
-// Without a request (0) or a known source rate the request stands.
-func CapVideoBitrate(requested, source int, sourceCodec, outCodec string) int {
+// A source deeper than 8 bits is judged to need more: the figure is raised by
+// BitDepthFactor of the source rate before the request and the codec ladder
+// apply. Without a request (0) or a known source rate the request stands.
+func CapVideoBitrate(requested, source int, sourceCodec, outCodec string, bitDepth int) int {
 	if requested <= 0 || source <= 0 {
 		return requested
 	}
@@ -402,6 +404,9 @@ func CapVideoBitrate(requested, source int, sourceCodec, outCodec string) int {
 		x = math.RoundToEven(x * 2.5)
 	case source <= 3000000:
 		x = math.RoundToEven(x * 2)
+	}
+	if bitDepth > 8 {
+		x = math.RoundToEven(x * BitDepthFactor(source))
 	}
 	x = min(x, float64(requested))
 	f := codecEfficiency(outCodec) / codecEfficiency(sourceCodec)
@@ -416,6 +421,22 @@ func CapVideoBitrate(requested, source int, sourceCodec, outCodec string) int {
 		f = max(f, 2)
 	}
 	return min(int(math.RoundToEven(f*x)), requested)
+}
+
+// BitDepthFactor is how much more the reference allows a picture deeper than
+// 8 bits, by the source rate (bits/s): 1.5 up to 4 Mb/s, 1.2 up to 8 Mb/s,
+// 1.1 up to 12 Mb/s, 1.05 above (measured on 10-bit H.264 and HEVC sources
+// from 40 kb/s to 34 Mb/s).
+func BitDepthFactor(source int) float64 {
+	switch {
+	case source <= 4000000:
+		return 1.5
+	case source <= 8000000:
+		return 1.2
+	case source <= 12000000:
+		return 1.1
+	}
+	return 1.05
 }
 
 func codecEfficiency(codec string) float64 {

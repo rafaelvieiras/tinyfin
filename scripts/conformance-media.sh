@@ -1437,6 +1437,8 @@ FFMPEG="$FFMPEG" "$(dirname "$0")/conformance-subs3.sh" "$ROOT"
 
 # Pictures of other shapes for the encoded-HLS scenarios (library "Hls3", lazy).
 FFMPEG="$FFMPEG" "$(dirname "$0")/conformance-hls3.sh" "$ROOT"
+# 10-bit pictures at known rates for the rate ladder scenarios: library "Rate10" (lazy).
+"$(dirname "$0")/conformance-rate10.sh" "$ROOT"
 # Containers, transport stream framings and probe oddities: library "Probe3" (lazy).
 FFMPEG="$FFMPEG" "$(dirname "$0")/conformance-probe3.sh" "$ROOT"
 

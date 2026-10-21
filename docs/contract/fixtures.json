@@ -82,7 +82,8 @@
     {"key": "music4", "name": "Music4", "type": "music", "path": "Music4", "lazy": true},
     {"key": "music5", "name": "Music5", "type": "music", "path": "Music5", "lazy": true},
     {"key": "musicvideos", "name": "MusicVideos", "type": "musicvideos", "path": "MusicVideos", "lazy": true},
-    {"key": "hls3", "name": "Hls3", "type": "movies", "path": "Hls3", "lazy": true}
+    {"key": "hls3", "name": "Hls3", "type": "movies", "path": "Hls3", "lazy": true},
+    {"key": "rate10", "name": "Rate10", "type": "movies", "path": "Rate10", "lazy": true}
   ],
   "items": [
     {"key": "alpha", "type": "Movie", "path": "Movies/Alpha Movie (2015)/Alpha Movie (2015).mp4"},
@@ -593,6 +594,15 @@
     {"key": "oddclip", "type": "Movie", "library": "hls3", "path": "Hls3/Odd Clip (2401)/Odd Clip (2401).mp4"},
     {"key": "tenbit", "type": "Movie", "library": "hls3", "path": "Hls3/Ten Bit (2402)/Ten Bit (2402).mp4"},
     {"key": "hevcclip", "type": "Movie", "library": "hls3", "path": "Hls3/Hevc Clip (2403)/Hevc Clip (2403).mp4"},
-    {"key": "sixchan", "type": "Movie", "library": "hls3", "path": "Hls3/Six Chan (2404)/Six Chan (2404).mkv"}
+    {"key": "sixchan", "type": "Movie", "library": "hls3", "path": "Hls3/Six Chan (2404)/Six Chan (2404).mkv"},
+    {"key": "r10-80", "type": "Movie", "library": "rate10", "path": "Rate10/Ten 80k (2801)/Ten 80k (2801).mkv"},
+    {"key": "r10-800", "type": "Movie", "library": "rate10", "path": "Rate10/Ten 800k (2802)/Ten 800k (2802).mkv"},
+    {"key": "r10-1500", "type": "Movie", "library": "rate10", "path": "Rate10/Ten 1500k (2803)/Ten 1500k (2803).mkv"},
+    {"key": "r10-3000", "type": "Movie", "library": "rate10", "path": "Rate10/Ten 3000k (2804)/Ten 3000k (2804).mkv"},
+    {"key": "r10-6000", "type": "Movie", "library": "rate10", "path": "Rate10/Ten 6000k (2805)/Ten 6000k (2805).mkv"},
+    {"key": "r10-8000", "type": "Movie", "library": "rate10", "path": "Rate10/Ten 8000k (2806)/Ten 8000k (2806).mkv"},
+    {"key": "r10-12000", "type": "Movie", "library": "rate10", "path": "Rate10/Ten 12000k (2807)/Ten 12000k (2807).mkv"},
+    {"key": "r10-hevc", "type": "Movie", "library": "rate10", "path": "Rate10/Ten Hevc 1000k (2808)/Ten Hevc 1000k (2808).mkv"},
+    {"key": "r10-eight", "type": "Movie", "library": "rate10", "path": "Rate10/Eight 800k (2809)/Eight 800k (2809).mkv"}
   ]
 }

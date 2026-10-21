@@ -17,8 +17,12 @@ func TestHLSJobKey(t *testing.T) {
 	if a == b || a == bare {
 		t.Fatalf("another track must be another job: %q %q %q", a, b, bare)
 	}
-	if a != c {
-		t.Fatalf("session and token do not change the job: %q vs %q", a, c)
+	if a == c {
+		t.Fatalf("another play session must be another job: %q vs %q", a, c)
+	}
+	d := hlsJobKey("abc", url.Values{"audiostreamindex": {"1"}, "playsessionid": {"x"}, "apikey": {"k"}})
+	if a != d {
+		t.Fatalf("the token does not change the job: %q vs %q", a, d)
 	}
 }
 
