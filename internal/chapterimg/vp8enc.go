@@ -2,9 +2,11 @@ package chapterimg
 
 import (
 	"encoding/binary"
+	"fmt"
 	"image"
 	"io"
 	"math"
+	"os"
 )
 
 // The lossy encoder proper: macroblock analysis with a rate-distortion
@@ -335,6 +337,36 @@ func bModeOf(ymode int) int {
 	return bDC
 }
 
+// y16Bits is the cost of signalling a 16x16 luma mode (with the flag that
+// says it is not 4x4), uvBits that of a chroma mode; both have fixed
+// probabilities in the format.
+func y16Bits(mode int) int32 {
+	c := bitCost(145, true)
+	switch mode {
+	case vp8DC:
+		c += bitCost(156, false) + bitCost(163, false)
+	case vp8V:
+		c += bitCost(156, false) + bitCost(163, true)
+	case vp8H:
+		c += bitCost(156, true) + bitCost(128, false)
+	default:
+		c += bitCost(156, true) + bitCost(128, true)
+	}
+	return c
+}
+
+func uvBits(mode int) int32 {
+	switch mode {
+	case vp8DC:
+		return bitCost(142, false)
+	case vp8V:
+		return bitCost(142, true) + bitCost(114, false)
+	case vp8H:
+		return bitCost(142, true) + bitCost(114, true) + bitCost(183, false)
+	}
+	return bitCost(142, true) + bitCost(114, true) + bitCost(183, true)
+}
+
 // ---- analysis ----
 
 type vp8Enc struct {
@@ -456,8 +488,25 @@ func (e *vp8Enc) analyseChroma(m *vp8MB, mx, my int) {
 				}
 			}
 		}
+		bits += uvBits(mode)
 		if j := e.j(dist, bits); j < bestJ {
 			bestJ, bestMode, bestRec, bestLv = j, mode, rec, lvs
+		}
+		// nothing coded: the prediction itself
+		var zrec [2][64]int
+		d0 := 0
+		for pi, pl := range [][2][]int{{e.src.u, e.rec.u}, {e.src.v, e.rec.v}} {
+			vp8Predict(pl[1], cw, cx0, cy0, 8, mode, cpred[:])
+			zrec[pi] = cpred
+			for y := 0; y < 8; y++ {
+				for x := 0; x < 8; x++ {
+					dd := pl[0][(cy0+y)*cw+cx0+x] - cpred[y*8+x]
+					d0 += dd * dd
+				}
+			}
+		}
+		if j := e.j(d0, uvBits(mode)); j < bestJ {
+			bestJ, bestMode, bestRec, bestLv = j, mode, zrec, [2][4][16]int{}
 		}
 	}
 	m.uvmode = bestMode
@@ -546,11 +595,26 @@ func (e *vp8Enc) analyseI16(m *vp8MB, mx, my int, rec16 *[256]int) float64 {
 				dist += dd * dd
 			}
 		}
+		bits += y16Bits(mode)
 		if j := e.j(dist, bits); j < bestJ {
 			bestJ = j
 			m.ymode = mode
 			m.y2, m.y = cand.y2, cand.y
 			*rec16 = rec
+		}
+		// the same mode with nothing coded: the prediction itself
+		d0 := 0
+		for y := 0; y < 16; y++ {
+			for x := 0; x < 16; x++ {
+				dd := e.src.y[(y0+y)*stride+x0+x] - pred[y*16+x]
+				d0 += dd * dd
+			}
+		}
+		if j := e.j(d0, y16Bits(mode)); j < bestJ {
+			bestJ = j
+			m.ymode = mode
+			m.y2, m.y = [16]int{}, [16][16]int{}
+			*rec16 = pred
 		}
 	}
 	return bestJ
@@ -776,7 +840,7 @@ func (e *vp8Enc) analyseMB(m *vp8MB, mx, my int) {
 	var m4 vp8MB
 	m4.i4 = true
 	j4 := e.analyseI4(&m4, mx, my)
-	j4 += e.lambda * 16 // the extra flag and mode overhead of 4x4 prediction
+	j4 += e.lambda * float64(bitCost(145, false)) / 256 // the flag of 4x4 prediction
 	if j4 < j16 {
 		m4.uvmode, m4.u, m4.v = m.uvmode, m.u, m.v
 		*m = m4
