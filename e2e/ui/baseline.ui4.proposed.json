@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "target": "tinyfin",
+  "passing": [
+    "playback.spec.ts > api trace: direct-play session matches the reference",
+    "playback.spec.ts > chapters: the details page lists the chapters and a chapter starts playback at its position",
+    "playback.spec.ts > next episode: the Up Next popup appears near the end and Start Now plays the next episode",
+    "playback.spec.ts > play: direct play starts the video element",
+    "playback.spec.ts > progress: pause, seek, resume and stop are reported and the resume position persists",
+    "playback.spec.ts > quality menu: the 420 kbps preset is sent as MaxStreamingBitrate and a lower-bitrate source stays direct",
+    "playback.spec.ts > trickplay: hovering the position slider shows a thumbnail served from the trickplay sheets"
+  ]
+}

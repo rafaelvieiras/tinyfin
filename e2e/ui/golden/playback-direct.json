@@ -1,0 +1,55 @@
+{
+  "flow": "details -> Play -> 1.5 s -> close",
+  "entries": [
+    {
+      "method": "GET",
+      "path": "/Items/:id/Ancestors",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Items/:id/Collections",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/Items/:id/PlaybackInfo",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Items/:id/Similar",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Playback/BitrateTest",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/Sessions/Playing/Stopped",
+      "status": 204
+    },
+    {
+      "method": "POST",
+      "path": "/Sessions/Playing",
+      "status": 204
+    },
+    {
+      "method": "GET",
+      "path": "/System/Endpoint",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Users/:id/Items/:id/Intros",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Users/:id/Items/:id",
+      "status": 200
+    }
+  ]
+}
