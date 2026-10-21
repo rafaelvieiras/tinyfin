@@ -2711,7 +2711,7 @@
      "text": [
       {
        "op": "eq",
-       "value": "1\n00:00:01,023 --> 00:00:02,523\nHello <i>world</i>\n\n2\n00:00:03,023 --> 00:00:04,023\nSecond line\n\n"
+       "value": "1\n00:00:01,000 --> 00:00:02,500\nHello <i>world</i>\n\n2\n00:00:03,000 --> 00:00:04,000\nSecond line\n\n"
       }
      ]
     }
@@ -2731,7 +2731,7 @@
      "text": [
       {
        "op": "eq",
-       "value": "WEBVTT\n\n00:00:01.023 --> 00:00:02.523\nHello <i>world</i>\n\n00:00:03.023 --> 00:00:04.023\nSecond line"
+       "value": "WEBVTT\n\n00:00:01.000 --> 00:00:02.500\nHello <i>world</i>\n\n00:00:03.000 --> 00:00:04.000\nSecond line"
       }
      ]
     }
@@ -2911,7 +2911,7 @@
      "text": [
       {
        "op": "eq",
-       "value": "{\"TrackEvents\":[{\"Id\":\"1\",\"Text\":\"Hello \\u003Ci\\u003Eworld\\u003C/i\\u003E\",\"StartPositionTicks\":10230000,\"EndPositionTicks\":25230000},{\"Id\":\"2\",\"Text\":\"Second line\",\"StartPositionTicks\":30230000,\"EndPositionTicks\":40230000}]}"
+       "value": "{\"TrackEvents\":[{\"Id\":\"1\",\"Text\":\"Hello \\u003Ci\\u003Eworld\\u003C/i\\u003E\",\"StartPositionTicks\":10000000,\"EndPositionTicks\":25000000},{\"Id\":\"2\",\"Text\":\"Second line\",\"StartPositionTicks\":30000000,\"EndPositionTicks\":40000000}]}"
       }
      ]
     }
@@ -2971,7 +2971,7 @@
      "text": [
       {
        "op": "eq",
-       "value": "1\n00:00:01,020 --> 00:00:02,520\nHello {\\i1}world{\\i0}\nline two\n\n"
+       "value": "1\n00:00:01,000 --> 00:00:02,500\nHello {\\i1}world{\\i0}\nline two\n\n"
       }
      ]
     }
@@ -2991,7 +2991,7 @@
      "text": [
       {
        "op": "eq",
-       "value": "WEBVTT\n\n00:00:01.020 --> 00:00:02.520\nHello world\nline two"
+       "value": "WEBVTT\n\n00:00:01.000 --> 00:00:02.500\nHello world\nline two"
       }
      ]
     }
@@ -3171,7 +3171,7 @@
      "text": [
       {
        "op": "eq",
-       "value": "{\"TrackEvents\":[{\"Id\":\"1\",\"Text\":\"Hello {\\\\i1}world{\\\\i0}\\nline two\",\"StartPositionTicks\":10200000,\"EndPositionTicks\":25200000}]}"
+       "value": "{\"TrackEvents\":[{\"Id\":\"1\",\"Text\":\"Hello {\\\\i1}world{\\\\i0}\\nline two\",\"StartPositionTicks\":10000000,\"EndPositionTicks\":25000000}]}"
       }
      ]
     }

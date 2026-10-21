@@ -7,13 +7,47 @@
 set -euo pipefail
 ROOT="${1:?usage: conformance-media.sh <media-root>}"
 FFMPEG="${FFMPEG:-ffmpeg}"
+# The bytes of the tree depend on the muxer: a recent Matroska muxer writes the AAC
+# CodecDelay element, which changes how the reference cuts cues and segments
+# (subtitles.stream.embedded, playback.hls.keyframe-plan). The scenario constants are
+# calibrated on a tree made by jellyfin-ffmpeg (the reference's own build), so any
+# other ffmpeg is replaced by the one inside a Jellyfin container image (docker;
+# JF_IMAGE, default jellyfin/jellyfin:12.2). Without docker the script aborts, unless
+# FFMPEG_ANY=1 (then the scenarios fed by a different build may fail).
+case "$("$FFMPEG" -version 2>/dev/null | head -1)" in
+  *ellyfin*) ;;
+  *)
+    if [ "${FFMPEG_ANY:-0}" = 1 ]; then
+      echo "warning: $FFMPEG is not jellyfin-ffmpeg; some fixture-dependent scenarios may fail" >&2
+    elif command -v docker >/dev/null 2>&1; then
+      mkdir -p "$ROOT"; JFROOT="$(realpath "$ROOT")"; ROOT="$JFROOT"
+      FFMPEG="$(mktemp)"; trap 'rm -f "$FFMPEG"' EXIT
+      printf '#!/bin/sh\nexec docker run --rm -i -u "$(id -u):$(id -g)" -v "%s:%s" -v /tmp:/tmp -w "$PWD" --entrypoint /usr/lib/jellyfin-ffmpeg/ffmpeg "%s" "$@"\n' \
+        "$JFROOT" "$JFROOT" "${JF_IMAGE:-jellyfin/jellyfin:12.2}" >"$FFMPEG"
+      chmod +x "$FFMPEG"
+      echo "$0: ffmpeg is not jellyfin-ffmpeg; using the Jellyfin container image" >&2
+    else
+      echo "$0: FFMPEG must be jellyfin-ffmpeg (set FFMPEG, or install docker; FFMPEG_ANY=1 to ignore)" >&2
+      exit 1
+    fi ;;
+esac
+# Pin what differs between ffmpeg builds: an AAC track's encoder delay (0.023 s)
+# is either folded into the video/subtitle start (ffmpeg 4.x: video 0.023, audio 0)
+# or kept as a negative audio start (ffmpeg 6+: video 0, audio -0.023). The explicit
+# output offset makes every build produce the 4.x layout, and lone streams get an
+# explicit default disposition (4.x marks them, newer builds do not).
+TSFIX=(-output_ts_offset 0.023)
+DEFALL=(-disposition:v:0 default -disposition:a:0 default)
+# <out> -> FIX: the same two pins for a Matroska output with one video and one AAC track
+fixfor() { case "$1" in *.mkv) FIX=("${TSFIX[@]}" "${DEFALL[@]}") ;; *) FIX=() ;; esac; }
 
 clip() { # <out> <seconds> <tone-hz> [fps] [WxH]
   mkdir -p "$(dirname "$1")"
   [ -f "$1" ] && return 0
+  fixfor "$1"
   "$FFMPEG" -v error -y -f lavfi -i "testsrc=duration=$2:size=${5:-320x240}:rate=${4:-24}" \
     -f lavfi -i "sine=frequency=$3:duration=$2" -c:v libx264 -preset ultrafast -pix_fmt yuv420p \
-    -c:a aac -shortest "$1"
+    -c:a aac "${FIX[@]}" -shortest "$1"
 }
 
 clip "$ROOT/Movies/Alpha Movie (2015)/Alpha Movie (2015).mp4"   6 440
@@ -579,12 +613,12 @@ avmulti() { # <out> [extra subtitle file]
   local t; t="$(mktemp -d)"
   printf '1\n00:00:00,500 --> 00:00:03,500\nBURN IN TEXT\n' >"$t/a.srt"
   "$FFMPEG" -v error -y -f lavfi -i "testsrc=duration=4:size=320x240:rate=6" \
-    -f lavfi -i "sine=frequency=440:duration=4" -f lavfi -i "sine=frequency=880:duration=4" \
-    -i "$t/a.srt" -i "$t/a.srt" -map 0 -map 1 -map 2 -map 3 -map 4 \
+    -itsoffset 0.025 -f lavfi -i "sine=frequency=440:duration=4" -itsoffset 0.025 -f lavfi -i "sine=frequency=880:duration=4" \
+    -itsoffset 0.025 -i "$t/a.srt" -itsoffset 0.025 -i "$t/a.srt" -map 0 -map 1 -map 2 -map 3 -map 4 \
     -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a:0 aac -c:a:1 libmp3lame -c:s:0 srt -c:s:1 ass \
     -metadata:s:a:0 language=eng -metadata:s:a:1 language=por \
     -metadata:s:s:0 language=eng -metadata:s:s:1 language=por \
-    -disposition:a:0 default -disposition:a:1 0 -disposition:s:0 default -disposition:s:1 0 -shortest "$1"
+    -disposition:a:0 default -disposition:a:1 0 -disposition:s:0 default -disposition:s:1 0 "${DEFALL[@]}" -t 4 "$1"
   rm -rf "$t"
 }
 avmulti "$AV/Av Multi (2400)/Av Multi (2400).mkv"
@@ -611,7 +645,7 @@ mkvsubs() { # <out>
     -i "$t/a.srt" -i "$t/b.ass" -i "$t/a.srt" -map 0 -map 1 -map 2 -map 3 -map 4 \
     -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -c:s:0 srt -c:s:1 ass -c:s:2 srt \
     -metadata:s:s:0 language=eng -metadata:s:s:0 title="English Full" -metadata:s:s:1 language=por -metadata:s:s:2 language=spa \
-    -disposition:s:0 default -disposition:s:1 0 -disposition:s:2 forced -shortest "$1"
+    -disposition:s:0 default -disposition:s:1 0 -disposition:s:2 forced "${DEFALL[@]}" "${TSFIX[@]}" -t 4 "$1"
   rm -rf "$t"
 }
 # file names: plain, language codes (2 and 3 letters, region form, a name),
@@ -636,7 +670,7 @@ if [ ! -f "$M/Sub Mov (2302).mp4" ]; then
   mkdir -p "$M"
   printf '1\n00:00:01,000 --> 00:00:02,500\nHello <i>world</i>\n' >"$M/.t.srt"
   "$FFMPEG" -v error -y -f lavfi -i "testsrc=duration=4:size=320x240:rate=6" -f lavfi -i "sine=frequency=500:duration=4" -i "$M/.t.srt" \
-    -map 0 -map 1 -map 2 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -c:s mov_text -metadata:s:s:0 language=fra -shortest "$M/Sub Mov (2302).mp4"
+    -map 0 -map 1 -map 2 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -c:s mov_text -metadata:s:s:0 language=fra -t 4 "$M/Sub Mov (2302).mp4"
   rm -f "$M/.t.srt"
 fi
 X="$SF/Sub Mixed (2303)"
@@ -814,9 +848,10 @@ chaptered() { # <out>
   mkdir -p "$(dirname "$1")"
   local t; t="$(mktemp -d)"
   printf ';FFMETADATA1\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=0\nEND=2000\ntitle=Opening\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=2000\nEND=4000\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=4000\nEND=6000\ntitle=Finale\n' >"$t/m.txt"
+  fixfor "$1"
   "$FFMPEG" -v error -y -f lavfi -i "testsrc=duration=6:size=320x240:rate=6" \
     -f lavfi -i "sine=frequency=500:duration=6" -i "$t/m.txt" -map 0 -map 1 -map_metadata 2 \
-    -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "$1"
+    -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac "${FIX[@]}" -shortest "$1"
   rm -rf "$t"
 }
 chaptered "$CH/Chaptered Movie (2500)/Chaptered Movie (2500).mkv"
@@ -837,20 +872,20 @@ bitmapsub() { # <out> <bitmap codec: pgs|dvd|dvb|mixed>
   python3 "$(dirname "$0")/conformance-pgs.py" "$t/a.sup" 320 240 "BURN IN" 0.5 3.5
   "$FFMPEG" -v error -y -f lavfi -i "testsrc=duration=4:size=320x240:rate=6" -f lavfi -i "sine=frequency=440:duration=4" \
     -i "$t/a.sup" -map 0 -map 1 -map 2 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -c:s copy \
-    -metadata:s:s:0 language=eng -t 4 "$t/pgs.mkv"
+    -metadata:s:s:0 language=eng "${DEFALL[@]}" -disposition:s:0 default "${TSFIX[@]}" -t 4 "$t/pgs.mkv"
   case "$2" in
     pgs) mv "$t/pgs.mkv" "$1" ;;
-    dvd) "$FFMPEG" -v error -y -i "$t/pgs.mkv" -map 0 -c:v copy -c:a copy -c:s dvdsub "$1" ;;
+    dvd) "$FFMPEG" -v error -y -i "$t/pgs.mkv" -map 0 -c:v copy -c:a copy -c:s dvdsub -copyts "$1" ;;
     dvb) # the encoder ends the cue at the 32-bit time limit; a copy cut at 4 s drops that packet
-      "$FFMPEG" -v error -y -i "$t/pgs.mkv" -map 0 -c:v copy -c:a copy -c:s dvbsub "$t/dvb.mkv"
-      "$FFMPEG" -v error -y -i "$t/dvb.mkv" -map 0 -c copy -t 4 "$1" ;;
+      "$FFMPEG" -v error -y -i "$t/pgs.mkv" -map 0 -c:v copy -c:a copy -c:s dvbsub -copyts "$t/dvb.mkv"
+      "$FFMPEG" -v error -y -i "$t/dvb.mkv" -map 0 -c copy -copyts -t 4 "$1" ;;
     mixed)
       printf '1\n00:00:00,500 --> 00:00:03,500\nBURN IN TEXT\n' >"$t/a.srt"
-      "$FFMPEG" -v error -y -i "$t/pgs.mkv" -map 0 -c:v copy -c:a copy -c:s dvdsub "$t/dvd.mkv"
+      "$FFMPEG" -v error -y -i "$t/pgs.mkv" -map 0 -c:v copy -c:a copy -c:s dvdsub -copyts "$t/dvd.mkv"
       "$FFMPEG" -v error -y -i "$t/pgs.mkv" -i "$t/dvd.mkv" -i "$t/a.srt" -map 0:v -map 0:a -map 2 -map 0:s -map 1:s \
         -c:v copy -c:a copy -c:s:0 srt -c:s:1 copy -c:s:2 copy \
         -metadata:s:s:0 language=eng -metadata:s:s:1 language=por -metadata:s:s:2 language=spa \
-        -disposition:s:0 default -disposition:s:1 0 -disposition:s:2 0 "$1" ;;
+        -disposition:s:0 default -disposition:s:1 0 -disposition:s:2 0 -copyts "$1" ;;
   esac
   rm -rf "$t"
 }
@@ -885,9 +920,10 @@ with open(out, "w") as f:
         if title:
             f.write("title=%s\n" % title)
 PY
+  fixfor "$out"
   "$FFMPEG" -v error -y -f lavfi -i "color=c=black:s=640x360:r=5:d=$secs,geq=lum='min(255,T*8)':cb=128:cr=128" \
     -f lavfi -i "sine=frequency=500:duration=$secs" -i "$t/m.txt" -map 0 -map 1 -map_metadata 2 \
-    -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "$out"
+    -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac "${FIX[@]}" -shortest "$out"
   rm -rf "$t"
 }
 chapterramp "$CI/Chapter Pics (2660)/Chapter Pics (2660).mkv" 30 "0|One" "10000|Two" "20000"
@@ -923,9 +959,10 @@ with open(out, "w") as f:
         if title:
             f.write("title=%s\n" % title)
 PY
+  fixfor "$out"
   "$FFMPEG" -v error -y -f lavfi -i "testsrc2=s=${size}:r=5:d=${secs},noise=alls=40:allf=t" \
     -f lavfi -i "sine=frequency=500:duration=${secs}" -i "$t/m.txt" -map 0 -map 1 -map_metadata 2 \
-    -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "$out"
+    -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac "${FIX[@]}" -shortest "$out"
   rm -rf "$t"
 }
 chapternoise "$CI3/Chapter Noise (2670)/Chapter Noise (2670).mkv" 20 640x360 "5000|A" "10000|B"
@@ -948,9 +985,10 @@ chapterplain() { # <name> <id> <geq luma expression>
   mkdir -p "$(dirname "$out")"
   local t; t="$(mktemp -d)"
   printf ';FFMETADATA1\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=0\nEND=5000\ntitle=A\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=5000\nEND=20000\ntitle=B\n' >"$t/m.txt"
+  fixfor "$out"
   "$FFMPEG" -v error -y -f lavfi -i "nullsrc=s=640x360:r=5:d=20,format=yuv444p,geq=lum='$3':cb=128:cr=128" \
     -f lavfi -i "sine=frequency=500:duration=20" -i "$t/m.txt" -map 0 -map 1 -map_metadata 2 \
-    -c:v libx264 -preset ultrafast -pix_fmt yuv444p -c:a aac -shortest "$out"
+    -c:v libx264 -preset ultrafast -pix_fmt yuv444p -c:a aac "${FIX[@]}" -shortest "$out"
   rm -rf "$t"
 }
 chapterplain "Chapter Flat" 2680 "16"
@@ -1146,8 +1184,9 @@ mx() { # <out> <video args...> (audio: one AAC track)
   local out="$1"; shift
   [ -f "$out" ] && return 0
   mkdir -p "$(dirname "$out")"
+  fixfor "$out"
   "$FFMPEG" -v error -y -f lavfi -i "testsrc=duration=3:size=320x240:rate=12" \
-    -f lavfi -i "sine=frequency=440:duration=3" "$@" -c:a aac -shortest "$out"
+    -f lavfi -i "sine=frequency=440:duration=3" "$@" -c:a aac "${FIX[@]}" -shortest "$out"
 }
 mx "$MX/Mx Mkv (2500)/Mx Mkv (2500).mkv" -c:v libx264 -preset ultrafast -pix_fmt yuv420p
 # remuxed with mkvmerge, which (unlike ffmpeg) writes BPS / NUMBER_OF_BYTES / NUMBER_OF_FRAMES statistics tags

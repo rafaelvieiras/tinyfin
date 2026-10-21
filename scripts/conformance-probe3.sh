@@ -27,9 +27,23 @@ ff() { "$FFMPEG" -v error -y "$@"; }
 # the reference's own jellyfin-ffmpeg (FFMPEG=...), as scripts/conformance-media.sh
 # does, to get the same files on every machine.
 BX=(-threads 1 -fflags +bitexact -flags +bitexact -map_metadata -1)
+# The bytes depend on the encoder build, so a build that is not jellyfin-ffmpeg is
+# replaced by the one inside a Jellyfin container image (docker; JF_IMAGE, default
+# jellyfin/jellyfin:12.2) when docker is available; otherwise only a warning.
 case "$("$FFMPEG" -version 2>/dev/null | head -1)" in
   *ellyfin*) ;;
-  *) echo "Probe3: warning: $FFMPEG is not jellyfin-ffmpeg; the ts-bitrate figures of playback9 may differ" >&2 ;;
+  *)
+    if [ -z "${JFFMPEG:-}" ] && command -v docker >/dev/null 2>&1; then
+      r="$(realpath "$ROOT")"
+      JFWRAP="$(mktemp)"
+      printf '#!/bin/sh\nexec docker run --rm -i -u "$(id -u):$(id -g)" -v "%s:%s" -w "%s" --entrypoint /usr/lib/jellyfin-ffmpeg/ffmpeg "%s" "$@"\n' \
+        "$r" "$r" "$r" "${JF_IMAGE:-jellyfin/jellyfin:12.2}" >"$JFWRAP"
+      chmod +x "$JFWRAP"; trap 'rm -f "$JFWRAP"' EXIT
+      echo "Probe3: $FFMPEG is not jellyfin-ffmpeg; using the Jellyfin container image" >&2
+      FFMPEG="$JFWRAP"
+    elif [ -n "${JFFMPEG:-}" ]; then FFMPEG="$JFFMPEG"
+    else echo "Probe3: warning: $FFMPEG is not jellyfin-ffmpeg and docker is missing; the ts-bitrate figures of playback9 may differ" >&2
+    fi ;;
 esac
 # <stem incl. id> <ext> <ffmpeg args...> : one movie
 mk() {

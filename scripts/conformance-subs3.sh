@@ -76,7 +76,7 @@ if [ ! -f "$FA.mkv" ]; then
     cp "$font" "$work/Attached.ttf"
     sed "s/Zzyzx Nonexistent Font/$family/" "$S3/Font Missing (4000)/Font Missing (4000).en.ass" >"$work/fa.ass"
     "$FFMPEG" -v error -y -i "$S3/Font Missing (4000)/Font Missing (4000).mp4" -i "$work/fa.ass" -map 0 -map 1 \
-      -c copy -attach "$work/Attached.ttf" -metadata:s:t mimetype=font/ttf -metadata:s:s:0 language=eng "$FA.mkv"
+      -c copy -attach "$work/Attached.ttf" -metadata:s:t mimetype=font/ttf -metadata:s:s:0 language=eng -disposition:s:0 default "$FA.mkv"
   fi
 fi
 

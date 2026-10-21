@@ -33,7 +33,7 @@
      "text": [
       {
        "op": "matches",
-       "value": "^#EXTM3U\\n#EXT-X-PLAYLIST-TYPE:VOD\\n#EXT-X-VERSION:3\\n#EXT-X-TARGETDURATION:4\\n#EXT-X-MEDIA-SEQUENCE:0\\n#EXTINF:3\\.525000, nodesc\\nhls1/main/0\\.ts\\?[^\\n]*&runtimeTicks=0&actualSegmentLengthTicks=35250000\\n#EXT-X-ENDLIST\\n$"
+       "value": "^#EXTM3U\\n#EXT-X-PLAYLIST-TYPE:VOD\\n#EXT-X-VERSION:3\\n#EXT-X-TARGETDURATION:5\\n#EXT-X-MEDIA-SEQUENCE:0\\n#EXTINF:4\\.047000, nodesc\\nhls1/main/0\\.ts\\?[^\\n]*&runtimeTicks=0&actualSegmentLengthTicks=40470000\\n#EXT-X-ENDLIST\\n$"
       }
      ]
     }
@@ -53,7 +53,7 @@
      "text": [
       {
        "op": "matches",
-       "value": "#EXTINF:3\\.000000, nodesc\\nhls1/main/0\\.ts\\?[^\\n]*&runtimeTicks=0&actualSegmentLengthTicks=30000000\\n#EXTINF:0\\.525000, nodesc\\nhls1/main/1\\.ts\\?[^\\n]*&runtimeTicks=30000000&actualSegmentLengthTicks=5250000\\n#EXT-X-ENDLIST\\n$"
+       "value": "#EXTINF:3\\.000000, nodesc\\nhls1/main/0\\.ts\\?[^\\n]*&runtimeTicks=0&actualSegmentLengthTicks=30000000\\n#EXTINF:1\\.047000, nodesc\\nhls1/main/1\\.ts\\?[^\\n]*&runtimeTicks=30000000&actualSegmentLengthTicks=10470000\\n#EXT-X-ENDLIST\\n$"
       }
      ]
     }

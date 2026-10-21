@@ -25,6 +25,7 @@ if [ ! -f "$six" ]; then
   mkdir -p "$(dirname "$six")"
   "$FFMPEG" -v error -y -f lavfi -i "testsrc=duration=8:size=320x180:rate=24" \
     -f lavfi -i "anullsrc=channel_layout=5.1:sample_rate=48000" -t 8 \
-    -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a ac3 "$six" ||
+    -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a ac3 \
+    -disposition:v:0 default -disposition:a:0 default -output_ts_offset 0.005 "$six" ||
     { rm -f "$six"; echo "Hls3: six failed" >&2; }
 fi
