@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "target": "tinyfin",
+  "passing": [
+    "navigation.spec.ts > Shows -> series -> season -> episode detail",
+    "navigation.spec.ts > season 2 lists its single episode",
+    "playlists.spec.ts > collection: create via UI and open it",
+    "playlists.spec.ts > playlist: create via UI, add an item, open it, remove an item",
+    "preferences.spec.ts > display preferences: missing episodes setting persists",
+    "preferences.spec.ts > home preferences: hide watched checkbox persists",
+    "preferences.spec.ts > home preferences: home screen section choice persists",
+    "preferences.spec.ts > playback preferences: default audio track setting persists",
+    "preferences.spec.ts > preferences menu lists the settings pages",
+    "preferences.spec.ts > subtitle preferences: subtitle mode persists",
+    "search.spec.ts > search groups results by type and opens a result",
+    "userdata.spec.ts > favorite toggle on a movie shows in the Favorites tab",
+    "userdata.spec.ts > favorite toggle persists server-side and from the card overlay",
+    "userdata.spec.ts > mark played / unplayed toggles the indicator"
+  ]
+}

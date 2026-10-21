@@ -1,0 +1,100 @@
+{
+  "flow": "flow-userdata",
+  "entries": [
+    {
+      "method": "GET",
+      "path": "/Artists",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Items/:id/Ancestors",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Items/:id/Collections",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Items/:id/Similar",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Items/:id",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Items/Filters2",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Items/Filters",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Items",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Persons",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Studios",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/System/Info/Public",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/System/Info",
+      "status": 200
+    },
+    {
+      "method": "DELETE",
+      "path": "/Users/:id/FavoriteItems/:id",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/Users/:id/FavoriteItems/:id",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Users/:id/Items/:id",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Users/:id/Items",
+      "status": 200
+    },
+    {
+      "method": "DELETE",
+      "path": "/Users/:id/PlayedItems/:id",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/Users/:id/PlayedItems/:id",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Users/:id",
+      "status": 200
+    }
+  ]
+}
