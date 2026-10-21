@@ -1,6 +1,7 @@
 package chapterimg
 
 import (
+	"encoding/hex"
 	"image"
 	"image/color"
 	"math"
@@ -110,22 +111,21 @@ func (o Overlay) draw(img *image.RGBA) {
 		}
 	}
 	if o.Count > 0 {
-		cx, cy := float64(w-38), 38.0
-		for y := 0; y < h; y++ {
-			if math.Abs(float64(y)+0.5-cy) > 21 {
-				continue
+		// the circle has no anti-aliasing and is not an exact one: the
+		// reference's own pixels are used (40 x 40, from 20 left of the centre
+		// and 20 above it)
+		for j, row := range circleMask {
+			y := 18 + j
+			if y >= h {
+				break
 			}
-			for x := 0; x < w; x++ {
-				// coverage of the circle (radius 20, 80 % blue) by the
-				// distance of the pixel centre from its edge
-				d := math.Hypot(float64(x)+0.5-cx, float64(y)+0.5-cy)
-				cov := math.Max(0, math.Min(1, 20.5-d))
-				if cov > 0 {
-					blend(img, x, y, color.RGBA{0, 164, 220, 255}, 0.8*cov)
+			for i := 0; i < len(row); i++ {
+				if x := w - 58 + i; row[i] == '#' && x >= 0 {
+					blend(img, x, y, color.RGBA{0, 164, 220, 255}, 0.8)
 				}
 			}
 		}
-		drawDigits(img, strconv.Itoa(o.Count), int(cx), int(cy))
+		drawDigits(img, strconv.Itoa(o.Count), w-38)
 	}
 }
 
@@ -135,107 +135,176 @@ func blend(img *image.RGBA, x, y int, c color.RGBA, a float64) {
 	img.SetRGBA(x, y, color.RGBA{mix(d.R, c.R), mix(d.G, c.G), mix(d.B, c.B), 255})
 }
 
-// digit shapes, 3 wide and 5 high
-var glyphs = [10][5]string{
-	{"###", "# #", "# #", "# #", "###"},
-	{" # ", "## ", " # ", " # ", "###"},
-	{"###", "  #", "###", "#  ", "###"},
-	{"###", "  #", "###", "  #", "###"},
-	{"# #", "# #", "###", "  #", "  #"},
-	{"###", "#  ", "###", "  #", "###"},
-	{"###", "#  ", "###", "# #", "###"},
-	{"###", "  #", "  #", "  #", "  #"},
-	{"###", "# #", "###", "# #", "###"},
-	{"###", "# #", "###", "  #", "###"},
-}
-
-// drawDigits writes s in white, centred on (cx, cy), in blocks of 3 px (so a
-// digit is 9 x 15 px; wider counts are drawn smaller to stay in the circle).
-func drawDigits(img *image.RGBA, s string, cx, cy int) {
-	scale := 3
-	if len(s) > 2 {
-		scale = 2
+// drawDigits writes s in white on the unplayed count's circle, whose centre
+// is cx pixels from the left. The reference draws the number with a sans
+// typeface (hinted, so the glyphs sit on whole pixels): 24 pixels high for one
+// or two digits, centred on the circle, 18 for three or more, which start at a
+// fixed place 14 pixels left of the centre and run on (past the edge of the
+// picture, which clips them). The coverage of each glyph is the measured one
+// (glyphdata.go), so the pixels are the reference's.
+func drawDigits(img *image.RGBA, s string, cx int) {
+	var size, adv, start int
+	switch len(s) {
+	case 1:
+		size, adv, start = 1, 0, cx-6
+	case 2:
+		size, adv, start = 1, 15, cx-12
+	default:
+		size, adv, start = 0, 11, cx-14
 	}
-	if len(s) > 4 {
-		scale = 1
-	}
-	gap := scale
-	total := len(s)*3*scale + (len(s)-1)*gap
-	x0 := cx - total/2
-	y0 := cy - 5*scale/2
-	for i, r := range s {
-		g := glyphs[r-'0']
-		for gy := 0; gy < 5; gy++ {
-			for gx := 0; gx < 3; gx++ {
-				if g[gy][gx] != '#' {
+	for i := 0; i < len(s); i++ {
+		g := glyphData[size][s[i]-'0']
+		pix, _ := hex.DecodeString(g.a)
+		ox, oy := start+i*adv+g.x, 38+g.y
+		for gy := 0; gy < g.h; gy++ {
+			for gx := 0; gx < g.w; gx++ {
+				a := float64(pix[gy*g.w+gx]) / 255
+				if a == 0 || !image.Pt(ox+gx, oy+gy).In(img.Bounds()) {
 					continue
 				}
-				for dy := 0; dy < scale; dy++ {
-					for dx := 0; dx < scale; dx++ {
-						x, y := x0+i*(3*scale+gap)+gx*scale+dx, y0+gy*scale+dy
-						if image.Pt(x, y).In(img.Bounds()) {
-							img.SetRGBA(x, y, color.RGBA{255, 255, 255, 255})
-						}
-					}
-				}
+				blend(img, ox+gx, oy+gy, color.RGBA{255, 255, 255, 255}, a)
 			}
 		}
 	}
 }
 
-// blur applies a gaussian blur of the given sigma, two passes with the same
-// kernel. What lies outside the picture counts as black, so its borders go
-// dark (a pixel on the edge keeps a little more than half of its value).
+// blur blurs the picture the way the reference does (Skia's blur): three box
+// passes along each axis, rows first, whose window is
+// floor(sigma * 3 * sqrt(2 pi) / 4 + 0.5) (at least 1). An odd window is
+// centred; an even one is passed twice as it is, the second time shifted by
+// one pixel, and then once as the window plus one (the SVG recipe). The picture
+// is extended by mirroring (not by black or by its edge pixels). The reference
+// computes in 8 bits; here the passes are exact and rounded at the end, which
+// stays within a level or two. For a window of 256 or more the reference
+// switches to something wider that could not be worked out; the passes are
+// then run twice, which has about the right width but not the same pixels.
 func blur(img *image.RGBA, sigma float64) {
 	b := img.Bounds()
 	w, h := b.Dx(), b.Dy()
-	r := int(math.Ceil(3 * sigma))
-	if r > max(w, h) {
-		r = max(w, h)
+	d := int(math.Floor(sigma*3*math.Sqrt(2*math.Pi)/4 + 0.5))
+	if d < 1 {
+		d = 1
 	}
-	k := make([]float64, 2*r+1)
-	var sum float64
-	for i := range k {
-		d := float64(i - r)
-		k[i] = math.Exp(-d * d / (2 * sigma * sigma))
-		sum += k[i]
+	type pass struct{ size, off int }
+	var passes []pass
+	if d%2 == 1 {
+		passes = []pass{{d, d / 2}, {d, d / 2}, {d, d / 2}}
+	} else {
+		passes = []pass{{d, d / 2}, {d, d/2 - 1}, {d + 1, d / 2}}
 	}
-	for i := range k {
-		k[i] /= sum
+	if d >= 256 {
+		passes = append(passes, passes...)
 	}
-	src := make([]float64, w*h*3)
+	buf := make([]float64, w*h*3)
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
 			for c := 0; c < 3; c++ {
-				src[(y*w+x)*3+c] = float64(img.Pix[y*img.Stride+x*4+c])
+				buf[(y*w+x)*3+c] = float64(img.Pix[y*img.Stride+x*4+c])
 			}
 		}
 	}
-	tmp := make([]float64, len(src))
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
-			var acc [3]float64
-			for i := max(x-r, 0); i <= min(x+r, w-1); i++ {
-				kv := k[i-x+r]
-				for c := 0; c < 3; c++ {
-					acc[c] += src[(y*w+i)*3+c] * kv
-				}
-			}
-			copy(tmp[(y*w+x)*3:], acc[:])
+	for axis := 0; axis < 2; axis++ {
+		n, lines, step, lstep := w, h, 3, w*3
+		if axis == 1 {
+			n, lines, step, lstep = h, w, w*3, 3
 		}
-	}
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
-			var acc [3]float64
-			for j := max(y-r, 0); j <= min(y+r, h-1); j++ {
-				kv := k[j-y+r]
-				for c := 0; c < 3; c++ {
-					acc[c] += tmp[(j*w+x)*3+c] * kv
-				}
-			}
+		line := make([]float64, n)
+		pre := make([]float64, 0)
+		for l := 0; l < lines; l++ {
 			for c := 0; c < 3; c++ {
-				img.Pix[y*img.Stride+x*4+c] = uint8(acc[c] + 0.5)
+				base := l*lstep + c
+				for i := 0; i < n; i++ {
+					line[i] = buf[base+i*step]
+				}
+				for _, p := range passes {
+					if p.size == 1 {
+						continue
+					}
+					// prefix sums over the line extended by p.size on both sides
+					m := n + 2*p.size
+					if cap(pre) < m+1 {
+						pre = make([]float64, m+1)
+					}
+					pre = pre[:m+1]
+					pre[0] = 0
+					for i := 0; i < m; i++ {
+						pre[i+1] = pre[i] + line[mirror(i-p.size, n)]
+					}
+					for i := 0; i < n; i++ {
+						lo := i + p.size - p.off
+						line[i] = (pre[lo+p.size] - pre[lo]) / float64(p.size)
+					}
+				}
+				for i := 0; i < n; i++ {
+					buf[base+i*step] = line[i]
+				}
 			}
 		}
 	}
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			for c := 0; c < 3; c++ {
+				img.Pix[y*img.Stride+x*4+c] = uint8(math.Min(255, math.Max(0, buf[(y*w+x)*3+c]+0.5)))
+			}
+		}
+	}
+}
+
+// mirror maps any index onto 0..n-1 by mirroring at the edges, the edge pixel
+// repeated (... 1 0 | 0 1 2 ... n-1 | n-1 n-2 ...).
+func mirror(i, n int) int {
+	p := 2 * n
+	i %= p
+	if i < 0 {
+		i += p
+	}
+	if i >= n {
+		i = p - 1 - i
+	}
+	return i
+}
+
+// circleMask is the unplayed count's circle (radius 20, centred 38 pixels from
+// the top and from the right edge) as the reference rasterises it.
+var circleMask = [40]string{
+	"................########................",
+	"............################............",
+	"..........####################..........",
+	".........######################.........",
+	".......##########################.......",
+	"......############################......",
+	".....##############################.....",
+	"....###############################.....",
+	"....################################....",
+	"...##################################...",
+	"..###################################...",
+	"..####################################..",
+	".######################################.",
+	".######################################.",
+	".######################################.",
+	".######################################.",
+	"########################################",
+	"########################################",
+	"########################################",
+	"########################################",
+	"########################################",
+	"########################################",
+	"########################################",
+	"########################################",
+	".######################################.",
+	".######################################.",
+	".######################################.",
+	".######################################.",
+	"..####################################..",
+	"..###################################...",
+	"...##################################...",
+	"....################################....",
+	"....###############################.....",
+	".....##############################.....",
+	"......############################......",
+	"........########################........",
+	".........######################.........",
+	"...........##################...........",
+	"............################............",
+	"................########................",
 }
