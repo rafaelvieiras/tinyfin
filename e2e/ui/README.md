@@ -125,6 +125,8 @@ How it is set up (so a failure can be read correctly):
   - chapter stills and trickplay sheets are made by the reference only for the 30 s `ChapterImg`
     fixture (none for the 6 s chapter clips; the 1500 s trickplay clip only delays the scan), so that
     one item serves both specs;
-  - the web UI hides chapters without an extracted still, hence the wait on `Chapters[].ImageTag`.
+  - the burn-in specs need a Tinyfin whose ffmpeg has the `subtitles` filter (the reference's own build does); a host ffmpeg without it makes the first segment fail, so point `TINYFIN_FFMPEG_PATH`/`TINYFIN_FFPROBE_PATH` at such a build;
+  the client also asks `GET /Sessions` for `TranscodingInfo.IsVideoDirect` to decide whether a track is burned in (`playstate.session.R10`);
+- the web UI hides chapters without an extracted still, hence the wait on `Chapters[].ImageTag`.
 - A spec that checked the details page flipping to "Resume" without a reload was dropped: it was flaky on
   the reference itself (view reuse); the persisted position is asserted via the API and a fresh load.

@@ -159,6 +159,7 @@ func (s *Server) ensureTranscodeJob(r *http.Request, h hlsRequest) (*transcode.J
 	job, err := s.transcode.Start(context.Background(), h.key, h.req)
 	if err == nil {
 		s.noteHLSEncoding(h.key, hlsQuery(r))
+		s.noteTranscodeSession(r, h)
 	}
 	return job, err
 }
@@ -441,6 +442,7 @@ func (s *Server) segmentJob(r *http.Request, h hlsRequest, n int, startTicks int
 	job, err := s.transcode.Start(context.Background(), h.key, req)
 	if err == nil {
 		s.noteHLSEncoding(h.key, hlsQuery(r))
+		s.noteTranscodeSession(r, h)
 	}
 	return job, err
 }

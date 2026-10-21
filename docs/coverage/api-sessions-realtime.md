@@ -21,14 +21,14 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| 🟡 partial | `GET /Sessions` | DefaultAuthorization | yes | 12/12 | In-process registry fed by authentication and playback reports; admin only. |
+| 🟡 partial | `GET /Sessions` | DefaultAuthorization | yes | 12/16 | In-process registry fed by authentication and playback reports; admin only. |
 | 🗓️ planned | `POST /Sessions/Capabilities` | DefaultAuthorization |  |  | The Full variant is served; the plain one is the older form of the same report. (priority: low) |
-| ✅ supported *(no scenario)* | `POST /Sessions/Capabilities/Full` | DefaultAuthorization | yes |  |  |
+| ✅ supported *(no scenario)* | `POST /Sessions/Capabilities/Full` | DefaultAuthorization | yes | 0/4 |  |
 | ✅ supported | `POST /Sessions/Logout` | DefaultAuthorization | yes | 1/1 |  |
-| ✅ supported | `POST /Sessions/Playing` | DefaultAuthorization | yes | 40/40 |  |
+| ✅ supported | `POST /Sessions/Playing` | DefaultAuthorization | yes | 40/44 |  |
 | ✅ supported | `POST /Sessions/Playing/Ping` | DefaultAuthorization |  | 5/5 |  |
-| ✅ supported | `POST /Sessions/Playing/Progress` | DefaultAuthorization | yes | 18/18 |  |
-| ✅ supported | `POST /Sessions/Playing/Stopped` | DefaultAuthorization | yes | 23/23 |  |
+| ✅ supported | `POST /Sessions/Playing/Progress` | DefaultAuthorization | yes | 18/19 |  |
+| ✅ supported | `POST /Sessions/Playing/Stopped` | DefaultAuthorization | yes | 23/27 |  |
 | 🗓️ planned | `POST /Sessions/Viewing` | DefaultAuthorization |  |  | Remote control of other sessions is not implemented (the /socket transport exists). (priority: low) |
 | 🗓️ planned | `POST /Sessions/{sessionId}/Command` | DefaultAuthorization | yes |  | Remote control of other sessions is not implemented (the /socket transport exists). (priority: low) |
 | 🗓️ planned | `POST /Sessions/{sessionId}/Command/{command}` | DefaultAuthorization |  |  | Remote control of other sessions is not implemented (the /socket transport exists). (priority: low) |

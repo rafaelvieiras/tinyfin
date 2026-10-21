@@ -21,6 +21,7 @@ package api
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -62,6 +63,34 @@ type sessionPlayStateDto struct {
 	RepeatMode          string `json:"RepeatMode"`
 	PlaybackOrder       string `json:"PlaybackOrder"`
 	LiveStreamID        string `json:"LiveStreamId,omitempty"`
+}
+
+// transcodingInfoDto is a session's TranscodingInfo: what the stream the
+// device is being served looks like (playstate.session.R10). The web client
+// reads it to tell a copied picture from an encoded one and to fill its
+// playback statistics.
+type transcodingInfoDto struct {
+	AudioCodec               string   `json:"AudioCodec,omitempty"`
+	VideoCodec               string   `json:"VideoCodec,omitempty"`
+	Container                string   `json:"Container,omitempty"`
+	IsVideoDirect            bool     `json:"IsVideoDirect"`
+	IsAudioDirect            bool     `json:"IsAudioDirect"`
+	Bitrate                  int      `json:"Bitrate,omitempty"`
+	Width                    int      `json:"Width,omitempty"`
+	Height                   int      `json:"Height,omitempty"`
+	AudioChannels            int      `json:"AudioChannels,omitempty"`
+	HardwareAccelerationType string   `json:"HardwareAccelerationType"`
+	TranscodeReasons         []string `json:"TranscodeReasons"`
+}
+
+// deviceTranscode is the stream a device was last served by a transcode job:
+// the job's key, the item, and the TranscodingInfo shown on the session
+// (nil once a playback report said the stream is not transcoded).
+type deviceTranscode struct {
+	key         string
+	item        storage.ItemID
+	playSession string
+	info        *transcodingInfoDto
 }
 
 // nowPlayingQueueItemDto is one entry of a session's play queue
@@ -128,6 +157,10 @@ type sessionInfoDto struct {
 	HasCustomDeviceName bool     `json:"HasCustomDeviceName"`
 	ServerID            string   `json:"ServerId"`
 	SupportedCommands   []string `json:"SupportedCommands"`
+	// TranscodingInfo is present from the moment the device's transcode job
+	// starts until a report says the stream is not transcoded, or the item
+	// stops (playstate.session.R10).
+	TranscodingInfo *transcodingInfoDto `json:"TranscodingInfo,omitempty"`
 }
 
 // trackedSession is one entry in sessionRegistry, keyed by DeviceID. Every
@@ -171,10 +204,53 @@ type playingState struct {
 type sessionRegistry struct {
 	mu       sync.Mutex
 	byDevice map[string]*trackedSession
+	// transcodes is keyed by DeviceId and kept apart from byDevice: a
+	// device's stream can start before its session reports anything.
+	transcodes map[string]*deviceTranscode
 }
 
 func newSessionRegistry() *sessionRegistry {
-	return &sessionRegistry{byDevice: make(map[string]*trackedSession)}
+	return &sessionRegistry{byDevice: make(map[string]*trackedSession), transcodes: make(map[string]*deviceTranscode)}
+}
+
+// setTranscode records the transcode job deviceID is now served from.
+func (r *sessionRegistry) setTranscode(deviceID, key string, item storage.ItemID, playSession string, info *transcodingInfoDto) {
+	if deviceID == "" {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.transcodes[deviceID] = &deviceTranscode{key: key, item: item, playSession: playSession, info: info}
+}
+
+// transcodeKey is the key of the job deviceID was last served for item, when
+// it belongs to the reported play session (an empty one matches any).
+func (r *sessionRegistry) transcodeKey(deviceID string, item storage.ItemID, playSession string) (string, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if t, ok := r.transcodes[deviceID]; ok && t.item == item && (playSession == "" || t.playSession == "" || strings.EqualFold(playSession, t.playSession)) {
+		return t.key, true
+	}
+	return "", false
+}
+
+// clearTranscodeInfo hides the TranscodingInfo of deviceID; the job stays known.
+func (r *sessionRegistry) clearTranscodeInfo(deviceID string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if t, ok := r.transcodes[deviceID]; ok {
+		t.info = nil
+	}
+}
+
+// dropTranscode forgets the stream of deviceID when it belongs to item (an
+// empty item matches any).
+func (r *sessionRegistry) dropTranscode(deviceID string, item storage.ItemID) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if t, ok := r.transcodes[deviceID]; ok && (item == "" || t.item == item) {
+		delete(r.transcodes, deviceID)
+	}
 }
 
 // upsertCapabilities registers or updates the tracked session for deviceID
@@ -300,7 +376,11 @@ func (r *sessionRegistry) list(serverID string, activeWithinSeconds int, hasFilt
 		if hasFilter && now.Sub(ts.lastActivityDate) > time.Duration(activeWithinSeconds)*time.Second {
 			continue
 		}
-		out = append(out, ts.dto(serverID))
+		d := ts.dto(serverID)
+		if t := r.transcodes[ts.deviceID]; t != nil {
+			d.TranscodingInfo = t.info
+		}
+		out = append(out, d)
 	}
 	return out
 }

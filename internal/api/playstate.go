@@ -495,6 +495,26 @@ func (s *Server) updatePlaybackSession(r *http.Request, ac *AuthContext, item *s
 		return def
 	}
 
+	// A stopped report ends the device's stream (session.R10); a report that
+	// says the stream is not transcoded hides its TranscodingInfo.
+	if kind == reportStopped {
+		var id storage.ItemID
+		if item != nil {
+			id = item.ID
+		}
+		s.sessions.dropTranscode(ac.DeviceID, id)
+	} else if item != nil && rep.PlayMethod != nil && *rep.PlayMethod != "" && *rep.PlayMethod != "Transcode" {
+		s.sessions.clearTranscodeInfo(ac.DeviceID)
+	}
+	transcoding := false
+	if item != nil && kind != reportStopped {
+		if key, ok := s.sessions.transcodeKey(ac.DeviceID, item.ID, strOr(rep.PlaySessionID, "")); ok {
+			_, transcoding = s.transcode.Get(key)
+		}
+		if !transcoding {
+			_, transcoding = s.transcode.Get(string(item.ID))
+		}
+	}
 	s.sessions.reportPlayback(ac.DeviceID, string(ac.User.ID), ac.User.Name, ac.Client, ac.Device, ac.Version, remoteEndPoint(r), func(ts *trackedSession) {
 		if kind == reportStopped {
 			ts.playing = nil
@@ -511,7 +531,7 @@ func (s *Server) updatePlaybackSession(r *http.Request, ac *AuthContext, item *s
 		if method == "Transcode" {
 			// Without an active transcode job for the item the report is
 			// recorded as direct play (session.R3).
-			if _, running := s.transcode.Get(string(item.ID)); !running {
+			if !transcoding {
 				method = "DirectPlay"
 			}
 		}

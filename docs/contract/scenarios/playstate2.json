@@ -1,0 +1,795 @@
+[
+  {
+    "id": "playstate.session.transcoding-info-lifecycle",
+    "endpoint": "GET /Sessions",
+    "spec": "playstate.md#session-state",
+    "scope": "modern",
+    "tags": [
+      "playstate",
+      "transcode",
+      "web-client"
+    ],
+    "covers": [
+      "playstate.session.R10",
+      "playstate.session.R11",
+      "playstate.session.R12",
+      "playstate.session.R13"
+    ],
+    "requires": [
+      "library:avtrack",
+      "item:av-multi"
+    ],
+    "steps": [
+      {
+        "name": "register the session",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Capabilities/Full",
+          "body": {
+            "PlayableMediaTypes": [
+              "Video"
+            ],
+            "SupportedCommands": []
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "reset: a playing report that is not a transcode",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing",
+          "body": {
+            "ItemId": "{{item.av-multi.id}}",
+            "PlaySessionId": "sc-tinfo-reset",
+            "PlayMethod": "DirectPlay",
+            "IsPaused": true
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "reset: stopped",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.av-multi.id}}",
+            "PlaySessionId": "sc-tinfo-reset"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "no stream yet: no TranscodingInfo",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "first segment starts the transcode",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.av-multi.id}}/hls1/main/0.ts?MediaSourceId={{item.av-multi.id}}&PlaySessionId=sc-tinfo&DeviceId={{device.admin}}&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000&TranscodeReasons=ContainerBitrateExceedsLimit&runtimeTicks=0&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "the session describes the stream, even with nothing playing",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].NowPlayingItem",
+              "op": "absent"
+            },
+            {
+              "path": "$[0].TranscodingInfo.VideoCodec",
+              "op": "eq",
+              "value": "h264"
+            },
+            {
+              "path": "$[0].TranscodingInfo.AudioCodec",
+              "op": "eq",
+              "value": "aac"
+            },
+            {
+              "path": "$[0].TranscodingInfo.Container",
+              "op": "eq",
+              "value": "ts"
+            },
+            {
+              "path": "$[0].TranscodingInfo.IsVideoDirect",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$[0].TranscodingInfo.IsAudioDirect",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$[0].TranscodingInfo.Bitrate",
+              "op": "eq",
+              "value": 628000
+            },
+            {
+              "path": "$[0].TranscodingInfo.Width",
+              "op": "eq",
+              "value": 160
+            },
+            {
+              "path": "$[0].TranscodingInfo.Height",
+              "op": "eq",
+              "value": 120
+            },
+            {
+              "path": "$[0].TranscodingInfo.AudioChannels",
+              "op": "eq",
+              "value": 1
+            },
+            {
+              "path": "$[0].TranscodingInfo.HardwareAccelerationType",
+              "op": "eq",
+              "value": "none"
+            },
+            {
+              "path": "$[0].TranscodingInfo.TranscodeReasons",
+              "op": "eq",
+              "value": [
+                "ContainerBitrateExceedsLimit"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "name": "start reported as Transcode",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing",
+          "body": {
+            "ItemId": "{{item.av-multi.id}}",
+            "PlaySessionId": "sc-tinfo",
+            "PlayMethod": "Transcode",
+            "IsPaused": true,
+            "PositionTicks": 0
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "Transcode is kept while the stream runs",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].PlayState.PlayMethod",
+              "op": "eq",
+              "value": "Transcode"
+            },
+            {
+              "path": "$[0].TranscodingInfo.VideoCodec",
+              "op": "eq",
+              "value": "h264"
+            }
+          ]
+        }
+      },
+      {
+        "name": "progress reported as DirectStream",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Progress",
+          "body": {
+            "ItemId": "{{item.av-multi.id}}",
+            "PlaySessionId": "sc-tinfo",
+            "PlayMethod": "DirectStream",
+            "IsPaused": true,
+            "PositionTicks": 10000000
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "a report that is not Transcode hides TranscodingInfo",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].PlayState.PlayMethod",
+              "op": "eq",
+              "value": "DirectStream"
+            },
+            {
+              "path": "$[0].TranscodingInfo",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "progress reported as Transcode again",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Progress",
+          "body": {
+            "ItemId": "{{item.av-multi.id}}",
+            "PlaySessionId": "sc-tinfo",
+            "PlayMethod": "Transcode",
+            "IsPaused": true,
+            "PositionTicks": 20000000
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "the stream still runs, the info stays hidden",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].PlayState.PlayMethod",
+              "op": "eq",
+              "value": "Transcode"
+            },
+            {
+              "path": "$[0].TranscodingInfo",
+              "op": "absent"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "cleanup: close playback",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.av-multi.id}}",
+            "PlaySessionId": "sc-tinfo",
+            "Failed": true
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      }
+    ]
+  },
+  {
+    "id": "playstate.session.transcoding-info-stopped",
+    "endpoint": "POST /Sessions/Playing/Stopped",
+    "spec": "playstate.md#session-state",
+    "scope": "modern",
+    "tags": [
+      "playstate",
+      "transcode"
+    ],
+    "covers": [
+      "playstate.session.R10"
+    ],
+    "requires": [
+      "library:avtrack",
+      "item:av-multi"
+    ],
+    "steps": [
+      {
+        "name": "register the session",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Capabilities/Full",
+          "body": {
+            "PlayableMediaTypes": [
+              "Video"
+            ],
+            "SupportedCommands": []
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "reset: a playing report that is not a transcode",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing",
+          "body": {
+            "ItemId": "{{item.av-multi.id}}",
+            "PlaySessionId": "sc-tinfo-reset",
+            "PlayMethod": "DirectPlay",
+            "IsPaused": true
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "reset: stopped",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.av-multi.id}}",
+            "PlaySessionId": "sc-tinfo-reset"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "segment 1 starts the transcode",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.av-multi.id}}/hls1/main/1.ts?MediaSourceId={{item.av-multi.id}}&PlaySessionId=sc-tinfo&DeviceId={{device.admin}}&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000&AudioStreamIndex=1&runtimeTicks=30000000&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "start reported as Transcode",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing",
+          "body": {
+            "ItemId": "{{item.av-multi.id}}",
+            "PlaySessionId": "sc-tinfo",
+            "PlayMethod": "Transcode",
+            "IsPaused": true,
+            "PositionTicks": 0
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "playing a stream",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo.VideoCodec",
+              "op": "eq",
+              "value": "h264"
+            },
+            {
+              "path": "$[0].TranscodingInfo.TranscodeReasons",
+              "op": "eq",
+              "value": []
+            }
+          ]
+        }
+      },
+      {
+        "name": "stopped",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.av-multi.id}}",
+            "PlaySessionId": "sc-tinfo",
+            "PositionTicks": 10000000
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "stopped: no TranscodingInfo, nothing playing",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo",
+              "op": "absent"
+            },
+            {
+              "path": "$[0].NowPlayingItem",
+              "op": "absent"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "cleanup: close playback",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.av-multi.id}}",
+            "PlaySessionId": "sc-tinfo",
+            "Failed": true
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      }
+    ]
+  },
+  {
+    "id": "playstate.session.transcoding-info-copy-and-mp4",
+    "endpoint": "GET /Sessions",
+    "spec": "playstate.md#session-state",
+    "scope": "modern",
+    "tags": [
+      "playstate",
+      "transcode"
+    ],
+    "covers": [
+      "playstate.session.R14",
+      "playstate.session.R15"
+    ],
+    "requires": [
+      "library:long",
+      "item:long"
+    ],
+    "steps": [
+      {
+        "name": "register the session",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Capabilities/Full",
+          "body": {
+            "PlayableMediaTypes": [
+              "Video"
+            ],
+            "SupportedCommands": []
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "reset: a playing report that is not a transcode",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing",
+          "body": {
+            "ItemId": "{{item.long.id}}",
+            "PlaySessionId": "sc-tinfo-reset",
+            "PlayMethod": "DirectPlay",
+            "IsPaused": true
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "reset: stopped",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.long.id}}",
+            "PlaySessionId": "sc-tinfo-reset"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "a copied picture",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.long.id}}/hls1/main/0.ts?MediaSourceId={{item.long.id}}&PlaySessionId=sc-tinfo&DeviceId={{device.admin}}&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&AudioCodec=aac&VideoBitrate=500000&runtimeTicks=0&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "IsVideoDirect, the source size, the rate counted for the variant",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo.VideoCodec",
+              "op": "eq",
+              "value": "h264"
+            },
+            {
+              "path": "$[0].TranscodingInfo.IsVideoDirect",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$[0].TranscodingInfo.IsAudioDirect",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$[0].TranscodingInfo.Width",
+              "op": "eq",
+              "value": 320
+            },
+            {
+              "path": "$[0].TranscodingInfo.Height",
+              "op": "eq",
+              "value": 240
+            },
+            {
+              "path": "$[0].TranscodingInfo.Bitrate",
+              "op": "eq",
+              "value": 547500
+            },
+            {
+              "path": "$[0].TranscodingInfo.TranscodeReasons",
+              "op": "eq",
+              "value": []
+            }
+          ]
+        }
+      },
+      {
+        "name": "an encoded picture in fragmented mp4",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.long.id}}/hls1/main/0.mp4?MediaSourceId={{item.long.id}}&PlaySessionId=sc-tinfo&DeviceId={{device.admin}}&SegmentContainer=mp4&SegmentLength=3&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000&runtimeTicks=0&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "a new stream replaces the description",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo.Container",
+              "op": "eq",
+              "value": "mp4"
+            },
+            {
+              "path": "$[0].TranscodingInfo.IsVideoDirect",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$[0].TranscodingInfo.IsAudioDirect",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$[0].TranscodingInfo.Width",
+              "op": "eq",
+              "value": 160
+            },
+            {
+              "path": "$[0].TranscodingInfo.Height",
+              "op": "eq",
+              "value": 120
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": []
+  },
+  {
+    "id": "playstate.session.transcoding-info-device",
+    "endpoint": "GET /Sessions",
+    "spec": "playstate.md#session-state",
+    "scope": "modern",
+    "tags": [
+      "playstate",
+      "transcode"
+    ],
+    "covers": [
+      "playstate.session.R16"
+    ],
+    "requires": [
+      "library:avtrack",
+      "item:av-multi"
+    ],
+    "steps": [
+      {
+        "name": "register the session",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Capabilities/Full",
+          "body": {
+            "PlayableMediaTypes": [
+              "Video"
+            ],
+            "SupportedCommands": []
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "reset: a playing report that is not a transcode",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing",
+          "body": {
+            "ItemId": "{{item.av-multi.id}}",
+            "PlaySessionId": "sc-tinfo-reset",
+            "PlayMethod": "DirectPlay",
+            "IsPaused": true
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "reset: stopped",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.av-multi.id}}",
+            "PlaySessionId": "sc-tinfo-reset"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "a stream for another device",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.av-multi.id}}/hls1/main/0.ts?MediaSourceId={{item.av-multi.id}}&PlaySessionId=sc-tinfo&DeviceId={{device.admin}}-other&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000&AudioStreamIndex=1&runtimeTicks=0&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "the caller's session is untouched",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo",
+              "op": "absent"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": []
+  }
+]

@@ -310,6 +310,27 @@ set `IsPaused=true`.
 - **playstate.session.R8** An omitted `MediaSourceId` is reported as the `ItemId` (32 hex digits).
 - **playstate.session.R9** [untestable: needs waiting several seconds] While playing and not paused, the
   server advances the session position by 1 s per second (capped at runtime) without writing user data.
+- **playstate.session.R10** `TranscodingInfo` is a member of the session (the one whose `DeviceId` the transcoded
+  request carries in its `DeviceId` query value), present from the moment a transcode job starts for that device,
+  that is at the first segment request (not at the master or media playlist), whether or not anything is reported
+  as playing. A stopped report for the item the stream belongs to removes it (and `NowPlayingItem`).
+- **playstate.session.R11** A start or progress report whose `PlayMethod` is not `Transcode` removes
+  `TranscodingInfo`; it does not come back until another transcode job starts (a later `Transcode` report, more
+  segments of the same job, or `DELETE /Videos/ActiveEncodings` do not restore or remove it).
+- **playstate.session.R12** A report with `PlayMethod` `Transcode` is recorded as `Transcode` when the device's
+  transcode job for the item and the reported `PlaySessionId` (the one in the stream's URL) exists, also after `TranscodingInfo` was hidden by R11; otherwise as `DirectPlay` (R3).
+  A report sent before the first segment request is therefore recorded as `DirectPlay` and the next progress
+  report as `Transcode`.
+- **playstate.session.R13** `TranscodingInfo` members: `VideoCodec` and `AudioCodec` (the target codec, the source's
+  own when that stream is copied), `Container` (the segment container: `ts` or `mp4`), `IsVideoDirect`/`IsAudioDirect`
+  (the stream is copied), `Bitrate`, `Width`, `Height` (the picture after the width limit), `AudioChannels`,
+  `HardwareAccelerationType` (`none`) and `TranscodeReasons` (the `TranscodeReasons` query value split on commas, `[]`
+  when absent). `Framerate` and `CompletionPercentage` are absent on an HLS stream.
+- **playstate.session.R14** `Bitrate` is the bandwidth announced for the variant of the master playlist: the
+  requested video bit rate held to the source picture's rate (`playback.hls` rules) plus 128000 per output channel of
+  the sound (it counts the video rate even when the picture is copied); `Width`/`Height` of a copied picture are the source's.
+- **playstate.session.R15** A second job for the same device (another container, a restart) replaces the description.
+- **playstate.session.R16** A request carrying another `DeviceId` value describes the stream of that device only.
 
 ## Legacy web routes
 
@@ -438,6 +459,13 @@ Settled by probing the 12.2 reference:
 | `playstate.session.R7` | `session.queue-stored-only-by-stopped` |
 | `playstate.session.R8` | `session.media-source-default` |
 | `playstate.session.R9` | none (untestable) |
+| `playstate.session.R10` | `session.transcoding-info-lifecycle`, `session.transcoding-info-stopped` |
+| `playstate.session.R11` | `session.transcoding-info-lifecycle` |
+| `playstate.session.R12` | `session.transcoding-info-lifecycle` |
+| `playstate.session.R13` | `session.transcoding-info-lifecycle` |
+| `playstate.session.R14` | `session.transcoding-info-copy-and-mp4` |
+| `playstate.session.R15` | `session.transcoding-info-copy-and-mp4` |
+| `playstate.session.R16` | `session.transcoding-info-device` |
 | `playstate.legacy.R1` | `legacy.mark-played-path-user`, `legacy.unknown-item-and-anonymous` |
 | `playstate.legacy.R2` | `legacy.mark-unplayed-path-user` |
 | `playstate.legacy.R3` | `legacy.other-user-forbidden`, `legacy.admin-on-behalf`, `legacy.unknown-item-and-anonymous` |

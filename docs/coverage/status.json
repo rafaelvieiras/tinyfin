@@ -4099,6 +4099,10 @@
     "playstate.session.queue-stored-only-by-stopped",
     "playstate.session.stopped-clears-now-playing",
     "playstate.session.transcode-without-job-is-direct-play",
+    "playstate.session.transcoding-info-copy-and-mp4",
+    "playstate.session.transcoding-info-device",
+    "playstate.session.transcoding-info-lifecycle",
+    "playstate.session.transcoding-info-stopped",
     "playstate.start.ignored-fields-accepted",
     "wire.date.other-members",
     "wire.path.trailing-slash-reads"
@@ -4125,7 +4129,13 @@
    "status": "supported",
    "registered": true,
    "verified": false,
-   "web": true
+   "web": true,
+   "scenarios": [
+    "playstate.session.transcoding-info-copy-and-mp4",
+    "playstate.session.transcoding-info-device",
+    "playstate.session.transcoding-info-lifecycle",
+    "playstate.session.transcoding-info-stopped"
+   ]
   },
   {
    "id": "POST /Sessions/Logout",
@@ -4169,6 +4179,10 @@
     "playstate.session.queue-stored-only-by-stopped",
     "playstate.session.stopped-clears-now-playing",
     "playstate.session.transcode-without-job-is-direct-play",
+    "playstate.session.transcoding-info-copy-and-mp4",
+    "playstate.session.transcoding-info-device",
+    "playstate.session.transcoding-info-lifecycle",
+    "playstate.session.transcoding-info-stopped",
     "playstate.start.activity-log",
     "playstate.start.basic",
     "playstate.start.hidden-item",
@@ -4236,7 +4250,8 @@
     "playstate.resume.below-minimum-removes-entry",
     "playstate.session.progress-replaces-state",
     "playstate.session.queue-stored-only-by-stopped",
-    "playstate.session.transcode-without-job-is-direct-play"
+    "playstate.session.transcode-without-job-is-direct-play",
+    "playstate.session.transcoding-info-lifecycle"
    ]
   },
   {
@@ -4256,6 +4271,10 @@
     "playstate.resume.long-runtime-listed",
     "playstate.session.queue-stored-only-by-stopped",
     "playstate.session.stopped-clears-now-playing",
+    "playstate.session.transcoding-info-copy-and-mp4",
+    "playstate.session.transcoding-info-device",
+    "playstate.session.transcoding-info-lifecycle",
+    "playstate.session.transcoding-info-stopped",
     "playstate.stopped.above-maximum",
     "playstate.stopped.activity-log",
     "playstate.stopped.below-minimum",

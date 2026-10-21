@@ -64,6 +64,7 @@ reference source open in the same session.
 | `specs/policy.md`, `scenarios/policy.json` | Policy enforcement: `EnableContentDownloading` (download route), `EnableContentDeletion`/`EnableContentDeletionFromFolders` (delete route, `CanDelete`/`CanDownload`), and the playback flags (`scenarios/policy2.json`: the transcode offer of PlaybackInfo) |
 | `specs/playback.md`, `scenarios/playback.json` | Track selection and burned-in subtitles: `AudioStreamIndex`/`SubtitleStreamIndex` in PlaybackInfo, the `TranscodingUrl` and its HLS master playlist; lazy library `AvTrack` |
 | `specs/playback.md`, `scenarios/playback12.json` | The web client's request body (digit strings), secondary audio tracks, the transcoding entry choice, always-burn-in subtitles; lazy library `AvTrack` |
+| `specs/playstate.md`, `scenarios/playstate2.json` | `TranscodingInfo` and `PlayState.PlayMethod` of a session while a transcode job runs (`playstate.session.R10`-`R16`); lazy libraries `AvTrack`, `Long` |
 | `specs/chapters.md`, `scenarios/chapters.json` | Chapter marks (`Chapters` on the item, `Fields=Chapters`) and `GET /MediaSegments/{itemId}`; lazy library `Chapters` |
 | `specs/bitmap.md`, `scenarios/bitmap.json` | Picture subtitles (PGS, DVD, DVB): stream members, delivery in PlaybackInfo, the track as a file, HLS and the burn-in; lazy library `Bitmap` |
 | `specs/chapters.md`, `scenarios/chapters2.json` | Chapter pictures (`ImageTag`, `Images/Chapter/{index}`, the Extract Chapter Images task); lazy libraries `ChapterImg`, `ChapterImgTask`, `ChapterImgOff` |
