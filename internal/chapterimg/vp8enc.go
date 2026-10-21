@@ -2,11 +2,9 @@ package chapterimg
 
 import (
 	"encoding/binary"
-	"fmt"
 	"image"
 	"io"
 	"math"
-	"os"
 )
 
 // The lossy encoder proper: macroblock analysis with a rate-distortion
