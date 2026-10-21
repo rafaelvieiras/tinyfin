@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 865
+    "pass": 866
   },
   "scenarios": {
     "admin.backup.create": "pass",
@@ -65,6 +65,7 @@
     "chapters.images.toggle": "pass",
     "chapters.images.webp": "pass",
     "chapters.images.webp-lossy": "pass",
+    "chapters.images.webp-size": "pass",
     "chapters.images.zero-side": "pass",
     "chapters.item.detail": "pass",
     "chapters.item.listing": "pass",
