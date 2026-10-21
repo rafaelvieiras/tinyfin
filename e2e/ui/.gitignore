@@ -1,0 +1,6 @@
+node_modules/
+.webdist/
+test-results/
+playwright-report/
+.state/
+results.json

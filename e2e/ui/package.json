@@ -1,0 +1,13 @@
+{
+  "name": "tinyfin-e2e-ui",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "test": "bash run.sh"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.49.1",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0"
+  }
+}

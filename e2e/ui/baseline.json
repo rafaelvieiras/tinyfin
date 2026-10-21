@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "target": "tinyfin",
+  "passing": [
+    "seed.spec.ts > home page shows the libraries",
+    "seed.spec.ts > login as admin",
+    "seed.spec.ts > movie detail page renders",
+    "seed.spec.ts > movies library lists the fixture items"
+  ]
+}
