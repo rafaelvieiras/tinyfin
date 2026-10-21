@@ -20,6 +20,17 @@ A="sine=frequency=440:duration=3:sample_rate=48000"
 H264=(-c:v libx264 -preset ultrafast -pix_fmt yuv420p)
 VP9=(-c:v libvpx-vp9 -deadline realtime -pix_fmt yuv420p)
 ff() { "$FFMPEG" -v error -y "$@"; }
+# The bit rates of the transport streams (playback9 "ts-bitrate") are pinned to
+# the bytes the encoders write, so those fixtures are made single threaded and
+# bit-exact (no encoder / muxer version strings, no time stamps of the run).
+# The bytes still depend on the libx264 / aac encoder build: generate them with
+# the reference's own jellyfin-ffmpeg (FFMPEG=...), as scripts/conformance-media.sh
+# does, to get the same files on every machine.
+BX=(-threads 1 -fflags +bitexact -flags +bitexact -map_metadata -1)
+case "$("$FFMPEG" -version 2>/dev/null | head -1)" in
+  *ellyfin*) ;;
+  *) echo "Probe3: warning: $FFMPEG is not jellyfin-ffmpeg; the ts-bitrate figures of playback9 may differ" >&2 ;;
+esac
 # <stem incl. id> <ext> <ffmpeg args...> : one movie
 mk() {
   local d="$P3/$1"; local o="$d/$1.$2"; shift 2
@@ -31,9 +42,9 @@ lav() { echo -f lavfi -i "$1"; }
 
 # transport streams: 188-byte packets, and the 192-byte packets of M2TS whose 4-byte header is
 # a time stamp (valid), all zero, or missing (a plain stream under the M2TS name)
-mk "P3 Ts Aac (3801)" ts $(lav $V) $(lav $A) -ac 2 "${H264[@]}" -c:a aac -b:a 128k -f mpegts
-mk "P3 M2ts (3802)" m2ts $(lav $V) $(lav $A) -ac 2 "${H264[@]}" -c:a aac -b:a 128k -f mpegts -mpegts_m2ts_mode 1
-mk "P3 Mts (3806)" mts $(lav $V) $(lav $A) -ac 2 "${H264[@]}" -c:a ac3 -b:a 192k -f mpegts
+mk "P3 Ts Aac (3801)" ts $(lav $V) $(lav $A) -ac 2 "${H264[@]}" -c:a aac -b:a 128k "${BX[@]}" -f mpegts
+mk "P3 M2ts (3802)" m2ts $(lav $V) $(lav $A) -ac 2 "${H264[@]}" -c:a aac -b:a 128k "${BX[@]}" -f mpegts -mpegts_m2ts_mode 1
+mk "P3 Mts (3806)" mts $(lav $V) $(lav $A) -ac 2 "${H264[@]}" -c:a ac3 -b:a 192k "${BX[@]}" -f mpegts
 python3 - "$P3" <<'PY'
 import os, shutil, sys
 p3 = sys.argv[1]

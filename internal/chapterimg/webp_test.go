@@ -160,3 +160,54 @@ func TestEncodeVP8(t *testing.T) {
 		}
 	}
 }
+
+// Smooth pictures shrink to almost nothing with the predictor and backward
+// references (the reference makes a horizontal 640x360 ramp ~1 KB).
+func TestEncodeWebPSmallRamp(t *testing.T) {
+	img := image.NewRGBA(image.Rect(0, 0, 640, 360))
+	for y := 0; y < 360; y++ {
+		for x := 0; x < 640; x++ {
+			v := uint8(16 + 219*x/639)
+			img.SetRGBA(x, y, color.RGBA{v, v, v, 255})
+		}
+	}
+	var buf bytes.Buffer
+	if err := encodeWebP(&buf, img); err != nil {
+		t.Fatal(err)
+	}
+	if buf.Len() > 1000 {
+		t.Errorf("ramp is %d bytes, want <= 1000", buf.Len())
+	}
+}
+
+// Flat and two-tone pictures cost next to nothing (the reference makes a
+// flat 640x360 one 34 bytes and a half-and-half one 74).
+func TestEncodeWebPFlatAndStep(t *testing.T) {
+	for name, tc := range map[string]struct {
+		f   func(x int) uint8
+		max int
+	}{
+		"flat": {func(x int) uint8 { return 16 }, 60},
+		"step": {func(x int) uint8 {
+			if x < 320 {
+				return 235
+			}
+			return 16
+		}, 111},
+	} {
+		img := image.NewRGBA(image.Rect(0, 0, 640, 360))
+		for y := 0; y < 360; y++ {
+			for x := 0; x < 640; x++ {
+				v := tc.f(x)
+				img.SetRGBA(x, y, color.RGBA{v, v, v, 255})
+			}
+		}
+		var buf bytes.Buffer
+		if err := encodeWebP(&buf, img); err != nil {
+			t.Fatal(err)
+		}
+		if buf.Len() > tc.max {
+			t.Errorf("%s is %d bytes, want <= %d", name, buf.Len(), tc.max)
+		}
+	}
+}

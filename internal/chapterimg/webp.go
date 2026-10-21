@@ -9,26 +9,19 @@ import (
 )
 
 // encodeWebP writes img as a lossless WebP (a RIFF container around a VP8L
-// bitstream): subtract-green transform, one set of prefix codes built from
-// the picture's own histograms, no backward references and no colour cache.
-// The reference makes its WebP the same way (VP8L) at the default quality;
-// below quality 100 it makes a lossy VP8 one, which cannot be produced here
-// (there is no VP8 encoder in the Go standard library).
+// bitstream). Several transform / colour-cache settings are tried (see
+// vp8l.go) and the smallest stream wins. The reference makes its WebP the
+// same way (VP8L) at the default quality; below quality 100 it makes a lossy
+// VP8 one (vp8.go).
 func encodeWebP(w io.Writer, img *image.RGBA) error {
 	b := img.Bounds()
 	width, height := b.Dx(), b.Dy()
 	n := width * height
-	// green, red, blue per pixel (the picture has no alpha)
-	g := make([]byte, n)
-	r := make([]byte, n)
-	bl := make([]byte, n)
-	al := make([]byte, n)
-	var hg, hr, hb, ha [256]int
+	argb := make([]uint32, n)
 	hasAlpha := false
 	for y := 0; y < height; y++ {
 		row := img.Pix[y*img.Stride : y*img.Stride+width*4]
 		for x := 0; x < width; x++ {
-			i := y*width + x
 			pr, pg, pb, pa := row[x*4], row[x*4+1], row[x*4+2], row[x*4+3]
 			if pa != 255 {
 				hasAlpha = true
@@ -38,45 +31,10 @@ func encodeWebP(w io.Writer, img *image.RGBA) error {
 					pb = uint8(min(255, (int(pb)*255+int(pa)/2)/int(pa)))
 				}
 			}
-			al[i] = pa
-			g[i] = pg
-			r[i] = pr - pg
-			bl[i] = pb - pg
-			hg[g[i]]++
-			hr[r[i]]++
-			hb[bl[i]]++
-			ha[pa]++
+			argb[y*width+x] = uint32(pa)<<24 | uint32(pr)<<16 | uint32(pg)<<8 | uint32(pb)
 		}
 	}
-	var bw bitWriter
-	bw.put(0x2f, 8)
-	bw.put(uint32(width-1), 14)
-	bw.put(uint32(height-1), 14)
-	if hasAlpha {
-		bw.put(1, 1)
-	} else {
-		bw.put(0, 1) // alpha is not used
-	}
-	bw.put(0, 3) // version
-	bw.put(1, 1) // a transform follows
-	bw.put(2, 2) // subtract green
-	bw.put(0, 1) // no other transform
-	bw.put(0, 1) // no colour cache
-	bw.put(0, 1) // no meta prefix image
-	cg := bw.prefixCode(hg[:], 280)
-	cr := bw.prefixCode(hr[:], 256)
-	cb := bw.prefixCode(hb[:], 256)
-	ca := bw.prefixCode(ha[:], 256)
-	var hd [40]int
-	hd[0] = 1
-	bw.prefixCode(hd[:], 40)
-	for i := 0; i < n; i++ {
-		cg.write(&bw, int(g[i]))
-		cr.write(&bw, int(r[i]))
-		cb.write(&bw, int(bl[i]))
-		ca.write(&bw, int(al[i]))
-	}
-	data := bw.bytes()
+	data := encodeVP8L(argb, width, height, hasAlpha)
 	chunk := len(data)
 	pad := chunk & 1
 	var head [20]byte
@@ -130,6 +88,9 @@ type prefix struct {
 	code []uint32
 }
 
+// bits is the cost of a symbol in bits.
+func (p *prefix) bits(sym int) int { return int(p.len[sym]) }
+
 func (p *prefix) write(b *bitWriter, sym int) {
 	if l := p.len[sym]; l > 0 {
 		b.put(p.code[sym], uint(l))
@@ -171,12 +132,58 @@ func (b *bitWriter) prefixCode(hist []int, alphabet int) *prefix {
 	copy(full, hist)
 	lengths := huffmanLengths(full, 15)
 	copy(p.len, lengths)
-	assignCodes(p)
+	if len(used) == 1 {
+		// a lone symbol costs no bits in the data
+		p.len = make([]uint8, alphabet)
+	} else {
+		assignCodes(p)
+	}
 	b.put(0, 1) // normal code
-	// code lengths are sent with no run-length symbols: a literal each
+	// code lengths go out run-length coded (symbols 16 to 18)
+	type tok struct{ sym, extra, nbits int }
+	var toks []tok
+	prev := 8
+	for i := 0; i < alphabet; {
+		v := int(lengths[i])
+		j := i
+		for j < alphabet && int(lengths[j]) == v {
+			j++
+		}
+		c := j - i
+		i = j
+		if v == 0 {
+			for c >= 3 {
+				if c >= 11 {
+					k := min(c, 138)
+					toks = append(toks, tok{18, k - 11, 7})
+					c -= k
+				} else {
+					toks = append(toks, tok{17, c - 3, 3})
+					c = 0
+				}
+			}
+			for ; c > 0; c-- {
+				toks = append(toks, tok{0, 0, 0})
+			}
+			continue
+		}
+		if v != prev {
+			toks = append(toks, tok{v, 0, 0})
+			c--
+			prev = v
+		}
+		for c >= 3 {
+			k := min(c, 6)
+			toks = append(toks, tok{16, k - 3, 2})
+			c -= k
+		}
+		for ; c > 0; c-- {
+			toks = append(toks, tok{v, 0, 0})
+		}
+	}
 	clHist := make([]int, 19)
-	for _, l := range lengths[:alphabet] {
-		clHist[l]++
+	for _, t := range toks {
+		clHist[t.sym]++
 	}
 	clLens := huffmanLengths(clHist, 7)
 	order := []int{17, 18, 0, 1, 2, 3, 4, 5, 16, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
@@ -196,8 +203,11 @@ func (b *bitWriter) prefixCode(hist []int, alphabet int) *prefix {
 		// a single symbol costs no bits
 		cl.len = make([]uint8, 19)
 	}
-	for _, l := range lengths[:alphabet] {
-		cl.write(b, int(l))
+	for _, t := range toks {
+		cl.write(b, t.sym)
+		if t.nbits > 0 {
+			b.put(uint32(t.extra), uint(t.nbits))
+		}
 	}
 	return p
 }

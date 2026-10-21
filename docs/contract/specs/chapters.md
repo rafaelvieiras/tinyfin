@@ -76,7 +76,7 @@ A still taken at each chapter mark, opt-in per library. Scenarios: [`../scenario
 | `chapters.images.R12` | `chapters.images.long-form` |
 | `chapters.images.R14` | `chapters.images.path` |
 | `chapters.images.R15` | `chapters.images.overlays`, `chapters.images.count-digits`, `chapters.images.blur-box`, `chapters.images.blur-edges`, `chapters.images.crop-whitespace` |
-| `chapters.images.R16` | `chapters.images.webp`, `chapters.images.webp-lossy` |
+| `chapters.images.R16` | `chapters.images.webp`, `chapters.images.webp-lossy`, `chapters.images.webp-size` |
 | `chapters.fields.R1`, `R2` | `chapters.item.listing`, `chapters.item.none` |
 | `chapters.segments.R1`, `R2` | `chapters.segments.empty` |
 | `chapters.segments.R3`, `R4` | `chapters.segments.errors` |
