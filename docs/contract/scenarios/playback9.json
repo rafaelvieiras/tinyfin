@@ -872,12 +872,12 @@
             {
               "path": "$.MediaSources[0].MediaStreams[0].BitRate",
               "op": "eq",
-              "value": 118807
+              "value": 118477
             },
             {
               "path": "$.MediaSources[0].MediaStreams[1].BitRate",
               "op": "eq",
-              "value": 130089
+              "value": 130917
             }
           ]
         }
@@ -899,12 +899,12 @@
             {
               "path": "$.MediaSources[0].MediaStreams[0].BitRate",
               "op": "eq",
-              "value": 130204
+              "value": 129376
             },
             {
               "path": "$.MediaSources[0].MediaStreams[1].BitRate",
               "op": "eq",
-              "value": 130089
+              "value": 130917
             }
           ]
         }
