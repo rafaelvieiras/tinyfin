@@ -17,10 +17,12 @@ type vp8lConfig struct {
 	crossCol  bool
 	cacheBits int // 0 for none
 	tileBits  int // predictor / cross-colour tile size (log2)
+	meta      bool
 }
 
 func encodeVP8L(argb []uint32, w, h int, hasAlpha bool) []byte {
 	var best []byte
+	var bestCfg vp8lConfig
 	var preps [2]vp8lPrep // without / with the predictor
 	try := func(c vp8lConfig) {
 		pi := 0
@@ -29,15 +31,18 @@ func encodeVP8L(argb []uint32, w, h int, hasAlpha bool) []byte {
 		}
 		out := encodeVP8LWith(argb, w, h, hasAlpha, c, &preps[pi])
 		if best == nil || len(out) < len(best) {
-			best = out
+			best, bestCfg = out, c
 		}
 	}
 	for _, cb := range []int{0, 10} {
-		try(vp8lConfig{true, true, true, cb, 4})
-		try(vp8lConfig{true, true, false, cb, 4})
-		try(vp8lConfig{true, false, false, cb, 4})
-		try(vp8lConfig{false, false, false, cb, 4})
+		try(vp8lConfig{true, true, true, cb, 4, false})
+		try(vp8lConfig{true, true, false, cb, 4, false})
+		try(vp8lConfig{true, false, false, cb, 4, false})
+		try(vp8lConfig{false, false, false, cb, 4, false})
 	}
+	// the winner again, with several prefix code groups when they pay
+	bestCfg.meta = true
+	try(bestCfg)
 	return best
 }
 
@@ -108,7 +113,7 @@ func encodeVP8LWith(src []uint32, w, h int, hasAlpha bool, c vp8lConfig, pr *vp8
 		pix = pr.cc
 	}
 	bw.put(0, 1) // no more transforms
-	writeEntropyImage(&bw, pix, w, h, c.cacheBits, true)
+	writeEntropyImage(&bw, pix, w, h, c.cacheBits, true, c.meta)
 	return bw.bytes()
 }
 
@@ -360,7 +365,7 @@ func applyColorTransform(pix []uint32, w, h, tb int, mult []uint32, tw int) {
 }
 
 func writeSubImage(bw *bitWriter, pix []uint32, w, h int) {
-	writeEntropyImage(bw, pix, w, h, 0, false)
+	writeEntropyImage(bw, pix, w, h, 0, false, false)
 }
 
 // ---- backward references ----
@@ -538,67 +543,375 @@ func tokenize(pix []uint32, w int, cacheBits int, lz bool) []token {
 	return toks
 }
 
-func writeEntropyImage(bw *bitWriter, pix []uint32, w, h, cacheBits int, main bool) {
+func writeEntropyImage(bw *bitWriter, pix []uint32, w, h, cacheBits int, main, meta bool) {
 	toks := tokenize(pix, w, cacheBits, true)
+	if !main {
+		writeTokens(bw, toks, w, h, cacheBits, false, nil)
+		return
+	}
+	best := bw.clone()
+	writeTokens(&best, toks, w, h, cacheBits, true, nil)
+	if !meta {
+		*bw = best
+		return
+	}
+	size := func(b *bitWriter) int { return len(b.buf)*8 + int(b.nacc) }
+	// with and without backward references; several groups of prefix codes
+	// let the regions that are all the same cost no bits at all
+	for _, lz := range []bool{true, false} {
+		t := toks
+		if !lz {
+			t = tokenize(pix, w, cacheBits, false)
+			b := bw.clone()
+			writeTokens(&b, t, w, h, cacheBits, true, nil)
+			if size(&b) < size(&best) {
+				best = b
+			}
+		}
+		if m := planGroups(t, w, h, cacheBits); m != nil {
+			b := bw.clone()
+			writeTokens(&b, t, w, h, cacheBits, true, m)
+			if size(&b) < size(&best) {
+				best = b
+			}
+		}
+	}
+	*bw = best
+}
+
+func (b *bitWriter) clone() bitWriter {
+	return bitWriter{buf: append([]byte(nil), b.buf...), acc: b.acc, nacc: b.nacc}
+}
+
+// metaPlan says which prefix code group codes the tokens that start in each
+// tile of the picture.
+type metaPlan struct {
+	bits   int
+	tw, th int
+	group  []int // per tile
+	n      int   // number of groups
+}
+
+// histogram layout of one group: green (with lengths and cache), red, blue,
+// alpha, distance
+type histLayout struct{ g, total int }
+
+func (l histLayout) segs() [5][2]int {
+	return [5][2]int{{0, l.g}, {l.g, l.g + 256}, {l.g + 256, l.g + 512}, {l.g + 512, l.g + 768}, {l.g + 768, l.g + 808}}
+}
+
+func addToken(h []int32, l histLayout, t token) {
+	switch t.kind {
+	case 0:
+		h[(t.a>>8)&0xff]++
+		h[l.g+int((t.a>>16)&0xff)]++
+		h[l.g+256+int(t.a&0xff)]++
+		h[l.g+512+int(t.a>>24)]++
+	case 1:
+		h[280+int(t.a)]++
+	default:
+		s, _, _ := prefixSplit(int(t.length))
+		h[256+s]++
+		s, _, _ = prefixSplit(int(t.dist))
+		h[l.g+768+s]++
+	}
+}
+
+var log2f = func() (t [8192]float64) {
+	for i := 1; i < len(t); i++ {
+		t[i] = math.Log2(float64(i))
+	}
+	return
+}()
+
+func lg(c int32) float64 {
+	if int(c) < len(log2f) {
+		return log2f[c]
+	}
+	return math.Log2(float64(c))
+}
+
+// segCost estimates the bits of a histogram segment: its code and its data.
+func segCost(seg []int32) float64 {
+	var tot int32
+	n := 0
+	for _, c := range seg {
+		if c > 0 {
+			tot += c
+			n++
+		}
+	}
+	switch n {
+	case 0:
+		return 4
+	case 1:
+		return 4
+	case 2:
+		if len(seg) <= 256 {
+			// simple code
+			var d float64
+			lt := lg(tot)
+			for _, c := range seg {
+				if c > 0 {
+					d += float64(c) * (lt - lg(c))
+				}
+			}
+			return 12 + d
+		}
+	}
+	d := 0.0
+	lt := lg(tot)
+	for _, c := range seg {
+		if c > 0 {
+			d += float64(c) * (lt - lg(c))
+		}
+	}
+	return 70 + 3*float64(n) + d
+}
+
+func histCost(h []int32, l histLayout) float64 {
+	c := 0.0
+	for _, s := range l.segs() {
+		c += segCost(h[s[0]:s[1]])
+	}
+	return c
+}
+
+// planGroups clusters the tiles of the picture by the tokens that start in
+// them; it returns nil when one group is as good.
+func planGroups(toks []token, w, h, cacheBits int) *metaPlan {
+	bits := 3
+	for ((w+(1<<uint(bits))-1)>>uint(bits))*((h+(1<<uint(bits))-1)>>uint(bits)) > 300 {
+		bits++
+	}
+	tw, th := (w+(1<<uint(bits))-1)>>uint(bits), (h+(1<<uint(bits))-1)>>uint(bits)
+	if tw*th < 2 {
+		return nil
+	}
+	gsize := 256 + 24
+	if cacheBits > 0 {
+		gsize += 1 << uint(cacheBits)
+	}
+	l := histLayout{g: gsize, total: gsize + 808}
+	nt := tw * th
+	hs := make([][]int32, nt)
+	// l.g is the offset of red; the green segment is [0, g)
+	pos := 0
+	for _, t := range toks {
+		x, y := pos%w, pos/w
+		ti := (y>>uint(bits))*tw + (x >> uint(bits))
+		if hs[ti] == nil {
+			hs[ti] = make([]int32, l.total)
+		}
+		addToken(hs[ti], l, t)
+		if t.kind == 2 {
+			pos += int(t.length)
+		} else {
+			pos++
+		}
+	}
+	// tiles with the same histogram share a cluster from the start
+	type cl struct {
+		h     []int32
+		cost  float64
+		alive bool
+	}
+	var cls []*cl
+	tileCl := make([]int, nt)
+	seen := map[string]int{}
+	for ti := 0; ti < nt; ti++ {
+		if hs[ti] == nil {
+			hs[ti] = make([]int32, l.total)
+		}
+		key := string(int32Bytes(hs[ti]))
+		if ci, ok := seen[key]; ok {
+			tileCl[ti] = ci
+			continue
+		}
+		seen[key] = len(cls)
+		tileCl[ti] = len(cls)
+		cls = append(cls, &cl{h: hs[ti], cost: histCost(hs[ti], l), alive: true})
+	}
+	n := len(cls)
+	parent := make([]int, n)
+	for i := range parent {
+		parent[i] = i
+	}
+	tmp := make([]int32, l.total)
+	mergeCost := func(a, b *cl) float64 {
+		for i := range tmp {
+			tmp[i] = a.h[i] + b.h[i]
+		}
+		return histCost(tmp, l) - a.cost - b.cost
+	}
+	delta := make([][]float64, n)
+	for i := range delta {
+		delta[i] = make([]float64, n)
+	}
+	for i := 0; i < n; i++ {
+		for j := i + 1; j < n; j++ {
+			delta[i][j] = mergeCost(cls[i], cls[j])
+		}
+	}
+	alive := n
+	for alive > 1 {
+		bi, bj, best := -1, -1, 0.0
+		for i := 0; i < n; i++ {
+			if !cls[i].alive {
+				continue
+			}
+			for j := i + 1; j < n; j++ {
+				if cls[j].alive && delta[i][j] < best {
+					bi, bj, best = i, j, delta[i][j]
+				}
+			}
+		}
+		if bi < 0 {
+			break
+		}
+		for k := range cls[bi].h {
+			cls[bi].h[k] += cls[bj].h[k]
+		}
+		cls[bi].cost = histCost(cls[bi].h, l)
+		cls[bj].alive = false
+		parent[bj] = bi
+		alive--
+		for k := 0; k < n; k++ {
+			if !cls[k].alive || k == bi {
+				continue
+			}
+			if k < bi {
+				delta[k][bi] = mergeCost(cls[k], cls[bi])
+			} else {
+				delta[bi][k] = mergeCost(cls[bi], cls[k])
+			}
+		}
+	}
+	if alive < 2 {
+		return nil
+	}
+	find := func(i int) int {
+		for parent[i] != i {
+			i = parent[i]
+		}
+		return i
+	}
+	idx := map[int]int{}
+	m := &metaPlan{bits: bits, tw: tw, th: th, group: make([]int, nt)}
+	for ti := 0; ti < nt; ti++ {
+		r := find(tileCl[ti])
+		g, ok := idx[r]
+		if !ok {
+			g = len(idx)
+			idx[r] = g
+		}
+		m.group[ti] = g
+	}
+	m.n = len(idx)
+	return m
+}
+
+func int32Bytes(h []int32) []byte {
+	b := make([]byte, 0, len(h)*4)
+	for _, v := range h {
+		b = append(b, byte(v), byte(v>>8), byte(v>>16), byte(v>>24))
+	}
+	return b
+}
+
+func writeTokens(bw *bitWriter, toks []token, w, h, cacheBits int, main bool, m *metaPlan) {
 	if cacheBits > 0 {
 		bw.put(1, 1)
 		bw.put(uint32(cacheBits), 4)
 	} else {
 		bw.put(0, 1)
 	}
-	if main {
-		bw.put(0, 1) // no meta prefix image
-	}
 	gsize := 256 + 24
 	if cacheBits > 0 {
 		gsize += 1 << uint(cacheBits)
 	}
-	hg := make([]int, gsize)
-	hr := make([]int, 256)
-	hb := make([]int, 256)
-	ha := make([]int, 256)
-	hd := make([]int, 40)
+	l := histLayout{g: gsize, total: gsize + 808}
+	groups := 1
+	if m != nil && main {
+		bw.put(1, 1)
+		bw.put(uint32(m.bits-2), 3)
+		img := make([]uint32, len(m.group))
+		for i, g := range m.group {
+			img[i] = uint32(g) << 8
+		}
+		writeEntropyImage2(bw, img, m.tw, m.th)
+		groups = m.n
+	} else if main {
+		bw.put(0, 1) // no meta prefix image
+	}
+	hs := make([][]int32, groups)
+	for i := range hs {
+		hs[i] = make([]int32, l.total)
+	}
+	pos := 0
+	groupAt := func(pos int) int {
+		if m == nil {
+			return 0
+		}
+		x, y := pos%w, pos/w
+		return m.group[(y>>uint(m.bits))*m.tw+(x>>uint(m.bits))]
+	}
 	for _, t := range toks {
-		switch t.kind {
-		case 0:
-			hg[(t.a>>8)&0xff]++
-			hr[(t.a>>16)&0xff]++
-			hb[t.a&0xff]++
-			ha[t.a>>24]++
-		case 1:
-			hg[280+int(t.a)]++
-		default:
-			s, _, _ := prefixSplit(int(t.length))
-			hg[256+s]++
-			s, _, _ = prefixSplit(int(t.dist))
-			hd[s]++
+		addToken(hs[groupAt(pos)], l, t)
+		if t.kind == 2 {
+			pos += int(t.length)
+		} else {
+			pos++
 		}
 	}
-	cg := bw.prefixCode(hg, gsize)
-	cr := bw.prefixCode(hr, 256)
-	cb := bw.prefixCode(hb, 256)
-	ca := bw.prefixCode(ha, 256)
-	cd := bw.prefixCode(hd, 40)
+	type codes struct{ g, r, b, a, d *prefix }
+	cs := make([]codes, groups)
+	for gi := range cs {
+		hh := hs[gi]
+		toInt := func(s []int32) []int {
+			o := make([]int, len(s))
+			for i, v := range s {
+				o[i] = int(v)
+			}
+			return o
+		}
+		cs[gi].g = bw.prefixCode(toInt(hh[:l.g]), l.g)
+		cs[gi].r = bw.prefixCode(toInt(hh[l.g:l.g+256]), 256)
+		cs[gi].b = bw.prefixCode(toInt(hh[l.g+256:l.g+512]), 256)
+		cs[gi].a = bw.prefixCode(toInt(hh[l.g+512:l.g+768]), 256)
+		cs[gi].d = bw.prefixCode(toInt(hh[l.g+768:l.g+808]), 40)
+	}
+	pos = 0
 	for _, t := range toks {
+		c := &cs[groupAt(pos)]
 		switch t.kind {
 		case 0:
-			cg.write(bw, int((t.a>>8)&0xff))
-			cr.write(bw, int((t.a>>16)&0xff))
-			cb.write(bw, int(t.a&0xff))
-			ca.write(bw, int(t.a>>24))
+			c.g.write(bw, int((t.a>>8)&0xff))
+			c.r.write(bw, int((t.a>>16)&0xff))
+			c.b.write(bw, int(t.a&0xff))
+			c.a.write(bw, int(t.a>>24))
+			pos++
 		case 1:
-			cg.write(bw, 280+int(t.a))
+			c.g.write(bw, 280+int(t.a))
+			pos++
 		default:
 			s, nb, ex := prefixSplit(int(t.length))
-			cg.write(bw, 256+s)
+			c.g.write(bw, 256+s)
 			if nb > 0 {
 				bw.put(uint32(ex), uint(nb))
 			}
 			s, nb, ex = prefixSplit(int(t.dist))
-			cd.write(bw, s)
+			c.d.write(bw, s)
 			if nb > 0 {
 				bw.put(uint32(ex), uint(nb))
 			}
+			pos += int(t.length)
 		}
 	}
+}
+
+// writeEntropyImage2 writes a sub-image (meta prefix image): no cache, no
+// further meta image.
+func writeEntropyImage2(bw *bitWriter, pix []uint32, w, h int) {
+	writeTokens(bw, tokenize(pix, w, 0, true), w, h, 0, false, nil)
 }
