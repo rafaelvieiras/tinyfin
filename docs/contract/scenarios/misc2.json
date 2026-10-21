@@ -1,0 +1,111 @@
+[
+  {
+    "id": "misc.home.syncplay-list",
+    "endpoint": "GET /SyncPlay/List",
+    "spec": "misc.md#home",
+    "scope": "modern",
+    "tags": [
+      "web-client"
+    ],
+    "covers": [
+      "misc.home.R1"
+    ],
+    "requires": [],
+    "steps": [
+      {
+        "name": "authenticated",
+        "request": {
+          "method": "GET",
+          "path": "/SyncPlay/List"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$",
+              "op": "type",
+              "value": "array"
+            },
+            {
+              "path": "$",
+              "op": "len",
+              "value": 0
+            }
+          ]
+        },
+        "as": "admin"
+      },
+      {
+        "name": "anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/SyncPlay/List"
+        },
+        "expect": {
+          "status": 401
+        },
+        "as": "anonymous"
+      }
+    ],
+    "cleanup": []
+  },
+  {
+    "id": "misc.home.recommended-programs",
+    "endpoint": "GET /LiveTv/Programs/Recommended",
+    "spec": "misc.md#home",
+    "scope": "modern",
+    "tags": [
+      "web-client"
+    ],
+    "covers": [
+      "misc.home.R2"
+    ],
+    "requires": [],
+    "steps": [
+      {
+        "name": "authenticated",
+        "request": {
+          "method": "GET",
+          "path": "/LiveTv/Programs/Recommended",
+          "query": {
+            "limit": "1",
+            "isAiring": "true"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items",
+              "op": "len",
+              "value": 0
+            },
+            {
+              "path": "$.TotalRecordCount",
+              "op": "eq",
+              "value": 0
+            },
+            {
+              "path": "$.StartIndex",
+              "op": "eq",
+              "value": 0
+            }
+          ]
+        },
+        "as": "admin"
+      },
+      {
+        "name": "anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/LiveTv/Programs/Recommended"
+        },
+        "expect": {
+          "status": 401
+        },
+        "as": "anonymous"
+      }
+    ],
+    "cleanup": []
+  }
+]

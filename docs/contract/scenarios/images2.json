@@ -1,0 +1,190 @@
+[
+  {
+    "id": "images.frame.movie",
+    "endpoint": "GET /Items/{itemId}/Images/{imageType}",
+    "spec": "images.md#frames",
+    "scope": "modern",
+    "tags": [
+      "images"
+    ],
+    "covers": [
+      "images.frame.R1"
+    ],
+    "requires": [
+      "item:alpha"
+    ],
+    "steps": [
+      {
+        "name": "the item carries a Primary tag, blur hash and aspect ratio",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.alpha.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.ImageTags.Primary",
+              "op": "hex32"
+            },
+            {
+              "path": "$.ImageBlurHashes.Primary",
+              "op": "type",
+              "value": "object"
+            },
+            {
+              "path": "$.PrimaryImageAspectRatio",
+              "op": "type",
+              "value": "number"
+            }
+          ]
+        },
+        "capture": {
+          "tag": "$.ImageTags.Primary"
+        }
+      },
+      {
+        "name": "the picture is a JPEG of the video's size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.alpha.id}}/Images/Primary"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "/^image\\/jpeg/"
+          },
+          "image": {
+            "width": 320,
+            "height": 240
+          }
+        }
+      },
+      {
+        "name": "it is listed with the video's size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.alpha.id}}/Images"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[?ImageType=Primary].Width",
+              "op": "eq",
+              "value": 320
+            },
+            {
+              "path": "$[?ImageType=Primary].Height",
+              "op": "eq",
+              "value": 240
+            },
+            {
+              "path": "$[?ImageType=Primary].ImageTag",
+              "op": "eq",
+              "value": "{{capture.tag}}"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": []
+  },
+  {
+    "id": "images.frame.episode",
+    "endpoint": "GET /Items/{itemId}/Images/{imageType}",
+    "spec": "images.md#frames",
+    "scope": "modern",
+    "tags": [
+      "images"
+    ],
+    "covers": [
+      "images.frame.R1"
+    ],
+    "requires": [
+      "item:s01e01"
+    ],
+    "steps": [
+      {
+        "name": "the item carries a Primary tag, blur hash and aspect ratio",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.s01e01.id}}"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.ImageTags.Primary",
+              "op": "hex32"
+            },
+            {
+              "path": "$.ImageBlurHashes.Primary",
+              "op": "type",
+              "value": "object"
+            },
+            {
+              "path": "$.PrimaryImageAspectRatio",
+              "op": "type",
+              "value": "number"
+            }
+          ]
+        },
+        "capture": {
+          "tag": "$.ImageTags.Primary"
+        }
+      },
+      {
+        "name": "the picture is a JPEG of the video's size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.s01e01.id}}/Images/Primary"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "/^image\\/jpeg/"
+          },
+          "image": {
+            "width": 320,
+            "height": 240
+          }
+        }
+      },
+      {
+        "name": "it is listed with the video's size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.s01e01.id}}/Images"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[?ImageType=Primary].Width",
+              "op": "eq",
+              "value": 320
+            },
+            {
+              "path": "$[?ImageType=Primary].Height",
+              "op": "eq",
+              "value": 240
+            },
+            {
+              "path": "$[?ImageType=Primary].ImageTag",
+              "op": "eq",
+              "value": "{{capture.tag}}"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": []
+  }
+]

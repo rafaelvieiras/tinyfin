@@ -171,6 +171,8 @@ var routePaths = []string{
 	// segment ("LiveTv", a literal) differs from all of theirs, same
 	// reasoning as every other entry in this list keyed off segment count.
 	"/LiveTv/Programs",
+	"/LiveTv/Programs/Recommended",
+	"/SyncPlay/List",
 	"/Users/{userId}/Items/{itemId}",
 	"/Items/{itemId}/Images/{imageType}",
 	"/Items/{itemId}/Images/{imageType}/{imageIndex}",

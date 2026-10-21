@@ -703,6 +703,11 @@ func (s *Server) routes() {
 	// unconditionally even though no LiveTV tuner is ever configured here.
 	// See library.go's handleLiveTvPrograms doc comment.
 	s.mux.HandleFunc("GET /LiveTv/Programs", requireAuth(s.handleLiveTvPrograms))
+	// The home page asks for the recommended programs and the SyncPlay groups
+	// before it lays out its rows; a 404 on either stops the page after the
+	// library tiles (no "Recently Added" rows).
+	s.mux.HandleFunc("GET /LiveTv/Programs/Recommended", requireAuth(s.handleLiveTvPrograms))
+	s.mux.HandleFunc("GET /SyncPlay/List", requireAuth(s.handleSyncPlayList))
 	// Not in the current OpenAPI spec (docs/04's verification source), but
 	// still sent by a real client: jellyfin-web's item-details page uses
 	// the legacy jellyfin-apiclient package (same one behind the

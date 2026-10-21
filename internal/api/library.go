@@ -701,6 +701,13 @@ func (s *Server) handleLiveTvPrograms(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{Items: []baseItemDto{}})
 }
 
+// handleSyncPlayList serves GET /SyncPlay/List: SyncPlay groups are not
+// implemented, so the list is always empty (the reference answers 200 with an
+// empty array for a server where nobody started a group).
+func (s *Server) handleSyncPlayList(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, []struct{}{})
+}
+
 // handleItemImage serves GET /Items/{itemId}/Images/{imageType} and
 // .../Images/{imageType}/{imageIndex} — both routes point at this same
 // handler; imageIndex simply reads as empty via r.PathValue on the

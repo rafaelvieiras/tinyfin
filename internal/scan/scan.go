@@ -303,6 +303,9 @@ func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, 
 			stats.Errors = append(stats.Errors, fmt.Sprintf("building collections: %v", err))
 		}
 	}
+	if ctx.Err() == nil {
+		s.seedVideoFrames(ctx, lib)
+	}
 	stats.Duration = time.Since(started)
 	log.Printf("scan: library %q: %d items in %s (probed %d, skipped %d unchanged, %d enriched, %d warnings)",
 		lib.Name, stats.ItemsScanned, stats.Duration.Round(time.Millisecond), stats.ItemsProbed, stats.ItemsSkipped, stats.ItemsEnriched, len(stats.Errors))
@@ -1951,7 +1954,9 @@ func (s *Scanner) storeProviderImage(ctx context.Context, itemID storage.ItemID,
 	}
 	if !replaceImages {
 		existing, err := s.store.GetImageRefs(ctx, itemID, storage.ImageKind(img.Kind))
-		if err == nil && len(existing) > 0 {
+		// A frame taken from the video stands in for a missing picture and
+		// gives way to a provider's.
+		if err == nil && len(existing) > 0 && !s.isFrameImage(existing[0].Path) {
 			return
 		}
 	}
