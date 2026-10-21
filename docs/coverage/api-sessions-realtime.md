@@ -75,7 +75,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `POST /UserFavoriteItems/{itemId}` | DefaultAuthorization |  | 2/2 |  |
 | 🗓️ planned | `DELETE /UserItems/{itemId}/Rating` | DefaultAuthorization | yes |  | Star ratings are not implemented (likes are, through UserData). (priority: low) |
 | 🗓️ planned | `POST /UserItems/{itemId}/Rating` | DefaultAuthorization | yes |  | Star ratings are not implemented (likes are, through UserData). (priority: low) |
-| ✅ supported | `GET /UserItems/{itemId}/UserData` | DefaultAuthorization | yes | 14/14 |  |
+| ✅ supported | `GET /UserItems/{itemId}/UserData` | DefaultAuthorization | yes | 14/15 |  |
 | ✅ supported | `POST /UserItems/{itemId}/UserData` | DefaultAuthorization | yes | 31/31 |  |
 | ✅ supported | `DELETE /UserPlayedItems/{itemId}` | DefaultAuthorization | yes | 19/19 |  |
 | ✅ supported | `POST /UserPlayedItems/{itemId}` | DefaultAuthorization | yes | 48/48 |  |

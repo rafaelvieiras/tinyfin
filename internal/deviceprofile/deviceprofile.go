@@ -374,3 +374,68 @@ func Lookup(client string) (DeviceProfile, bool) {
 func Default() DeviceProfile {
 	return defaultProfile
 }
+
+// ErrBadNumber is wrapped by the error of a numeric member that holds
+// neither a whole number nor a string of digits (a request carrying one is
+// refused with 400).
+var ErrBadNumber = fmt.Errorf("not a whole number")
+
+// LenientInt reads a whole-number member the way the reference does: a JSON
+// whole number or a string holding one ("1", the form the web client sends
+// for stream indexes and segment counts). null and an empty string (when
+// emptyOK) mean "not set" (nil). Anything else (a fraction, a word, a
+// boolean) is an error wrapping ErrBadNumber.
+func LenientInt(raw json.RawMessage, emptyOK bool) (*int64, error) {
+	s := strings.TrimSpace(string(raw))
+	if s == "" || s == "null" {
+		return nil, nil
+	}
+	if strings.HasPrefix(s, `"`) {
+		var str string
+		if err := json.Unmarshal(raw, &str); err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrBadNumber, err)
+		}
+		if str == "" && emptyOK {
+			return nil, nil
+		}
+		s = strings.TrimSpace(str)
+	}
+	n, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %q", ErrBadNumber, s)
+	}
+	return &n, nil
+}
+
+// UnmarshalJSON accepts MinSegments and SegmentLength as whole numbers or as
+// strings of digits (the web client sends "1"); null, an empty string or a
+// non-number is an error, like the reference.
+func (t *TranscodingProfile) UnmarshalJSON(data []byte) error {
+	type plain TranscodingProfile
+	aux := struct {
+		*plain
+		MinSegments   json.RawMessage `json:"MinSegments"`
+		SegmentLength json.RawMessage `json:"SegmentLength"`
+	}{plain: (*plain)(t)}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	t.MinSegments, t.SegmentLength = 0, 0
+	for _, f := range []struct {
+		raw json.RawMessage
+		dst *int
+	}{{aux.MinSegments, &t.MinSegments}, {aux.SegmentLength, &t.SegmentLength}} {
+		if len(f.raw) == 0 {
+			continue
+		}
+		if strings.TrimSpace(string(f.raw)) == "null" {
+			return fmt.Errorf("%w: null", ErrBadNumber)
+		}
+		n, err := LenientInt(f.raw, false)
+		if err != nil {
+			return err
+		}
+		*f.dst = int(*n)
+	}
+	return nil
+}

@@ -15,6 +15,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -139,7 +140,45 @@ type playbackInfoRequestBody struct {
 	// AllowVideoStreamCopy / AllowAudioStreamCopy, when false, are written
 	// to the end of the TranscodingUrl (they default to true).
 	AllowVideoStreamCopy *bool `json:"AllowVideoStreamCopy,omitempty"`
-	AllowAudioStreamCopy *bool `json:"AllowAudioStreamCopy,omitempty"`
+	// AlwaysBurnInSubtitleWhenTranscoding (body only) burns the selected
+	// subtitle into a transcoded picture whatever the profile delivers.
+	AlwaysBurnInSubtitleWhenTranscoding *bool `json:"AlwaysBurnInSubtitleWhenTranscoding,omitempty"`
+	AllowAudioStreamCopy                *bool `json:"AllowAudioStreamCopy,omitempty"`
+}
+
+// UnmarshalJSON reads the stream indexes and the bitrate ceiling as the
+// reference does: a whole number or a string of digits (the web client sends
+// "1"); null or an empty string is "not set"; anything else is an error
+// wrapping deviceprofile.ErrBadNumber.
+func (b *playbackInfoRequestBody) UnmarshalJSON(data []byte) error {
+	type plain playbackInfoRequestBody
+	aux := struct {
+		*plain
+		AudioStreamIndex    json.RawMessage `json:"AudioStreamIndex"`
+		SubtitleStreamIndex json.RawMessage `json:"SubtitleStreamIndex"`
+		MaxStreamingBitrate json.RawMessage `json:"MaxStreamingBitrate"`
+	}{plain: (*plain)(b)}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	b.AudioStreamIndex, b.SubtitleStreamIndex, b.MaxStreamingBitrate = nil, nil, nil
+	for _, f := range []struct {
+		raw json.RawMessage
+		set func(n int64)
+	}{
+		{aux.AudioStreamIndex, func(n int64) { v := int(n); b.AudioStreamIndex = &v }},
+		{aux.SubtitleStreamIndex, func(n int64) { v := int(n); b.SubtitleStreamIndex = &v }},
+		{aux.MaxStreamingBitrate, func(n int64) { b.MaxStreamingBitrate = &n }},
+	} {
+		n, err := deviceprofile.LenientInt(f.raw, true)
+		if err != nil {
+			return err
+		}
+		if n != nil {
+			f.set(*n)
+		}
+	}
+	return nil
 }
 
 // resolveDeviceProfile implements docs/07 O2's negotiation order: a
@@ -287,12 +326,13 @@ func remoteProtocol(u string) string {
 // client normally negotiates (docs/04).
 func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost && r.Body != nil {
-		// A subtitle profile with an empty, null or unknown Method is a
-		// request the reference refuses outright.
+		// A subtitle profile with an empty, null or unknown Method, or a
+		// numeric member that is not a number, is a request the reference
+		// refuses outright.
 		raw, _ := io.ReadAll(r.Body)
 		r.Body = io.NopCloser(bytes.NewReader(raw))
 		var probe playbackInfoRequestBody
-		if err := json.Unmarshal(raw, &probe); err != nil && strings.Contains(err.Error(), "SubtitleProfile.Method") {
+		if err := json.Unmarshal(raw, &probe); err != nil && (strings.Contains(err.Error(), "SubtitleProfile.Method") || errors.Is(err, deviceprofile.ErrBadNumber)) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -497,14 +537,19 @@ func (s *Server) handlePlaybackInfo(w http.ResponseWriter, r *http.Request) {
 		method := ""
 		if hasSub && (subMethod == "Encode" || subMethod == "Hls") {
 			method = subMethod
+		} else if inline && !hasSub && subIdx != nil {
+			// no subtitle (-1) or a stream that does not exist: the URL
+			// names the Encode method without a track (playback.subtitle.R8)
+			method = "Encode"
 		}
 		offer := buildTranscodeOffer(offerInput{
-			item: item, profile: profile, tp: pickTranscodingProfile(profile, decision), reasons: decision.Reasons,
+			item: item, profile: profile, tp: pickTranscodingProfile(profile, decision, item), reasons: decision.Reasons,
 			deviceID: deviceID, token: token, playSession: resp.PlaySessionID,
 			audioIdx: audioIdx, subIdx: subIdx, subMethod: method,
 			maxBitrate:  s.remoteBitrateCap(r, requestedMaxBitrate(r, body, profile)),
 			noVideoCopy: !allowedByRequest(r, "allowvideostreamcopy", body.AllowVideoStreamCopy) || forcesRemoteTranscoding(r, item),
 			noAudioCopy: !allowedByRequest(r, "allowaudiostreamcopy", body.AllowAudioStreamCopy) || forcesRemoteTranscoding(r, item),
+			alwaysBurn:  inline && body.AlwaysBurnInSubtitleWhenTranscoding != nil && *body.AlwaysBurnInSubtitleWhenTranscoding,
 		})
 		source.TranscodingUrl = offer.URL
 		source.TranscodingContainer = offer.Container

@@ -467,3 +467,12 @@ func TestCapVideoBitrateBitDepth(t *testing.T) {
 		t.Errorf("plain ladder = %d / %d, want 4024680", a, b)
 	}
 }
+
+func TestBufSizeStaysInInt32(t *testing.T) {
+	if got := bufSize(2147419647); got != 2147483647 {
+		t.Errorf("bufSize(2147419647) = %d", got)
+	}
+	if got := bufSize(500000); got != 1000000 {
+		t.Errorf("bufSize(500000) = %d", got)
+	}
+}

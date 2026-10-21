@@ -22,7 +22,7 @@ How to read and edit this: [`docs/coverage/README.md`](coverage/README.md). Mach
 | Registered by Tinyfin | **188** (52%) |
 | Registered **and** a passing contract scenario | **145** (40%) |
 | Called by the official web client (docs/11) and registered | 122 of 164 (74%) |
-| Routes Tinyfin serves that the OpenAPI document lacks | 23 (legacy aliases the web client needs, `/socket`, HLS) |
+| Routes Tinyfin serves that the OpenAPI document lacks | 25 (legacy aliases the web client needs, `/socket`, HLS) |
 | Non-route features tracked | 112 (✅ 64 · 🟡 19 · 🗓️ 13 · ⛔ 16) |
 
 ### Routes by status
@@ -146,11 +146,11 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [collections](contract/specs/collections.md) | 51 | 51 | 30 | 30 |
 | [extras](contract/specs/extras.md) | 21 | 21 | 15 | 15 |
 | [images](contract/specs/images.md) | 17 | 16 | 13 | 13 |
-| [items](contract/specs/items.md) | 170 | 170 | 156 | 156 |
+| [items](contract/specs/items.md) | 171 | 171 | 156 | 156 |
 | [misc](contract/specs/misc.md) | 7 | 7 | 3 | 3 |
 | [music](contract/specs/music.md) | 82 | 82 | 14 | 14 |
 | [musicvideos](contract/specs/musicvideos.md) | 26 | 26 | 17 | 17 |
-| [playback](contract/specs/playback.md) | 54 | 53 | 7 | 7 |
+| [playback](contract/specs/playback.md) | 60 | 59 | 7 | 7 |
 | [playlists](contract/specs/playlists.md) | 33 | 33 | 23 | 23 |
 | [playstate](contract/specs/playstate.md) | 91 | 89 | 107 | 107 |
 | [policy](contract/specs/policy.md) | 19 | 18 | 8 | 8 |
@@ -158,11 +158,11 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [scan](contract/specs/scan.md) | 28 | 28 | 23 | 23 |
 | [search](contract/specs/search.md) | 16 | 16 | 14 | 14 |
 | [startup](contract/specs/startup.md) | 25 | 23 | 3 | 0 |
-| [subtitles](contract/specs/subtitles.md) | 48 | 48 | 23 | 23 |
+| [subtitles](contract/specs/subtitles.md) | 49 | 49 | 23 | 23 |
 | [trickplay](contract/specs/trickplay.md) | 11 | 11 | 10 | 10 |
 | [users](contract/specs/users.md) | 188 | 188 | 195 | 195 |
 | [wire](contract/specs/wire.md) | 15 | 14 | 14 | 14 |
-| **total** | 1042 | 1012 | 740 | 737 |
+| **total** | 1050 | 1020 | 740 | 737 |
 
 ## Biggest gaps (planned or not planned, web-client facing)
 

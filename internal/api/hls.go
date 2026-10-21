@@ -63,7 +63,10 @@ func (s *Server) resolveHLS(r *http.Request, item storage.Item) hlsRequest {
 	profile := s.resolveDeviceProfile(r)
 	audioIdx := atoiPtr(q.Get("audiostreamindex"))
 	subIdx := atoiPtr(q.Get("subtitlestreamindex"))
-	burn := strings.EqualFold(q.Get("subtitlemethod"), "Encode") && subIdx != nil
+	// the track is burned in when the URL says Encode, or when the client asked
+	// for it to be burned in whenever the video is transcoded
+	burn := subIdx != nil && *subIdx >= 0 &&
+		(strings.EqualFold(q.Get("subtitlemethod"), "Encode") || strings.EqualFold(q.Get("alwaysburninsubtitlewhentranscoding"), "true"))
 	var track *transcode.Subtitle
 	if burn {
 		track = burnRequest(item, *subIdx)

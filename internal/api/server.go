@@ -634,6 +634,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /UserItems/Resume", requireAuth(s.handleUserItemsResume))
 	s.mux.HandleFunc("GET /UserItems/{itemId}/UserData", requireAuth(s.handleUserItemDataGet))
 	s.mux.HandleFunc("POST /UserItems/{itemId}/UserData", requireAuth(s.handleUserItemDataPost))
+	// Legacy aliases the official web client still calls (items.userdata.R14).
+	s.mux.HandleFunc("GET /Users/{userId}/Items/{itemId}/UserData", requireAuth(s.handleLegacyUserItemDataGet))
+	s.mux.HandleFunc("POST /Users/{userId}/Items/{itemId}/UserData", requireAuth(s.handleLegacyUserItemDataPost))
 	s.mux.HandleFunc("GET /Shows/{seriesId}/Seasons", requireAuth(s.handleShowSeasons))
 	s.mux.HandleFunc("GET /Shows/{seriesId}/Episodes", requireAuth(s.handleShowEpisodes))
 	// Home screen's "next episode" row and the series detail page's
