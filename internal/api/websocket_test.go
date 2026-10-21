@@ -284,6 +284,42 @@ func TestSocketScheduledTasksInfoPushOnScanStateChange(t *testing.T) {
 	}
 }
 
+// The final push of a stopped scan is sent although the scan's own context
+// is already cancelled (admin.tasks.R12).
+func TestSocketScheduledTasksInfoAfterCancelledScan(t *testing.T) {
+	ts, st, srv := newSocketTestServer(t)
+	admin := createTestAdminUser(t, st, "admin3", "adminpass")
+	token := loginToken(t, ts.URL, admin.Name, "adminpass")
+	conn := dialSocket(t, ts, token)
+	_ = readSocketMessage(t, conn) // ForceKeepAlive
+	sendSocketMessage(t, conn, "ScheduledTasksInfoStart", "0,1000")
+	waitForSubscription(t, srv, func(c *wsConn) bool {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		return c.tasks.subscribed
+	})
+
+	srv.scanState.begin()
+	srv.scanState.end(context.Canceled)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	srv.notifyScanEnded(ctx)
+
+	msg := readSocketMessage(t, conn)
+	if msg.MessageType != "ScheduledTasksInfo" {
+		t.Fatalf("message type = %q, want ScheduledTasksInfo", msg.MessageType)
+	}
+	for _, x := range msg.Data.([]any) {
+		if m, ok := x.(map[string]any); ok && m["Key"] == "RefreshLibrary" {
+			if m["State"] != "Idle" {
+				t.Fatalf("task = %#v, want State \"Idle\"", m)
+			}
+			return
+		}
+	}
+	t.Fatalf("no RefreshLibrary task in %#v", msg.Data)
+}
+
 // TestSocketActivityLogEntryAdminOnly covers docs/12's finding that
 // ActivityLogEntryStart is rejected outright for a non-admin (silently, the
 // connection stays open) while an admin's subscription receives real

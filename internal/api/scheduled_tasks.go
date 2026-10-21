@@ -119,6 +119,7 @@ func (s *Server) taskInfo(def taskDef) scheduledTaskInfo {
 		Triggers:    s.taskTriggers(def),
 		Description: def.description,
 		Category:    def.category,
+		IsHidden:    def.hidden,
 		Key:         def.key,
 	}
 	if st == "Running" || st == "Cancelling" {

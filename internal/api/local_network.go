@@ -90,64 +90,110 @@ func (s *Server) loadLocalNetwork() {
 	}
 }
 
+// networkConfigurationDto is the network section with the reference's
+// defaults. Tinyfin acts on EnableRemoteAccess and LocalNetworkSubnets; the
+// other members are stored and served back so the Networking page round-trips
+// (they do not move the listener: BaseUrl, the ports, HTTPS and the address
+// family switches are not applied, admin.config.R4).
 type networkConfigurationDto struct {
-	LocalNetworkSubnets []string `json:"LocalNetworkSubnets"`
-	// EnableRemoteAccess is stored by POST /Startup/RemoteAccess and the
-	// network section (default true). When false, a caller outside the
-	// local network is answered 503 on every route except the web client's
-	// static files (wire.network.R1).
-	EnableRemoteAccess bool `json:"EnableRemoteAccess"`
-	// EnableUPnP is always false: automatic port mapping is not implemented
-	// (startup.remote.R2).
-	EnableUPnP bool `json:"EnableUPnP"`
+	BaseUrl                           string   `json:"BaseUrl"`
+	EnableHttps                       bool     `json:"EnableHttps"`
+	RequireHttps                      bool     `json:"RequireHttps"`
+	CertificatePath                   string   `json:"CertificatePath"`
+	CertificatePassword               string   `json:"CertificatePassword"`
+	InternalHttpPort                  int      `json:"InternalHttpPort"`
+	InternalHttpsPort                 int      `json:"InternalHttpsPort"`
+	PublicHttpPort                    int      `json:"PublicHttpPort"`
+	PublicHttpsPort                   int      `json:"PublicHttpsPort"`
+	AutoDiscovery                     bool     `json:"AutoDiscovery"`
+	EnableUPnP                        bool     `json:"EnableUPnP"`
+	EnableIPv4                        bool     `json:"EnableIPv4"`
+	EnableIPv6                        bool     `json:"EnableIPv6"`
+	EnableRemoteAccess                bool     `json:"EnableRemoteAccess"`
+	LocalNetworkSubnets               []string `json:"LocalNetworkSubnets"`
+	LocalNetworkAddresses             []string `json:"LocalNetworkAddresses"`
+	KnownProxies                      []string `json:"KnownProxies"`
+	IgnoreVirtualInterfaces           bool     `json:"IgnoreVirtualInterfaces"`
+	VirtualInterfaceNames             []string `json:"VirtualInterfaceNames"`
+	EnablePublishedServerUriByRequest bool     `json:"EnablePublishedServerUriByRequest"`
+	PublishedServerUriBySubnet        []string `json:"PublishedServerUriBySubnet"`
+	RemoteIPFilter                    []string `json:"RemoteIPFilter"`
+	IsRemoteIPFilterBlacklist         bool     `json:"IsRemoteIPFilterBlacklist"`
 }
 
-// handleNetworkConfigurationGet is GET /System/Configuration/network
-// (administrator only): the part of the reference's network configuration
-// section Tinyfin honors.
+const settingNetworkConfig = "NetworkConfiguration"
+
+func defaultNetworkConfiguration() networkConfigurationDto {
+	return networkConfigurationDto{
+		InternalHttpPort: 8096, InternalHttpsPort: 8920, PublicHttpPort: 8096, PublicHttpsPort: 8920,
+		AutoDiscovery: true, EnableIPv4: true, EnableRemoteAccess: true,
+		LocalNetworkSubnets: []string{}, LocalNetworkAddresses: []string{}, KnownProxies: []string{},
+		IgnoreVirtualInterfaces: true, VirtualInterfaceNames: []string{"veth"},
+		PublishedServerUriBySubnet: []string{}, RemoteIPFilter: []string{},
+	}
+}
+
+func (n *networkConfigurationDto) nonNil() {
+	for _, p := range []*[]string{&n.LocalNetworkSubnets, &n.LocalNetworkAddresses, &n.KnownProxies,
+		&n.VirtualInterfaceNames, &n.PublishedServerUriBySubnet, &n.RemoteIPFilter} {
+		if *p == nil {
+			*p = []string{}
+		}
+	}
+}
+
+// handleNetworkConfigurationGet is GET /System/Configuration/network (any
+// signed-in user): the stored section, with the two members Tinyfin acts on
+// read from their live state.
 func (s *Server) handleNetworkConfigurationGet(w http.ResponseWriter, r *http.Request) {
-	out := networkConfigurationDto{LocalNetworkSubnets: []string{}, EnableRemoteAccess: true}
+	out := defaultNetworkConfiguration()
+	s.loadSection(r.Context(), settingNetworkConfig, &out)
+	out.EnableUPnP = false
+	out.EnableRemoteAccess = true
 	if v, ok, err := s.store.GetSetting(r.Context(), settingRemoteAccess); err == nil && ok {
 		out.EnableRemoteAccess = v == "true"
 	}
+	out.LocalNetworkSubnets = []string{}
 	if ln := s.localNet.Load(); ln != nil {
 		out.LocalNetworkSubnets = ln.raw
 	}
+	out.nonNil()
 	writeJSON(w, http.StatusOK, out)
 }
 
 // handleNetworkConfigurationPost is POST /System/Configuration/network
-// (administrator only). Absent and unknown members are left alone; an
-// unparseable subnet answers 400 and changes nothing.
+// (administrator only). The section is replaced as a whole: members left
+// out fall back to their defaults. An unparseable subnet answers 400 and
+// changes nothing.
 func (s *Server) handleNetworkConfigurationPost(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		LocalNetworkSubnets *[]string `json:"LocalNetworkSubnets"`
-		EnableRemoteAccess  *bool     `json:"EnableRemoteAccess"`
-	}
+	body := defaultNetworkConfiguration()
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeInvalidBody(w)
 		return
 	}
-	if body.EnableRemoteAccess != nil {
-		if err := s.store.SetSetting(r.Context(), settingRemoteAccess, strconv.FormatBool(*body.EnableRemoteAccess)); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		s.remoteAccessOff.Store(!*body.EnableRemoteAccess)
+	body.nonNil()
+	ln, ok := parseSubnets(body.LocalNetworkSubnets)
+	if !ok {
+		writeInvalidBody(w)
+		return
 	}
-	if body.LocalNetworkSubnets != nil {
-		ln, ok := parseSubnets(*body.LocalNetworkSubnets)
-		if !ok {
-			writeInvalidBody(w)
-			return
-		}
-		raw, _ := json.Marshal(ln.raw)
-		if err := s.store.SetSetting(r.Context(), settingLocalNetworkSubnets, string(raw)); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		s.localNet.Store(ln)
+	body.EnableUPnP = false
+	raw, _ := json.Marshal(body)
+	if err := s.store.SetSetting(r.Context(), settingNetworkConfig, string(raw)); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
+	if err := s.store.SetSetting(r.Context(), settingRemoteAccess, strconv.FormatBool(body.EnableRemoteAccess)); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	s.remoteAccessOff.Store(!body.EnableRemoteAccess)
+	subnets, _ := json.Marshal(ln.raw)
+	if err := s.store.SetSetting(r.Context(), settingLocalNetworkSubnets, string(subnets)); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	s.localNet.Store(ln)
 	w.WriteHeader(http.StatusNoContent)
 }
 

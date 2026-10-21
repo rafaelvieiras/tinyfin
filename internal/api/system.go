@@ -83,19 +83,11 @@ func (s *Server) handleQuickConnectEnabled(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, s.quickConnectEnabled())
 }
 
-// brandingOptions mirrors the OpenAPI schema's BrandingOptions. Tinyfin has
-// no branding/customization system (out of scope per docs/01), but
-// jellyfin-web's login screen fetches this unconditionally — left
-// unregistered it fails the same way handleQuickConnectEnabled's doc
-// comment describes, found the same way (real jellyfin-web build).
-type brandingOptions struct {
-	LoginDisclaimer     string `json:"LoginDisclaimer"`
-	CustomCss           string `json:"CustomCss"`
-	SplashscreenEnabled bool   `json:"SplashscreenEnabled"`
-}
-
+// handleBrandingConfiguration is GET /Branding/Configuration (anonymous):
+// the branding section of the configuration (config_sections.go) that the
+// login page reads; members never set are left out.
 func (s *Server) handleBrandingConfiguration(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, brandingOptions{})
+	writeJSON(w, http.StatusOK, s.brandingConfiguration(r.Context()))
 }
 
 // handleConfigurationPages is GET /web/ConfigurationPages — the admin

@@ -8,13 +8,13 @@
    "supported": 64
   },
   "operations": 364,
-  "registered": 188,
+  "registered": 198,
   "routes_by_status": {
    "divergent-by-design": 16,
-   "not-planned": 93,
+   "not-planned": 91,
    "partial": 12,
-   "planned": 83,
-   "supported": 160
+   "planned": 75,
+   "supported": 170
   },
   "verified": 145
  },
@@ -205,24 +205,28 @@
    "tag": "Authentication",
    "group": "users-auth",
    "policy": "RequiresElevation",
-   "status": "planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": true,
-   "notes": "Only the built-in password provider exists; the admin dashboard lists providers, so these two answer 404.",
-   "priority": "low"
+   "scenarios": [
+    "admin.auth.providers",
+    "users.update.provider-ids-from-lists"
+   ]
   },
   {
    "id": "GET /Auth/Providers",
    "tag": "Authentication",
    "group": "users-auth",
    "policy": "RequiresElevation",
-   "status": "planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": true,
-   "notes": "Only the built-in password provider exists; the admin dashboard lists providers, so these two answer 404.",
-   "priority": "low"
+   "scenarios": [
+    "admin.auth.providers",
+    "users.update.provider-ids-from-lists"
+   ]
   },
   {
    "id": "POST /QuickConnect/Authorize",
@@ -332,6 +336,7 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "admin.devices.list",
     "collections.visibility.partial-members",
     "collections.visibility.restricted-user",
     "playstate.auth.token-only-header",
@@ -433,6 +438,7 @@
     "users.password.preference-access-disabled",
     "users.password.remove-own",
     "users.password.reset-by-admin",
+    "users.password.reset-lowercase-key",
     "users.password.reset-own",
     "users.password.set-on-passwordless",
     "users.password.wrong-current",
@@ -596,6 +602,7 @@
    "verified": false,
    "web": true,
    "scenarios": [
+    "admin.config.branding",
     "startup.wizard.pre-setup"
    ]
   },
@@ -604,36 +611,36 @@
    "tag": "Branding",
    "group": "system",
    "policy": "Anonymous",
-   "status": "planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": true,
-   "notes": "Not implemented; /Branding/Configuration returns the defaults.",
-   "priority": "low"
+   "scenarios": [
+    "admin.config.branding"
+   ]
   },
   {
    "id": "GET /Branding/Css.css",
    "tag": "Branding",
    "group": "system",
    "policy": "Anonymous",
-   "status": "planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
-   "web": true,
-   "notes": "Not implemented; /Branding/Configuration returns the defaults.",
-   "priority": "low"
+   "web": true
   },
   {
    "id": "GET /Channels",
    "tag": "Channel",
    "group": "live-tv",
    "policy": "DefaultAuthorization",
-   "status": "not-planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": false,
-   "notes": "Out of scope for v1 (docs/01, decision D8). Channels are a plugin concept in the reference.",
-   "priority": "low"
+   "scenarios": [
+    "admin.channels.list"
+   ]
   },
   {
    "id": "GET /Channels/Features",
@@ -779,24 +786,26 @@
    "tag": "Device",
    "group": "users-auth",
    "policy": "RequiresElevation",
-   "status": "planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": true,
-   "notes": "Devices are stored (internal/storage/device.go) and appear in sessions, but there are no device-management routes, so the dashboard's Devices page 404s.",
-   "priority": "medium"
+   "scenarios": [
+    "admin.devices.list"
+   ]
   },
   {
    "id": "GET /Devices/Info",
    "tag": "Device",
    "group": "users-auth",
    "policy": "RequiresElevation",
-   "status": "planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": true,
-   "notes": "Devices are stored (internal/storage/device.go) and appear in sessions, but there are no device-management routes, so the dashboard's Devices page 404s.",
-   "priority": "medium"
+   "scenarios": [
+    "admin.devices.list"
+   ]
   },
   {
    "id": "GET /Devices/Options",
@@ -2496,12 +2505,13 @@
    "tag": "Library",
    "group": "library-browse",
    "policy": "RequiresElevation",
-   "status": "planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": false,
-   "notes": "Library notification hooks and file/download endpoints are not implemented.",
-   "priority": "low"
+   "scenarios": [
+    "admin.mediafolders.list"
+   ]
   },
   {
    "id": "POST /Library/Movies/Added",
@@ -2802,12 +2812,13 @@
    "tag": "LiveTv",
    "group": "live-tv",
    "policy": "LiveTvAccess",
-   "status": "not-planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": false,
-   "notes": "Out of scope for v1 (docs/01, decision D8).",
-   "priority": "low"
+   "scenarios": [
+    "admin.livetv.info"
+   ]
   },
   {
    "id": "DELETE /LiveTv/ListingProviders",
@@ -3967,6 +3978,8 @@
    "web": true,
    "scenarios": [
     "admin.tasks.auth",
+    "admin.tasks.catalog",
+    "admin.tasks.default-triggers",
     "admin.tasks.list"
    ],
    "notes": "Lists only the tasks Tinyfin really runs (RefreshLibrary, RefreshTrickplayImages, CleanActivityLog) with the reference's Ids and Keys; the reference's ~20 tasks (plugin updates, subtitle/lyric downloads, ...) belong to subsystems that do not exist. See specs/admin.md."
@@ -3998,6 +4011,7 @@
    "scenarios": [
     "admin.tasks.auth",
     "admin.tasks.run",
+    "admin.tasks.run-maintenance",
     "chapters.images.off",
     "chapters.images.task"
    ],
@@ -4016,6 +4030,7 @@
    "scenarios": [
     "admin.tasks.get",
     "admin.tasks.run",
+    "admin.tasks.run-maintenance",
     "admin.tasks.triggers"
    ]
   },
@@ -5058,12 +5073,13 @@
    "tag": "System",
    "group": "system",
    "policy": "RequiresElevation",
-   "status": "planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": true,
-   "notes": "Not implemented.",
-   "priority": "low"
+   "scenarios": [
+    "admin.config.branding"
+   ]
   },
   {
    "id": "GET /System/Configuration/MetadataOptions/Default",
@@ -5087,6 +5103,9 @@
    "verified": false,
    "web": true,
    "scenarios": [
+    "admin.config.branding",
+    "admin.config.encoding",
+    "admin.config.network-fields",
     "startup.wizard.user-and-complete"
    ],
    "notes": "Only the network key is served (GET /System/Configuration/network)."
@@ -5100,6 +5119,10 @@
    "registered": true,
    "verified": false,
    "web": true,
+   "scenarios": [
+    "admin.config.encoding",
+    "admin.config.network-fields"
+   ],
    "notes": "Only the network key is served (POST /System/Configuration/network)."
   },
   {
@@ -5328,6 +5351,7 @@
     "users.update.other-user-non-admin",
     "users.update.policy-in-body-ignored",
     "users.update.preference-access-disabled",
+    "users.update.provider-ids-from-lists",
     "users.update.rename-and-configuration",
     "users.update.rename-case-only",
     "users.update.rename-validation"
@@ -5546,6 +5570,7 @@
     "users.password.preference-access-disabled",
     "users.password.remove-own",
     "users.password.reset-by-admin",
+    "users.password.reset-lowercase-key",
     "users.password.reset-other-non-admin",
     "users.password.reset-own",
     "users.password.set-on-passwordless",
@@ -5597,6 +5622,7 @@
     "users.update.other-user-non-admin",
     "users.update.policy-in-body-ignored",
     "users.update.preference-access-disabled",
+    "users.update.provider-ids-from-lists",
     "users.update.rename-and-configuration",
     "users.update.rename-case-only",
     "users.update.rename-validation",
@@ -5792,6 +5818,7 @@
     "users.update.other-user-non-admin",
     "users.update.policy-in-body-ignored",
     "users.update.preference-access-disabled",
+    "users.update.provider-ids-from-lists",
     "users.update.rename-and-configuration",
     "users.update.rename-case-only",
     "users.update.rename-validation",
@@ -5889,7 +5916,8 @@
     "users.schedule.out-of-range-hours",
     "users.schedule.window-around-now",
     "users.token.disabled-user-token",
-    "users.update.preference-access-disabled"
+    "users.update.preference-access-disabled",
+    "users.update.provider-ids-from-lists"
    ]
   },
   {
@@ -8681,6 +8709,8 @@
   "GET /Audio/{itemId}/master.m3u8",
   "GET /Audio/{itemId}/{file}",
   "GET /MusicGenres",
+  "GET /System/Configuration/branding",
+  "GET /System/Configuration/encoding",
   "GET /Users/{userId}/Items",
   "GET /Users/{userId}/Items/{itemId}",
   "GET /Users/{userId}/Items/{itemId}/Intros",
@@ -8691,6 +8721,7 @@
   "GET /Videos/{itemId}/master.m3u8",
   "GET /socket",
   "POST /ScheduledTasks/{first}/{second}",
+  "POST /System/Configuration/encoding",
   "POST /Users/{userId}",
   "POST /Users/{userId}/Configuration",
   "POST /Users/{userId}/FavoriteItems/{itemId}",

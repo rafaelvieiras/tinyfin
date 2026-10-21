@@ -1,0 +1,1300 @@
+[
+ {
+  "id": "admin.livetv.info",
+  "endpoint": "GET /LiveTv/Info",
+  "spec": "admin.md#pages",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.pages.R1"
+  ],
+  "requires": [
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "admin",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/LiveTv/Info"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Services",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Services[0].Name",
+       "op": "eq",
+       "value": "Emby"
+      },
+      {
+       "path": "$.Services[0].Tuners",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.IsEnabled",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.EnabledUsers",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "non-admin",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/LiveTv/Info"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Services",
+       "op": "type",
+       "value": "array"
+      }
+     ]
+    }
+   },
+   {
+    "name": "anonymous",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/LiveTv/Info"
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.channels.list",
+  "endpoint": "GET /Channels",
+  "spec": "admin.md#pages",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.pages.R2"
+  ],
+  "requires": [
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "admin",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Channels"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.StartIndex",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "non-admin",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Channels"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "anonymous",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Channels"
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.auth.providers",
+  "endpoint": "GET /Auth/Providers",
+  "spec": "admin.md#pages",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.pages.R3"
+  ],
+  "requires": [
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "providers",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Auth/Providers"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[0].Name",
+       "op": "eq",
+       "value": "Default"
+      },
+      {
+       "path": "$[0].Id",
+       "op": "exists"
+      }
+     ]
+    }
+   },
+   {
+    "name": "reset providers",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Auth/PasswordResetProviders"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[0].Name",
+       "op": "eq",
+       "value": "Default Password Reset Provider"
+      },
+      {
+       "path": "$[0].Id",
+       "op": "exists"
+      }
+     ]
+    }
+   },
+   {
+    "name": "non-admin providers",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Auth/Providers"
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "non-admin reset providers",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Auth/PasswordResetProviders"
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "anonymous providers",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Auth/Providers"
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "anonymous reset providers",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Auth/PasswordResetProviders"
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.mediafolders.list",
+  "endpoint": "GET /Library/MediaFolders",
+  "spec": "admin.md#pages",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.pages.R4"
+  ],
+  "requires": [
+   "user:alice",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "all",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Library/MediaFolders"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Movies"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Playlists"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "allmatch",
+       "value": "^[0-9a-f]{32}$"
+      },
+      {
+       "path": "$.TotalRecordCount",
+       "op": "gte",
+       "value": 2
+      }
+     ]
+    }
+   },
+   {
+    "name": "visible only",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Library/MediaFolders?isHidden=false"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Movies"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Playlists"
+      }
+     ]
+    }
+   },
+   {
+    "name": "hidden only",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Library/MediaFolders?isHidden=true"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Name",
+       "op": "eq",
+       "value": "Playlists"
+      },
+      {
+       "path": "$.Items[0].CollectionType",
+       "op": "eq",
+       "value": "playlists"
+      }
+     ]
+    }
+   },
+   {
+    "name": "non-admin",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Library/MediaFolders"
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "anonymous",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Library/MediaFolders"
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.devices.list",
+  "endpoint": "GET /Devices",
+  "spec": "admin.md#devices",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.devices.R1",
+   "admin.devices.R2",
+   "admin.devices.R3"
+  ],
+  "requires": [
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "login on a new device",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "{{user.alice.name}}",
+      "Pw": "{{user.alice.password}}"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"ConfDevices\", Device=\"Conf Device\", DeviceId=\"sc-admin-devices{{run.suffix}}\", Version=\"9.8.7\""
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "list",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "gte",
+       "value": 1
+      },
+      {
+       "path": "$.StartIndex",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Items[?Id=sc-admin-devices{{run.suffix}}].Name",
+       "op": "eq",
+       "value": "Conf Device"
+      },
+      {
+       "path": "$.Items[?Id=sc-admin-devices{{run.suffix}}].AppName",
+       "op": "eq",
+       "value": "ConfDevices"
+      },
+      {
+       "path": "$.Items[?Id=sc-admin-devices{{run.suffix}}].AppVersion",
+       "op": "eq",
+       "value": "9.8.7"
+      },
+      {
+       "path": "$.Items[?Id=sc-admin-devices{{run.suffix}}].LastUserName",
+       "op": "eq",
+       "value": "{{user.alice.name}}"
+      },
+      {
+       "path": "$.Items[?Id=sc-admin-devices{{run.suffix}}].LastUserId",
+       "op": "eq",
+       "value": "{{user.alice.id}}"
+      },
+      {
+       "path": "$.Items[?Id=sc-admin-devices{{run.suffix}}].DateLastActivity",
+       "op": "exists"
+      },
+      {
+       "path": "$.Items[?Id=sc-admin-devices{{run.suffix}}].Capabilities.PlayableMediaTypes",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.Items[?Id=sc-admin-devices{{run.suffix}}].Capabilities.SupportsPersistentIdentifier",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.Items[?Id=sc-admin-devices{{run.suffix}}].Capabilities.SupportsMediaControl",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "filtered by user",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices?userId={{user.alice.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "sc-admin-devices{{run.suffix}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "one device",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Info?id=sc-admin-devices{{run.suffix}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Id",
+       "op": "eq",
+       "value": "sc-admin-devices{{run.suffix}}"
+      },
+      {
+       "path": "$.AppName",
+       "op": "eq",
+       "value": "ConfDevices"
+      }
+     ]
+    }
+   },
+   {
+    "name": "unknown device",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Info?id=sc-no-such-device"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "bad user id",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices?userId=nope"
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "non-admin list",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Devices"
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "non-admin one",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Info?id=sc-admin-devices{{run.suffix}}"
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "anonymous",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Devices"
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.config.encoding",
+  "endpoint": "GET /System/Configuration/encoding",
+  "spec": "admin.md#config",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.config.R1",
+   "admin.config.R2",
+   "admin.config.R3"
+  ],
+  "requires": [
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "defaults",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.EncodingThreadCount",
+       "op": "type",
+       "value": "number"
+      },
+      {
+       "path": "$.HardwareAccelerationType",
+       "op": "type",
+       "value": "string"
+      },
+      {
+       "path": "$.EnableHardwareEncoding",
+       "op": "type",
+       "value": "boolean"
+      },
+      {
+       "path": "$.H264Crf",
+       "op": "type",
+       "value": "number"
+      },
+      {
+       "path": "$.H265Crf",
+       "op": "type",
+       "value": "number"
+      },
+      {
+       "path": "$.EncoderPreset",
+       "op": "type",
+       "value": "string"
+      },
+      {
+       "path": "$.DeinterlaceMethod",
+       "op": "type",
+       "value": "string"
+      },
+      {
+       "path": "$.TonemappingAlgorithm",
+       "op": "type",
+       "value": "string"
+      },
+      {
+       "path": "$.EnableTonemapping",
+       "op": "type",
+       "value": "boolean"
+      },
+      {
+       "path": "$.HardwareDecodingCodecs",
+       "op": "type",
+       "value": "array"
+      },
+      {
+       "path": "$.SubtitleExtractionTimeoutMinutes",
+       "op": "type",
+       "value": "number"
+      },
+      {
+       "path": "$.EnableSubtitleExtraction",
+       "op": "type",
+       "value": "boolean"
+      },
+      {
+       "path": "$.VaapiDevice",
+       "op": "type",
+       "value": "string"
+      },
+      {
+       "path": "$.AllowHevcEncoding",
+       "op": "type",
+       "value": "boolean"
+      },
+      {
+       "path": "$.EnableThrottling",
+       "op": "type",
+       "value": "boolean"
+      },
+      {
+       "path": "$.ThrottleDelaySeconds",
+       "op": "type",
+       "value": "number"
+      }
+     ]
+    }
+   },
+   {
+    "name": "remember the section",
+    "config": {
+     "section": "encoding",
+     "set": {}
+    }
+   },
+   {
+    "name": "replace",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {
+      "EncodingThreadCount": 3,
+      "H264Crf": 19,
+      "HardwareDecodingCodecs": [
+       "h264"
+      ]
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "replaced",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.EncodingThreadCount",
+       "op": "eq",
+       "value": 3
+      },
+      {
+       "path": "$.H264Crf",
+       "op": "eq",
+       "value": 19
+      },
+      {
+       "path": "$.HardwareDecodingCodecs",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.H265Crf",
+       "op": "eq",
+       "value": 28
+      },
+      {
+       "path": "$.EnableHardwareEncoding",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "any user reads",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.EncodingThreadCount",
+       "op": "eq",
+       "value": 3
+      }
+     ]
+    }
+   },
+   {
+    "name": "non-admin cannot write",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {}
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "anonymous",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "anonymous write",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {}
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.config.branding",
+  "endpoint": "GET /System/Configuration/branding",
+  "spec": "admin.md#config",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.config.R1",
+   "admin.config.R3"
+  ],
+  "requires": [
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "remember the section",
+    "config": {
+     "section": "branding",
+     "set": {}
+    }
+   },
+   {
+    "name": "clear",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/branding",
+     "body": {}
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "defaults",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/branding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.SplashscreenEnabled",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.LoginDisclaimer",
+       "op": "absent"
+      },
+      {
+       "path": "$.CustomCss",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "set",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/branding",
+     "body": {
+      "LoginDisclaimer": "Sc disclaimer",
+      "CustomCss": ".scBranding{color:red}",
+      "SplashscreenEnabled": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "read",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/branding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.LoginDisclaimer",
+       "op": "eq",
+       "value": "Sc disclaimer"
+      },
+      {
+       "path": "$.CustomCss",
+       "op": "eq",
+       "value": ".scBranding{color:red}"
+      },
+      {
+       "path": "$.SplashscreenEnabled",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "public view",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Branding/Configuration"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.LoginDisclaimer",
+       "op": "eq",
+       "value": "Sc disclaimer"
+      },
+      {
+       "path": "$.SplashscreenEnabled",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "stylesheet",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Branding/Css"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/^text\\/css/"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": ".scBranding{color:red}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "replace drops members",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/branding",
+     "body": {
+      "LoginDisclaimer": "Only this"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "dropped",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/branding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.LoginDisclaimer",
+       "op": "eq",
+       "value": "Only this"
+      },
+      {
+       "path": "$.CustomCss",
+       "op": "absent"
+      },
+      {
+       "path": "$.SplashscreenEnabled",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "non-admin cannot write",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/branding",
+     "body": {}
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "anonymous read",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/branding"
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.config.network-fields",
+  "endpoint": "GET /System/Configuration/network",
+  "spec": "admin.md#config",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.config.R1",
+   "admin.config.R4"
+  ],
+  "requires": [
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "remember the section",
+    "config": {
+     "section": "network",
+     "set": {}
+    }
+   },
+   {
+    "name": "reset",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/network",
+     "body": {}
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "defaults",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/network"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.EnableIPv4",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.EnableIPv6",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.EnableRemoteAccess",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.EnableUPnP",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.AutoDiscovery",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.BaseUrl",
+       "op": "eq",
+       "value": ""
+      },
+      {
+       "path": "$.EnableHttps",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.RequireHttps",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.InternalHttpPort",
+       "op": "eq",
+       "value": 8096
+      },
+      {
+       "path": "$.InternalHttpsPort",
+       "op": "eq",
+       "value": 8920
+      },
+      {
+       "path": "$.PublicHttpPort",
+       "op": "eq",
+       "value": 8096
+      },
+      {
+       "path": "$.PublicHttpsPort",
+       "op": "eq",
+       "value": 8920
+      },
+      {
+       "path": "$.LocalNetworkSubnets",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.LocalNetworkAddresses",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.KnownProxies",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.RemoteIPFilter",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.IsRemoteIPFilterBlacklist",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.IgnoreVirtualInterfaces",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.VirtualInterfaceNames",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.EnablePublishedServerUriByRequest",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.PublishedServerUriBySubnet",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$.CertificatePath",
+       "op": "eq",
+       "value": ""
+      },
+      {
+       "path": "$.CertificatePassword",
+       "op": "eq",
+       "value": ""
+      }
+     ]
+    }
+   },
+   {
+    "name": "replace",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/network",
+     "body": {
+      "EnableIPv6": true,
+      "PublicHttpPort": 8099,
+      "KnownProxies": [
+       "10.1.2.3"
+      ]
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "replaced",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/network"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.EnableIPv6",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.PublicHttpPort",
+       "op": "eq",
+       "value": 8099
+      },
+      {
+       "path": "$.KnownProxies",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$.EnableIPv4",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.InternalHttpPort",
+       "op": "eq",
+       "value": 8096
+      }
+     ]
+    }
+   },
+   {
+    "name": "any user reads",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/network"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.EnableIPv6",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "non-admin cannot write",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/network",
+     "body": {}
+    },
+    "expect": {
+     "status": 403
+    }
+   }
+  ],
+  "cleanup": []
+ }
+]

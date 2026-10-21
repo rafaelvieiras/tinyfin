@@ -393,6 +393,7 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 
 **Rules**
 
+- **users.password.R15** The request body's member names are matched case-insensitively, as everywhere in the API (`resetPassword`, `currentPw` and `newPw` mean the same as `ResetPassword`, `CurrentPw` and `NewPw`): the web client sends `{"resetPassword":true}`. A password change is applied to the stored password alone: a profile, policy or login write that happens at the same time (the web client saves the profile and the policy right after creating an account, and a sign-in updates the last-login time) can never bring the previous password back.
 - **users.password.R14** `POST /Users/{userId}/Password` is an alias with the target id in the path and the same body and rules, with one difference: the id is always treated as explicitly given, so an administrator changing their own password through the alias must supply `CurrentPw`.
 - **users.password.R15** Every successful password change, removal or `ResetPassword` writes a `UserPasswordChanged` entry: `Severity` `Information`, `Name` `Password has been changed for user <name>`, `UserId` of the target, no `ShortOverview`, no `ItemId`. When the change revokes tokens (`users.password.R7`) the `SessionEnded` entries (`users.token.R9`) are written after it. A refused request (wrong `CurrentPw`, `403`) writes no such entry.
 - **users.password.R16** A wrong `CurrentPw` that reaches the configured threshold (`users.auth.R14`) disables the target and writes a `UserLockedOut` entry (`users.auth.R28`); no `AuthenticationFailed` entry is written for a wrong `CurrentPw`.
@@ -429,6 +430,7 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 - **users.update.R8** An unknown user answers `404`; a body that is not valid JSON answers `400`.
 - **users.update.R9** A body without `Configuration` resets the user's preferences to their defaults.
 - **users.update.R12** Body validation runs before the user lookup and the authorization check: a body without a `Policy` member (or with a `Policy` lacking `AuthenticationProviderId` or `PasswordResetProviderId`) answers `400` with a validation-problem body naming `Policy.AuthenticationProviderId` / `Policy.PasswordResetProviderId`, even for an unknown or foreign target. A body with `"Policy": null` is accepted. The minimal valid body is `{"Name":..., "Configuration":{...}, "Policy":{"AuthenticationProviderId":"...","PasswordResetProviderId":"..."}}`; a `userId` that is not a GUID or is all zeros answers `400`.
+- **users.update.R14** The provider ids the web client puts in `Policy.AuthenticationProviderId` and `Policy.PasswordResetProviderId` when it saves a profile are the ones listed by `GET /Auth/Providers` and `GET /Auth/PasswordResetProviders` (`admin.pages.R3`); a body carrying them is accepted (`204`).
 - **users.update.R13** A successful `POST /Users` sends a `UserUpdated` WebSocket message to the target user's own open sockets (`Data` is the updated user object, with the new `Name`); sockets of other users receive none. See *Realtime socket*.
 - **users.update.R11** A non-administrator whose `EnableUserPreferenceAccess` policy flag is `false` is refused (`403`) when updating themselves.
 
@@ -758,6 +760,7 @@ The user object is the one of `GET /Users/{userId}` (also inside login answers, 
 | `users.password.R11` | `users.password.anonymous` |
 | `users.password.R12` | `users.password.legacy-hash-field-ignored` |
 | `users.password.R13` | `users.password.preference-access-disabled` |
+| `users.password.R15` | `users.password.reset-lowercase-key` |
 | `users.password.R14` | `users.password-alias.change-own`, `users.password-alias.admin-sets-other`, `users.password-alias.reset`, `users.password-alias.admin-self-needs-current`, `users.password-alias.errors` |
 | `users.password.R15` | `users.password.activity-entries` |
 | `users.password.R16` | `users.password.wrong-current-lockout-entry` |
@@ -772,6 +775,7 @@ The user object is the one of `GET /Users/{userId}` (also inside login answers, 
 | `users.update.R9` | `users.update.omitted-configuration-resets` |
 | `users.update.R10` | `users.update-alias.self`, `users.update-alias.admin-and-errors` |
 | `users.update.R11` | `users.update.preference-access-disabled` |
+| `users.update.R14` | `users.update.provider-ids-from-lists` |
 | `users.update.R13` | `users.update.emits-user-updated` |
 | `users.update.R12` | `users.update.not-found-and-bad-body` |
 | `users.configuration.R1` | `users.configuration.update-own` |
