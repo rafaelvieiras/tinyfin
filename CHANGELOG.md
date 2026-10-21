@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The `charenc` of a text burn-in comes from an exact implementation of the reference's statistical charset detector
+  (`bitmap.md#charset-detection` R1-R20: byte-order marks, coding state machines, CJK distribution and hiragana
+  analysis, single-byte language models, Hebrew and Latin-1 probers, escape sequences, single-precision confidences)
+  replacing the older heuristic; all 84 recorded reference answers are reproduced, short and ambiguous samples
+  included (`TestDetectCharsetCorpus`).
 - The media sources on an item (`GET /Items`, `/Items/{id}`, `/Users/{userId}/Items/{id}`) report `SupportsDirectStream`
   and `SupportsTranscoding` from the caller's playback flags like the reference (`playback.md#item-sources` R1,
   scenario `playback.item.stream-flags`): a track is always streamable and transcodable with

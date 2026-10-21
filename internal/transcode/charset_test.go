@@ -1,9 +1,11 @@
 package transcode
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -28,18 +30,15 @@ func TestDetectCharset(t *testing.T) {
 		{"gb", gb, "gb18030"},
 		{"cyrillic", ru, "windows-1251"},
 	} {
-		if got := detectCharset(c.data); got != c.want {
+		if got := charencFor("x.srt", c.data); got != c.want {
 			t.Errorf("%s: %q, want %q", c.name, got, c.want)
 		}
 	}
 }
 
-// TestDetectCharsetCorpus checks the heuristic against samples whose `charenc`
+// TestDetectCharsetCorpus checks the detector against samples whose `charenc`
 // the reference server was observed to pass (internal/transcode/testdata,
-// probed black-box with one sidecar per sample). Entries flagged
-// known_difference are short or ambiguous samples where the reference's
-// statistical detector answers differently; they are listed so a change in the
-// heuristic is noticed, and must keep differing.
+// probed black-box with one sidecar per sample, SubRip files).
 func TestDetectCharsetCorpus(t *testing.T) {
 	raw, err := os.ReadFile("testdata/charset-corpus.json")
 	if err != nil {
@@ -49,28 +48,87 @@ func TestDetectCharsetCorpus(t *testing.T) {
 		Name      string `json:"name"`
 		Hex       string `json:"hex"`
 		Reference string `json:"reference"`
-		Known     bool   `json:"known_difference"`
 	}
 	if err := json.Unmarshal(raw, &corpus); err != nil {
 		t.Fatal(err)
+	}
+	if len(corpus) != 84 {
+		t.Fatalf("corpus has %d samples, want 84", len(corpus))
 	}
 	for _, c := range corpus {
 		data, err := hex.DecodeString(c.Hex)
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := detectCharset(data)
+		got := charencFor("x.srt", data)
 		if got == "" {
 			got = "NONE"
-		}
-		if c.Known {
-			if got == c.Reference {
-				t.Errorf("%s: now matches the reference (%q): clear known_difference", c.Name, got)
-			}
-			continue
 		}
 		if got != c.Reference {
 			t.Errorf("%s: %q, reference %q", c.Name, got, c.Reference)
 		}
+	}
+}
+
+// The embedded tables must stay equal to the contract's data files.
+func TestCharsetDataMatchesContract(t *testing.T) {
+	for _, n := range []string{"charset-cjk.json", "charset-sbcs.json", "charset-statemachines.json"} {
+		a, err := os.ReadFile("chardata/" + n)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, err := os.ReadFile("../../docs/contract/data/" + n)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(a, b) {
+			t.Errorf("%s differs from docs/contract/data", n)
+		}
+	}
+}
+
+func TestCharsetBOMAndEdges(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		data string
+		want string
+	}{
+		{"empty", "", ""},
+		{"utf16be", "\xfe\xffab", "utf-16be"},
+		{"ucs4-3412", "\xfe\xff\x00\x00", "X-ISO-10646-UCS-4-3412"},
+		{"utf16le", "\xff\xfea\x00", "utf-16le"},
+		{"utf32le", "\xff\xfe\x00\x00", "utf-32le"},
+		{"utf32be", "\x00\x00\xfe\xff", "utf-32be"},
+		{"ucs4-2143", "\x00\x00\xff\xfe", "X-ISO-10646-UCS-4-2143"},
+		{"utf7", "+/v8", "utf-7"},
+		{"gb18030 bom", "\x84\x31\x95\x33", "gb18030"},
+		{"lone nbsp is plain", "a\xa0b", "ascii"},
+		{"iso-2022-jp", "a\x1b$B$3$s$K$A$O\x1b(B", "iso-2022-jp"},
+		{"hz", "a ~{<:Ky2;S{#,NpJ)l6HK!#~} b", "hz-gb-2312"},
+		{"escape alone", "a\x1bb", "ascii"},
+	} {
+		if got := detectCharset([]byte(c.data)); got != c.want {
+			t.Errorf("%s: %q, want %q", c.name, got, c.want)
+		}
+	}
+	// Long inputs: the detector reads in chunks and stops at "found".
+	long := strings.Repeat("Ol\xc3\xa1 mundo \xc3\xa7\xc3\xa3o. ", 200)
+	if got := detectCharset([]byte(long)); got != "utf-8" {
+		t.Errorf("long utf-8: %q", got)
+	}
+	if got := detectCharset([]byte(strings.Repeat("hello ", 1000))); got != "ascii" {
+		t.Errorf("long ascii: %q", got)
+	}
+}
+
+func TestCharencFor(t *testing.T) {
+	bom := []byte("\xff\xfeH\x00")
+	for ext, want := range map[string]string{"a.srt": "", "a.SSA": "", "a.ass": "", "a.sub": "utf-16le"} {
+		if got := charencFor(ext, bom); got != want {
+			t.Errorf("%s: %q, want %q", ext, got, want)
+		}
+	}
+	if got := charencFor("a.srt", nil); got != "" {
+		t.Errorf("empty: %q", got)
 	}
 }

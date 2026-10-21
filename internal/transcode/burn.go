@@ -154,7 +154,7 @@ func (c Config) resolveText(req *Request, jobDir string) {
 	if !sub.Embedded {
 		if lang := sidecarLanguage(req.InputPath, sub.Path); lang != "" {
 			if data, err := os.ReadFile(sub.Path); err == nil {
-				sub.Charset = detectCharset(data)
+				sub.Charset = charencFor(sub.Path, data)
 			}
 		}
 		return
