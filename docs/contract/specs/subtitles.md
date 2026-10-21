@@ -61,6 +61,7 @@ Scenarios: [`../scenarios/subtitles.json`](../scenarios/subtitles.json) and [`..
 - **subtitles.stream.R11** A file is read by the parser of its extension. When that parser finds no cue (the content is another format) the file can only be asked for in the format of its own extension, which serves it as it is (`vtt` for the `.vtt` of SubRip text, `ass` for the `.ass` of WebVTT text, `sub` for a `.sub` as `text/vnd.dvb.subtitle`, `smi` for a SAMI file as `application/smil+xml`); every other format is `400`. A SAMI file is also served converted (`srt`, `vtt`, `ass`) and `sami` is `400`. A `.sup` file whose content is text is served as it is only for the format `pgssub` (`application/octet-stream`); `srt`, `vtt` and `sup` are `400`.
 - **subtitles.stream.R12** A VobSub pair: `idx` serves the `.idx` file as it is (`application/octet-stream`); `srt` and `vtt` read the index as text, one cue per `timestamp:` line (the text of a cue is what follows the comma, the file position, and its end is zero); `sub`, `dvdsub`, `vobsub`, `mks`, `sup` and unknown names are `400`. A `.sub` with no index serves only `sub` (as it is, `text/vnd.dvb.subtitle`). A Matroska subtitle file is served like the track it holds: a text track in the formats of R10 (`mks` is `400`), a PGS track as `sup`, `pgssub` or `dvdsub` (`application/octet-stream`, [`bitmap.route.R1`](bitmap.md#route)) and every other format `400`.
 - **subtitles.stream.R13** A file named `.mks` whose content is plain text (SubRip, WebVTT or ASS, not Matroska) is read like the format it holds, at every position among the item's streams and in every format of R10: the extraction is the same ffmpeg call as for a real Matroska file, which accepts the text. The two kinds of file can be mixed in one item. Each track gives the document of its content (`mks` is `400` as in R12; an ASS track has the font `Arial` replaced as in R6). The fixture is `Mks Plain (4100)` of library `Subs4` (three plain-text `.mks` files: SubRip `de`, WebVTT `en`, ASS `fr`).
+- **subtitles.stream.R14** `js` (any case) is another name of `json`: the same body and `application/json`. It is the name the web client's text tracks use. A longer name (`jsonp`) is not served (`400`). (`subtitles.stream.js-alias`)
 
 ## <a id="playlist"></a>The playlist of a subtitle stream
 
@@ -132,6 +133,7 @@ Observed on the reference and deliberately not reproduced (not asserted by a sce
 | `subtitles.stream.R11` | `subtitles2.sidecar.odd-route`, `subtitles2.mks.route` |
 | `subtitles.stream.R12` | `subtitles2.vobsub.route`, `subtitles2.mks.route` |
 | `subtitles.stream.R13` | `subtitles4.mks.plain-text` |
+| `subtitles.stream.R14` | `subtitles.stream.js-alias` |
 | `subtitles.playlist.R1`, `R2` | `subtitles.playlist.segments` |
 | `subtitles.delivery.R1` | `subtitles.delivery.no-profile`, `subtitles.delivery.external` |
 | `subtitles.delivery.R2`, `R3` | `subtitles.delivery.external` |

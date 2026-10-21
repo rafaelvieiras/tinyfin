@@ -1,0 +1,175 @@
+[
+  {
+    "id": "subtitles.stream.js-alias",
+    "endpoint": "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/{startPositionTicks}/Stream.{format}",
+    "spec": "subtitles.md#stream",
+    "scope": "modern",
+    "tags": [
+      "subtitles",
+      "web-client"
+    ],
+    "covers": [
+      "subtitles.stream.R14"
+    ],
+    "requires": [
+      "library:subfiles",
+      "item:sub-convert",
+      "library:avtrack",
+      "item:av-multi"
+    ],
+    "steps": [
+      {
+        "name": "js is the JSON event list",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/0/Stream.js"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "json": [
+            {
+              "path": "$.TrackEvents",
+              "op": "len",
+              "value": 2
+            },
+            {
+              "path": "$.TrackEvents[0].Text",
+              "op": "eq",
+              "value": "Hello <i>world</i>"
+            },
+            {
+              "path": "$.TrackEvents[0].StartPositionTicks",
+              "op": "eq",
+              "value": 10000000
+            }
+          ],
+          "text": [
+            {
+              "op": "contains",
+              "value": "\\u003Ci\\u003Eworld\\u003C/i\\u003E"
+            }
+          ]
+        }
+      },
+      {
+        "name": "in any case",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/0/Stream.JS"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "json": [
+            {
+              "path": "$.TrackEvents",
+              "op": "len",
+              "value": 2
+            },
+            {
+              "path": "$.TrackEvents[0].Text",
+              "op": "eq",
+              "value": "Hello <i>world</i>"
+            },
+            {
+              "path": "$.TrackEvents[0].StartPositionTicks",
+              "op": "eq",
+              "value": 10000000
+            }
+          ],
+          "text": [
+            {
+              "op": "contains",
+              "value": "\\u003Ci\\u003Eworld\\u003C/i\\u003E"
+            }
+          ]
+        }
+      },
+      {
+        "name": "route without a start position",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/0/Stream.js"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      {
+        "name": "an embedded SubRip track",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.av-multi.id}}/{{item.av-multi.id}}/Subtitles/3/0/Stream.js"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "json": [
+            {
+              "path": "$.TrackEvents",
+              "op": "len",
+              "value": 1
+            },
+            {
+              "path": "$.TrackEvents[0].Text",
+              "op": "eq",
+              "value": "BURN IN TEXT"
+            },
+            {
+              "path": "$.TrackEvents[0].StartPositionTicks",
+              "op": "eq",
+              "value": 5250000
+            }
+          ]
+        }
+      },
+      {
+        "name": "an embedded ASS track",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.av-multi.id}}/{{item.av-multi.id}}/Subtitles/4/0/Stream.js"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "json": [
+            {
+              "path": "$.TrackEvents[0].Text",
+              "op": "eq",
+              "value": "BURN IN TEXT"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a longer name is not the alias",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.sub-convert.id}}/{{item.sub-convert.id}}/Subtitles/0/Stream.jsonp"
+        },
+        "expect": {
+          "status": 400
+        }
+      }
+    ],
+    "cleanup": []
+  }
+]

@@ -1,0 +1,178 @@
+[
+  {
+    "id": "items.userdata.legacy-path",
+    "endpoint": "POST /Users/{userId}/Items/{itemId}/UserData",
+    "spec": "items.md#userdata-write",
+    "scope": "legacy-web-required",
+    "tags": [
+      "items",
+      "web-client"
+    ],
+    "covers": [
+      "items.userdata.R14"
+    ],
+    "requires": [
+      "item:alpha",
+      "user:alice",
+      "user:admin"
+    ],
+    "steps": [
+      {
+        "name": "favorite through the legacy route",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{user.alice.id}}/Items/{{item.alpha.id}}/UserData",
+          "body": {
+            "IsFavorite": true
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.IsFavorite",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.ItemId",
+              "op": "eq",
+              "value": "{{item.alpha.id}}"
+            }
+          ]
+        }
+      },
+      {
+        "name": "the modern route sees it",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/UserItems/{{item.alpha.id}}/UserData"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.IsFavorite",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "the legacy read is the same",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/Users/{{user.alice.id}}/Items/{{item.alpha.id}}/UserData"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.IsFavorite",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.Played",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "a partial update keeps the rest",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{user.alice.id}}/Items/{{item.alpha.id}}/UserData",
+          "body": {
+            "PlaybackPositionTicks": 5000000
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.IsFavorite",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.PlaybackPositionTicks",
+              "op": "eq",
+              "value": 5000000
+            }
+          ]
+        }
+      },
+      {
+        "name": "another user's data is forbidden",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{user.admin.id}}/Items/{{item.alpha.id}}/UserData",
+          "body": {
+            "IsFavorite": true
+          }
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "an unknown item",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{user.alice.id}}/Items/00000000000000000000000000000001/UserData",
+          "body": {
+            "IsFavorite": true
+          }
+        },
+        "expect": {
+          "status": 404
+        }
+      },
+      {
+        "name": "a malformed body",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/Users/{{user.alice.id}}/Items/{{item.alpha.id}}/UserData",
+          "body": "not json"
+        },
+        "expect": {
+          "status": 400
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "reset user data",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/UserItems/{{item.alpha.id}}/UserData",
+          "body": {
+            "Played": false,
+            "IsFavorite": false,
+            "PlaybackPositionTicks": 0,
+            "PlayCount": 0
+          }
+        },
+        "expect": {
+          "status": [
+            200,
+            204,
+            404
+          ]
+        }
+      }
+    ]
+  }
+]

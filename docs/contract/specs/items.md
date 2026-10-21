@@ -358,6 +358,7 @@ Errors: **400** all-zero item id / malformed body, **401** anonymous, **403** ot
 - **items.userdata.R11** `Key`, `ItemId`, `PlayedPercentage` and `UnplayedItemCount` may appear in the body (they are part of the response shape) but are ignored; the response `Key`/`ItemId` are those of the item.
 - **items.userdata.R12** Malformed JSON body is **400**.
 - **items.userdata.R13** Writing user data on a folder (series, season) does not propagate to its children.
+- **items.userdata.R14** `GET` and `POST /Users/{userId}/Items/{itemId}/UserData` are aliases of the `/UserItems/{itemId}/UserData` routes with the user taken from the path (own id or administrator, else `403`); everything else is as R1-R13. The web client posts to the `POST` form to change the favorite mark. (`items.userdata.legacy-path`)
 
 ---
 
@@ -558,6 +559,7 @@ Every question that was open in earlier revisions has been settled by probing th
 | `items.userdata.R11` | `items.userdata.post-ignored-fields` |
 | `items.userdata.R12` | `items.userdata.post-errors` |
 | `items.userdata.R13` | `items.userdata.post-folder-no-propagation` |
+| `items.userdata.R14` | `items.userdata.legacy-path` |
 | `items.get.R1` | `items.get.anonymous` |
 | `items.get.R2` | `items.get.movie`, `items.get.series-and-episode` |
 | `items.get.R3` | `items.get.movie`, `items.get.series-and-episode` |

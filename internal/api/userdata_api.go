@@ -17,9 +17,10 @@ import (
 //	POST /UserItems/{itemId}/UserData   (items.userdata.R6-R13)
 //	GET  /UserItems/Resume              (items.resume.R1-R11)
 //
-// The legacy /Users/{userId}/Items/{itemId}/UserData and
-// /Users/{userId}/Items/Resume forms are excluded from the contract
-// (docs/contract/scope-excluded.md) and deliberately not routed.
+// The legacy /Users/{userId}/Items/{itemId}/UserData forms are kept as thin
+// aliases because the official web client still posts to one
+// (items.userdata.R14); /Users/{userId}/Items/Resume is excluded from the
+// contract (docs/contract/scope-excluded.md) and deliberately not routed.
 
 // userDataBody is the partial-update body of POST /UserItems/{itemId}/UserData.
 // A member that is absent or null is left unchanged; Key, ItemId,
@@ -96,7 +97,17 @@ func (s *Server) resolveUserItemFor(w http.ResponseWriter, r *http.Request, rawU
 
 // handleUserItemDataGet is GET /UserItems/{itemId}/UserData.
 func (s *Server) handleUserItemDataGet(w http.ResponseWriter, r *http.Request) {
-	target, item, ok := s.resolveUserItem(w, r)
+	s.userItemDataGet(w, r, caseInsensitiveQuery(r).Get("userid"))
+}
+
+// handleLegacyUserItemDataGet is GET /Users/{userId}/Items/{itemId}/UserData
+// (items.userdata.R14): the modern route with the user id taken from the path.
+func (s *Server) handleLegacyUserItemDataGet(w http.ResponseWriter, r *http.Request) {
+	s.userItemDataGet(w, r, r.PathValue("userId"))
+}
+
+func (s *Server) userItemDataGet(w http.ResponseWriter, r *http.Request, rawUserID string) {
+	target, item, ok := s.resolveUserItemFor(w, r, rawUserID)
 	if !ok {
 		return
 	}
@@ -111,7 +122,17 @@ func (s *Server) handleUserItemDataGet(w http.ResponseWriter, r *http.Request) {
 // (items.userdata.R9) and a folder write never propagates to children
 // (items.userdata.R13).
 func (s *Server) handleUserItemDataPost(w http.ResponseWriter, r *http.Request) {
-	target, item, ok := s.resolveUserItem(w, r)
+	s.userItemDataPost(w, r, caseInsensitiveQuery(r).Get("userid"))
+}
+
+// handleLegacyUserItemDataPost is POST /Users/{userId}/Items/{itemId}/UserData
+// (items.userdata.R14), the form the web client uses to mark favorites.
+func (s *Server) handleLegacyUserItemDataPost(w http.ResponseWriter, r *http.Request) {
+	s.userItemDataPost(w, r, r.PathValue("userId"))
+}
+
+func (s *Server) userItemDataPost(w http.ResponseWriter, r *http.Request, rawUserID string) {
+	target, item, ok := s.resolveUserItemFor(w, r, rawUserID)
 	if !ok {
 		return
 	}

@@ -359,7 +359,7 @@ func parseFormat(ext string) (Format, bool) {
 		return FormatASS, true
 	case "ssa":
 		return FormatSSA, true
-	case "json":
+	case "json", "js": // "js" is the spelling the web client's text tracks use
 		return FormatJSON, true
 	case "ttml":
 		return FormatTTML, true

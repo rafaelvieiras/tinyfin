@@ -11,11 +11,9 @@ Tinyfin is not required to implement these. The replacement is specified instead
 | `DELETE /PlayingItems/{itemId}` | `POST /Sessions/Playing/Stopped` |
 | `DELETE /Users/{userId}/PlayingItems/{itemId}` | `POST /Sessions/Playing/Stopped` |
 | `GET /Users/{userId}/Items/Resume` | `GET /UserItems/Resume` |
-| `GET /Users/{userId}/Items/{itemId}/UserData` | `GET /UserItems/{itemId}/UserData` |
 | `POST /PlayingItems/{itemId}` | `POST /Sessions/Playing` |
 | `POST /PlayingItems/{itemId}/Progress` | `POST /Sessions/Playing/Progress` |
 | `POST /Users/{userId}/Authenticate` | `POST /Users/AuthenticateByName` |
-| `POST /Users/{userId}/Items/{itemId}/UserData` | `POST /UserItems/{itemId}/UserData` |
 | `POST /Users/{userId}/PlayingItems/{itemId}` | `POST /Sessions/Playing` |
 | `POST /Users/{userId}/PlayingItems/{itemId}/Progress` | `POST /Sessions/Playing/Progress` |
 
@@ -28,6 +26,8 @@ Specified as thin aliases of the modern route (user id taken from the path). Iso
 | `DELETE /Users/{userId}/PlayedItems/{itemId}` | `DELETE /UserPlayedItems/{itemId}?userId=` | static:2 |
 | `GET /Users/{userId}/Items` | `GET /Items?userId=` | static:37 |
 | `GET /Users/{userId}/Items/{itemId}` | `/Items/{itemId}?userId=` | static:46, live-capture |
+| `GET /Users/{userId}/Items/{itemId}/UserData` | `GET /UserItems/{itemId}/UserData?userId=` | live-capture (web client) |
+| `POST /Users/{userId}/Items/{itemId}/UserData` | `POST /UserItems/{itemId}/UserData?userId=` | live-capture (web client, favorite mark) |
 | `POST /Users/{userId}` | `POST /Users?userId=` | static:1 |
 | `POST /Users/{userId}/Configuration` | `POST /Users/Configuration?userId=` | static:6 |
 | `POST /Users/{userId}/Password` | `POST /Users/Password?userId=` | static:2 |

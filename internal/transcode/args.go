@@ -330,6 +330,16 @@ func scaleFilter(req Request) string {
 	return ""
 }
 
+// bufSize is the rate control buffer of an encode held to maxrate: twice the
+// rate, kept within the 32-bit option range of ffmpeg (a client that states no
+// real limit sends a ceiling near 2^31 and twice that overflows it).
+func bufSize(maxrate int) int {
+	if maxrate > math.MaxInt32/2 {
+		return math.MaxInt32
+	}
+	return 2 * maxrate
+}
+
 // videoEncodeArgs is the encoder part of a re-encoded picture. H.264 and HEVC
 // are written with the reference's encoder settings: constant quality capped
 // by the requested bit rate, the "veryfast" preset with a light motion search,
@@ -338,7 +348,7 @@ func scaleFilter(req Request) string {
 // of a segment ahead of its presentation time.
 func videoEncodeArgs(req Request) []string {
 	maxrate := CapVideoBitrate(req.VideoBitrate, req.VideoSourceBitrate, req.VideoSourceCodec, req.VideoCodec, req.VideoSourceBitDepth)
-	rate := []string{"-maxrate", strconv.Itoa(maxrate), "-bufsize", strconv.Itoa(2 * maxrate)}
+	rate := []string{"-maxrate", strconv.Itoa(maxrate), "-bufsize", strconv.Itoa(bufSize(maxrate))}
 	switch req.VideoCodec {
 	case "h264":
 		args := []string{"-c:v", "libx264", "-preset", "veryfast", "-crf", "23"}
@@ -361,7 +371,7 @@ func videoEncodeArgs(req Request) []string {
 	args := []string{"-c:v", req.VideoCodec}
 	if req.VideoBitrate > 0 {
 		b := strconv.Itoa(req.VideoBitrate)
-		args = append(args, "-b:v", b, "-maxrate", b, "-bufsize", strconv.Itoa(2*req.VideoBitrate))
+		args = append(args, "-b:v", b, "-maxrate", b, "-bufsize", strconv.Itoa(bufSize(req.VideoBitrate)))
 	}
 	return args
 }

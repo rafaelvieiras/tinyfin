@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "target": "tinyfin",
+  "passing": [
+    "playback.spec.ts > api trace: HLS transcode session matches the reference",
+    "playback.spec.ts > api trace: direct-play session matches the reference",
+    "playback.spec.ts > audio: the audio menu lists both tracks and switching reloads the stream",
+    "playback.spec.ts > chapters: the details page lists the chapters and a chapter starts playback at its position",
+    "playback.spec.ts > next episode: the Up Next popup appears near the end and Start Now plays the next episode",
+    "playback.spec.ts > play: direct play starts the video element",
+    "playback.spec.ts > progress: pause, seek, resume and stop are reported and the resume position persists",
+    "playback.spec.ts > quality menu: the 420 kbps preset is sent as MaxStreamingBitrate and a lower-bitrate source stays direct",
+    "playback.spec.ts > subtitles: the menu lists Off and both embedded tracks; a text track is shown, then turned off",
+    "playback.spec.ts > subtitles: without burn-in a transcoded stream keeps the subtitle as an external text track",
+    "playback.spec.ts > transcode: a bitrate limit below the source makes the server produce HLS",
+    "playback.spec.ts > trickplay: hovering the position slider shows a thumbnail served from the trickplay sheets",
+    "seed.spec.ts > first-run login page renders",
+    "seed.spec.ts > home page shows the libraries",
+    "seed.spec.ts > login as admin",
+    "seed.spec.ts > movie detail page renders",
+    "seed.spec.ts > movies library lists the fixture items",
+    "trace.spec.ts > api trace home -> library -> detail matches the reference"
+  ]
+}

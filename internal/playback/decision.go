@@ -175,6 +175,9 @@ func reasons(item storage.Item, profile deviceprofile.DeviceProfile, opts Option
 	if hasVideo {
 		out = append(out, videoConditionFailures(video, normalizeToken(item.Container), profile)...)
 	}
+	if hasAudio && audioConditionFailed(item.MediaStreams, audio, profile) {
+		out = append(out, "SecondaryAudioNotSupported")
+	}
 	if opts.BurnSubtitle || opts.NoDirectPlay {
 		out = append(out, "SubtitleCodecNotSupported")
 	}
@@ -242,6 +245,10 @@ func decide(item storage.Item, profile deviceprofile.DeviceProfile, opts Options
 	if hasVideo && len(videoConditionFailures(video, container, profile)) > 0 {
 		// a CodecProfile condition the video does not meet rules out every
 		// way of sending it as is
+		return transcodeOrNone(profile)
+	}
+	if hasAudio && audioConditionFailed(item.MediaStreams, audio, profile) {
+		// a secondary audio track the profile refuses (playback.audio.R3)
 		return transcodeOrNone(profile)
 	}
 	if container != "" && !opts.BurnSubtitle {
@@ -369,6 +376,41 @@ func FirstTranscodingProfile(profiles []deviceprofile.TranscodingProfile) (devic
 		return tp, true
 	}
 	return deviceprofile.TranscodingProfile{}, false
+}
+
+// PickTranscodingProfile is the entry a video is offered when it has to be
+// transcoded (playback.offer.R2): of the entries meant for streaming, the
+// first whose video codec list takes the source's picture (an empty list takes
+// any), else the first; among those, the first whose audio codec list takes
+// the selected track's sound, else the first of them.
+func PickTranscodingProfile(profiles []deviceprofile.TranscodingProfile, videoCodec, audioCodec string) (deviceprofile.TranscodingProfile, bool) {
+	var cands []deviceprofile.TranscodingProfile
+	for _, tp := range profiles {
+		if (tp.Type == "" || tp.Type == "Video") && !strings.EqualFold(tp.Context, "Static") {
+			cands = append(cands, tp)
+		}
+	}
+	if len(cands) == 0 {
+		return deviceprofile.TranscodingProfile{}, false
+	}
+	narrow := func(list []deviceprofile.TranscodingProfile, codecs func(deviceprofile.TranscodingProfile) string, codec string) []deviceprofile.TranscodingProfile {
+		if codec == "" {
+			return list
+		}
+		var ok []deviceprofile.TranscodingProfile
+		for _, tp := range list {
+			if c := codecs(tp); c == "" || containsToken(c, codec) {
+				ok = append(ok, tp)
+			}
+		}
+		if len(ok) == 0 {
+			return list
+		}
+		return ok
+	}
+	cands = narrow(cands, func(tp deviceprofile.TranscodingProfile) string { return tp.VideoCodec }, normalizeToken(videoCodec))
+	cands = narrow(cands, func(tp deviceprofile.TranscodingProfile) string { return tp.AudioCodec }, normalizeToken(audioCodec))
+	return cands[0], true
 }
 
 // selectStream returns the default-marked stream of type t, or the first

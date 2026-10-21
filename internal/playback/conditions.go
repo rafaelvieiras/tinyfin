@@ -150,3 +150,35 @@ func videoConditionFailures(v storage.MediaStreamRef, container string, profile 
 	}
 	return out
 }
+
+// secondaryAudio reports whether the selected audio stream is not the first
+// audio stream of the file, whatever its default flag or codec.
+func secondaryAudio(streams []storage.MediaStreamRef, audio storage.MediaStreamRef) bool {
+	for _, s := range streams {
+		if s.Type == storage.StreamTypeAudio {
+			return s.Index != audio.Index
+		}
+	}
+	return false
+}
+
+// audioConditionFailed reports whether a condition of the VideoAudio
+// CodecProfiles of profile (those whose codec, when set, lists the audio
+// codec) on IsSecondaryAudio is not met by the selected audio stream.
+func audioConditionFailed(streams []storage.MediaStreamRef, audio storage.MediaStreamRef, profile deviceprofile.DeviceProfile) bool {
+	secondary := strconv.FormatBool(secondaryAudio(streams, audio))
+	for _, cp := range profile.CodecProfiles {
+		if !strings.EqualFold(cp.Type, "VideoAudio") {
+			continue
+		}
+		if cp.Codec != "" && !containsToken(cp.Codec, normalizeToken(audio.Codec)) {
+			continue
+		}
+		for _, c := range cp.Conditions {
+			if strings.EqualFold(c.Property, "IsSecondaryAudio") && !conditionHolds(c, secondary, true) {
+				return true
+			}
+		}
+	}
+	return false
+}

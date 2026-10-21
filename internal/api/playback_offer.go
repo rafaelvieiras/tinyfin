@@ -66,6 +66,9 @@ type offerInput struct {
 	// noVideoCopy / noAudioCopy: the request forbids copying the video /
 	// audio stream (allowVideoStreamCopy=false / allowAudioStreamCopy=false).
 	noVideoCopy, noAudioCopy bool
+	// alwaysBurn: the request asks for the selected subtitle to be burned in
+	// whenever the video is transcoded (playback.subtitle.R8).
+	alwaysBurn bool
 }
 
 // splitCodecs lowercases a comma separated codec list.
@@ -178,7 +181,7 @@ func buildTranscodeOffer(in offerInput) transcodeOffer {
 	if in.audioIdx != nil {
 		q.add("AudioStreamIndex", strconv.Itoa(*in.audioIdx))
 	}
-	if in.subIdx != nil && (in.subMethod == "Encode" || in.subMethod == "Hls") {
+	if in.subIdx != nil && *in.subIdx >= 0 && (in.subMethod == "Encode" || in.subMethod == "Hls" || in.alwaysBurn) {
 		q.add("SubtitleStreamIndex", strconv.Itoa(*in.subIdx))
 	}
 	audioBitrate := int64(192000)
@@ -267,6 +270,9 @@ func buildTranscodeOffer(in offerInput) transcodeOffer {
 	if in.noAudioCopy {
 		q.add("allowAudioStreamCopy", "false")
 	}
+	if in.alwaysBurn {
+		q.add("alwaysBurnInSubtitleWhenTranscoding", "true")
+	}
 
 	path := "/videos/" + guid.Dashed(id)
 	if hls {
@@ -277,8 +283,17 @@ func buildTranscodeOffer(in offerInput) transcodeOffer {
 
 // pickTranscodingProfile is the entry of the profile a video is offered; when
 // the profile has none the decision's own container and codecs stand in for it.
-func pickTranscodingProfile(profile deviceprofile.DeviceProfile, d playback.Decision) deviceprofile.TranscodingProfile {
-	if tp, ok := playback.FirstTranscodingProfile(profile.TranscodingProfiles); ok {
+func pickTranscodingProfile(profile deviceprofile.DeviceProfile, d playback.Decision, item storage.Item) deviceprofile.TranscodingProfile {
+	var vc, ac string
+	for _, st := range item.MediaStreams {
+		if st.Type == storage.StreamTypeVideo && vc == "" {
+			vc = st.Codec
+		}
+		if st.Type == storage.StreamTypeAudio && d.AudioStream != nil && st.Index == *d.AudioStream {
+			ac = st.Codec
+		}
+	}
+	if tp, ok := playback.PickTranscodingProfile(profile.TranscodingProfiles, vc, ac); ok {
 		return tp
 	}
 	return deviceprofile.TranscodingProfile{Container: d.Container, Type: "Video", Protocol: "hls"}
