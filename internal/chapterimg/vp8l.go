@@ -21,8 +21,13 @@ type vp8lConfig struct {
 
 func encodeVP8L(argb []uint32, w, h int, hasAlpha bool) []byte {
 	var best []byte
+	var preps [2]vp8lPrep // without / with the predictor
 	try := func(c vp8lConfig) {
-		out := encodeVP8LWith(argb, w, h, hasAlpha, c)
+		pi := 0
+		if c.predictor {
+			pi = 1
+		}
+		out := encodeVP8LWith(argb, w, h, hasAlpha, c, &preps[pi])
 		if best == nil || len(out) < len(best) {
 			best = out
 		}
@@ -36,9 +41,20 @@ func encodeVP8L(argb []uint32, w, h int, hasAlpha bool) []byte {
 	return best
 }
 
-func encodeVP8LWith(src []uint32, w, h int, hasAlpha bool, c vp8lConfig) []byte {
-	pix := make([]uint32, len(src))
-	copy(pix, src)
+// vp8lPrep memoises the transform stages shared by the configurations.
+type vp8lPrep struct {
+	sg                       []uint32
+	modes                    []uint32
+	mtw, mth                 int
+	pred                     []uint32
+	mult                     []uint32
+	ctw, cth                 int
+	cc                       []uint32
+	haveSG, havePred, haveCC bool
+}
+
+func encodeVP8LWith(src []uint32, w, h int, hasAlpha bool, c vp8lConfig, pr *vp8lPrep) []byte {
+	pix := src
 	var bw bitWriter
 	bw.put(0x2f, 8)
 	bw.put(uint32(w-1), 14)
@@ -50,31 +66,46 @@ func encodeVP8LWith(src []uint32, w, h int, hasAlpha bool, c vp8lConfig) []byte 
 	}
 	bw.put(0, 3) // version
 	if c.subGreen {
+		if !pr.haveSG {
+			pr.sg = make([]uint32, len(src))
+			for i, p := range src {
+				g := (p >> 8) & 0xff
+				r := ((p>>16)&0xff - g) & 0xff
+				b := (p&0xff - g) & 0xff
+				pr.sg[i] = (p & 0xff00ff00) | r<<16 | b
+			}
+			pr.haveSG = true
+		}
+		pix = pr.sg
 		bw.put(1, 1)
 		bw.put(2, 2)
-		for i, p := range pix {
-			g := (p >> 8) & 0xff
-			r := ((p>>16)&0xff - g) & 0xff
-			b := (p&0xff - g) & 0xff
-			pix[i] = (p & 0xff00ff00) | r<<16 | b
-		}
 	}
 	if c.predictor {
+		if !pr.havePred {
+			pr.modes, pr.mtw, pr.mth = chooseModes(pix, w, h, c.tileBits)
+			pr.pred = applyPredictor(pix, w, h, c.tileBits, pr.modes, pr.mtw)
+			pr.havePred = true
+		}
 		bw.put(1, 1)
 		bw.put(0, 2)
 		bw.put(uint32(c.tileBits-2), 3)
-		modes, tw, th := chooseModes(pix, w, h, c.tileBits)
-		writeSubImage(&bw, modes, tw, th)
-		pix = applyPredictor(pix, w, h, c.tileBits, modes, tw)
+		writeSubImage(&bw, pr.modes, pr.mtw, pr.mth)
+		pix = pr.pred
 	}
 	if c.crossCol {
 		cb := c.tileBits + 1
+		if !pr.haveCC {
+			pr.mult, pr.ctw, pr.cth = chooseColorTransform(pix, w, h, cb)
+			pr.cc = make([]uint32, len(pix))
+			copy(pr.cc, pix)
+			applyColorTransform(pr.cc, w, h, cb, pr.mult, pr.ctw)
+			pr.haveCC = true
+		}
 		bw.put(1, 1)
 		bw.put(1, 2)
 		bw.put(uint32(cb-2), 3)
-		mult, tw, th := chooseColorTransform(pix, w, h, cb)
-		writeSubImage(&bw, mult, tw, th)
-		applyColorTransform(pix, w, h, cb, mult, tw)
+		writeSubImage(&bw, pr.mult, pr.ctw, pr.cth)
+		pix = pr.cc
 	}
 	bw.put(0, 1) // no more transforms
 	writeEntropyImage(&bw, pix, w, h, c.cacheBits, true)
