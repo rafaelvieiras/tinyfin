@@ -1276,6 +1276,19 @@ data[i + 2], data[i + 3], data[i + 4] = word >> 8, word & 255, compat << 4
 open(dst, "wb").write(data)
 PY
   }
+  # A real dual-layer stream (profile 7 shape): a base layer and a half-size enhancement layer
+  # interleaved by dovi_tool (the enhancement NAL units are wrapped as type 63, an RPU in each
+  # picture as type 62), then the record patched to profile 7 / id 6 with the layer present. The
+  # RPUs themselves are profile 8.1 ones: dovi_tool cannot generate profile 7 metadata.
+  f="$MX2/Mx2 Dv7 Real El (2730)/Mx2 Dv7 Real El (2730).mkv"
+  if [ ! -f "$f" ]; then
+    hevc "$WORK/b.hevc" yuv420p10le "$HDR10" && dvrpu "$WORK/bl.hevc" "$WORK/b.hevc" 8.1 &&
+      jf -f lavfi -i "testsrc=duration=3:size=160x120:rate=12" -c:v libx265 -preset ultrafast -pix_fmt yuv420p10le \
+        -x265-params "log-level=error:repeat-headers=1:no-open-gop=1" -f hevc "$WORK/e.hevc" &&
+      dvrpu "$WORK/el.hevc" "$WORK/e.hevc" 8.1 &&
+      "$DOVI" mux --bl "$WORK/bl.hevc" --el "$WORK/el.hevc" -o "$WORK/dual.hevc" >/dev/null &&
+      mux "$WORK/dual.mkv" "$WORK/dual.hevc" && dvcfg "$WORK/dual.mkv" "Mx2 Dv7 Real El (2730)" 7 6 1
+  fi
   local DV81="$MX2/Mx2 Dv81 Mkv (2602)/Mx2 Dv81 Mkv (2602).mkv"
   if [ -f "$DV81" ]; then
     dvcfg "$DV81" "Mx2 Dv Cfg 8 2 (2610)" 8 2 0

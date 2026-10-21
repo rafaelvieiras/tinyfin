@@ -409,7 +409,8 @@ func CapVideoBitrate(requested, source int, sourceCodec, outCodec string, bitDep
 		x = math.RoundToEven(x * BitDepthFactor(source))
 	}
 	x = min(x, float64(requested))
-	f := codecEfficiency(outCodec) / codecEfficiency(sourceCodec)
+	// (a target more efficient than the source never lowers the figure)
+	f := max(1, codecEfficiency(outCodec)/codecEfficiency(sourceCodec))
 	switch {
 	case x <= 500000:
 		f = max(f, 4)

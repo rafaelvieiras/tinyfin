@@ -1504,6 +1504,91 @@
       }
      ]
     }
+   },
+   {
+    "name": "r10-800 announced as hevc",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.r10-800.id}}/master.m3u8?MediaSourceId={{item.r10-800.id}}&DeviceId=conf&PlaySessionId=r10-{{run.suffix}}-10&SegmentContainer=ts&VideoCodec=hevc&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=3377280,AVERAGE-BANDWIDTH=3377280,"
+      }
+     ]
+    }
+   },
+   {
+    "name": "r10-6000 announced as hevc",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.r10-6000.id}}/master.m3u8?MediaSourceId={{item.r10-6000.id}}&DeviceId=conf&PlaySessionId=r10-{{run.suffix}}-11&SegmentContainer=ts&VideoCodec=hevc&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=8227231,AVERAGE-BANDWIDTH=8227231,"
+      }
+     ]
+    }
+   },
+   {
+    "name": "r10-12000 announced as hevc",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.r10-12000.id}}/master.m3u8?MediaSourceId={{item.r10-12000.id}}&DeviceId=conf&PlaySessionId=r10-{{run.suffix}}-12&SegmentContainer=ts&VideoCodec=hevc&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=14425312,AVERAGE-BANDWIDTH=14425312,"
+      }
+     ]
+    }
+   },
+   {
+    "name": "r10-hevc announced as hevc",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.r10-hevc.id}}/master.m3u8?MediaSourceId={{item.r10-hevc.id}}&DeviceId=conf&PlaySessionId=r10-{{run.suffix}}-13&SegmentContainer=ts&VideoCodec=hevc&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=3833318,AVERAGE-BANDWIDTH=3833318,"
+      }
+     ]
+    }
+   },
+   {
+    "name": "r10-eight announced as hevc",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.r10-eight.id}}/master.m3u8?MediaSourceId={{item.r10-eight.id}}&DeviceId=conf&PlaySessionId=r10-{{run.suffix}}-14&SegmentContainer=ts&VideoCodec=hevc&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=4518800,AVERAGE-BANDWIDTH=4518800,"
+      }
+     ]
+    }
    }
   ]
  }

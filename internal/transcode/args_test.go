@@ -455,6 +455,13 @@ func TestCapVideoBitrateBitDepth(t *testing.T) {
 			t.Errorf("CapVideoBitrate(50M, %d, %s, 10 bits) = %d, want %d", c.src, c.codec, got, c.want)
 		}
 	}
+	// a more efficient target does not lower the figure
+	if got := CapVideoBitrate(50000000, 3048364, "h264", "hevc", 8); got != 3048364 {
+		t.Errorf("h264 to hevc above the ladder = %d, want 3048364", got)
+	}
+	if got := CapVideoBitrate(50000000, 1530000, "h264", "hevc", 8); got != 3825000 {
+		t.Errorf("h264 to hevc in the ladder = %d, want 3825000", got)
+	}
 	// 8 bits and an unknown depth keep the plain ladder
 	if a, b := CapVideoBitrate(50000000, 804936, "h264", "h264", 8), CapVideoBitrate(50000000, 804936, "h264", "h264", 0); a != b || a != 4024680 {
 		t.Errorf("plain ladder = %d / %d, want 4024680", a, b)
