@@ -19,22 +19,22 @@ How to read and edit this: [`docs/coverage/README.md`](coverage/README.md). Mach
 | Measure | Value |
 |---|---|
 | Reference operations (OpenAPI 12.2.0) | 364 |
-| Registered by Tinyfin | **186** (51%) |
+| Registered by Tinyfin | **188** (52%) |
 | Registered **and** a passing contract scenario | **145** (40%) |
-| Called by the official web client (docs/11) and registered | 121 of 164 (74%) |
+| Called by the official web client (docs/11) and registered | 122 of 164 (74%) |
 | Routes Tinyfin serves that the OpenAPI document lacks | 23 (legacy aliases the web client needs, `/socket`, HLS) |
 | Non-route features tracked | 112 (✅ 64 · 🟡 19 · 🗓️ 13 · ⛔ 16) |
 
 ### Routes by status
 
-✅✅✅✅✅✅✅✅✅🟡🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔↔️ ✅ 158 · 🟡 12 · 🗓️ 83 · ⛔ 95 · ↔️ 16
+✅✅✅✅✅✅✅✅✅🟡🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔↔️ ✅ 160 · 🟡 12 · 🗓️ 83 · ⛔ 93 · ↔️ 16
 
 ```mermaid
 pie showData title Reference operations by status
-    "supported" : 158
+    "supported" : 160
     "partial" : 12
     "planned" : 83
-    "not-planned" : 95
+    "not-planned" : 93
     "divergent-by-design" : 16
 ```
 
@@ -60,9 +60,9 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | [Images](coverage/api-images.md) | 40 | 11 (28%) | 7 (18%) | ✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️ | ✅ 11 · 🗓️ 29 |
 | [Library administration](coverage/api-library-admin.md) | 32 | 13 (41%) | 6 (19%) | ✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔↔️ | ✅ 11 · 🗓️ 16 · ⛔ 3 · ↔️ 2 |
 | [Library browsing and metadata queries](coverage/api-library-browse.md) | 58 | 46 (79%) | 41 (71%) | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🟡🗓️🗓️🗓️🗓️ | ✅ 44 · 🟡 1 · 🗓️ 11 · ⛔ 1 · ↔️ 1 |
-| [Live TV and channels](coverage/api-live-tv.md) | 43 | 1 (2%) | 0 (0%) | ⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔ | 🟡 1 · ⛔ 42 |
+| [Live TV and channels](coverage/api-live-tv.md) | 43 | 2 (5%) | 0 (0%) | ✅⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 1 · 🟡 1 · ⛔ 41 |
 | [Playback, streaming and subtitles](coverage/api-playback.md) | 38 | 24 (63%) | 19 (50%) | ✅✅✅✅✅✅✅✅✅✅🟡🟡⛔⛔⛔⛔⛔⛔⛔↔️ | ✅ 19 · 🟡 3 · ⛔ 14 · ↔️ 2 |
-| [Sessions, play state and realtime](coverage/api-sessions-realtime.md) | 50 | 15 (30%) | 11 (22%) | ✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 14 · 🟡 1 · 🗓️ 13 · ⛔ 22 |
+| [Sessions, play state and realtime](coverage/api-sessions-realtime.md) | 50 | 16 (32%) | 11 (22%) | ✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 15 · 🟡 1 · 🗓️ 13 · ⛔ 21 |
 | [System, branding, localization and plugins](coverage/api-system.md) | 47 | 27 (57%) | 19 (40%) | ✅✅✅✅✅✅✅✅🟡🟡🟡🗓️🗓️🗓️⛔⛔⛔⛔⛔↔️ | ✅ 18 · 🟡 6 · 🗓️ 7 · ⛔ 13 · ↔️ 3 |
 | [Users, authentication and first-run setup](coverage/api-users-auth.md) | 35 | 28 (80%) | 21 (60%) | ✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️↔️↔️↔️↔️ | ✅ 21 · 🗓️ 7 · ↔️ 7 |
 
@@ -88,7 +88,7 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | ItemUpdate | 3 | 0 | 0 | ⛔ 3 |
 | Library | 34 | 25 | 21 | ✅ 24 · 🗓️ 9 · ↔️ 1 |
 | LibraryStructure | 8 | 5 | 3 | ✅ 5 · 🗓️ 3 |
-| LiveTv | 38 | 1 | 0 | 🟡 1 · ⛔ 37 |
+| LiveTv | 38 | 2 | 0 | ✅ 1 · 🟡 1 · ⛔ 36 |
 | Localization | 4 | 4 | 4 | ✅ 4 |
 | Lyric | 6 | 1 | 1 | ✅ 1 · ⛔ 5 |
 | MediaInfo | 5 | 3 | 2 | ✅ 3 · ⛔ 2 |
@@ -107,7 +107,7 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | Studio | 2 | 2 | 2 | ✅ 2 |
 | Subtitle | 10 | 10 | 8 | ✅ 5 · 🟡 3 · ↔️ 2 |
 | Suggestion | 1 | 1 | 1 | ✅ 1 |
-| SyncPlay | 22 | 0 | 0 | ⛔ 22 |
+| SyncPlay | 22 | 1 | 0 | ✅ 1 · ⛔ 21 |
 | System | 19 | 14 | 8 | ✅ 11 · 🟡 3 · 🗓️ 5 |
 | Trailer | 1 | 0 | 0 | ⛔ 1 |
 | TrickPlay | 2 | 2 | 2 | ✅ 2 |
@@ -145,9 +145,9 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [chapters](contract/specs/chapters.md) | 26 | 26 | 5 | 5 |
 | [collections](contract/specs/collections.md) | 51 | 51 | 30 | 30 |
 | [extras](contract/specs/extras.md) | 21 | 21 | 15 | 15 |
-| [images](contract/specs/images.md) | 15 | 15 | 13 | 13 |
+| [images](contract/specs/images.md) | 17 | 16 | 13 | 13 |
 | [items](contract/specs/items.md) | 170 | 170 | 156 | 156 |
-| [misc](contract/specs/misc.md) | 5 | 5 | 3 | 3 |
+| [misc](contract/specs/misc.md) | 7 | 7 | 3 | 3 |
 | [music](contract/specs/music.md) | 82 | 82 | 14 | 14 |
 | [musicvideos](contract/specs/musicvideos.md) | 26 | 26 | 17 | 17 |
 | [playback](contract/specs/playback.md) | 54 | 53 | 7 | 7 |
@@ -162,7 +162,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [trickplay](contract/specs/trickplay.md) | 11 | 11 | 10 | 10 |
 | [users](contract/specs/users.md) | 188 | 188 | 195 | 195 |
 | [wire](contract/specs/wire.md) | 15 | 14 | 14 | 14 |
-| **total** | 1038 | 1009 | 740 | 737 |
+| **total** | 1042 | 1012 | 740 | 737 |
 
 ## Biggest gaps (planned or not planned, web-client facing)
 
@@ -202,7 +202,6 @@ Operations the official web client mentions (docs/11) that Tinyfin does not regi
 | `POST /ScheduledTasks/Running/{taskId}` | 🗓️ planned | Library administration | Only the library-scan task and its start route exist. |
 | `POST /Sessions/{sessionId}/Command` | 🗓️ planned | Sessions, play state and realtime | Remote control of other sessions is not implemented (the /socket transport exists). |
 | `GET /Shows/Upcoming` | 🗓️ planned | Library browsing and metadata queries | Not implemented. |
-| `GET /SyncPlay/List` | ⛔ not-planned | Sessions, play state and realtime | Not in scope for v1; the web client treats 404 on /SyncPlay/List as 'unavailable'. |
 | `POST /ClientLog/Document` | 🗓️ planned | System, branding, localization and plugins | Not implemented. |
 | `POST /System/Configuration/Branding` | 🗓️ planned | System, branding, localization and plugins | Not implemented. |
 | `POST /System/Restart` | 🗓️ planned | System, branding, localization and plugins | Not implemented; a supervisor restarts the process. |

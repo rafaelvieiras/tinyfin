@@ -4,7 +4,7 @@
 
 Sessions, remote control, per-user item data, display preferences and SyncPlay.
 
-[Overview](../COVERAGE.md) · 50 operations · 15 registered (30%) · 11 verified · ✅ 14 · 🟡 1 · 🗓️ 13 · ⛔ 22
+[Overview](../COVERAGE.md) · 50 operations · 16 registered (32%) · 11 verified · ✅ 15 · 🟡 1 · 🗓️ 13 · ⛔ 21
 
 ✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔
 
@@ -47,7 +47,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ⛔ not-planned | `POST /SyncPlay/Buffering` | SyncPlayIsInGroup |  |  | Not in scope for v1; the web client treats 404 on /SyncPlay/List as 'unavailable'. (priority: low) |
 | ⛔ not-planned | `POST /SyncPlay/Join` | SyncPlayJoinGroup |  |  | Not in scope for v1; the web client treats 404 on /SyncPlay/List as 'unavailable'. (priority: low) |
 | ⛔ not-planned | `POST /SyncPlay/Leave` | SyncPlayIsInGroup |  |  | Not in scope for v1; the web client treats 404 on /SyncPlay/List as 'unavailable'. (priority: low) |
-| ⛔ not-planned | `GET /SyncPlay/List` | SyncPlayJoinGroup | yes |  | Not in scope for v1; the web client treats 404 on /SyncPlay/List as 'unavailable'. (priority: low) |
+| ✅ supported *(no scenario)* | `GET /SyncPlay/List` | SyncPlayJoinGroup | yes | 0/1 |  |
 | ⛔ not-planned | `POST /SyncPlay/MovePlaylistItem` | SyncPlayIsInGroup |  |  | Not in scope for v1; the web client treats 404 on /SyncPlay/List as 'unavailable'. (priority: low) |
 | ⛔ not-planned | `POST /SyncPlay/New` | SyncPlayCreateGroup |  |  | Not in scope for v1; the web client treats 404 on /SyncPlay/List as 'unavailable'. (priority: low) |
 | ⛔ not-planned | `POST /SyncPlay/NextItem` | SyncPlayIsInGroup |  |  | Not in scope for v1; the web client treats 404 on /SyncPlay/List as 'unavailable'. (priority: low) |

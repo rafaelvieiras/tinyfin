@@ -4,9 +4,9 @@
 
 Tuners, guide, timers, recordings and channel plugins.
 
-[Overview](../COVERAGE.md) · 43 operations · 1 registered (2%) · 0 verified · 🟡 1 · ⛔ 42
+[Overview](../COVERAGE.md) · 43 operations · 2 registered (5%) · 0 verified · ✅ 1 · 🟡 1 · ⛔ 41
 
-⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔
+✅⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔
 
 Columns: **Auth** is the reference's authorization policy; **Web** = mentioned in docs/11 (called by the official web client); **Tests** = scenarios that exercise the route (passing / total).
 
@@ -39,7 +39,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ⛔ not-planned | `GET /LiveTv/LiveStreamFiles/{streamId}/stream.{container}` | Anonymous |  |  | Out of scope for v1 (docs/01, decision D8). (priority: low) |
 | 🟡 partial | `GET /LiveTv/Programs` | LiveTvAccess | yes |  | Always returns an empty result so the series detail page does not break; no Live TV exists. |
 | ⛔ not-planned | `POST /LiveTv/Programs` | LiveTvAccess | yes |  | Out of scope for v1 (docs/01, decision D8). (priority: low) |
-| ⛔ not-planned | `GET /LiveTv/Programs/Recommended` | LiveTvAccess |  |  | Out of scope for v1 (docs/01, decision D8). (priority: low) |
+| ✅ supported *(no scenario)* | `GET /LiveTv/Programs/Recommended` | LiveTvAccess |  | 0/1 |  |
 | ⛔ not-planned | `GET /LiveTv/Programs/{programId}` | LiveTvAccess |  |  | Out of scope for v1 (docs/01, decision D8). (priority: low) |
 | ⛔ not-planned | `GET /LiveTv/Recordings` | LiveTvAccess |  |  | Out of scope for v1 (docs/01, decision D8). (priority: low) |
 | ⛔ not-planned | `GET /LiveTv/Recordings/Folders` | LiveTvAccess |  |  | Out of scope for v1 (docs/01, decision D8). (priority: low) |

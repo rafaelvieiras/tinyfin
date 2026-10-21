@@ -8,13 +8,13 @@
    "supported": 64
   },
   "operations": 364,
-  "registered": 186,
+  "registered": 188,
   "routes_by_status": {
    "divergent-by-design": 16,
-   "not-planned": 95,
+   "not-planned": 93,
    "partial": 12,
    "planned": 83,
-   "supported": 158
+   "supported": 160
   },
   "verified": 145
  },
@@ -1070,6 +1070,8 @@
    "web": true,
    "scenarios": [
     "images.episode.names",
+    "images.frame.episode",
+    "images.frame.movie",
     "images.local.extension-order",
     "images.local.extensions-recognized",
     "images.local.folder-shaped",
@@ -1102,6 +1104,8 @@
    "scenarios": [
     "chapters.images.generate",
     "images.api.index-lookup",
+    "images.frame.episode",
+    "images.frame.movie",
     "music.image.album",
     "music2.artist.images",
     "musicvideos.images.local"
@@ -1119,6 +1123,8 @@
    "scenarios": [
     "chapters.images.generate",
     "images.api.index-lookup",
+    "images.frame.episode",
+    "images.frame.movie",
     "music.image.album",
     "music2.artist.images",
     "musicvideos.images.local"
@@ -2098,6 +2104,8 @@
     "extras.series.series-and-season",
     "extras.versions.movie",
     "images.api.index-lookup",
+    "images.frame.episode",
+    "images.frame.movie",
     "images.local.backdrop-duplicate",
     "images.local.backdrops",
     "images.local.extension-order",
@@ -2913,12 +2921,13 @@
    "tag": "LiveTv",
    "group": "live-tv",
    "policy": "LiveTvAccess",
-   "status": "not-planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": false,
-   "notes": "Out of scope for v1 (docs/01, decision D8).",
-   "priority": "low"
+   "scenarios": [
+    "misc.home.recommended-programs"
+   ]
   },
   {
    "id": "GET /LiveTv/Programs/{programId}",
@@ -4741,12 +4750,13 @@
    "tag": "SyncPlay",
    "group": "sessions-realtime",
    "policy": "SyncPlayJoinGroup",
-   "status": "not-planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": true,
-   "notes": "Not in scope for v1; the web client treats 404 on /SyncPlay/List as 'unavailable'.",
-   "priority": "low"
+   "scenarios": [
+    "misc.home.syncplay-list"
+   ]
   },
   {
    "id": "POST /SyncPlay/MovePlaylistItem",
