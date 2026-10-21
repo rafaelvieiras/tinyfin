@@ -2,7 +2,7 @@
 
 What a client sees when it asks for a particular audio track or a subtitle that has to be rendered into the picture: what PlaybackInfo says (direct play or not, the `TranscodingUrl` and the parameters in it), and what the HLS routes of that URL answer. Probed on the 12.2 reference with online metadata off.
 
-Scenarios: [`../scenarios/playback.json`](../scenarios/playback.json), [`../scenarios/playback2.json`](../scenarios/playback2.json), [`../scenarios/playback4.json`](../scenarios/playback4.json) (the offer), [`../scenarios/playback5.json`](../scenarios/playback5.json) (segment plan, seek, repeated names), [`../scenarios/playback6.json`](../scenarios/playback6.json) (stream bit rates, members, container names), [`../scenarios/playback8.json`](../scenarios/playback8.json) (segment timestamps), [`../scenarios/playback10.json`](../scenarios/playback10.json) (how a picture is encoded: reordering, profile and level, scaling, HEVC, a seek near the end; fixtures from `scripts/conformance-hls3.sh`, library `Hls3`). Fixture state: [`../fixtures.json`](../fixtures.json), media from `scripts/conformance-media.sh` (lazy library `AvTrack`; library `Strm` holds a `.strm` whose address `scripts/conformance-strm-serve.sh <media-root>` serves, it must be running for `playback.offer.strm-http`).
+Scenarios: [`../scenarios/playback.json`](../scenarios/playback.json), [`../scenarios/playback2.json`](../scenarios/playback2.json), [`../scenarios/playback4.json`](../scenarios/playback4.json) (the offer), [`../scenarios/playback5.json`](../scenarios/playback5.json) (segment plan, seek, repeated names), [`../scenarios/playback6.json`](../scenarios/playback6.json) (stream bit rates, members, container names), [`../scenarios/playback8.json`](../scenarios/playback8.json) (segment timestamps), [`../scenarios/playback10.json`](../scenarios/playback10.json) (how a picture is encoded: reordering, profile and level, scaling, HEVC, a seek near the end; fixtures from `scripts/conformance-hls3.sh`, library `Hls3`), [`../scenarios/playback11.json`](../scenarios/playback11.json) (media sources on the item, the kill of running encodings, the rate ladder of 10-bit pictures). Fixture state: [`../fixtures.json`](../fixtures.json), media from `scripts/conformance-media.sh` (lazy library `AvTrack`; library `Strm` holds a `.strm` whose address `scripts/conformance-strm-serve.sh <media-root>` serves, it must be running for `playback.offer.strm-http`).
 
 ## Fixture facts this spec relies on
 
@@ -70,6 +70,10 @@ What `POST /Items/{id}/PlaybackInfo` says about a video, from the device profile
 - **playback.offer.R6** `GET` of an `http` offer (and of any `Videos/{id}/stream` request that carries `TranscodeReasons` and no `Static=true`) answers `200` with the source transcoded as one progressive stream in the URL's container (`video/mp4`, `video/x-matroska`, ...), no range support.
 - Every video media source carries `Bitrate`, the rate of the file (`playback.offer.R5` scenario).
 
+## <a id="item-sources"></a>Media sources on the item
+
+- **playback.item.R1** The `MediaSources[0]` of an item (`GET /Items`, `/Items/{id}`, `/Users/{userId}/Items/{id}`) reports `SupportsDirectPlay` true and the two other flags from the caller's policy, whatever the container, codec or path kind (`.mp4`, `.mkv`, `.avi`, `.strm` with an unreachable address, music video, episode, home video): for a track (`Audio`) `SupportsDirectStream` is always true and `SupportsTranscoding` is `EnableAudioPlaybackTranscoding`; for every other file `SupportsDirectStream` is `EnablePlaybackRemuxing` and `SupportsTranscoding` is `EnableVideoPlaybackTranscoding` (`EnableAudioPlaybackTranscoding` and `EnableMediaPlayback` change nothing). An API key or an administrator with the default policy sees all three true. This is the "no device profile" answer of `policy.md#playback` R5/R6.
+
 ## Known differences
 
 Observed on the reference and deliberately not reproduced (not asserted by a scenario that runs against both):
@@ -124,3 +128,4 @@ Observed on the reference and deliberately not reproduced (not asserted by a sce
 | `playback.offer.R21` | `playback.offer.ts-bitrate` |
 | `playback.offer.R22`, `R23` | `playback.offer.pixel-depth` |
 | `playback.offer.R24` | `playback.offer.transcode-codec-reasons` |
+| `playback.item.R1` | `playback.item.stream-flags` |

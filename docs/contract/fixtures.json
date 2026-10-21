@@ -9,7 +9,11 @@
     {"key": "rating17s1", "name": "rating17s1", "password": "Rating-Pass-17s", "policy": {"MaxParentalRating": 17, "MaxParentalSubRating": 1}},
     {"key": "blockunrated", "name": "blockunrated", "password": "Block-Pass-1", "policy": {"BlockUnratedItems": ["Movie"]}},
     {"key": "collmgr", "name": "collmgr", "password": "CollMgr-Pass-1", "policy": {"EnableCollectionManagement": true}},
-    {"key": "submgr", "name": "submgr", "password": "SubMgr-Pass-1", "policy": {"EnableSubtitleManagement": true}}
+    {"key": "submgr", "name": "submgr", "password": "SubMgr-Pass-1", "policy": {"EnableSubtitleManagement": true}},
+    {"key": "flagsnone", "name": "flagsnone", "password": "Flags-Pass-1", "policy": {"EnableAudioPlaybackTranscoding": false, "EnableVideoPlaybackTranscoding": false, "EnablePlaybackRemuxing": false}},
+    {"key": "flagsremux", "name": "flagsremux", "password": "Flags-Pass-1", "policy": {"EnableAudioPlaybackTranscoding": false, "EnableVideoPlaybackTranscoding": false, "EnablePlaybackRemuxing": true}},
+    {"key": "flagsaudio", "name": "flagsaudio", "password": "Flags-Pass-1", "policy": {"EnableAudioPlaybackTranscoding": true, "EnableVideoPlaybackTranscoding": false, "EnablePlaybackRemuxing": false}},
+    {"key": "flagsvideo", "name": "flagsvideo", "password": "Flags-Pass-1", "policy": {"EnableAudioPlaybackTranscoding": false, "EnableVideoPlaybackTranscoding": true, "EnablePlaybackRemuxing": false}}
   ],
   "libraries": [
     {"key": "movies", "name": "Movies", "type": "movies", "path": "Movies"},

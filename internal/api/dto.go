@@ -551,6 +551,17 @@ func (s *Server) mediaSourcesFor(ctx context.Context, item storage.Item) []media
 	// branch's own reasoning.
 	source.SupportsDirectPlay = true
 	source.TranscodingSubProtocol = "http"
+	// What the caller's flags leave on the table (playback.item.R1): a
+	// track is always streamable and transcodable with EnableAudioPlayback-
+	// Transcoding; any other file is streamable with EnablePlaybackRemuxing
+	// and transcodable with EnableVideoPlaybackTranscoding.
+	ac, _ := AuthFromContext(ctx)
+	f := playbackFlagsFor(ac)
+	if item.Type == storage.ItemTypeAudio {
+		source.SupportsDirectStream, source.SupportsTranscoding = true, f.audio
+	} else {
+		source.SupportsDirectStream, source.SupportsTranscoding = f.remux, f.video
+	}
 	return []mediaSourceInfoDto{source}
 }
 

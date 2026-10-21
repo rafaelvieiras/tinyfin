@@ -1,0 +1,915 @@
+[
+ {
+  "id": "playback.item.stream-flags",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "playback.md#item-sources",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "policy"
+  ],
+  "covers": [
+   "playback.item.R1"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-multi",
+   "library:music",
+   "item:mfirst",
+   "library:musicvideos",
+   "item:mvsecond"
+  ],
+  "steps": [
+   {
+    "name": "admin: alpha (video)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "admin: av-multi (video)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.av-multi.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "admin: mvsecond (video)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvsecond.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "admin: mfirst (audio)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mfirst.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "admin: listing",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.alpha.id}}&Fields=MediaSources"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "admin: track listing",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.mfirst.id}}&Fields=MediaSources"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsnone: alpha (video)",
+    "as": "flagsnone",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsnone: av-multi (video)",
+    "as": "flagsnone",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.av-multi.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsnone: mvsecond (video)",
+    "as": "flagsnone",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvsecond.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsnone: mfirst (audio)",
+    "as": "flagsnone",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mfirst.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsnone: listing",
+    "as": "flagsnone",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.alpha.id}}&Fields=MediaSources"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsnone: track listing",
+    "as": "flagsnone",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.mfirst.id}}&Fields=MediaSources"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsremux: alpha (video)",
+    "as": "flagsremux",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsremux: av-multi (video)",
+    "as": "flagsremux",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.av-multi.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsremux: mvsecond (video)",
+    "as": "flagsremux",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvsecond.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsremux: mfirst (audio)",
+    "as": "flagsremux",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mfirst.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsremux: listing",
+    "as": "flagsremux",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.alpha.id}}&Fields=MediaSources"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsremux: track listing",
+    "as": "flagsremux",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.mfirst.id}}&Fields=MediaSources"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsaudio: alpha (video)",
+    "as": "flagsaudio",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsaudio: av-multi (video)",
+    "as": "flagsaudio",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.av-multi.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsaudio: mvsecond (video)",
+    "as": "flagsaudio",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvsecond.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsaudio: mfirst (audio)",
+    "as": "flagsaudio",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mfirst.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsaudio: listing",
+    "as": "flagsaudio",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.alpha.id}}&Fields=MediaSources"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsaudio: track listing",
+    "as": "flagsaudio",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.mfirst.id}}&Fields=MediaSources"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsvideo: alpha (video)",
+    "as": "flagsvideo",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsvideo: av-multi (video)",
+    "as": "flagsvideo",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.av-multi.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsvideo: mvsecond (video)",
+    "as": "flagsvideo",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvsecond.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsvideo: mfirst (audio)",
+    "as": "flagsvideo",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mfirst.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsvideo: listing",
+    "as": "flagsvideo",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.alpha.id}}&Fields=MediaSources"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsvideo: track listing",
+    "as": "flagsvideo",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.mfirst.id}}&Fields=MediaSources"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   }
+  ]
+ }
+]
