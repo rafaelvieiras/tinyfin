@@ -140,11 +140,12 @@ func encodeArgs(req Request) []string {
 			// after a seek the copied sound would start at the key frame before
 			// the position, ahead of the re-encoded picture
 			args = append(args, "-copypriorss:a", "0")
-			if req.AudioDropTicks > 0 {
-				// the picture of a seek close to the end of the file begins before
-				// the position asked for, the sound does not
-				args = append(args, "-bsf:a", fmt.Sprintf("noise=drop='lt(pts*tb\\,%s)'", strconv.FormatFloat(float64(req.AudioDropTicks)/ticksPerSecond, 'f', 3, 64)))
-			}
+		}
+		if req.AudioDropTicks > 0 && !videoCopy {
+			// the picture of a seek close to the end of the file begins before
+			// the position asked for (at the start of a file shorter than the
+			// margin, with no seek of its own), the sound does not
+			args = append(args, "-bsf:a", fmt.Sprintf("noise=drop='lt(pts*tb\\,%s)'", strconv.FormatFloat(float64(req.AudioDropTicks)/ticksPerSecond, 'f', 3, 64)))
 		}
 	} else {
 		enc := req.AudioEncoder
