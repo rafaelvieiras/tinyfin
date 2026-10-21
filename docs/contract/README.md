@@ -124,7 +124,7 @@ reference source open in the same session.
   (subtitle documents, playlists): a list of `{"op", "value"}` with ops `eq`
   (the whole body), `prefix`, `contains`, `notcontains`, `matches` (an
   unanchored regular expression, `(?s)` lets `.` cross lines) and `lines` (the
-  number of non-empty lines), `hexprefix` and `hexcontains` (the body starts with / contains the bytes of a hex string) and `bytes_lte` / `bytes_gte` (the body's length); string values are template-expanded.
+  number of non-empty lines), `hexprefix` and `hexcontains` (the body starts with / contains the bytes of a hex string) and `bytes_lte` / `bytes_gte` (the body's length) and `minlen` / `maxlen` (bounds on the body's size in bytes, numbers); string values are template-expanded.
   `expect.image` decodes a PNG, JPEG or GIF body and asserts `width`, `height`
   and `pixels`: a list of `{"x", "y", "rgb", "a", "tol"}` (a negative `x`/`y`
   counts from the right/bottom edge; `rgb` is the colour not premultiplied, `a`
@@ -193,7 +193,9 @@ reference source open in the same session.
 * `{"config": {"section": "network", "set": {...}}}` patches a named
   configuration section (`GET`/`POST /System/Configuration/<section>`); every
   section touched is restored when the scenario ends, like the main one.
-* `requires` also takes runner-detected capabilities: `serverfile:read`
+* `requires` also takes runner-detected capabilities: `ffmpeg:noise-bsf` (the server's ffmpeg has the `noise`
+  bit stream filter with `drop`: asked of the ffmpeg given by `-ffmpeg` / `$TINYFIN_FFMPEG_PATH`, always there with
+  `-reference`; without it the scenario is BLOCKED), `serverfile:read`
   (above) and `origin:non-loopback`. The runner decides the latter at setup
   from its own admin login: both servers write `IP address: <peer>` into the
   login's activity entries, so it knows the address the server sees it from. A

@@ -1469,6 +1469,7 @@ if mx2_tools; then mx2_make; fi
 # script, library "Subs2" (lazy).
 FFMPEG="$FFMPEG" "$(dirname "$0")/conformance-subs2.sh" "$ROOT"
 FFMPEG="$FFMPEG" "$(dirname "$0")/conformance-subs3.sh" "$ROOT"
+FFMPEG="$FFMPEG" "$(dirname "$0")/conformance-subs4.sh" "$ROOT"
 
 # Pictures of other shapes for the encoded-HLS scenarios (library "Hls3", lazy).
 FFMPEG="$FFMPEG" "$(dirname "$0")/conformance-hls3.sh" "$ROOT"

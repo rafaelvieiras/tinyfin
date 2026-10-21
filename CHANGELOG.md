@@ -35,6 +35,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   quality 100 is a lossy VP8 key frame from a new pure-Go encoder, and a WebP quality outside 0-100 is an empty
   `200` body. `cropWhitespace` is proven a no-op for chapter pictures. The conformance runner gains
   `expect.image` (size and pixel asserts) and `hexprefix`/`hexcontains`/`bytes_lte`/`bytes_gte` text ops.
+- Burn-in fallback fonts and plain-text `.mks`, wave 29 (`bitmap.md` R8, `subtitles.md` R13, `playback.md` R17,
+  scenarios `subtitles4.*`, fixtures from `scripts/conformance-subs4.sh`): the Docker image ships DejaVu Sans and
+  WenQuanYi Zen Hei with a `fonts.conf` (`deploy/fonts.conf`), the same fallback faces as the reference image
+  (libass drew no text at all in the distroless image: no fontconfig configuration); a host without any gets a
+  generated minimal configuration for the ffmpeg process and the first system font directory as `fontsdir`;
+  decoded frames of a burned-in missing font with Latin, CJK, Cyrillic and Greek text are identical to the
+  reference's. A file named `.mks` with plain-text content is served as the format it holds at every position
+  (it answered `404` before; the reference never does). A copied sound is cut at the position asked for also when
+  the picture is clamped to the start of a short file. The conformance runner gains the text assertions
+  `minlen`/`maxlen` and the capability `ffmpeg:noise-bsf` (`-ffmpeg`, default `$TINYFIN_FFMPEG_PATH`; always
+  there for `-reference`).
 - HLS copy decisions and announced rates follow the reference (`playback.md#hls` R15-R16, scenario
   `playback.hls.copy-limits`): a picture is copied only when its profile, level, reference frames, bit depth
   and sample aspect also fit `h264-profile`/`hevc-profile`/`Profile`, `h264-level`/`hevc-level`/`Level`,

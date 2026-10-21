@@ -47,7 +47,7 @@ FROM web-${WITH_WEB} AS webassets
 FROM debian:bookworm-slim AS ffmpeg
 ARG TARGETARCH
 ARG JELLYFIN_FFMPEG_VERSION
-RUN apt-get update && apt-get install -y --no-install-recommends curl xz-utils ca-certificates fonts-dejavu-core \
+RUN apt-get update && apt-get install -y --no-install-recommends curl xz-utils ca-certificates fonts-dejavu-core fonts-wqy-zenhei \
 	&& rm -rf /var/lib/apt/lists/* \
 	&& arch="$( [ "$TARGETARCH" = "arm64" ] && echo linuxarm64-gpl || echo linux64-gpl )" \
 	&& curl -fsSL -o /tmp/jellyfin-ffmpeg.tar.xz \
@@ -67,8 +67,13 @@ COPY --from=webassets /web /web
 # Final ffmpeg/ffprobe path other Tinyfin code (internal/transcode) should target:
 #   /usr/lib/jellyfin-ffmpeg/ffmpeg and /usr/lib/jellyfin-ffmpeg/ffprobe
 COPY --from=ffmpeg /jellyfin-ffmpeg /usr/lib/jellyfin-ffmpeg
-# Fonts for burned-in text subtitles (libass fontsdir): the image has no fontconfig data of its own.
+# Fonts for burned-in text subtitles, the same fallback as the jellyfin image: DejaVu Sans for a
+# font that is not installed, WenQuanYi Zen Hei for CJK. The image has no fontconfig data of its
+# own and libass draws no text without a configuration, so one is shipped (deploy/fonts.conf).
 COPY --from=ffmpeg /usr/share/fonts/truetype/dejavu /usr/share/fonts/truetype/dejavu
+COPY --from=ffmpeg /usr/share/fonts/truetype/wqy/wqy-zenhei.ttc /usr/share/fonts/truetype/wqy/wqy-zenhei.ttc
+COPY deploy/fonts.conf /etc/fonts/fonts.conf
+ENV FONTCONFIG_FILE=/etc/fonts/fonts.conf
 ENV TINYFIN_FONTS_DIR=/usr/share/fonts/truetype/dejavu
 VOLUME ["/data"]
 EXPOSE 8096

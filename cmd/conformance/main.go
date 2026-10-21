@@ -91,6 +91,7 @@ func run(args []string) int {
 	adminPass := fs.String("admin-pass", "", "administrator password")
 	mediaRoot := fs.String("media-root", "/media", "media root AS SEEN BY THE SERVER")
 	mediaLocal := fs.String("media-local-root", "", "the same media root as the RUNNER sees it; lets fs steps change files (scenarios that require fs:write are BLOCKED without it); never defaulted, the runner must not guess where to write")
+	ffmpeg := fs.String("ffmpeg", os.Getenv("TINYFIN_FFMPEG_PATH"), "the ffmpeg the server under test uses, as the runner can run it (default $TINYFIN_FFMPEG_PATH); scenarios that require ffmpeg:noise-bsf are BLOCKED when it lacks that filter (the reference always has it)")
 	fixtures := fs.String("fixtures", "docs/contract/fixtures.json", "fixtures file")
 	scenarios := fs.String("scenarios", "docs/contract/scenarios", "scenarios directory")
 	scope := fs.String("scope", "", "only run scenarios with this scope (modern|legacy-web-required|scope-negative)")
@@ -151,6 +152,7 @@ func run(args []string) int {
 	c.ServerDataDir = *dataDir
 	c.ReadFileCmd = *readCmd
 	c.MediaLocalRoot = *mediaLocal
+	c.FFmpegPath, c.Reference = *ffmpeg, *reference
 	switch *suffix {
 	case "":
 	case "auto":

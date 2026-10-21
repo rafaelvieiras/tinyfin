@@ -15,7 +15,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -326,11 +325,6 @@ func (s *Server) handleSubtitleStream(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		pre = &extractedSubtitle{data: decodeSubtitleText(data), kind: kind, ext: ext}
-	case "mks":
-		if !hasEBMLHeader(st.Path) && !strings.EqualFold(st.Codec, "ass") && subtitle.NormalizeCodec(st.Codec) != "text" {
-			writeSubtitleError(w, http.StatusNotFound)
-			return
-		}
 	}
 
 	if st.IsExternal && (nativeSubtitleText[fileExt] || fileExt == "sami") && !subtitle.IsTextCodec(st.Codec) {
@@ -441,20 +435,6 @@ type extractedSubtitle struct {
 // nativeSubtitleText are the extensions of the text files the server reads
 // itself: a request to convert one that yields no cue is refused.
 var nativeSubtitleText = map[string]bool{"srt": true, "vtt": true, "ass": true, "ssa": true, "smi": true}
-
-// hasEBMLHeader reports whether the file starts with the EBML header.
-func hasEBMLHeader(path string) bool {
-	f, err := os.Open(path)
-	if err != nil {
-		return false
-	}
-	defer f.Close()
-	var magic [4]byte
-	if _, err := io.ReadFull(f, magic[:]); err != nil {
-		return false
-	}
-	return magic == [4]byte{0x1a, 0x45, 0xdf, 0xa3}
-}
 
 // serveSubtitleFile answers with the bytes of a subtitle file as they are
 // (ok), or with a 400 when the format asked for is not the file's own.

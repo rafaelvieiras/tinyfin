@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 )
@@ -107,6 +108,9 @@ func (c *Client) Setup(ctx context.Context, adminUser, adminPass, mediaRoot stri
 	}
 	if c.MediaLocalRoot != "" {
 		c.Available["fs:write"] = true
+	}
+	if c.noiseBSFAvailable() {
+		c.Available["ffmpeg:noise-bsf"] = true
 	}
 
 	// users
@@ -488,4 +492,18 @@ func (c *Client) settleItems(ctx context.Context, max time.Duration) {
 		}
 		time.Sleep(700 * time.Millisecond)
 	}
+}
+
+// noiseBSFAvailable tells whether the server's ffmpeg has the noise bit stream
+// filter with its drop option: always for the reference, else by asking the
+// ffmpeg the runner was pointed at.
+func (c *Client) noiseBSFAvailable() bool {
+	if c.Reference {
+		return true
+	}
+	if c.FFmpegPath == "" {
+		return false
+	}
+	out, err := exec.Command(c.FFmpegPath, "-hide_banner", "-h", "bsf=noise").CombinedOutput()
+	return err == nil && strings.Contains(string(out), "-drop ")
 }

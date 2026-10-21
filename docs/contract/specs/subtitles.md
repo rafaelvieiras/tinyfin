@@ -60,6 +60,7 @@ Scenarios: [`../scenarios/subtitles.json`](../scenarios/subtitles.json) and [`..
 - **subtitles.stream.R10** The formats a text track (embedded or in a file) is served in are `srt`, `vtt`, `ass`, `ssa`, `json` and `ttml` (R1); `subrip` and `webvtt` always convert and are `application/octet-stream` (R7); `smi`, `sami`, `sub`, `idx`, `sup`, `mks` and unknown names are `400`. This holds for every text codec (`subrip`, `ass`, `mov_text`, `webvtt`, ...).
 - **subtitles.stream.R11** A file is read by the parser of its extension. When that parser finds no cue (the content is another format) the file can only be asked for in the format of its own extension, which serves it as it is (`vtt` for the `.vtt` of SubRip text, `ass` for the `.ass` of WebVTT text, `sub` for a `.sub` as `text/vnd.dvb.subtitle`, `smi` for a SAMI file as `application/smil+xml`); every other format is `400`. A SAMI file is also served converted (`srt`, `vtt`, `ass`) and `sami` is `400`. A `.sup` file whose content is text is served as it is only for the format `pgssub` (`application/octet-stream`); `srt`, `vtt` and `sup` are `400`.
 - **subtitles.stream.R12** A VobSub pair: `idx` serves the `.idx` file as it is (`application/octet-stream`); `srt` and `vtt` read the index as text, one cue per `timestamp:` line (the text of a cue is what follows the comma, the file position, and its end is zero); `sub`, `dvdsub`, `vobsub`, `mks`, `sup` and unknown names are `400`. A `.sub` with no index serves only `sub` (as it is, `text/vnd.dvb.subtitle`). A Matroska subtitle file is served like the track it holds: a text track in the formats of R10 (`mks` is `400`), a PGS track as `sup`, `pgssub` or `dvdsub` (`application/octet-stream`, [`bitmap.route.R1`](bitmap.md#route)) and every other format `400`.
+- **subtitles.stream.R13** A file named `.mks` whose content is plain text (SubRip, WebVTT or ASS, not Matroska) is read like the format it holds, at every position among the item's streams and in every format of R10: the extraction is the same ffmpeg call as for a real Matroska file, which accepts the text. The two kinds of file can be mixed in one item. Each track gives the document of its content (`mks` is `400` as in R12; an ASS track has the font `Arial` replaced as in R6). The fixture is `Mks Plain (4100)` of library `Subs4` (three plain-text `.mks` files: SubRip `de`, WebVTT `en`, ASS `fr`).
 
 ## <a id="playlist"></a>The playlist of a subtitle stream
 
@@ -98,7 +99,7 @@ Observed on the reference and deliberately not reproduced (not asserted by a sce
 * **Embedded tracks and the extraction tool.** Embedded tracks are extracted with whatever `ffmpeg` Tinyfin is configured with, so ASS header details (font names, a byte order mark) follow that build.
 * **Queries on the same route.** The reference caches converted documents without all parameters in the key: a request with `copyTimestamps` can be answered with the document of an earlier one with the same index and offsets. Tinyfin has no cache.
 * **A dashed media source id.** The reference answers `500` for a `mediaSourceId` written with dashes (it compares the text); Tinyfin folds every id of a path to one spelling before routing (wire.id.R2) and serves it.
-* **Text named `.mks`.** A file named `.mks` whose content is plain text (not Matroska) is served by the reference unevenly: some positions answered `200` and others `404` for the same content. Tinyfin answers `404` for it unless its content is ASS or a plain-text track; not asserted.
+* **Text named `.mks`.** Settled in R13 (the reference answered `200` for every plain-text `.mks` in 5 fixtures, 40+ requests over positions, formats, start positions, concurrent requests and content kinds; the earlier `404` observations did not reproduce, and no content or position makes it answer one). A text file whose content ffmpeg cannot read is not asserted.
 * **Content of another encoding.** The charset a burned-in external text file is read in (`bitmap.burnin.R5`) is detected by rules over the bytes; the reference's detector is statistical and disagrees on short or ambiguous samples (listed in `bitmap.md`).
 * **Providers.** There is no subtitle provider plugin system: search lists nothing, nothing can be downloaded.
 
@@ -130,6 +131,7 @@ Observed on the reference and deliberately not reproduced (not asserted by a sce
 | `subtitles.stream.R10` | `subtitles2.embedded.route`, `subtitles2.mks.route` |
 | `subtitles.stream.R11` | `subtitles2.sidecar.odd-route`, `subtitles2.mks.route` |
 | `subtitles.stream.R12` | `subtitles2.vobsub.route`, `subtitles2.mks.route` |
+| `subtitles.stream.R13` | `subtitles4.mks.plain-text` |
 | `subtitles.playlist.R1`, `R2` | `subtitles.playlist.segments` |
 | `subtitles.delivery.R1` | `subtitles.delivery.no-profile`, `subtitles.delivery.external` |
 | `subtitles.delivery.R2`, `R3` | `subtitles.delivery.external` |
