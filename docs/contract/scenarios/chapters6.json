@@ -1,0 +1,404 @@
+[
+ {
+  "id": "chapters.images.webp-size",
+  "endpoint": "GET /Items/{itemId}/Images/Chapter/{imageIndex}",
+  "spec": "chapters.md#images",
+  "scope": "modern",
+  "tags": [
+   "chapters",
+   "chapter-images"
+  ],
+  "covers": [
+   "chapters.images.R16"
+  ],
+  "requires": [
+   "library:chapterimg3",
+   "item:chapter-flat",
+   "item:chapter-step",
+   "item:chapter-ramp",
+   "item:chapter-noise",
+   "item:chapter-borderw"
+  ],
+  "steps": [
+   {
+    "name": "wait for chapter-flat",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-flat.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Chapters[1].ImageTag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      }
+     ]
+    },
+    "retryMs": 120000
+   },
+   {
+    "name": "wait for chapter-step",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-step.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Chapters[1].ImageTag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      }
+     ]
+    },
+    "retryMs": 120000
+   },
+   {
+    "name": "wait for chapter-ramp",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-ramp.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Chapters[1].ImageTag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      }
+     ]
+    },
+    "retryMs": 120000
+   },
+   {
+    "name": "wait for chapter-noise",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Chapters[1].ImageTag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      }
+     ]
+    },
+    "retryMs": 120000
+   },
+   {
+    "name": "wait for chapter-borderw",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-borderw.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Chapters[1].ImageTag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      }
+     ]
+    },
+    "retryMs": 120000
+   },
+   {
+    "name": "flat, lossless: 34 bytes in the reference",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-flat.id}}/Images/Chapter/0",
+     "query": {
+      "format": "Webp"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/webp"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "RIFF"
+      },
+      {
+       "op": "contains",
+       "value": "WEBPVP8L"
+      },
+      {
+       "op": "bytes_lte",
+       "value": 51
+      }
+     ]
+    }
+   },
+   {
+    "name": "step, lossless: 74 bytes in the reference",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-step.id}}/Images/Chapter/0",
+     "query": {
+      "format": "Webp"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/webp"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "RIFF"
+      },
+      {
+       "op": "contains",
+       "value": "WEBPVP8L"
+      },
+      {
+       "op": "bytes_lte",
+       "value": 111
+      }
+     ]
+    }
+   },
+   {
+    "name": "ramp, lossless: 966 bytes in the reference",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-ramp.id}}/Images/Chapter/0",
+     "query": {
+      "format": "Webp"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/webp"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "RIFF"
+      },
+      {
+       "op": "contains",
+       "value": "WEBPVP8L"
+      },
+      {
+       "op": "bytes_lte",
+       "value": 1449
+      }
+     ]
+    }
+   },
+   {
+    "name": "bordered gradient, lossless: 10504 bytes in the reference",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-borderw.id}}/Images/Chapter/0",
+     "query": {
+      "format": "Webp"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/webp"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "RIFF"
+      },
+      {
+       "op": "contains",
+       "value": "WEBPVP8L"
+      },
+      {
+       "op": "bytes_lte",
+       "value": 15756
+      }
+     ]
+    }
+   },
+   {
+    "name": "noise, lossy q90: 125852 bytes in the reference",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "format": "Webp",
+      "quality": "90"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/webp"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "RIFF"
+      },
+      {
+       "op": "contains",
+       "value": "WEBPVP8 "
+      },
+      {
+       "op": "bytes_lte",
+       "value": 163600
+      }
+     ]
+    }
+   },
+   {
+    "name": "noise, lossy q50: 57698 bytes in the reference",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "format": "Webp",
+      "quality": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/webp"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "RIFF"
+      },
+      {
+       "op": "contains",
+       "value": "WEBPVP8 "
+      },
+      {
+       "op": "bytes_lte",
+       "value": 75000
+      }
+     ]
+    }
+   },
+   {
+    "name": "noise, lossy q10: 18814 bytes in the reference",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-noise.id}}/Images/Chapter/0",
+     "query": {
+      "format": "Webp",
+      "quality": "10"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/webp"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "RIFF"
+      },
+      {
+       "op": "contains",
+       "value": "WEBPVP8 "
+      },
+      {
+       "op": "bytes_lte",
+       "value": 24500
+      }
+     ]
+    }
+   },
+   {
+    "name": "ramp, lossy q50: 646 bytes in the reference",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-ramp.id}}/Images/Chapter/0",
+     "query": {
+      "format": "Webp",
+      "quality": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/webp"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "RIFF"
+      },
+      {
+       "op": "contains",
+       "value": "WEBPVP8 "
+      },
+      {
+       "op": "bytes_lte",
+       "value": 840
+      }
+     ]
+    }
+   },
+   {
+    "name": "bordered gradient, lossy q90: 790 bytes in the reference",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.chapter-borderw.id}}/Images/Chapter/0",
+     "query": {
+      "format": "Webp",
+      "quality": "90"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/webp"
+     },
+     "text": [
+      {
+       "op": "prefix",
+       "value": "RIFF"
+      },
+      {
+       "op": "contains",
+       "value": "WEBPVP8 "
+      },
+      {
+       "op": "bytes_lte",
+       "value": 1027
+      }
+     ]
+    }
+   }
+  ]
+ }
+]
