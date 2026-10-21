@@ -1,0 +1,15 @@
+{
+  "flow": "keys-create",
+  "entries": [
+    {
+      "method": "GET",
+      "path": "/Auth/Keys",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/Auth/Keys",
+      "status": 204
+    }
+  ]
+}

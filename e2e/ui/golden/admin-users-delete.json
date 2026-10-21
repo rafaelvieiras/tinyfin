@@ -1,0 +1,15 @@
+{
+  "flow": "users-delete",
+  "entries": [
+    {
+      "method": "DELETE",
+      "path": "/Users/:id",
+      "status": 204
+    },
+    {
+      "method": "GET",
+      "path": "/Users",
+      "status": 200
+    }
+  ]
+}

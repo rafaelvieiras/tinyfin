@@ -1,0 +1,15 @@
+{
+  "flow": "keys-revoke",
+  "entries": [
+    {
+      "method": "DELETE",
+      "path": "/Auth/Keys/:id",
+      "status": 204
+    },
+    {
+      "method": "GET",
+      "path": "/Auth/Keys",
+      "status": 200
+    }
+  ]
+}

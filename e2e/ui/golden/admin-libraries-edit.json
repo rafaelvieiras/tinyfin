@@ -1,0 +1,30 @@
+{
+  "flow": "libraries-edit",
+  "entries": [
+    {
+      "method": "GET",
+      "path": "/Libraries/AvailableOptions",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/Library/VirtualFolders/LibraryOptions",
+      "status": 204
+    },
+    {
+      "method": "GET",
+      "path": "/Library/VirtualFolders",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Localization/countries",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Localization/cultures",
+      "status": 200
+    }
+  ]
+}

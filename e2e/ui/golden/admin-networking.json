@@ -1,0 +1,10 @@
+{
+  "flow": "networking",
+  "entries": [
+    {
+      "method": "GET",
+      "path": "/System/Configuration/network",
+      "status": 200
+    }
+  ]
+}

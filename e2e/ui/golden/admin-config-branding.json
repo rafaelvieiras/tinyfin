@@ -1,0 +1,35 @@
+{
+  "flow": "config-branding",
+  "entries": [
+    {
+      "method": "GET",
+      "path": "/Branding/Configuration",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/Sessions/Capabilities/Full",
+      "status": 204
+    },
+    {
+      "method": "POST",
+      "path": "/System/Configuration/branding",
+      "status": 204
+    },
+    {
+      "method": "GET",
+      "path": "/System/Info/Public",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/System/Info",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Users/:id",
+      "status": 200
+    }
+  ]
+}

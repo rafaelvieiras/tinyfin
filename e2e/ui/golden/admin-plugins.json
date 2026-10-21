@@ -1,0 +1,20 @@
+{
+  "flow": "plugins",
+  "entries": [
+    {
+      "method": "GET",
+      "path": "/Packages",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Plugins/:id/12.2.0.0/Image",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Plugins",
+      "status": 200
+    }
+  ]
+}

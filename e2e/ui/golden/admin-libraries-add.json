@@ -1,0 +1,65 @@
+{
+  "flow": "libraries-add",
+  "entries": [
+    {
+      "method": "GET",
+      "path": "/Environment/DefaultDirectoryBrowser",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Environment/DirectoryContents",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Environment/Drives",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Environment/ParentPath",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/Environment/ValidatePath",
+      "status": 204
+    },
+    {
+      "method": "GET",
+      "path": "/Items/:id/Images/Primary",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Libraries/AvailableOptions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Library/VirtualFolders",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/Library/VirtualFolders",
+      "status": 204
+    },
+    {
+      "method": "GET",
+      "path": "/Localization/countries",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Localization/cultures",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/ScheduledTasks",
+      "status": 200
+    }
+  ]
+}

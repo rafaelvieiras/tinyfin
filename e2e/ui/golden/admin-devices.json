@@ -1,0 +1,15 @@
+{
+  "flow": "devices",
+  "entries": [
+    {
+      "method": "GET",
+      "path": "/Devices",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Users",
+      "status": 200
+    }
+  ]
+}

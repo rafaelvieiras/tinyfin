@@ -1,0 +1,15 @@
+{
+  "flow": "libraries-rename",
+  "entries": [
+    {
+      "method": "POST",
+      "path": "/Library/VirtualFolders/Name",
+      "status": 204
+    },
+    {
+      "method": "GET",
+      "path": "/Library/VirtualFolders",
+      "status": 200
+    }
+  ]
+}
