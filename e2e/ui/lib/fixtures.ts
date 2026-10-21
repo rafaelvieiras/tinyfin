@@ -36,10 +36,10 @@ export class ApiTrace {
     });
   }
   mark() { return this.entries.length; }
-  /** Distinct {method,path,status}, sorted; optionally only what happened after mark(). */
-  unique(since = 0): TraceEntry[] {
+  /** Distinct {method,path,status}, sorted; optionally only what happened between two mark()s. */
+  unique(since = 0, until?: number): TraceEntry[] {
     const seen = new Map<string, TraceEntry>();
-    for (const e of this.entries.slice(since)) seen.set(`${e.method} ${e.path} ${e.status}`, e);
+    for (const e of this.entries.slice(since, until)) seen.set(`${e.method} ${e.path} ${e.status}`, e);
     return [...seen.values()].sort((a, b) => (a.path + a.method + a.status).localeCompare(b.path + b.method + b.status));
   }
 }

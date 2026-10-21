@@ -42,6 +42,7 @@ bash "$REPO/scripts/conformance-media.sh" "$CACHE" >/dev/null 2>"$STATE/media.lo
 
 start_ref() {
   cp -a "$CACHE" "$STATE/media-ref"
+  bash "$HERE/lib/extra-media.sh" "$STATE/media-ref"
   local port name; port="$(freeport "${REF_PORT:-18300}")"; name="tinyfin-ui-ref-$$"
   # offline DNS keeps online metadata providers from renaming the fixtures
   REF_NAME="$name" REF_IMAGE="$IMAGE" REF_DOCKER_ARGS="${REF_DOCKER_ARGS:---dns 127.0.0.1}" \
@@ -52,6 +53,7 @@ start_ref() {
 }
 start_tf() {
   cp -a "$CACHE" "$STATE/media-tf"
+  bash "$HERE/lib/extra-media.sh" "$STATE/media-tf"
   local port out; port="$(freeport "${TF_PORT:-18400}")"
   out="$(TINYFIN_WEB_DIR="$HERE/.webdist" bash "$REPO/scripts/conformance-tinyfin-up.sh" "$port")"
   # the script prints credentials; keep only pid and dir
