@@ -470,6 +470,7 @@
     {"key": "mx2-hlg", "type": "Movie", "library": "matrix2", "path": "Matrix2/Mx2 Hlg (2601)/Mx2 Hlg (2601).mkv"},
     {"key": "mx2-dv81-sdr", "type": "Movie", "library": "matrix2", "path": "Matrix2/Mx2 Dv81 Sdr Base (2722)/Mx2 Dv81 Sdr Base (2722).mkv"},
     {"key": "mx2-dv7el", "type": "Movie", "library": "matrix2", "path": "Matrix2/Mx2 Dv Cfg 7 6 El (2613)/Mx2 Dv Cfg 7 6 El (2613).mkv"},
+    {"key": "mx2-dv7real", "type": "Movie", "library": "matrix2", "path": "Matrix2/Mx2 Dv7 Real El (2730)/Mx2 Dv7 Real El (2730).mkv"},
     {"key": "mx2-opus", "type": "Movie", "library": "matrix2", "path": "Matrix2/Mx2 Audio Opus (2674)/Mx2 Audio Opus (2674).mkv"},
     {"key": "mx2-vorbis", "type": "Movie", "library": "matrix2", "path": "Matrix2/Mx2 Audio Vorbis (2675)/Mx2 Audio Vorbis (2675).mkv"},
     {"key": "mx2-h264", "type": "Movie", "library": "matrix2", "path": "Matrix2/Mx2 H264 Mkv (2620)/Mx2 H264 Mkv (2620).mkv"},

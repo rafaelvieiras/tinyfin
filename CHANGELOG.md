@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The media sources on an item (`GET /Items`, `/Items/{id}`, `/Users/{userId}/Items/{id}`) report `SupportsDirectStream`
+  and `SupportsTranscoding` from the caller's playback flags like the reference (`playback.md#item-sources` R1,
+  scenario `playback.item.stream-flags`): a track is always streamable and transcodable with
+  `EnableAudioPlaybackTranscoding`, any other file streamable with `EnablePlaybackRemuxing` and transcodable with
+  `EnableVideoPlaybackTranscoding`, whatever its container or path kind.
+- `DELETE /Videos/ActiveEncodings` stops the encodes of a play session (`playback.md#encodings` R1-R2, scenarios
+  `playback.encodings.delete`/`restart`): both `DeviceId` and `PlaySessionId` are required (`400` problem
+  otherwise), the session is matched by `PlaySessionId` alone without regard to case, any signed-in user may call it,
+  HLS jobs and progressive streams end and the next segment request starts a new encode. A transcode job is now
+  named after the device, the play session and the parameters that change the output (another session never
+  reuses a job).
+- 10-bit pictures are held to a higher rate like the reference (`playback.md#hls` R17, scenario
+  `playback.hls.rate-ten-bit`, fixtures from `scripts/conformance-rate10.sh`): the figure after the 2.5 / 2 step is
+  multiplied by 1.5 up to a 4 Mb/s source, 1.2 up to 8, 1.1 up to 12 and 1.05 above, for the master `BANDWIDTH` and the
+  encoder `-maxrate` alike (118 measured files, no exception). A target more efficient than the source (H.264 to HEVC)
+  no longer lowers the figure.
+- `scripts/conformance-media.sh` also builds a dual-layer Dolby Vision stream (base layer plus interleaved
+  enhancement layer NAL units, record patched to profile 7 with the layer present) for the Matrix2 library.
 - HLS copy decisions and announced rates follow the reference (`playback.md#hls` R15-R16, scenario
   `playback.hls.copy-limits`): a picture is copied only when its profile, level, reference frames, bit depth
   and sample aspect also fit `h264-profile`/`hevc-profile`/`Profile`, `h264-level`/`hevc-level`/`Level`,

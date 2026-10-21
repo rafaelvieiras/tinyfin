@@ -1591,5 +1591,117 @@
     }
    }
   ]
+ },
+ {
+  "id": "playback.offer.dv7-real-el",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "playback.md#offer",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "hdr"
+  ],
+  "covers": [
+   "playback.offer.R13"
+  ],
+  "requires": [
+   "library:matrix2",
+   "item:mx2-dv7real"
+  ],
+  "steps": [
+   {
+    "name": "base layer geometry and record of a stream that carries a real enhancement layer",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-dv7real.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-dv7real.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRangeType",
+       "op": "eq",
+       "value": "DOVIWithEL"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvProfile",
+       "op": "eq",
+       "value": 7
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].ElPresentFlag",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].RpuPresentFlag",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].BlPresentFlag",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvBlSignalCompatibilityId",
+       "op": "eq",
+       "value": 6
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DisplayTitle",
+       "op": "eq",
+       "value": "240p HEVC Dolby Vision Profile 7.6 (HDR10)"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Width",
+       "op": "eq",
+       "value": 320
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Height",
+       "op": "eq",
+       "value": 240
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].BitRate",
+       "op": "eq",
+       "value": 82266
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "copied by HLS",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.mx2-dv7real.id}}/master.m3u8?MediaSourceId={{item.mx2-dv7real.id}}&DeviceId=conf&PlaySessionId=dv7-{{run.suffix}}&SegmentContainer=ts&VideoCodec=hevc&AudioCodec=aac&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=1361992,AVERAGE-BANDWIDTH=1361992,VIDEO-RANGE=PQ,CODECS=\"hvc1.2.4."
+      },
+      {
+       "op": "contains",
+       "value": ".B0,mp4a.40.2\",RESOLUTION=320x240,FRAME-RATE=12"
+      }
+     ]
+    }
+   }
+  ]
  }
 ]
