@@ -1,0 +1,10 @@
+{
+  "flow": "keys-list",
+  "entries": [
+    {
+      "method": "GET",
+      "path": "/Auth/Keys",
+      "status": 200
+    }
+  ]
+}

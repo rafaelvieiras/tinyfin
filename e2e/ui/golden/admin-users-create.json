@@ -1,0 +1,50 @@
+{
+  "flow": "users-create",
+  "entries": [
+    {
+      "method": "GET",
+      "path": "/Auth/PasswordResetProviders",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Auth/Providers",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Channels",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Library/MediaFolders",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/System/Configuration/network",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/Users/:id/Policy",
+      "status": 204
+    },
+    {
+      "method": "GET",
+      "path": "/Users/:id",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/Users/New",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Users",
+      "status": 200
+    }
+  ]
+}

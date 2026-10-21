@@ -1,0 +1,20 @@
+{
+  "flow": "libraries-list",
+  "entries": [
+    {
+      "method": "GET",
+      "path": "/Items/:id/Images/Primary",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Library/VirtualFolders",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/ScheduledTasks",
+      "status": 200
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "flow": "dashboard-home",
+  "entries": [
+    {
+      "method": "GET",
+      "path": "/Items/Counts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/ScheduledTasks",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Sessions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/System/ActivityLog/Entries",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/System/Info/Storage",
+      "status": 200
+    }
+  ]
+}

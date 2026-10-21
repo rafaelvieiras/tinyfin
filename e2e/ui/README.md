@@ -81,3 +81,15 @@ node ratchet.mjs results.json --print-union   # prints baseline plus newly passi
 ```
 
 Removing an entry (accepting a regression) is a deliberate, reviewed edit.
+
+## Admin dashboard specs (`specs/admin-*.spec.ts`)
+
+Browser coverage of the admin dashboard: home, users (create, policy toggles, password set/reset,
+delete), libraries (wizard with a media path, options, rename, remove), devices, activity log,
+scheduled tasks (list, trigger, stop), API keys, transcoding / networking / General / Branding
+settings, plugins and logs pages. Every mutation is undone (also on failure), so the specs are
+order independent. Each flow also records its API trace and compares it with
+`golden/admin-<flow>.json` through `checkTrace` (`lib/fixtures.ts`): no 5xx anywhere, and on
+Tinyfin no endpoint the reference called may be missing (artwork requests excepted) and no 4xx/5xx
+may appear that the reference did not produce. Regenerate with `TARGET=ref ./run.sh --update-golden`.
+Proposed ratchet additions live in `baseline.ui3.proposed.json` (merged into `baseline.json` by hand).

@@ -1,0 +1,10 @@
+{
+  "flow": "users-list",
+  "entries": [
+    {
+      "method": "GET",
+      "path": "/Users",
+      "status": 200
+    }
+  ]
+}

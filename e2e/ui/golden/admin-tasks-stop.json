@@ -1,0 +1,20 @@
+{
+  "flow": "tasks-stop",
+  "entries": [
+    {
+      "method": "DELETE",
+      "path": "/ScheduledTasks/Running/:id",
+      "status": 204
+    },
+    {
+      "method": "POST",
+      "path": "/ScheduledTasks/Running/:id",
+      "status": 204
+    },
+    {
+      "method": "GET",
+      "path": "/ScheduledTasks",
+      "status": 200
+    }
+  ]
+}
