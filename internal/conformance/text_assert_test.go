@@ -11,6 +11,8 @@ func TestCheckText(t *testing.T) {
 		{Op: "notcontains", Value: "Goodbye"},
 		{Op: "matches", Value: `(?s)^WEBVTT.*Hello`},
 		{Op: "lines", Value: float64(3)},
+		{Op: "minlen", Value: float64(10)},
+		{Op: "maxlen", Value: float64(100)},
 		{Op: "eq", Value: "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nHello v\n"},
 	}
 	for _, a := range ok {
@@ -20,7 +22,7 @@ func TestCheckText(t *testing.T) {
 	}
 	bad := []TextAssert{
 		{Op: "prefix", Value: "X"}, {Op: "contains", Value: "nope"}, {Op: "notcontains", Value: "Hello"},
-		{Op: "matches", Value: `^Hello`}, {Op: "lines", Value: float64(2)}, {Op: "eq", Value: "x"}, {Op: "nope", Value: "x"},
+		{Op: "matches", Value: `^Hello`}, {Op: "lines", Value: float64(2)}, {Op: "minlen", Value: float64(1000)}, {Op: "maxlen", Value: float64(5)}, {Op: "eq", Value: "x"}, {Op: "nope", Value: "x"},
 	}
 	for _, a := range bad {
 		if err := c.checkText(r, a, nil); err == nil {

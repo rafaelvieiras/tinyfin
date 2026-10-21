@@ -123,8 +123,9 @@ reference source open in the same session.
   `title`, `status` equal to the number). `expect.text` asserts on the raw body
   (subtitle documents, playlists): a list of `{"op", "value"}` with ops `eq`
   (the whole body), `prefix`, `contains`, `notcontains`, `matches` (an
-  unanchored regular expression, `(?s)` lets `.` cross lines) and `lines` (the
-  number of non-empty lines); string values are template-expanded.
+  unanchored regular expression, `(?s)` lets `.` cross lines), `lines` (the
+  number of non-empty lines), `minlen` and `maxlen` (bounds on the body's size in bytes, numbers); string values are
+  template-expanded.
 * Server-clock templates build time-of-day dependent state without depending
   on when the suite runs: `{{clock.hour}}` is the server's *local* time of day
   in fractional hours, `{{clock.hour+1}}` / `{{clock.hour-0.5}}` shift it
@@ -189,7 +190,9 @@ reference source open in the same session.
 * `{"config": {"section": "network", "set": {...}}}` patches a named
   configuration section (`GET`/`POST /System/Configuration/<section>`); every
   section touched is restored when the scenario ends, like the main one.
-* `requires` also takes runner-detected capabilities: `serverfile:read`
+* `requires` also takes runner-detected capabilities: `ffmpeg:noise-bsf` (the server's ffmpeg has the `noise`
+  bit stream filter with `drop`: asked of the ffmpeg given by `-ffmpeg` / `$TINYFIN_FFMPEG_PATH`, always there with
+  `-reference`; without it the scenario is BLOCKED), `serverfile:read`
   (above) and `origin:non-loopback`. The runner decides the latter at setup
   from its own admin login: both servers write `IP address: <peer>` into the
   login's activity entries, so it knows the address the server sees it from. A

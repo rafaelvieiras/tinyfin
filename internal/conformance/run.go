@@ -76,6 +76,15 @@ type Client struct {
 	// steps and the scenarios that require "fs:write" are BLOCKED.
 	MediaLocalRoot string
 
+	// FFmpegPath is the ffmpeg the server under test uses, as the runner can
+	// run it ("" with Reference false: unknown). It decides the capability
+	// "ffmpeg:noise-bsf" (the noise bit stream filter with its drop option,
+	// which jellyfin-ffmpeg has and older builds do not).
+	FFmpegPath string
+	// Reference marks the target as the reference server, which ships a
+	// jellyfin-ffmpeg: "ffmpeg:noise-bsf" is available without FFmpegPath.
+	Reference bool
+
 	mediaRoot string
 	lazyLibs  map[string]*lazyLibrary
 	apiKeyID  string // access token of the run's API key (for Teardown)
@@ -644,6 +653,19 @@ func (c *Client) checkExpect(st Step, resp *Response, scratch map[string]string)
 // checkText evaluates one TextAssert against the raw body.
 func (c *Client) checkText(r *Response, a TextAssert, scratch map[string]string) error {
 	body := string(r.Body)
+	if a.Op == "minlen" || a.Op == "maxlen" {
+		want, ok := toFloat(a.Value)
+		if !ok {
+			return fmt.Errorf("%s needs a number", a.Op)
+		}
+		if a.Op == "minlen" && len(r.Body) < int(want) {
+			return fmt.Errorf("body is %d bytes, want at least %d", len(r.Body), int(want))
+		}
+		if a.Op == "maxlen" && len(r.Body) > int(want) {
+			return fmt.Errorf("body is %d bytes, want at most %d", len(r.Body), int(want))
+		}
+		return nil
+	}
 	if a.Op == "lines" {
 		want, ok := toFloat(a.Value)
 		if !ok {

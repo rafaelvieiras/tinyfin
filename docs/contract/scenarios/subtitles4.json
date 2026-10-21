@@ -1,0 +1,288 @@
+[
+ {
+  "id": "subtitles4.mks.plain-text",
+  "endpoint": "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/Stream.{format}",
+  "spec": "subtitles.md#stream",
+  "scope": "modern",
+  "tags": [
+   "subtitles"
+  ],
+  "covers": [
+   "subtitles.stream.R13"
+  ],
+  "requires": [
+   "library:subs4",
+   "item:mks-plain"
+  ],
+  "steps": [
+   {
+    "name": "a SubRip track in a file named .mks, as srt",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.mks-plain.id}}/{{item.mks-plain.id}}/Subtitles/0/0/Stream.srt"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "application/x-subrip"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "1\n00:00:01,000 --> 00:00:02,000\nHello\n\n2\n00:00:03,000 --> 00:00:03,500\nWorld\n\n"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the same as vtt",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.mks-plain.id}}/{{item.mks-plain.id}}/Subtitles/0/0/Stream.vtt"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "text/vtt"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nHello\n\n00:00:03.000 --> 00:00:03.500\nWorld"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the same as json",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.mks-plain.id}}/{{item.mks-plain.id}}/Subtitles/0/0/Stream.json"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "application/json"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "{\"TrackEvents\":[{\"Id\":\"1\",\"Text\":\"Hello\",\"StartPositionTicks\":10000000,\"EndPositionTicks\":20000000},{\"Id\":\"2\",\"Text\":\"World\",\"StartPositionTicks\":30000000,\"EndPositionTicks\":35000000}]}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a WebVTT track in a file named .mks, as srt (the second position)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.mks-plain.id}}/{{item.mks-plain.id}}/Subtitles/1/0/Stream.srt"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "application/x-subrip"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "1\n00:00:01,000 --> 00:00:02,000\nHello\n\n"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the same as vtt",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.mks-plain.id}}/{{item.mks-plain.id}}/Subtitles/1/0/Stream.vtt"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "text/vtt"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nHello"
+      }
+     ]
+    }
+   },
+   {
+    "name": "an ASS track in a file named .mks, as srt (the third position)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.mks-plain.id}}/{{item.mks-plain.id}}/Subtitles/2/0/Stream.srt"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "application/x-subrip"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "1\n00:00:01,000 --> 00:00:02,000\nHello\n\n"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the same as ass: the font Arial replaced",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.mks-plain.id}}/{{item.mks-plain.id}}/Subtitles/2/0/Stream.ass"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "text/x-ssa"
+     },
+     "text": [
+      {
+       "op": "contains",
+       "value": "Style: Default,Arial Unicode MS,20"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the container name is not a format",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.mks-plain.id}}/{{item.mks-plain.id}}/Subtitles/0/0/Stream.mks"
+    },
+    "expect": {
+     "status": 400,
+     "headers": {
+      "Content-Type": "text/plain"
+     },
+     "text": [
+      {
+       "op": "eq",
+       "value": "Error processing request."
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles4.burn.fonts-cjk",
+  "endpoint": "GET /Videos/{itemId}/hls1/{playlistId}/{segmentId}.{container}",
+  "spec": "bitmap.md#burnin",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "transcode"
+  ],
+  "covers": [
+   "bitmap.burnin.R8"
+  ],
+  "requires": [
+   "library:subs4",
+   "item:font-cjk"
+  ],
+  "steps": [
+   {
+    "name": "a style font that is not installed over Latin, CJK, Cyrillic and Greek text still draws the text",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.font-cjk.id}}/hls1/main/0.ts?MediaSourceId={{item.font-cjk.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&AudioStreamIndex=1&SubtitleStreamIndex=0&SubtitleMethod=Encode&VideoBitrate=500000&PlaySessionId=s4-{{run.suffix}}-font-cjk&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^.{900,}$"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "subtitles4.burn.seek-sound",
+  "endpoint": "GET /Videos/{itemId}/hls1/{playlistId}/{segmentId}.{container}",
+  "spec": "playback.md#hls",
+  "scope": "modern",
+  "tags": [
+   "subtitles",
+   "transcode"
+  ],
+  "covers": [
+   "playback.hls.R17"
+  ],
+  "requires": [
+   "library:subs3",
+   "item:font-missing",
+   "item:ext-sup",
+   "ffmpeg:noise-bsf"
+  ],
+  "steps": [
+   {
+    "name": "a text burn-in of a segment 2 s into a 4 s file: the picture restarts at 0, the copied sound is cut at 2 s (none in the first second)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.font-missing.id}}/hls1/main/1.ts?MediaSourceId={{item.font-missing.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=1&VideoCodec=h264&AudioCodec=aac&AudioStreamIndex=1&SubtitleStreamIndex=0&SubtitleMethod=Encode&VideoBitrate=600000&PlaySessionId=s4-{{run.suffix}}-seek-text&runtimeTicks=20000000&actualSegmentLengthTicks=10000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "minlen",
+       "value": 900
+      },
+      {
+       "op": "maxlen",
+       "value": 14000
+      }
+     ]
+    }
+   },
+   {
+    "name": "a picture burn-in of a sidecar, same position",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.ext-sup.id}}/hls1/main/1.ts?MediaSourceId={{item.ext-sup.id}}&DeviceId=conf&SegmentContainer=ts&SegmentLength=1&VideoCodec=h264&AudioCodec=aac&AudioStreamIndex=1&SubtitleStreamIndex=0&SubtitleMethod=Encode&VideoBitrate=600000&PlaySessionId=s4-{{run.suffix}}-seek-sup&runtimeTicks=20000000&actualSegmentLengthTicks=10000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "minlen",
+       "value": 900
+      },
+      {
+       "op": "maxlen",
+       "value": 14000
+      }
+     ]
+    }
+   }
+  ]
+ }
+]

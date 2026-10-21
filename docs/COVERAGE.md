@@ -140,7 +140,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | Spec | Rules | Rules with a scenario | Scenarios | Passing |
 |---|---|---|---|---|
 | [admin](contract/specs/admin.md) | 17 | 17 | 11 | 11 |
-| [bitmap](contract/specs/bitmap.md) | 21 | 19 | 11 | 11 |
+| [bitmap](contract/specs/bitmap.md) | 22 | 20 | 11 | 11 |
 | [browse](contract/specs/browse.md) | 29 | 29 | 15 | 15 |
 | [chapters](contract/specs/chapters.md) | 26 | 26 | 5 | 5 |
 | [collections](contract/specs/collections.md) | 51 | 51 | 30 | 30 |
@@ -150,7 +150,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [misc](contract/specs/misc.md) | 5 | 5 | 3 | 3 |
 | [music](contract/specs/music.md) | 82 | 82 | 14 | 14 |
 | [musicvideos](contract/specs/musicvideos.md) | 26 | 26 | 17 | 17 |
-| [playback](contract/specs/playback.md) | 49 | 48 | 7 | 7 |
+| [playback](contract/specs/playback.md) | 50 | 49 | 7 | 7 |
 | [playlists](contract/specs/playlists.md) | 33 | 33 | 23 | 23 |
 | [playstate](contract/specs/playstate.md) | 91 | 89 | 107 | 107 |
 | [policy](contract/specs/policy.md) | 19 | 18 | 8 | 8 |
@@ -158,11 +158,11 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [scan](contract/specs/scan.md) | 28 | 28 | 23 | 23 |
 | [search](contract/specs/search.md) | 16 | 16 | 14 | 14 |
 | [startup](contract/specs/startup.md) | 25 | 23 | 3 | 0 |
-| [subtitles](contract/specs/subtitles.md) | 47 | 47 | 23 | 23 |
+| [subtitles](contract/specs/subtitles.md) | 48 | 48 | 23 | 23 |
 | [trickplay](contract/specs/trickplay.md) | 11 | 11 | 10 | 10 |
 | [users](contract/specs/users.md) | 188 | 188 | 195 | 195 |
 | [wire](contract/specs/wire.md) | 15 | 14 | 14 | 14 |
-| **total** | 1011 | 1002 | 740 | 737 |
+| **total** | 1014 | 1005 | 740 | 737 |
 
 ## Biggest gaps (planned or not planned, web-client facing)
 
