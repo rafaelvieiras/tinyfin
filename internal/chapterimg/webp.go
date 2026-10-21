@@ -22,25 +22,41 @@ func encodeWebP(w io.Writer, img *image.RGBA) error {
 	g := make([]byte, n)
 	r := make([]byte, n)
 	bl := make([]byte, n)
-	var hg, hr, hb [256]int
+	al := make([]byte, n)
+	var hg, hr, hb, ha [256]int
+	hasAlpha := false
 	for y := 0; y < height; y++ {
 		row := img.Pix[y*img.Stride : y*img.Stride+width*4]
 		for x := 0; x < width; x++ {
 			i := y*width + x
-			gg := row[x*4+1]
-			g[i] = gg
-			r[i] = row[x*4] - gg
-			bl[i] = row[x*4+2] - gg
+			pr, pg, pb, pa := row[x*4], row[x*4+1], row[x*4+2], row[x*4+3]
+			if pa != 255 {
+				hasAlpha = true
+				if pa > 0 { // the picture is premultiplied, the stream is not
+					pr = uint8(min(255, (int(pr)*255+int(pa)/2)/int(pa)))
+					pg = uint8(min(255, (int(pg)*255+int(pa)/2)/int(pa)))
+					pb = uint8(min(255, (int(pb)*255+int(pa)/2)/int(pa)))
+				}
+			}
+			al[i] = pa
+			g[i] = pg
+			r[i] = pr - pg
+			bl[i] = pb - pg
 			hg[g[i]]++
 			hr[r[i]]++
 			hb[bl[i]]++
+			ha[pa]++
 		}
 	}
 	var bw bitWriter
 	bw.put(0x2f, 8)
 	bw.put(uint32(width-1), 14)
 	bw.put(uint32(height-1), 14)
-	bw.put(0, 1) // alpha is not used
+	if hasAlpha {
+		bw.put(1, 1)
+	} else {
+		bw.put(0, 1) // alpha is not used
+	}
 	bw.put(0, 3) // version
 	bw.put(1, 1) // a transform follows
 	bw.put(2, 2) // subtract green
@@ -50,8 +66,6 @@ func encodeWebP(w io.Writer, img *image.RGBA) error {
 	cg := bw.prefixCode(hg[:], 280)
 	cr := bw.prefixCode(hr[:], 256)
 	cb := bw.prefixCode(hb[:], 256)
-	var ha [256]int
-	ha[255] = 1
 	ca := bw.prefixCode(ha[:], 256)
 	var hd [40]int
 	hd[0] = 1
@@ -60,7 +74,7 @@ func encodeWebP(w io.Writer, img *image.RGBA) error {
 		cg.write(&bw, int(g[i]))
 		cr.write(&bw, int(r[i]))
 		cb.write(&bw, int(bl[i]))
-		ca.write(&bw, 255)
+		ca.write(&bw, int(al[i]))
 	}
 	data := bw.bytes()
 	chunk := len(data)

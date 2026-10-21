@@ -27,6 +27,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   no longer lowers the figure.
 - `scripts/conformance-media.sh` also builds a dual-layer Dolby Vision stream (base layer plus interleaved
   enhancement layer NAL units, record patched to profile 7 with the layer present) for the Matrix2 library.
+- Chapter picture overlays and WebP follow the reference (`chapters.md#images` R15-R16, scenarios
+  `chapters.images.count-digits`, `blur-box`, `blur-edges`, `crop-whitespace`, `webp-lossy`): the unplayed count
+  uses the reference's measured digit bitmaps (24 px for one or two digits, 18 px from three) and circle mask;
+  `blur` is Skia's box-filter blur on an opaque picture surrounded by nothing (edges lose alpha: dark in a JPEG,
+  transparent in a PNG/lossless WebP; sigma capped at 532, two boxes of 1.5x window from window 256); WebP below
+  quality 100 is a lossy VP8 key frame from a new pure-Go encoder, and a WebP quality outside 0-100 is an empty
+  `200` body. `cropWhitespace` is proven a no-op for chapter pictures. The conformance runner gains
+  `expect.image` (size and pixel asserts) and `hexprefix`/`hexcontains`/`bytes_lte`/`bytes_gte` text ops.
 - HLS copy decisions and announced rates follow the reference (`playback.md#hls` R15-R16, scenario
   `playback.hls.copy-limits`): a picture is copied only when its profile, level, reference frames, bit depth
   and sample aspect also fit `h264-profile`/`hevc-profile`/`Profile`, `h264-level`/`hevc-level`/`Level`,

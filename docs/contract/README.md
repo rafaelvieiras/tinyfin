@@ -124,7 +124,11 @@ reference source open in the same session.
   (subtitle documents, playlists): a list of `{"op", "value"}` with ops `eq`
   (the whole body), `prefix`, `contains`, `notcontains`, `matches` (an
   unanchored regular expression, `(?s)` lets `.` cross lines) and `lines` (the
-  number of non-empty lines); string values are template-expanded.
+  number of non-empty lines), `hexprefix` and `hexcontains` (the body starts with / contains the bytes of a hex string) and `bytes_lte` / `bytes_gte` (the body's length); string values are template-expanded.
+  `expect.image` decodes a PNG, JPEG or GIF body and asserts `width`, `height`
+  and `pixels`: a list of `{"x", "y", "rgb", "a", "tol"}` (a negative `x`/`y`
+  counts from the right/bottom edge; `rgb` is the colour not premultiplied, `a`
+  the alpha, either may be left out; each channel within `tol`, default 0).
 * Server-clock templates build time-of-day dependent state without depending
   on when the suite runs: `{{clock.hour}}` is the server's *local* time of day
   in fractional hours, `{{clock.hour+1}}` / `{{clock.hour-0.5}}` shift it
