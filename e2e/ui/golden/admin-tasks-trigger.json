@@ -1,0 +1,15 @@
+{
+  "flow": "tasks-trigger",
+  "entries": [
+    {
+      "method": "POST",
+      "path": "/ScheduledTasks/Running/:id",
+      "status": 204
+    },
+    {
+      "method": "GET",
+      "path": "/ScheduledTasks",
+      "status": 200
+    }
+  ]
+}

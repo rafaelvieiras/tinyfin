@@ -1,0 +1,10 @@
+{
+  "flow": "tasks-list",
+  "entries": [
+    {
+      "method": "GET",
+      "path": "/ScheduledTasks",
+      "status": 200
+    }
+  ]
+}

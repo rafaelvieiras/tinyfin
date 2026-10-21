@@ -1,0 +1,15 @@
+{
+  "flow": "activity",
+  "entries": [
+    {
+      "method": "GET",
+      "path": "/System/ActivityLog/Entries",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/Users",
+      "status": 200
+    }
+  ]
+}

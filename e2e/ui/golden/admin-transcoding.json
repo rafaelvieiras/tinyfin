@@ -1,0 +1,10 @@
+{
+  "flow": "transcoding",
+  "entries": [
+    {
+      "method": "GET",
+      "path": "/System/Configuration/encoding",
+      "status": 200
+    }
+  ]
+}

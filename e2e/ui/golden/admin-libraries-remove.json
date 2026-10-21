@@ -1,0 +1,15 @@
+{
+  "flow": "libraries-remove",
+  "entries": [
+    {
+      "method": "DELETE",
+      "path": "/Library/VirtualFolders",
+      "status": 204
+    },
+    {
+      "method": "GET",
+      "path": "/Library/VirtualFolders",
+      "status": 200
+    }
+  ]
+}

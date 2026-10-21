@@ -1,0 +1,15 @@
+{
+  "flow": "logs",
+  "entries": [
+    {
+      "method": "GET",
+      "path": "/System/Configuration",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/System/Logs",
+      "status": 200
+    }
+  ]
+}
