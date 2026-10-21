@@ -94,6 +94,11 @@ type Plan struct {
 	Quality     int
 	PNG         bool
 	WebP        bool
+	// WebPQuality is the quality of a lossy WebP (0 to 99), -1 for the
+	// lossless one; WebPEmpty is a WebP asked for with a quality outside 0 to
+	// 100, which the reference answers with an empty body.
+	WebPQuality int
+	WebPEmpty   bool
 	Overlay     Overlay
 }
 
@@ -136,7 +141,7 @@ func follow(other, from, n int) int {
 // ratio: a stored picture is never enlarged. A side that comes out as 0
 // before that last step leaves the picture as it is.
 func PlanFor(p Params, srcW, srcH int) Plan {
-	plan := Plan{W: srcW, H: srcH, Quality: defaultQuality}
+	plan := Plan{W: srcW, H: srcH, Quality: defaultQuality, WebPQuality: -1}
 	of := formatOf(p.Format)
 	plan.PNG = of == fmtPNG
 	plan.WebP = of == fmtWebP
@@ -149,6 +154,11 @@ func PlanFor(p Params, srcW, srcH int) Plan {
 	plan.Overlay = ov
 	need = need || needOv
 	if q, ok := val(p.Quality); ok {
+		if q >= 0 && q < 100 {
+			plan.WebPQuality = q
+		} else if q != 100 {
+			plan.WebPEmpty = true
+		}
 		if q < 1 {
 			q = 1
 		}
@@ -266,7 +276,7 @@ func (g *Generator) Render(id storage.ItemID, path string, mod time.Time, p Para
 	} else if plan.WebP {
 		ext = ".webp"
 	}
-	key := sha1.Sum([]byte(fmt.Sprintf("v2|%s|%d|%d|%d|%d|%v|%v|%+v", path, mod.UnixNano(), plan.W, plan.H, plan.Quality, plan.PNG, plan.WebP, plan.Overlay)))
+	key := sha1.Sum([]byte(fmt.Sprintf("v3|%s|%d|%d|%d|%d|%v|%v|%d|%v|%+v", path, mod.UnixNano(), plan.W, plan.H, plan.Quality, plan.PNG, plan.WebP, plan.WebPQuality, plan.WebPEmpty, plan.Overlay)))
 	dir := filepath.Join(g.Dir(id), "cache")
 	out := filepath.Join(dir, hex.EncodeToString(key[:8])+ext)
 	if st, err := os.Stat(out); err == nil && st.Size() > 0 {
@@ -293,7 +303,13 @@ func (g *Generator) Render(id storage.ItemID, path string, mod time.Time, p Para
 	if plan.PNG {
 		err = png.Encode(tmp, dst)
 	} else if plan.WebP {
-		err = encodeWebP(tmp, dst)
+		if plan.WebPEmpty {
+			err = nil
+		} else if plan.WebPQuality >= 0 {
+			err = encodeVP8(tmp, dst, plan.WebPQuality)
+		} else {
+			err = encodeWebP(tmp, dst)
+		}
 	} else {
 		err = jpeg.Encode(tmp, dst, &jpeg.Options{Quality: plan.Quality})
 	}
