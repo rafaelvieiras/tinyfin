@@ -1,0 +1,274 @@
+[
+ {
+  "id": "users.update.provider-ids-from-lists",
+  "endpoint": "POST /Users",
+  "spec": "users.md#update",
+  "scope": "modern",
+  "tags": [
+   "users"
+  ],
+  "covers": [
+   "users.update.R14"
+  ],
+  "steps": [
+   {
+    "name": "create",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-update-providers",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u": "$.Id"
+    }
+   },
+   {
+    "name": "authentication providers",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Auth/Providers"
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "ap": "$[0].Id"
+    }
+   },
+   {
+    "name": "reset providers",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Auth/PasswordResetProviders"
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "rp": "$[0].Id"
+    }
+   },
+   {
+    "name": "save the profile with the listed providers",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users?userId={{capture.u}}",
+     "body": {
+      "Name": "tmp-update-providers",
+      "Policy": {
+       "AuthenticationProviderId": "{{capture.ap}}",
+       "PasswordResetProviderId": "{{capture.rp}}"
+      }
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "policy saved with the listed providers",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u}}/Policy",
+     "body": {
+      "AuthenticationProviderId": "{{capture.ap}}",
+      "PasswordResetProviderId": "{{capture.rp}}",
+      "IsHidden": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "read back",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Users/{{capture.u}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Policy.AuthenticationProviderId",
+       "op": "eq",
+       "value": "{{capture.ap}}"
+      },
+      {
+       "path": "$.Policy.PasswordResetProviderId",
+       "op": "eq",
+       "value": "{{capture.rp}}"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete u",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u}}"
+    },
+    "expect": {}
+   }
+  ]
+ },
+ {
+  "id": "users.password.reset-lowercase-key",
+  "endpoint": "POST /Users/{userId}/Password",
+  "spec": "users.md#update-password",
+  "scope": "modern",
+  "tags": [
+   "security"
+  ],
+  "covers": [
+   "users.password.R15"
+  ],
+  "steps": [
+   {
+    "name": "create",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-password-lc",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u": "$.Id"
+    }
+   },
+   {
+    "name": "reset with a lower-case member name",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u}}/Password",
+     "body": {
+      "resetPassword": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "empty Pw logs in",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-password-lc",
+      "Pw": ""
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-lc-empty-Pw-logs-in{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "old Pw is rejected",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-password-lc",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-lc-old-Pw-is-rejected{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "set with lower-case member names",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u}}/Password",
+     "body": {
+      "currentPw": "",
+      "newPw": "Tmp-Pass-2"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "new Pw logs in",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-password-lc",
+      "Pw": "Tmp-Pass-2"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-lc-new-Pw-logs-in{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "empty Pw is rejected",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-password-lc",
+      "Pw": ""
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-lc-empty-Pw-is-rejected{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete u",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u}}"
+    },
+    "expect": {}
+   }
+  ]
+ }
+]

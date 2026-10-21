@@ -4,9 +4,9 @@
 
 Tuners, guide, timers, recordings and channel plugins.
 
-[Overview](../COVERAGE.md) · 43 operations · 2 registered (5%) · 0 verified · ✅ 1 · 🟡 1 · ⛔ 41
+[Overview](../COVERAGE.md) · 43 operations · 4 registered (9%) · 0 verified · ✅ 3 · 🟡 1 · ⛔ 39
 
-✅⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔
+✅🟡⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔
 
 Columns: **Auth** is the reference's authorization policy; **Web** = mentioned in docs/11 (called by the official web client); **Tests** = scenarios that exercise the route (passing / total).
 
@@ -14,7 +14,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ⛔ not-planned | `GET /Channels` | DefaultAuthorization |  |  | Out of scope for v1 (docs/01, decision D8). Channels are a plugin concept in the reference. (priority: low) |
+| ✅ supported *(no scenario)* | `GET /Channels` | DefaultAuthorization |  | 0/1 |  |
 | ⛔ not-planned | `GET /Channels/Features` | DefaultAuthorization |  |  | Out of scope for v1 (docs/01, decision D8). Channels are a plugin concept in the reference. (priority: low) |
 | ⛔ not-planned | `GET /Channels/Items/Latest` | DefaultAuthorization |  |  | Out of scope for v1 (docs/01, decision D8). Channels are a plugin concept in the reference. (priority: low) |
 | ⛔ not-planned | `GET /Channels/{channelId}/Features` | DefaultAuthorization |  |  | Out of scope for v1 (docs/01, decision D8). Channels are a plugin concept in the reference. (priority: low) |
@@ -29,7 +29,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ⛔ not-planned | `GET /LiveTv/Channels` | LiveTvAccess |  |  | Out of scope for v1 (docs/01, decision D8). (priority: low) |
 | ⛔ not-planned | `GET /LiveTv/Channels/{channelId}` | LiveTvAccess |  |  | Out of scope for v1 (docs/01, decision D8). (priority: low) |
 | ⛔ not-planned | `GET /LiveTv/GuideInfo` | LiveTvAccess |  |  | Out of scope for v1 (docs/01, decision D8). (priority: low) |
-| ⛔ not-planned | `GET /LiveTv/Info` | LiveTvAccess |  |  | Out of scope for v1 (docs/01, decision D8). (priority: low) |
+| ✅ supported *(no scenario)* | `GET /LiveTv/Info` | LiveTvAccess |  | 0/1 |  |
 | ⛔ not-planned | `DELETE /LiveTv/ListingProviders` | RequiresElevation |  |  | Out of scope for v1 (docs/01, decision D8). (priority: low) |
 | ⛔ not-planned | `POST /LiveTv/ListingProviders` | RequiresElevation |  |  | Out of scope for v1 (docs/01, decision D8). (priority: low) |
 | ⛔ not-planned | `GET /LiveTv/ListingProviders/Default` | LiveTvAccess |  |  | Out of scope for v1 (docs/01, decision D8). (priority: low) |

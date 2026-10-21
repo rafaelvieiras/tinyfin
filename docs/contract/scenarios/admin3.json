@@ -1,0 +1,987 @@
+[
+ {
+  "id": "admin.tasks.catalog",
+  "endpoint": "GET /ScheduledTasks",
+  "spec": "admin.md#tasks",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.tasks.R2",
+   "admin.tasks.R10"
+  ],
+  "steps": [
+   {
+    "name": "full list",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/ScheduledTasks"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 20
+      },
+      {
+       "path": "$[?Key=AudioNormalization].Id",
+       "op": "eq",
+       "value": "ec2f221fd8e7706b3d3afd2c4591b4d7"
+      },
+      {
+       "path": "$[?Key=AudioNormalization].Name",
+       "op": "eq",
+       "value": "Audio Normalization"
+      },
+      {
+       "path": "$[?Key=AudioNormalization].Category",
+       "op": "eq",
+       "value": "Library"
+      },
+      {
+       "path": "$[?Key=AudioNormalization].IsHidden",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$[?Key=AudioNormalization].Description",
+       "op": "eq",
+       "value": "Scans files for audio normalization data."
+      },
+      {
+       "path": "$[?Key=AudioNormalization].Triggers",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[?Key=CleanActivityLog].Id",
+       "op": "eq",
+       "value": "b461ef918ab28520928183e794350e3c"
+      },
+      {
+       "path": "$[?Key=CleanActivityLog].Name",
+       "op": "eq",
+       "value": "Clean Activity Log"
+      },
+      {
+       "path": "$[?Key=CleanActivityLog].Category",
+       "op": "eq",
+       "value": "Maintenance"
+      },
+      {
+       "path": "$[?Key=CleanActivityLog].IsHidden",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$[?Key=CleanActivityLog].Description",
+       "op": "eq",
+       "value": "Deletes activity log entries older than the configured age."
+      },
+      {
+       "path": "$[?Key=CleanActivityLog].Triggers",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$[?Key=DeleteCacheFiles].Id",
+       "op": "eq",
+       "value": "241d4fcb19a1d557ee62428e411da609"
+      },
+      {
+       "path": "$[?Key=DeleteCacheFiles].Name",
+       "op": "eq",
+       "value": "Clean Cache Directory"
+      },
+      {
+       "path": "$[?Key=DeleteCacheFiles].Category",
+       "op": "eq",
+       "value": "Maintenance"
+      },
+      {
+       "path": "$[?Key=DeleteCacheFiles].IsHidden",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$[?Key=DeleteCacheFiles].Description",
+       "op": "eq",
+       "value": "Deletes cache files no longer needed by the system."
+      },
+      {
+       "path": "$[?Key=DeleteCacheFiles].Triggers",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[?Key=CleanLogFiles].Id",
+       "op": "eq",
+       "value": "1c8ede62c521bea0bf851344f5b8ca40"
+      },
+      {
+       "path": "$[?Key=CleanLogFiles].Name",
+       "op": "eq",
+       "value": "Clean Log Directory"
+      },
+      {
+       "path": "$[?Key=CleanLogFiles].Category",
+       "op": "eq",
+       "value": "Maintenance"
+      },
+      {
+       "path": "$[?Key=CleanLogFiles].IsHidden",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$[?Key=CleanLogFiles].Description",
+       "op": "eq",
+       "value": "Deletes log files that are more than 3 days old."
+      },
+      {
+       "path": "$[?Key=CleanLogFiles].Triggers",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[?Key=DeleteTranscodeFiles].Id",
+       "op": "eq",
+       "value": "7d8088c10902f1bf4072ded42437bcfb"
+      },
+      {
+       "path": "$[?Key=DeleteTranscodeFiles].Name",
+       "op": "eq",
+       "value": "Clean Transcode Directory"
+      },
+      {
+       "path": "$[?Key=DeleteTranscodeFiles].Category",
+       "op": "eq",
+       "value": "Maintenance"
+      },
+      {
+       "path": "$[?Key=DeleteTranscodeFiles].IsHidden",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$[?Key=DeleteTranscodeFiles].Description",
+       "op": "eq",
+       "value": "Deletes transcode files more than one day old."
+      },
+      {
+       "path": "$[?Key=DeleteTranscodeFiles].Triggers",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$[?Key=DownloadLyrics].Id",
+       "op": "eq",
+       "value": "26649fe0aad57557245351f220da916c"
+      },
+      {
+       "path": "$[?Key=DownloadLyrics].Name",
+       "op": "eq",
+       "value": "Download missing lyrics"
+      },
+      {
+       "path": "$[?Key=DownloadLyrics].Category",
+       "op": "eq",
+       "value": "Library"
+      },
+      {
+       "path": "$[?Key=DownloadLyrics].IsHidden",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$[?Key=DownloadLyrics].Description",
+       "op": "eq",
+       "value": "Downloads lyrics for songs"
+      },
+      {
+       "path": "$[?Key=DownloadLyrics].Triggers",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[?Key=DownloadSubtitles].Id",
+       "op": "eq",
+       "value": "2c66a88bca43e565d7f8099f825478f1"
+      },
+      {
+       "path": "$[?Key=DownloadSubtitles].Name",
+       "op": "eq",
+       "value": "Download missing subtitles"
+      },
+      {
+       "path": "$[?Key=DownloadSubtitles].Category",
+       "op": "eq",
+       "value": "Library"
+      },
+      {
+       "path": "$[?Key=DownloadSubtitles].IsHidden",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$[?Key=DownloadSubtitles].Description",
+       "op": "eq",
+       "value": "Searches the internet for missing subtitles based on metadata configuration."
+      },
+      {
+       "path": "$[?Key=DownloadSubtitles].Triggers",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[?Key=RefreshChapterImages].Id",
+       "op": "eq",
+       "value": "4e6637c832ed644d1af3370a2506e80a"
+      },
+      {
+       "path": "$[?Key=RefreshChapterImages].Name",
+       "op": "eq",
+       "value": "Extract Chapter Images"
+      },
+      {
+       "path": "$[?Key=RefreshChapterImages].Category",
+       "op": "eq",
+       "value": "Library"
+      },
+      {
+       "path": "$[?Key=RefreshChapterImages].IsHidden",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$[?Key=RefreshChapterImages].Description",
+       "op": "eq",
+       "value": "Creates thumbnails for videos that have chapters."
+      },
+      {
+       "path": "$[?Key=RefreshChapterImages].Triggers",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[?Key=RefreshTrickplayImages].Id",
+       "op": "eq",
+       "value": "64f5f44cd30dc273cb9890205473bbcc"
+      },
+      {
+       "path": "$[?Key=RefreshTrickplayImages].Name",
+       "op": "eq",
+       "value": "Generate Trickplay Images"
+      },
+      {
+       "path": "$[?Key=RefreshTrickplayImages].Category",
+       "op": "eq",
+       "value": "Library"
+      },
+      {
+       "path": "$[?Key=RefreshTrickplayImages].IsHidden",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$[?Key=RefreshTrickplayImages].Description",
+       "op": "eq",
+       "value": "Creates trickplay previews for videos in enabled libraries."
+      },
+      {
+       "path": "$[?Key=RefreshTrickplayImages].Triggers",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[?Key=KeyframeExtraction].Id",
+       "op": "eq",
+       "value": "f302d80f31bcacf76f979d277d448581"
+      },
+      {
+       "path": "$[?Key=KeyframeExtraction].Name",
+       "op": "eq",
+       "value": "Keyframe Extractor"
+      },
+      {
+       "path": "$[?Key=KeyframeExtraction].Category",
+       "op": "eq",
+       "value": "Library"
+      },
+      {
+       "path": "$[?Key=KeyframeExtraction].IsHidden",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$[?Key=KeyframeExtraction].Description",
+       "op": "eq",
+       "value": "Extracts keyframes from video files to create more precise HLS playlists. This task may run for a long time."
+      },
+      {
+       "path": "$[?Key=KeyframeExtraction].Triggers",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$[?Key=TaskExtractMediaSegments].Id",
+       "op": "eq",
+       "value": "f861734dd71b37f9482b52a820e39013"
+      },
+      {
+       "path": "$[?Key=TaskExtractMediaSegments].Name",
+       "op": "eq",
+       "value": "Media Segment Scan"
+      },
+      {
+       "path": "$[?Key=TaskExtractMediaSegments].Category",
+       "op": "eq",
+       "value": "Library"
+      },
+      {
+       "path": "$[?Key=TaskExtractMediaSegments].IsHidden",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$[?Key=TaskExtractMediaSegments].Description",
+       "op": "eq",
+       "value": "Extracts or obtains media segments from MediaSegment enabled plugins."
+      },
+      {
+       "path": "$[?Key=TaskExtractMediaSegments].Triggers",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[?Key=MoveTrickplayImages].Id",
+       "op": "eq",
+       "value": "ebb6e58c4e9a8f5d1f77ab6ddefb3143"
+      },
+      {
+       "path": "$[?Key=MoveTrickplayImages].Name",
+       "op": "eq",
+       "value": "Migrate Trickplay Image Location"
+      },
+      {
+       "path": "$[?Key=MoveTrickplayImages].Category",
+       "op": "eq",
+       "value": "Maintenance"
+      },
+      {
+       "path": "$[?Key=MoveTrickplayImages].IsHidden",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$[?Key=MoveTrickplayImages].Description",
+       "op": "eq",
+       "value": "Moves existing trickplay files according to the library settings."
+      },
+      {
+       "path": "$[?Key=MoveTrickplayImages].Triggers",
+       "op": "len",
+       "value": 0
+      },
+      {
+       "path": "$[?Key=OptimizeDatabaseTask].Id",
+       "op": "eq",
+       "value": "31de9ce83b9223d338c77b1a635e144b"
+      },
+      {
+       "path": "$[?Key=OptimizeDatabaseTask].Name",
+       "op": "eq",
+       "value": "Optimize database"
+      },
+      {
+       "path": "$[?Key=OptimizeDatabaseTask].Category",
+       "op": "eq",
+       "value": "Maintenance"
+      },
+      {
+       "path": "$[?Key=OptimizeDatabaseTask].IsHidden",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$[?Key=OptimizeDatabaseTask].Description",
+       "op": "eq",
+       "value": "Compacts database and truncates free space. Running this task after scanning the library or doing other changes that imply database modifications might improve performance."
+      },
+      {
+       "path": "$[?Key=OptimizeDatabaseTask].Triggers",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[?Key=RefreshInternetChannels].Id",
+       "op": "eq",
+       "value": "0c9ee3a88fc15547c6852205480da1fd"
+      },
+      {
+       "path": "$[?Key=RefreshInternetChannels].Name",
+       "op": "eq",
+       "value": "Refresh Channels"
+      },
+      {
+       "path": "$[?Key=RefreshInternetChannels].Category",
+       "op": "eq",
+       "value": "Internet Channels"
+      },
+      {
+       "path": "$[?Key=RefreshInternetChannels].IsHidden",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$[?Key=RefreshInternetChannels].Description",
+       "op": "eq",
+       "value": "Refreshes internet channel information."
+      },
+      {
+       "path": "$[?Key=RefreshInternetChannels].Triggers",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[?Key=RefreshGuide].Id",
+       "op": "eq",
+       "value": "bea9b218c97bbf98c5dc1303bdb9a0ca"
+      },
+      {
+       "path": "$[?Key=RefreshGuide].Name",
+       "op": "eq",
+       "value": "Refresh Guide"
+      },
+      {
+       "path": "$[?Key=RefreshGuide].Category",
+       "op": "eq",
+       "value": "Live TV"
+      },
+      {
+       "path": "$[?Key=RefreshGuide].IsHidden",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$[?Key=RefreshGuide].Description",
+       "op": "eq",
+       "value": "Downloads channel information from live tv services."
+      },
+      {
+       "path": "$[?Key=RefreshGuide].Triggers",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[?Key=RefreshPeople].Id",
+       "op": "eq",
+       "value": "866456ed0d44e15468124ce33d85961e"
+      },
+      {
+       "path": "$[?Key=RefreshPeople].Name",
+       "op": "eq",
+       "value": "Refresh People"
+      },
+      {
+       "path": "$[?Key=RefreshPeople].Category",
+       "op": "eq",
+       "value": "Library"
+      },
+      {
+       "path": "$[?Key=RefreshPeople].IsHidden",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$[?Key=RefreshPeople].Description",
+       "op": "eq",
+       "value": "Updates metadata for actors and directors in your media library."
+      },
+      {
+       "path": "$[?Key=RefreshPeople].Triggers",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[?Key=TmdbRefreshUpcomingEpisodes].Id",
+       "op": "eq",
+       "value": "1ee23a5dd39fb4225715375c91bc2990"
+      },
+      {
+       "path": "$[?Key=TmdbRefreshUpcomingEpisodes].Name",
+       "op": "eq",
+       "value": "Refresh upcoming and missing episodes (TheMovieDb)"
+      },
+      {
+       "path": "$[?Key=TmdbRefreshUpcomingEpisodes].Category",
+       "op": "eq",
+       "value": "Library"
+      },
+      {
+       "path": "$[?Key=TmdbRefreshUpcomingEpisodes].IsHidden",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$[?Key=TmdbRefreshUpcomingEpisodes].Description",
+       "op": "eq",
+       "value": "Checks TheMovieDb for newly announced episodes and creates virtual entries for unaired and missing episodes, according to the TMDb plugin settings. When both options are disabled, removes any virtual entries previously created."
+      },
+      {
+       "path": "$[?Key=TmdbRefreshUpcomingEpisodes].Triggers",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[?Key=RefreshLibrary].Id",
+       "op": "eq",
+       "value": "7738148ffcd07979c7ceb148e06b3aed"
+      },
+      {
+       "path": "$[?Key=RefreshLibrary].Name",
+       "op": "eq",
+       "value": "Scan Media Library"
+      },
+      {
+       "path": "$[?Key=RefreshLibrary].Category",
+       "op": "eq",
+       "value": "Library"
+      },
+      {
+       "path": "$[?Key=RefreshLibrary].IsHidden",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$[?Key=RefreshLibrary].Description",
+       "op": "eq",
+       "value": "Scans your media library for new files and refreshes metadata."
+      },
+      {
+       "path": "$[?Key=RefreshLibrary].Triggers",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[?Key=PluginUpdates].Id",
+       "op": "eq",
+       "value": "f9b057c054e9e6daee4a88ffd146a403"
+      },
+      {
+       "path": "$[?Key=PluginUpdates].Name",
+       "op": "eq",
+       "value": "Update Plugins"
+      },
+      {
+       "path": "$[?Key=PluginUpdates].Category",
+       "op": "eq",
+       "value": "Application"
+      },
+      {
+       "path": "$[?Key=PluginUpdates].IsHidden",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$[?Key=PluginUpdates].Description",
+       "op": "eq",
+       "value": "Downloads and installs updates for plugins that are configured to update automatically."
+      },
+      {
+       "path": "$[?Key=PluginUpdates].Triggers",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$[?Key=CleanupUserDataTask].Id",
+       "op": "eq",
+       "value": "8240e309407dbbf43c99d30a6cbd239e"
+      },
+      {
+       "path": "$[?Key=CleanupUserDataTask].Name",
+       "op": "eq",
+       "value": "User data cleanup task"
+      },
+      {
+       "path": "$[?Key=CleanupUserDataTask].Category",
+       "op": "eq",
+       "value": "Maintenance"
+      },
+      {
+       "path": "$[?Key=CleanupUserDataTask].IsHidden",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$[?Key=CleanupUserDataTask].Description",
+       "op": "eq",
+       "value": "Cleans all user data (Watch state, favorite status etc) from media that is no longer present for at least 90 days."
+      },
+      {
+       "path": "$[?Key=CleanupUserDataTask].Triggers",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   },
+   {
+    "name": "visible tasks",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/ScheduledTasks?isHidden=false"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 18
+      },
+      {
+       "path": "$[*].Key",
+       "op": "notcontains",
+       "value": "RefreshGuide"
+      },
+      {
+       "path": "$[*].Key",
+       "op": "notcontains",
+       "value": "RefreshInternetChannels"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.tasks.default-triggers",
+  "endpoint": "GET /ScheduledTasks",
+  "spec": "admin.md#tasks",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.tasks.R11"
+  ],
+  "steps": [
+   {
+    "name": "defaults",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/ScheduledTasks"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?Key=AudioNormalization].Triggers[0].Type",
+       "op": "eq",
+       "value": "IntervalTrigger"
+      },
+      {
+       "path": "$[?Key=AudioNormalization].Triggers[0].IntervalTicks",
+       "op": "eq",
+       "value": 864000000000
+      },
+      {
+       "path": "$[?Key=DeleteCacheFiles].Triggers[0].Type",
+       "op": "eq",
+       "value": "IntervalTrigger"
+      },
+      {
+       "path": "$[?Key=DeleteCacheFiles].Triggers[0].IntervalTicks",
+       "op": "eq",
+       "value": 864000000000
+      },
+      {
+       "path": "$[?Key=CleanLogFiles].Triggers[0].Type",
+       "op": "eq",
+       "value": "IntervalTrigger"
+      },
+      {
+       "path": "$[?Key=CleanLogFiles].Triggers[0].IntervalTicks",
+       "op": "eq",
+       "value": 864000000000
+      },
+      {
+       "path": "$[?Key=DeleteTranscodeFiles].Triggers[0].Type",
+       "op": "eq",
+       "value": "StartupTrigger"
+      },
+      {
+       "path": "$[?Key=DeleteTranscodeFiles].Triggers[1].Type",
+       "op": "eq",
+       "value": "IntervalTrigger"
+      },
+      {
+       "path": "$[?Key=DeleteTranscodeFiles].Triggers[1].IntervalTicks",
+       "op": "eq",
+       "value": 864000000000
+      },
+      {
+       "path": "$[?Key=DownloadLyrics].Triggers[0].Type",
+       "op": "eq",
+       "value": "IntervalTrigger"
+      },
+      {
+       "path": "$[?Key=DownloadLyrics].Triggers[0].IntervalTicks",
+       "op": "eq",
+       "value": 864000000000
+      },
+      {
+       "path": "$[?Key=DownloadSubtitles].Triggers[0].Type",
+       "op": "eq",
+       "value": "IntervalTrigger"
+      },
+      {
+       "path": "$[?Key=DownloadSubtitles].Triggers[0].IntervalTicks",
+       "op": "eq",
+       "value": 864000000000
+      },
+      {
+       "path": "$[?Key=RefreshChapterImages].Triggers[0].Type",
+       "op": "eq",
+       "value": "DailyTrigger"
+      },
+      {
+       "path": "$[?Key=RefreshChapterImages].Triggers[0].TimeOfDayTicks",
+       "op": "eq",
+       "value": 72000000000
+      },
+      {
+       "path": "$[?Key=RefreshChapterImages].Triggers[0].MaxRuntimeTicks",
+       "op": "eq",
+       "value": 144000000000
+      },
+      {
+       "path": "$[?Key=RefreshTrickplayImages].Triggers[0].Type",
+       "op": "eq",
+       "value": "DailyTrigger"
+      },
+      {
+       "path": "$[?Key=RefreshTrickplayImages].Triggers[0].TimeOfDayTicks",
+       "op": "eq",
+       "value": 108000000000
+      },
+      {
+       "path": "$[?Key=TaskExtractMediaSegments].Triggers[0].Type",
+       "op": "eq",
+       "value": "IntervalTrigger"
+      },
+      {
+       "path": "$[?Key=TaskExtractMediaSegments].Triggers[0].IntervalTicks",
+       "op": "eq",
+       "value": 432000000000
+      },
+      {
+       "path": "$[?Key=OptimizeDatabaseTask].Triggers[0].Type",
+       "op": "eq",
+       "value": "IntervalTrigger"
+      },
+      {
+       "path": "$[?Key=OptimizeDatabaseTask].Triggers[0].IntervalTicks",
+       "op": "eq",
+       "value": 216000000000
+      },
+      {
+       "path": "$[?Key=RefreshInternetChannels].Triggers[0].Type",
+       "op": "eq",
+       "value": "IntervalTrigger"
+      },
+      {
+       "path": "$[?Key=RefreshInternetChannels].Triggers[0].IntervalTicks",
+       "op": "eq",
+       "value": 864000000000
+      },
+      {
+       "path": "$[?Key=RefreshGuide].Triggers[0].Type",
+       "op": "eq",
+       "value": "IntervalTrigger"
+      },
+      {
+       "path": "$[?Key=RefreshGuide].Triggers[0].IntervalTicks",
+       "op": "eq",
+       "value": 864000000000
+      },
+      {
+       "path": "$[?Key=RefreshPeople].Triggers[0].Type",
+       "op": "eq",
+       "value": "IntervalTrigger"
+      },
+      {
+       "path": "$[?Key=RefreshPeople].Triggers[0].IntervalTicks",
+       "op": "eq",
+       "value": 6048000000000
+      },
+      {
+       "path": "$[?Key=TmdbRefreshUpcomingEpisodes].Triggers[0].Type",
+       "op": "eq",
+       "value": "IntervalTrigger"
+      },
+      {
+       "path": "$[?Key=TmdbRefreshUpcomingEpisodes].Triggers[0].IntervalTicks",
+       "op": "eq",
+       "value": 6048000000000
+      },
+      {
+       "path": "$[?Key=PluginUpdates].Triggers[0].Type",
+       "op": "eq",
+       "value": "StartupTrigger"
+      },
+      {
+       "path": "$[?Key=PluginUpdates].Triggers[1].Type",
+       "op": "eq",
+       "value": "IntervalTrigger"
+      },
+      {
+       "path": "$[?Key=PluginUpdates].Triggers[1].IntervalTicks",
+       "op": "eq",
+       "value": 864000000000
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.tasks.run-maintenance",
+  "endpoint": "POST /ScheduledTasks/Running/{taskId}",
+  "spec": "admin.md#tasks",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.tasks.R10"
+  ],
+  "steps": [
+   {
+    "name": "start Clean Log Directory",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/ScheduledTasks/Running/1c8ede62c521bea0bf851344f5b8ca40"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "completes",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/ScheduledTasks/1c8ede62c521bea0bf851344f5b8ca40"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.State",
+       "op": "eq",
+       "value": "Idle"
+      },
+      {
+       "path": "$.LastExecutionResult.Status",
+       "op": "eq",
+       "value": "Completed"
+      },
+      {
+       "path": "$.LastExecutionResult.Key",
+       "op": "eq",
+       "value": "CleanLogFiles"
+      },
+      {
+       "path": "$.LastExecutionResult.Name",
+       "op": "eq",
+       "value": "Clean Log Directory"
+      }
+     ]
+    },
+    "retryMs": 15000
+   },
+   {
+    "name": "start Clean Cache Directory",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/ScheduledTasks/Running/241d4fcb19a1d557ee62428e411da609"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "completes too",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/ScheduledTasks/241d4fcb19a1d557ee62428e411da609"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.State",
+       "op": "eq",
+       "value": "Idle"
+      },
+      {
+       "path": "$.LastExecutionResult.Status",
+       "op": "eq",
+       "value": "Completed"
+      }
+     ]
+    },
+    "retryMs": 15000
+   },
+   {
+    "name": "start a plugin task",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/ScheduledTasks/Running/f9b057c054e9e6daee4a88ffd146a403"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "completes as well",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/ScheduledTasks/f9b057c054e9e6daee4a88ffd146a403"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.State",
+       "op": "eq",
+       "value": "Idle"
+      },
+      {
+       "path": "$.LastExecutionResult.Status",
+       "op": "eq",
+       "value": "Completed"
+      }
+     ]
+    },
+    "retryMs": 15000
+   }
+  ],
+  "cleanup": []
+ }
+]

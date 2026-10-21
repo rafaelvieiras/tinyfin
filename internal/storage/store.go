@@ -164,7 +164,11 @@ type UserStore interface {
 	GetUserByName(ctx context.Context, name string) (User, error)
 	QueryUsers(ctx context.Context) ([]User, error)
 	CreateUser(ctx context.Context, user User) (UserID, error)
+	// UpdateUser writes every member but the password hash; the hash is
+	// replaced only by SetUserPasswordHash (no lost update between a password
+	// change and a concurrent profile or login write).
 	UpdateUser(ctx context.Context, user User) error
+	SetUserPasswordHash(ctx context.Context, id UserID, hash string) error
 	DeleteUser(ctx context.Context, id UserID) error
 
 	// IssueToken mints a token for (userID, deviceID), revoking any earlier
@@ -203,6 +207,8 @@ type UserStore interface {
 // session tied to one.
 type DeviceStore interface {
 	GetDevice(ctx context.Context, id DeviceID) (Device, error)
+	// QueryDevices lists the devices whose last user is userID, most recently
+	// active first; an empty userID lists every device.
 	QueryDevices(ctx context.Context, userID UserID) ([]Device, error)
 	UpsertDevice(ctx context.Context, device Device) error
 	DeleteDevice(ctx context.Context, id DeviceID) error

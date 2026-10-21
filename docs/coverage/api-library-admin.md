@@ -61,10 +61,10 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ↔️ divergent-by-design | `GET /ScheduledTasks` | RequiresElevation | yes | 2/2 | Lists only the tasks Tinyfin really runs (RefreshLibrary, RefreshTrickplayImages, CleanActivityLog) with the reference's Ids and Keys; the reference's ~20 tasks (plugin updates, subtitle/lyric downloads, ...) belong to subsystems that do not exist. See specs/admin.md. |
+| ↔️ divergent-by-design | `GET /ScheduledTasks` | RequiresElevation | yes | 2/4 | Lists only the tasks Tinyfin really runs (RefreshLibrary, RefreshTrickplayImages, CleanActivityLog) with the reference's Ids and Keys; the reference's ~20 tasks (plugin updates, subtitle/lyric downloads, ...) belong to subsystems that do not exist. See specs/admin.md. |
 | ↔️ divergent-by-design | `DELETE /ScheduledTasks/Running/{taskId}` | RequiresElevation | yes | 2/2 | Cancels a running library scan or trickplay batch; stopping a task that is not running is a 204 no-op (the reference answers 500). |
-| 🗓️ planned | `POST /ScheduledTasks/Running/{taskId}` | RequiresElevation | yes | 4/4 | Only the library-scan task and its start route exist. (priority: low) |
-| ✅ supported | `GET /ScheduledTasks/{taskId}` | RequiresElevation | yes | 3/3 |  |
+| 🗓️ planned | `POST /ScheduledTasks/Running/{taskId}` | RequiresElevation | yes | 4/5 | Only the library-scan task and its start route exist. (priority: low) |
+| ✅ supported | `GET /ScheduledTasks/{taskId}` | RequiresElevation | yes | 3/4 |  |
 | 🗓️ planned | `POST /ScheduledTasks/{taskId}/Triggers` | RequiresElevation |  | 1/1 | Only the library-scan task and its start route exist. (priority: low) |
 
 ## Related features

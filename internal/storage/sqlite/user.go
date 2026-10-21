@@ -108,11 +108,15 @@ func (s *Store) CreateUser(ctx context.Context, user storage.User) (storage.User
 }
 
 func (s *Store) UpdateUser(ctx context.Context, user storage.User) error {
-	const query = `UPDATE users SET name = ?, password_hash = ?, is_administrator = ?, is_disabled = ?, enable_auto_login = ?, policy_json = ?, last_login_date = ?, last_activity_date = ?
+	// password_hash is deliberately not written here: callers read a user,
+	// change an unrelated member (policy, last login, name) and write the row
+	// back, so writing the hash would let a concurrent password change be
+	// overwritten with the stale value. SetUserPasswordHash owns the column.
+	const query = `UPDATE users SET name = ?, is_administrator = ?, is_disabled = ?, enable_auto_login = ?, policy_json = ?, last_login_date = ?, last_activity_date = ?
 		WHERE id = ?`
 
 	res, err := s.exec(ctx, query,
-		user.Name, user.PasswordHash, user.IsAdministrator, user.IsDisabled, user.EnableAutoLogin, user.Policy,
+		user.Name, user.IsAdministrator, user.IsDisabled, user.EnableAutoLogin, user.Policy,
 		ptrToAny(user.LastLoginDate), ptrToAny(user.LastActivityDate),
 		string(user.ID),
 	)
@@ -125,6 +129,21 @@ func (s *Store) UpdateUser(ctx context.Context, user storage.User) error {
 	}
 	if n == 0 {
 		return fmt.Errorf("sqlite: updating user %q: %w", user.ID, sql.ErrNoRows)
+	}
+	return nil
+}
+
+// SetUserPasswordHash replaces the stored password hash of a user (empty
+// means no password) without touching any other column.
+func (s *Store) SetUserPasswordHash(ctx context.Context, id storage.UserID, hash string) error {
+	res, err := s.exec(ctx, `UPDATE users SET password_hash = ? WHERE id = ?`, hash, string(id))
+	if err != nil {
+		return fmt.Errorf("sqlite: setting password of user %q: %w", id, err)
+	}
+	if n, err := res.RowsAffected(); err != nil {
+		return fmt.Errorf("sqlite: setting password of user %q: %w", id, err)
+	} else if n == 0 {
+		return fmt.Errorf("sqlite: setting password of user %q: %w", id, sql.ErrNoRows)
 	}
 	return nil
 }

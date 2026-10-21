@@ -377,7 +377,7 @@ func (s *Server) runScanCtx(ctx context.Context, lib storage.Library) {
 	defer func() { <-s.scanLibSem }()
 	stats, err := s.scanner.ScanLibrary(ctx, lib)
 	s.scanState.end(err)
-	s.notifyScheduledTasks(ctx, true)
+	s.notifyScanEnded(ctx)
 	if err != nil {
 		log.Printf("api: scanning library %q: %v", lib.Name, err)
 		return
@@ -392,6 +392,14 @@ func (s *Server) runScanCtx(ctx context.Context, lib storage.Library) {
 	s.chapterimg.EnqueueLibrary(lib)
 	log.Printf("api: scanned library %q: %d items cataloged (%d probed, %d unchanged) in %s, %d enriched, %d warnings",
 		lib.Name, stats.ItemsScanned, stats.ItemsProbed, stats.ItemsSkipped, stats.Duration.Round(time.Millisecond), stats.ItemsEnriched, len(stats.Errors))
+}
+
+// notifyScanEnded pushes the task list after a scan finished. The push must
+// outlive a cancelled scan: with the cancelled ctx the websocket write fails
+// and a dashboard that stopped the task never learns it is idle (its
+// progress readout would stay on screen, admin.tasks.R12).
+func (s *Server) notifyScanEnded(ctx context.Context) {
+	s.notifyScheduledTasks(context.WithoutCancel(ctx), true)
 }
 
 // runItemRefresh re-enriches one catalog item against the configured
@@ -818,7 +826,20 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("DELETE /Auth/Keys/{key}", requireAdmin(s.handleAuthKeysRevoke))
 	s.mux.HandleFunc("GET /System/Configuration", requireAdmin(s.handleSystemConfigurationGet))
 	s.mux.HandleFunc("POST /System/Configuration", requireAdmin(s.handleSystemConfigurationPost))
-	s.mux.HandleFunc("GET /System/Configuration/network", requireAdmin(s.handleNetworkConfigurationGet))
+	s.mux.HandleFunc("GET /System/Configuration/network", requireAuth(s.handleNetworkConfigurationGet))
+	s.mux.HandleFunc("GET /System/Configuration/encoding", requireAuth(s.handleEncodingConfigurationGet))
+	s.mux.HandleFunc("POST /System/Configuration/encoding", requireAdmin(s.handleEncodingConfigurationPost))
+	s.mux.HandleFunc("GET /System/Configuration/branding", requireAuth(s.handleBrandingConfigurationGet))
+	s.mux.HandleFunc("POST /System/Configuration/branding", requireAdmin(s.handleBrandingConfigurationPost))
+	s.mux.HandleFunc("GET /Branding/Css", s.handleBrandingCss)
+	s.mux.HandleFunc("GET /Branding/Css.css", s.handleBrandingCss)
+	s.mux.HandleFunc("GET /Devices", requireAdmin(s.handleDevices))
+	s.mux.HandleFunc("GET /Devices/Info", requireAdmin(s.handleDeviceInfo))
+	s.mux.HandleFunc("GET /Library/MediaFolders", requireAdmin(s.handleMediaFolders))
+	s.mux.HandleFunc("GET /Auth/Providers", requireAdmin(s.handleAuthProviders))
+	s.mux.HandleFunc("GET /Auth/PasswordResetProviders", requireAdmin(s.handlePasswordResetProviders))
+	s.mux.HandleFunc("GET /LiveTv/Info", requireAuth(s.handleLiveTvInfo))
+	s.mux.HandleFunc("GET /Channels", requireAuth(s.handleChannels))
 	s.mux.HandleFunc("POST /System/Configuration/network", requireAdmin(s.handleNetworkConfigurationPost))
 
 	// Playstate reporting and media segments (sessions_playback.go) — found

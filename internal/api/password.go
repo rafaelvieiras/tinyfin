@@ -122,6 +122,5 @@ func (s *Server) setPassword(r *http.Request, u storage.User, pw string) error {
 		}
 		hash = string(h)
 	}
-	u.PasswordHash = hash
-	return s.store.UpdateUser(r.Context(), u)
+	return s.store.SetUserPasswordHash(r.Context(), u.ID, hash)
 }

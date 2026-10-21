@@ -35,7 +35,8 @@ func (s *Store) GetDevice(ctx context.Context, id storage.DeviceID) (storage.Dev
 }
 
 func (s *Store) QueryDevices(ctx context.Context, userID storage.UserID) ([]storage.Device, error) {
-	rows, err := s.ex.QueryContext(ctx, `SELECT `+deviceColumns+` FROM devices WHERE last_user_id = ? ORDER BY date_last_activity DESC`, string(userID))
+	// An empty userID lists every device.
+	rows, err := s.ex.QueryContext(ctx, `SELECT `+deviceColumns+` FROM devices WHERE (? = '' OR last_user_id = ?) ORDER BY date_last_activity DESC`, string(userID), string(userID))
 	if err != nil {
 		return nil, fmt.Errorf("sqlite: querying devices for user %q: %w", userID, err)
 	}

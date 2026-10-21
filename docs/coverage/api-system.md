@@ -4,9 +4,9 @@
 
 Server information and configuration, logs, backup, branding, localization, plugins and packages.
 
-[Overview](../COVERAGE.md) · 47 operations · 27 registered (57%) · 19 verified · ✅ 18 · 🟡 6 · 🗓️ 7 · ⛔ 13 · ↔️ 3
+[Overview](../COVERAGE.md) · 47 operations · 30 registered (64%) · 19 verified · ✅ 21 · 🟡 6 · 🗓️ 4 · ⛔ 13 · ↔️ 3
 
-✅✅✅✅✅✅✅✅🟡🟡🟡🗓️🗓️🗓️⛔⛔⛔⛔⛔↔️
+✅✅✅✅✅✅✅✅✅🟡🟡🟡🗓️🗓️⛔⛔⛔⛔⛔↔️
 
 Columns: **Auth** is the reference's authorization policy; **Web** = mentioned in docs/11 (called by the official web client); **Tests** = scenarios that exercise the route (passing / total).
 
@@ -23,9 +23,9 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ✅ supported *(no scenario)* | `GET /Branding/Configuration` | Anonymous | yes | 0/1 |  |
-| 🗓️ planned | `GET /Branding/Css` | Anonymous | yes |  | Not implemented; /Branding/Configuration returns the defaults. (priority: low) |
-| 🗓️ planned | `GET /Branding/Css.css` | Anonymous | yes |  | Not implemented; /Branding/Configuration returns the defaults. (priority: low) |
+| ✅ supported *(no scenario)* | `GET /Branding/Configuration` | Anonymous | yes | 0/2 |  |
+| ✅ supported *(no scenario)* | `GET /Branding/Css` | Anonymous | yes | 0/1 |  |
+| ✅ supported *(no scenario)* | `GET /Branding/Css.css` | Anonymous | yes |  |  |
 
 ## Localization
 
@@ -67,10 +67,10 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `GET /System/ActivityLog/Entries` | RequiresElevation | yes | 18/18 |  |
 | ✅ supported *(no scenario)* | `GET /System/Configuration` | DefaultAuthorization | yes | 0/2 |  |
 | ✅ supported *(no scenario)* | `POST /System/Configuration` | RequiresElevation | yes |  |  |
-| 🗓️ planned | `POST /System/Configuration/Branding` | RequiresElevation | yes |  | Not implemented. (priority: low) |
+| ✅ supported *(no scenario)* | `POST /System/Configuration/Branding` | RequiresElevation | yes | 0/1 |  |
 | 🗓️ planned | `GET /System/Configuration/MetadataOptions/Default` | RequiresElevation |  |  | Not implemented. (priority: low) |
-| 🟡 partial | `GET /System/Configuration/{key}` | DefaultAuthorization | yes | 0/1 | Served by `GET /System/Configuration/network`. Only the network key is served (GET /System/Configuration/network). |
-| 🟡 partial | `POST /System/Configuration/{key}` | RequiresElevation | yes |  | Served by `POST /System/Configuration/network`. Only the network key is served (POST /System/Configuration/network). |
+| 🟡 partial | `GET /System/Configuration/{key}` | DefaultAuthorization | yes | 0/4 | Served by `GET /System/Configuration/network`. Only the network key is served (GET /System/Configuration/network). |
+| 🟡 partial | `POST /System/Configuration/{key}` | RequiresElevation | yes | 0/2 | Served by `POST /System/Configuration/network`. Only the network key is served (POST /System/Configuration/network). |
 | ✅ supported *(no scenario)* | `GET /System/Endpoint` | DefaultAuthorization | yes |  |  |
 | ✅ supported | `GET /System/Info` | FirstTimeSetupOrIgnoreParentalControl | yes | 2/4 |  |
 | ✅ supported | `GET /System/Info/Public` | Anonymous | yes | 4/6 |  |
