@@ -230,6 +230,9 @@ func (m *Manager) Start(ctx context.Context, sessionID string, req Request) (*Jo
 	if req.FontsDir == "" {
 		req.FontsDir = m.cfg.FontsDir
 	}
+	if req.FontsDir == "" && req.Subtitle != nil {
+		req.FontsDir = defaultFontsDir()
+	}
 	if req.AudioEncoder == "" && req.AudioCodec != "" && req.AudioCodec != "copy" {
 		req.AudioEncoder = m.audioEncoder(req.AudioCodec)
 	}
@@ -268,6 +271,9 @@ func (m *Manager) Start(ctx context.Context, sessionID string, req Request) (*Jo
 	// this is what makes the playlist it writes reference segments by
 	// plain relative name instead of an absolute filesystem path.
 	cmd.Dir = jobDir
+	if req.Subtitle != nil && !req.Subtitle.Bitmap {
+		cmd.Env = fontEnv(jobDir, req.FontsDir, m.cfg.FontsDir, defaultFontsDir())
+	}
 	// ffmpeg logs everything (progress, warnings, errors) to stderr;
 	// stdout is unused for this invocation. Both are redirected to a file
 	// in the job dir rather than piped: a pipe nobody reads blocks the
