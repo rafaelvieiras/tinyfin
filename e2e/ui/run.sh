@@ -7,7 +7,7 @@
 # applied: a baselined spec that no longer passes fails the run; other failures are reported as
 # known divergences. --update-golden requires TARGET=ref and rewrites golden/*.json.
 # --keep leaves the servers running (prints the state dir; stop with: ./down.sh <dir>).
-# Optional ~/.config/tinyfin-sala/credentials.env: a non-empty TINYFIN_TMDB_API_KEY is given to
+# Optional env file named by UI_CREDENTIALS_FILE: a non-empty TINYFIN_TMDB_API_KEY is given to
 # tinyfin only (values never printed). The reference stays offline (REF_DOCKER_ARGS default).
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"

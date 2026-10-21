@@ -5,13 +5,13 @@
 #   - TARGET=ref|tinyfin|both -> reference container and/or tinyfin, with libraries
 # Prints "STATE=<dir>"; stop with: down.sh <dir>. Stops only what this state dir started.
 #
-# Optional ~/.config/tinyfin-sala/credentials.env (or UI_CREDENTIALS_FILE) is sourced if
+# Optional env file named by UI_CREDENTIALS_FILE is sourced if
 # present; a non-empty TINYFIN_TMDB_API_KEY is passed to tinyfin only. Values are never printed.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
 TARGET="${TARGET:-both}"
-CRED="${UI_CREDENTIALS_FILE:-$HOME/.config/tinyfin-sala/credentials.env}"
+CRED="${UI_CREDENTIALS_FILE:-}"
 if [ -f "$CRED" ]; then set -a; . "$CRED"; set +a; fi
 [ -n "${TINYFIN_TMDB_API_KEY:-}" ] || unset TINYFIN_TMDB_API_KEY
 export ADMIN_USER="${UI_ADMIN_USER:-admin}" ADMIN_PASS="${UI_ADMIN_PASS:-Conformance-Admin-1}"

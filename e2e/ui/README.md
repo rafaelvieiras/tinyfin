@@ -43,8 +43,7 @@ Admin credentials default to the conformance ones; override with `UI_ADMIN_USER`
 
 ### Optional TMDB key
 
-If `~/.config/tinyfin-sala/credentials.env` exists it is sourced (override the path with
-`UI_CREDENTIALS_FILE`); a non-empty `TINYFIN_TMDB_API_KEY` is passed to Tinyfin only. Nothing is
+If `UI_CREDENTIALS_FILE` points to an env file it is sourced; a non-empty `TINYFIN_TMDB_API_KEY` is passed to Tinyfin only. Nothing is
 printed. The reference stays offline (`REF_DOCKER_ARGS` default `--dns 127.0.0.1`; set it
 explicitly to change that). Specs are meant to pass with and without the key; so far only the
 without-key configuration has been exercised.
