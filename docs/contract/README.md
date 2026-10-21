@@ -352,3 +352,5 @@ scenario that is not pending or divergent; `risky` ones run only with
 | **Total** | 661 | 661 | 0 | 0 | 0 |
 
 Note on probes: the HDR10+ and Dolby Vision scenarios (`playback.offer.video-range`, `playback.offer.codec-conditions`, library `Matrix2`) need an ffprobe that supports `-only_first_vframe`, i.e. jellyfin-ffmpeg's. A stock ffprobe (Ubuntu, conda) runs without the first-frame data and reports HDR10 instead of HDR10+. Point `TINYFIN_FFPROBE_PATH` at the jellyfin-ffmpeg ffprobe (or a wrapper around the `jellyfin/jellyfin` image) when running them.
+
+Note on subtitle burn-in and Probe3: `subtitles3.burn.*` need an ffmpeg with libass, and the `Probe3` fixtures need libopus/libvpx; the host ffmpeg may lack them. Use jellyfin-ffmpeg (or a docker wrapper that passes `-w "$PWD"` so relative HLS output paths resolve) via `TINYFIN_FFMPEG_PATH` and `TINYFIN_FFPROBE_PATH`; the stock ffprobe also reports `is_avc=false` with the larger probe limits.
