@@ -39,12 +39,12 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `GET /Albums/{itemId}/Similar` | DefaultAuthorization |  | 1/1 |  |
 | ✅ supported | `GET /Artists/{itemId}/Similar` | DefaultAuthorization |  | 1/1 |  |
 | 🗓️ planned | `DELETE /Items` | DefaultAuthorization | yes |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
-| ↔️ divergent-by-design | `GET /Items` | DefaultAuthorization | yes | 182/184 | The library-access restriction also applies when items are requested by Ids (the reference skips it). Recorded as a divergence in the contract scenarios. |
+| ↔️ divergent-by-design | `GET /Items` | DefaultAuthorization | yes | 184/184 | The library-access restriction also applies when items are requested by Ids (the reference skips it). Recorded as a divergence in the contract scenarios. |
 | ✅ supported | `GET /Items/Counts` | DefaultAuthorization | yes | 3/3 |  |
 | ✅ supported | `GET /Items/Latest` | DefaultAuthorization | yes | 5/5 |  |
 | ✅ supported *(no scenario)* | `GET /Items/Root` | DefaultAuthorization | yes |  |  |
 | ✅ supported | `DELETE /Items/{itemId}` | DefaultAuthorization | yes | 10/10 |  |
-| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 219/225 |  |
+| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 225/230 |  |
 | ✅ supported | `GET /Items/{itemId}/Ancestors` | DefaultAuthorization | yes | 2/2 |  |
 | ✅ supported | `GET /Items/{itemId}/Collections` | DefaultAuthorization | yes | 1/1 |  |
 | ✅ supported | `GET /Items/{itemId}/Download` | Download |  | 7/7 |  |

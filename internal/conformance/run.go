@@ -3,8 +3,14 @@ package conformance
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/color"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 	"io"
 	"net/http"
 	"net/url"
@@ -626,6 +632,11 @@ func (c *Client) checkExpect(st Step, resp *Response, scratch map[string]string)
 			return fmt.Errorf("text %s: %w%s", a.Op, err, snippet(resp))
 		}
 	}
+	if a := st.Expect.Image; a != nil {
+		if err := checkImage(resp, a); err != nil {
+			return fmt.Errorf("image: %w", err)
+		}
+	}
 	for name, src := range st.Capture {
 		src, err := c.expand(src, scratch)
 		if err != nil {
@@ -660,9 +671,33 @@ func (c *Client) checkText(r *Response, a TextAssert, scratch map[string]string)
 		}
 		return nil
 	}
+	if a.Op == "bytes_lte" || a.Op == "bytes_gte" {
+		want, ok := toFloat(a.Value)
+		if !ok {
+			return fmt.Errorf("%s needs a number", a.Op)
+		}
+		n := float64(len(r.Body))
+		if a.Op == "bytes_lte" && n > want || a.Op == "bytes_gte" && n < want {
+			return fmt.Errorf("%d bytes, want %s %d", len(r.Body), strings.TrimPrefix(a.Op, "bytes_"), int(want))
+		}
+		return nil
+	}
 	raw, ok := a.Value.(string)
 	if !ok {
 		return fmt.Errorf("value must be a string")
+	}
+	if a.Op == "hexprefix" || a.Op == "hexcontains" {
+		b, err := hex.DecodeString(raw)
+		if err != nil {
+			return fmt.Errorf("value is not hex: %w", err)
+		}
+		if a.Op == "hexprefix" && !bytes.HasPrefix(r.Body, b) {
+			return fmt.Errorf("body does not start with %s", raw)
+		}
+		if a.Op == "hexcontains" && !bytes.Contains(r.Body, b) {
+			return fmt.Errorf("body does not contain %s", raw)
+		}
+		return nil
 	}
 	want, err := c.expand(raw, scratch)
 	if err != nil {
@@ -1006,4 +1041,44 @@ func show(v any) string {
 		s = s[:120] + "…"
 	}
 	return s
+}
+
+// checkImage decodes the body (PNG, JPEG or GIF) and checks the size and the
+// pixels asked for.
+func checkImage(r *Response, a *ImageAssert) error {
+	img, _, err := image.Decode(bytes.NewReader(r.Body))
+	if err != nil {
+		return fmt.Errorf("not a picture: %w", err)
+	}
+	b := img.Bounds()
+	if a.Width != 0 && b.Dx() != a.Width || a.Height != 0 && b.Dy() != a.Height {
+		return fmt.Errorf("%dx%d, want %dx%d", b.Dx(), b.Dy(), a.Width, a.Height)
+	}
+	for _, p := range a.Pixels {
+		x, y := p.X, p.Y
+		if x < 0 {
+			x += b.Dx()
+		}
+		if y < 0 {
+			y += b.Dy()
+		}
+		if x < 0 || y < 0 || x >= b.Dx() || y >= b.Dy() {
+			return fmt.Errorf("pixel (%d,%d) is outside the %dx%d picture", p.X, p.Y, b.Dx(), b.Dy())
+		}
+		c := color.NRGBAModel.Convert(img.At(b.Min.X+x, b.Min.Y+y)).(color.NRGBA)
+		if p.RGB != nil {
+			got := [3]int{int(c.R), int(c.G), int(c.B)}
+			for i := range got {
+				if d := got[i] - p.RGB[i]; d > p.Tol || -d > p.Tol {
+					return fmt.Errorf("pixel (%d,%d) is %v alpha %d, want %v (tolerance %d)", x, y, got, c.A, *p.RGB, p.Tol)
+				}
+			}
+		}
+		if p.A != nil {
+			if d := int(c.A) - *p.A; d > p.Tol || -d > p.Tol {
+				return fmt.Errorf("pixel (%d,%d) has alpha %d, want %d (tolerance %d)", x, y, c.A, *p.A, p.Tol)
+			}
+		}
+	}
+	return nil
 }

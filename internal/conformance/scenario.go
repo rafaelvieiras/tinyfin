@@ -171,6 +171,9 @@ type Expect struct {
 	// Text asserts on the body as text (for responses that are not JSON:
 	// subtitle documents, playlists).
 	Text []TextAssert `json:"text,omitempty"`
+	// Image decodes the body as a PNG, JPEG or GIF picture and asserts on its
+	// size and some of its pixels.
+	Image *ImageAssert `json:"image,omitempty"`
 	// Empty asserts a zero-length body.
 	Empty bool `json:"empty,omitempty"`
 	// Problem asserts the body is an RFC 9110 problem document for this status
@@ -180,11 +183,33 @@ type Expect struct {
 
 // TextAssert is one assertion on the raw response body. Op is eq (the whole
 // body, exactly), prefix, contains, notcontains, matches (a regular
-// expression, unanchored; (?s) lets "." cross lines) or lines (the number of
-// non-empty lines, Value a number). String values are template-expanded.
+// expression, unanchored; (?s) lets "." cross lines), lines (the number of
+// non-empty lines, Value a number), hexprefix and hexcontains (the body starts
+// with, or contains, the bytes of a hex string) or bytes_lte and bytes_gte
+// (the length of the body, Value a number). String values are template-expanded.
 type TextAssert struct {
 	Op    string `json:"op"`
 	Value any    `json:"value"`
+}
+
+// ImageAssert is an assertion on a decoded picture: its size (a 0 is not
+// checked) and the colour of some pixels. A negative X or Y counts from the
+// right or bottom edge (-1 is the last column).
+type ImageAssert struct {
+	Width  int           `json:"width,omitempty"`
+	Height int           `json:"height,omitempty"`
+	Pixels []PixelAssert `json:"pixels,omitempty"`
+}
+
+// PixelAssert says the pixel at (X, Y) has the colour RGB (not premultiplied)
+// and/or the alpha A, each channel within Tol (0 means exactly). A member left
+// out is not checked.
+type PixelAssert struct {
+	X   int     `json:"x"`
+	Y   int     `json:"y"`
+	RGB *[3]int `json:"rgb,omitempty"`
+	A   *int    `json:"a,omitempty"`
+	Tol int     `json:"tol,omitempty"`
 }
 
 // Assert is one JSON-path assertion.

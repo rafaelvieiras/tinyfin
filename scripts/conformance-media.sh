@@ -937,6 +937,28 @@ chapternoise "$CI3/Chapter Edge16 (2676)/Chapter Edge16 (2676).mkv" 16 640x360 "
 chapternoise "$CI3/Chapter Tail (2678)/Chapter Tail (2678).mkv" 20 640x360 "5000|A" "19950|B"
 chapternoise "$ROOT/ChapterImgToggle/Chapter Toggle (2679)/Chapter Toggle (2679).mkv" 20 640x360 "5000|A" "10000|B"
 
+# Flat chapter pictures for the pixel scenarios (chapters5): a 640x360 video of
+# one plain picture (4:4:4, so the values come out exactly), chapters at 0 s
+# and 5 s. "Chapter Flat" is black, "Chapter Step" white on the left half and
+# black on the right, "Chapter Ramp" a horizontal ramp from black to white,
+# "Chapter Border White/Black" a gradient square in a white / black frame.
+chapterplain() { # <name> <id> <geq luma expression>
+  local out="$CI3/$1 ($2)/$1 ($2).mkv"
+  [ -f "$out" ] && return 0
+  mkdir -p "$(dirname "$out")"
+  local t; t="$(mktemp -d)"
+  printf ';FFMETADATA1\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=0\nEND=5000\ntitle=A\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=5000\nEND=20000\ntitle=B\n' >"$t/m.txt"
+  "$FFMPEG" -v error -y -f lavfi -i "nullsrc=s=640x360:r=5:d=20,format=yuv444p,geq=lum='$3':cb=128:cr=128" \
+    -f lavfi -i "sine=frequency=500:duration=20" -i "$t/m.txt" -map 0 -map 1 -map_metadata 2 \
+    -c:v libx264 -preset ultrafast -pix_fmt yuv444p -c:a aac -shortest "$out"
+  rm -rf "$t"
+}
+chapterplain "Chapter Flat" 2680 "16"
+chapterplain "Chapter Step" 2681 "if(lt(X,320),235,16)"
+chapterplain "Chapter Ramp" 2682 "16+219*X/639"
+chapterplain "Chapter Border White" 2683 "if(between(X,100,539)*between(Y,60,299),100+X/8,235)"
+chapterplain "Chapter Border Black" 2684 "if(between(X,100,539)*between(Y,60,299),100+X/8,16)"
+
 # Trickplay (own libraries "Trickplay", with the sheets switched on, and
 # "TrickplayOff", lazy): a 25.5 s clip (3 thumbnails, one sheet), a 1500 s
 # one at 1 fps (150 thumbnails, two sheets) and a 160x90 one that is narrower

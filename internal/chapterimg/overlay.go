@@ -89,6 +89,7 @@ func (o Overlay) draw(img *image.RGBA) {
 			img.Pix[i] = uint8(float64(img.Pix[i])*f + 0.5)
 			img.Pix[i+1] = uint8(float64(img.Pix[i+1])*f + 0.5)
 			img.Pix[i+2] = uint8(float64(img.Pix[i+2])*f + 0.5)
+			img.Pix[i+3] = uint8(255*(1-f) + float64(img.Pix[i+3])*f + 0.5)
 		}
 	}
 	if o.Percent > 0 {
@@ -104,8 +105,7 @@ func (o Overlay) draw(img *image.RGBA) {
 				if x < played {
 					img.SetRGBA(x, y, color.RGBA{0, 164, 220, 255})
 				} else {
-					c := img.RGBAAt(x, y)
-					img.SetRGBA(x, y, color.RGBA{uint8(float64(c.R) * 0.4), uint8(float64(c.G) * 0.4), uint8(float64(c.B) * 0.4), 255})
+					blend(img, x, y, color.RGBA{0, 0, 0, 255}, 0.6)
 				}
 			}
 		}
@@ -129,10 +129,12 @@ func (o Overlay) draw(img *image.RGBA) {
 	}
 }
 
+// blend draws the opaque colour c over the pixel with opacity a (the picture
+// is premultiplied, and has an alpha only where a blur gave it one).
 func blend(img *image.RGBA, x, y int, c color.RGBA, a float64) {
 	d := img.RGBAAt(x, y)
 	mix := func(dst, src uint8) uint8 { return uint8(float64(dst)*(1-a) + float64(src)*a + 0.5) }
-	img.SetRGBA(x, y, color.RGBA{mix(d.R, c.R), mix(d.G, c.G), mix(d.B, c.B), 255})
+	img.SetRGBA(x, y, color.RGBA{mix(d.R, c.R), mix(d.G, c.G), mix(d.B, c.B), mix(d.A, 255)})
 }
 
 // drawDigits writes s in white on the unplayed count's circle, whose centre
@@ -168,100 +170,102 @@ func drawDigits(img *image.RGBA, s string, cx int) {
 	}
 }
 
-// blur blurs the picture the way the reference does (Skia's blur): three box
-// passes along each axis, rows first, whose window is
-// floor(sigma * 3 * sqrt(2 pi) / 4 + 0.5) (at least 1). An odd window is
-// centred; an even one is passed twice as it is, the second time shifted by
-// one pixel, and then once as the window plus one (the SVG recipe). The picture
-// is extended by mirroring (not by black or by its edge pixels). The reference
-// computes in 8 bits; here the passes are exact and rounded at the end, which
-// stays within a level or two. For a window of 256 or more the reference
-// switches to something wider that could not be worked out; the passes are
-// then run twice, which has about the right width but not the same pixels.
+// blur blurs the picture the way the reference does (Skia's blur). The picture
+// is taken as opaque and as surrounded by nothing (transparent black), the
+// colours premultiplied: the edges lose their alpha, so a JPEG (which has
+// none) shows them dark and a PNG shows them half transparent. Along each
+// axis, rows first, the blur is a few box passes over the picture extended
+// with nothing (the passes spill beyond its edges and later passes read that,
+// so the picture is extended once by the whole reach). The window is
+// floor(sigma * 3 * sqrt(2 pi) / 4 + 0.5) (at least 1, the sigma at most
+// 532). Below 256 it is three boxes of that window: odd ones centred, even
+// ones as the SVG recipe says (the window twice, the second time shifted by
+// one pixel, then the window plus one). From 256 on it is two boxes of
+// window * 3 / 2 (the first centred, the second shifted by one when that is
+// even). The reference computes in 8 bits; here the passes are exact and
+// rounded at the end, which stays within a level or two.
 func blur(img *image.RGBA, sigma float64) {
 	b := img.Bounds()
 	w, h := b.Dx(), b.Dy()
+	sigma = math.Min(sigma, 532)
 	d := int(math.Floor(sigma*3*math.Sqrt(2*math.Pi)/4 + 0.5))
 	if d < 1 {
 		d = 1
 	}
 	type pass struct{ size, off int }
 	var passes []pass
-	if d%2 == 1 {
+	switch {
+	case d >= 256:
+		d = d * 3 / 2
+		if d%2 == 1 {
+			passes = []pass{{d, d / 2}, {d, d / 2}}
+		} else {
+			passes = []pass{{d, d / 2}, {d, d/2 - 1}}
+		}
+	case d%2 == 1:
 		passes = []pass{{d, d / 2}, {d, d / 2}, {d, d / 2}}
-	} else {
+	default:
 		passes = []pass{{d, d / 2}, {d, d/2 - 1}, {d + 1, d / 2}}
 	}
-	if d >= 256 {
-		passes = append(passes, passes...)
+	reach := 0
+	for _, p := range passes {
+		reach += p.size
 	}
-	buf := make([]float64, w*h*3)
+	buf := make([]float64, w*h*4)
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			for c := 0; c < 3; c++ {
-				buf[(y*w+x)*3+c] = float64(img.Pix[y*img.Stride+x*4+c])
+			for c := 0; c < 4; c++ {
+				buf[(y*w+x)*4+c] = float64(img.Pix[y*img.Stride+x*4+c])
 			}
 		}
 	}
+	var line, pre []float64
 	for axis := 0; axis < 2; axis++ {
-		n, lines, step, lstep := w, h, 3, w*3
+		n, lines, step, lstep := w, h, 4, w*4
 		if axis == 1 {
-			n, lines, step, lstep = h, w, w*3, 3
+			n, lines, step, lstep = h, w, w*4, 4
 		}
-		line := make([]float64, n)
-		pre := make([]float64, 0)
+		m := n + 2*reach
+		if cap(line) < m {
+			line = make([]float64, m)
+			pre = make([]float64, m+1)
+		}
+		line, pre = line[:m], pre[:m+1]
 		for l := 0; l < lines; l++ {
-			for c := 0; c < 3; c++ {
+			for c := 0; c < 4; c++ {
 				base := l*lstep + c
+				for i := range line {
+					line[i] = 0
+				}
 				for i := 0; i < n; i++ {
-					line[i] = buf[base+i*step]
+					line[reach+i] = buf[base+i*step]
 				}
 				for _, p := range passes {
-					if p.size == 1 {
-						continue
-					}
-					// prefix sums over the line extended by p.size on both sides
-					m := n + 2*p.size
-					if cap(pre) < m+1 {
-						pre = make([]float64, m+1)
-					}
-					pre = pre[:m+1]
-					pre[0] = 0
 					for i := 0; i < m; i++ {
-						pre[i+1] = pre[i] + line[mirror(i-p.size, n)]
+						pre[i+1] = pre[i] + line[i]
 					}
-					for i := 0; i < n; i++ {
-						lo := i + p.size - p.off
-						line[i] = (pre[lo+p.size] - pre[lo]) / float64(p.size)
+					for i := 0; i < m; i++ {
+						lo, hi := min(max(i-p.off, 0), m), min(max(i-p.off+p.size, 0), m)
+						line[i] = (pre[hi] - pre[lo]) / float64(p.size)
 					}
 				}
 				for i := 0; i < n; i++ {
-					buf[base+i*step] = line[i]
+					buf[base+i*step] = line[reach+i]
 				}
 			}
 		}
 	}
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
+			o := y*img.Stride + x*4
+			// premultiplied: the colours cannot exceed the alpha
+			a := uint8(math.Min(255, buf[(y*w+x)*4+3]+0.5))
 			for c := 0; c < 3; c++ {
-				img.Pix[y*img.Stride+x*4+c] = uint8(math.Min(255, math.Max(0, buf[(y*w+x)*3+c]+0.5)))
+				img.Pix[o+c] = uint8(math.Min(float64(a), buf[(y*w+x)*4+c]+0.5))
 			}
+			img.Pix[o+3] = a
 		}
 	}
-}
-
-// mirror maps any index onto 0..n-1 by mirroring at the edges, the edge pixel
-// repeated (... 1 0 | 0 1 2 ... n-1 | n-1 n-2 ...).
-func mirror(i, n int) int {
-	p := 2 * n
-	i %= p
-	if i < 0 {
-		i += p
-	}
-	if i >= n {
-		i = p - 1 - i
-	}
-	return i
 }
 
 // circleMask is the unplayed count's circle (radius 20, centred 38 pixels from

@@ -29,8 +29,8 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `HEAD /Items/{itemId}/Images/{imageType}` | Anonymous | yes | 5/5 |  |
 | ✅ supported *(no scenario)* | `POST /Items/{itemId}/Images/{imageType}` | RequiresElevation | yes |  |  |
 | ✅ supported *(no scenario)* | `DELETE /Items/{itemId}/Images/{imageType}/{imageIndex}` | RequiresElevation |  |  |  |
-| ✅ supported | `GET /Items/{itemId}/Images/{imageType}/{imageIndex}` | Anonymous |  | 15/21 |  |
-| ✅ supported | `HEAD /Items/{itemId}/Images/{imageType}/{imageIndex}` | Anonymous |  | 15/21 |  |
+| ✅ supported | `GET /Items/{itemId}/Images/{imageType}/{imageIndex}` | Anonymous |  | 21/26 |  |
+| ✅ supported | `HEAD /Items/{itemId}/Images/{imageType}/{imageIndex}` | Anonymous |  | 21/26 |  |
 | ✅ supported *(no scenario)* | `POST /Items/{itemId}/Images/{imageType}/{imageIndex}` | RequiresElevation |  |  |  |
 | 🗓️ planned | `POST /Items/{itemId}/Images/{imageType}/{imageIndex}/Index` | RequiresElevation |  |  | Not implemented. (priority: low) |
 | ✅ supported | `GET /Items/{itemId}/Images/{imageType}/{imageIndex}/{tag}/{format}/{maxWidth}/{maxHeight}/{percentPlayed}/{unplayedCount}` | Anonymous |  | 1/1 |  |
