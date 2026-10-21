@@ -111,6 +111,9 @@ func (s *Server) resolveHLS(r *http.Request, item storage.Item) hlsRequest {
 				out.req.VideoSourceBitrate = int(*v.BitRate)
 			}
 			out.req.VideoSourceCodec = v.Codec
+			if v.BitDepth != nil {
+				out.req.VideoSourceBitDepth = *v.BitDepth
+			}
 		}
 		out.req.H264Profile, out.req.H264Level = encoderProfile(q, dec.VideoCodec)
 	}
@@ -150,7 +153,11 @@ func (s *Server) ensureTranscodeJob(r *http.Request, h hlsRequest) (*transcode.J
 	if job, ok := s.transcode.Get(h.key); ok && (!job.Done() || job.Err() == nil) {
 		return job, nil
 	}
-	return s.transcode.Start(context.Background(), h.key, h.req)
+	job, err := s.transcode.Start(context.Background(), h.key, h.req)
+	if err == nil {
+		s.noteHLSEncoding(h.key, hlsQuery(r))
+	}
+	return job, err
 }
 
 // writeHLSFailure is the opaque plain-text failure the reference answers an
@@ -428,7 +435,11 @@ func (s *Server) segmentJob(r *http.Request, h hlsRequest, n int, startTicks int
 		}
 	}
 	req.StartTimeTicks, req.StartNumber, req.Cuts = startTicks, n, cuts
-	return s.transcode.Start(context.Background(), h.key, req)
+	job, err := s.transcode.Start(context.Background(), h.key, req)
+	if err == nil {
+		s.noteHLSEncoding(h.key, hlsQuery(r))
+	}
+	return job, err
 }
 
 // handleHLSNumberedSegment is GET /Videos/{itemId}/hls1/{playlistId}/{N}.{ext},

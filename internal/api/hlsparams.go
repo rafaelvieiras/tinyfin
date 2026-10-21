@@ -111,6 +111,14 @@ func hlsJobKey(itemID storage.ItemID, q url.Values) string {
 			empty = false
 		}
 	}
+	// the reference names an encode after its device and play session too
+	// (playback.encodings.R2): another session never reuses it
+	for _, k := range []string{"deviceid", "playsessionid"} {
+		if v := q.Get(k); v != "" {
+			b.WriteString(k + "=" + v + "\n")
+			empty = false
+		}
+	}
 	if empty {
 		return string(itemID)
 	}

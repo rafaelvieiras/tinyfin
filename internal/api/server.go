@@ -163,12 +163,16 @@ type Server struct {
 	// track in a session stops the job of the track it replaces.
 	hlsMu       sync.Mutex
 	hlsSessions map[string]string
-	scanner     *scan.Scanner
-	trickplay   *trickplay.Generator
-	chapterimg  *chapterimg.Generator
-	scanState   *scanTracker
-	taskRTOnce  sync.Once
-	taskRTv     *taskRuntime
+	// encMu guards encodings: the play session of each running encode
+	// (active_encodings.go).
+	encMu      sync.Mutex
+	encodings  activeEncodings
+	scanner    *scan.Scanner
+	trickplay  *trickplay.Generator
+	chapterimg *chapterimg.Generator
+	scanState  *scanTracker
+	taskRTOnce sync.Once
+	taskRTv    *taskRuntime
 	// scanLibSem bounds libraries scanning concurrently (runScan).
 	scanLibSem chan struct{}
 	sessions   *sessionRegistry
@@ -743,6 +747,7 @@ func (s *Server) routes() {
 	// in-process via internal/transcode.
 	s.mux.HandleFunc("GET /Videos/{itemId}/Trickplay/{width}/tiles.m3u8", requireAuth(s.handleTrickplayTiles))
 	s.mux.HandleFunc("GET /Videos/{itemId}/Trickplay/{width}/{file}", requireAuth(s.handleTrickplaySheet))
+	s.mux.HandleFunc("DELETE /Videos/ActiveEncodings", requireAuth(s.handleDeleteActiveEncodings))
 	s.mux.HandleFunc("GET /Videos/{itemId}/master.m3u8", requireAuth(s.handleHLSMaster))
 	s.mux.HandleFunc("GET /Videos/{itemId}/hls1/{playlistId}/{segment}", requireAuth(s.handleHLSNumberedSegment))
 	s.mux.HandleFunc("GET /Videos/{itemId}/main.m3u8", requireAuth(s.handleHLSPlaylist))

@@ -563,7 +563,7 @@ func describeHLS(item storage.Item, q url.Values, vc, ac string, audioIdx *int) 
 	if !m.videoCopy || numParam(q, "videobitrate") > 0 {
 		vbr = numParam(q, "videobitrate")
 		if v != nil && v.BitRate != nil {
-			vbr = transcode.CapVideoBitrate(vbr, int(*v.BitRate), v.Codec, m.vcodec)
+			vbr = transcode.CapVideoBitrate(vbr, int(*v.BitRate), v.Codec, m.vcodec, streamBitDepth(v))
 		}
 	}
 	ch := audioChannels(a, q)
@@ -729,4 +729,12 @@ func firstNonEmpty(vals ...string) string {
 		}
 	}
 	return ""
+}
+
+// streamBitDepth is the sample depth of a stream (0 when unknown).
+func streamBitDepth(v *storage.MediaStreamRef) int {
+	if v != nil && v.BitDepth != nil {
+		return *v.BitDepth
+	}
+	return 0
 }

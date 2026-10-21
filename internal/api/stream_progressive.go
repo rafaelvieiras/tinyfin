@@ -92,8 +92,10 @@ func (s *Server) streamVideoTranscode(w http.ResponseWriter, r *http.Request, it
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	encCtx, release := s.trackProgressiveEncoding(r)
+	defer release()
 	start := func() (*transcode.AudioStream, *bufio.Reader, bool) {
-		vs, err := s.transcode.StreamVideo(r.Context(), req, format)
+		vs, err := s.transcode.StreamVideo(encCtx, req, format)
 		if err != nil {
 			return nil, nil, false
 		}

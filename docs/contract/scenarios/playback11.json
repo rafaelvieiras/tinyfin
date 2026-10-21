@@ -1,0 +1,1707 @@
+[
+ {
+  "id": "playback.item.stream-flags",
+  "endpoint": "GET /Items/{itemId}",
+  "spec": "playback.md#item-sources",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "policy"
+  ],
+  "covers": [
+   "playback.item.R1"
+  ],
+  "requires": [
+   "library:avtrack",
+   "item:av-multi",
+   "library:music",
+   "item:mfirst",
+   "library:musicvideos",
+   "item:mvsecond"
+  ],
+  "steps": [
+   {
+    "name": "admin: alpha (video)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "admin: av-multi (video)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.av-multi.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "admin: mvsecond (video)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvsecond.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "admin: mfirst (audio)",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mfirst.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "admin: listing",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.alpha.id}}&Fields=MediaSources"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "admin: track listing",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.mfirst.id}}&Fields=MediaSources"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsnone: alpha (video)",
+    "as": "flagsnone",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsnone: av-multi (video)",
+    "as": "flagsnone",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.av-multi.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsnone: mvsecond (video)",
+    "as": "flagsnone",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvsecond.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsnone: mfirst (audio)",
+    "as": "flagsnone",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mfirst.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsnone: listing",
+    "as": "flagsnone",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.alpha.id}}&Fields=MediaSources"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsnone: track listing",
+    "as": "flagsnone",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.mfirst.id}}&Fields=MediaSources"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsremux: alpha (video)",
+    "as": "flagsremux",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsremux: av-multi (video)",
+    "as": "flagsremux",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.av-multi.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsremux: mvsecond (video)",
+    "as": "flagsremux",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvsecond.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsremux: mfirst (audio)",
+    "as": "flagsremux",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mfirst.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsremux: listing",
+    "as": "flagsremux",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.alpha.id}}&Fields=MediaSources"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsremux: track listing",
+    "as": "flagsremux",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.mfirst.id}}&Fields=MediaSources"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsaudio: alpha (video)",
+    "as": "flagsaudio",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsaudio: av-multi (video)",
+    "as": "flagsaudio",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.av-multi.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsaudio: mvsecond (video)",
+    "as": "flagsaudio",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvsecond.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsaudio: mfirst (audio)",
+    "as": "flagsaudio",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mfirst.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsaudio: listing",
+    "as": "flagsaudio",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.alpha.id}}&Fields=MediaSources"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsaudio: track listing",
+    "as": "flagsaudio",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.mfirst.id}}&Fields=MediaSources"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsvideo: alpha (video)",
+    "as": "flagsvideo",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsvideo: av-multi (video)",
+    "as": "flagsvideo",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.av-multi.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsvideo: mvsecond (video)",
+    "as": "flagsvideo",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mvsecond.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsvideo: mfirst (audio)",
+    "as": "flagsvideo",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.mfirst.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].SupportsDirectPlay",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsvideo: listing",
+    "as": "flagsvideo",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.alpha.id}}&Fields=MediaSources"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "flagsvideo: track listing",
+    "as": "flagsvideo",
+    "request": {
+     "method": "GET",
+     "path": "/Items?Ids={{item.mfirst.id}}&Fields=MediaSources"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsDirectStream",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.Items[0].MediaSources[0].SupportsTranscoding",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.encodings.delete",
+  "endpoint": "DELETE /Videos/ActiveEncodings",
+  "spec": "playback.md#encodings",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "transcode"
+  ],
+  "covers": [
+   "playback.encodings.R1"
+  ],
+  "requires": [],
+  "steps": [
+   {
+    "name": "anonymous",
+    "as": "anonymous",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/ActiveEncodings",
+     "query": {
+      "DeviceId": "d",
+      "PlaySessionId": "p"
+     },
+     "noAuth": true
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "both parameters are required",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/ActiveEncodings"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.status",
+       "op": "eq",
+       "value": 400
+      },
+      {
+       "path": "$.errors.deviceId[0]",
+       "op": "eq",
+       "value": "The deviceId field is required."
+      },
+      {
+       "path": "$.errors.playSessionId[0]",
+       "op": "eq",
+       "value": "The playSessionId field is required."
+      }
+     ]
+    }
+   },
+   {
+    "name": "the play session is required",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/ActiveEncodings",
+     "query": {
+      "DeviceId": "d"
+     }
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.playSessionId[0]",
+       "op": "eq",
+       "value": "The playSessionId field is required."
+      },
+      {
+       "path": "$.errors.deviceId",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the device is required",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/ActiveEncodings",
+     "query": {
+      "PlaySessionId": "p"
+     }
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.deviceId[0]",
+       "op": "eq",
+       "value": "The deviceId field is required."
+      },
+      {
+       "path": "$.errors.playSessionId",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "blank values are missing ones",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/ActiveEncodings",
+     "query": {
+      "DeviceId": " ",
+      "PlaySessionId": "p"
+     }
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.deviceId[0]",
+       "op": "eq",
+       "value": "The deviceId field is required."
+      }
+     ]
+    }
+   },
+   {
+    "name": "a session with no encode",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/ActiveEncodings",
+     "query": {
+      "DeviceId": "d",
+      "PlaySessionId": "enc-none-{{run.suffix}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "again",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/ActiveEncodings",
+     "query": {
+      "DeviceId": "d",
+      "PlaySessionId": "enc-none-{{run.suffix}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "parameter names ignore case",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/ActiveEncodings?deviceid=d&PLAYSESSIONID=enc-none-{{run.suffix}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "any user may stop a session",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/ActiveEncodings",
+     "query": {
+      "DeviceId": "d",
+      "PlaySessionId": "enc-none-{{run.suffix}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "a get is not a route",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/ActiveEncodings",
+     "query": {
+      "DeviceId": "d",
+      "PlaySessionId": "p"
+     }
+    },
+    "expect": {
+     "status": 405
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.encodings.restart",
+  "endpoint": "DELETE /Videos/ActiveEncodings",
+  "spec": "playback.md#encodings",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "transcode"
+  ],
+  "covers": [
+   "playback.encodings.R1",
+   "playback.encodings.R2"
+  ],
+  "requires": [
+   "library:hls3",
+   "item:alpha"
+  ],
+  "steps": [
+   {
+    "name": "an encode of the session",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.alpha.id}}/hls1/main/0.ts?MediaSourceId={{item.alpha.id}}&DeviceId=encdev&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&PlaySessionId=enc-{{run.suffix}}&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^G"
+      }
+     ]
+    }
+   },
+   {
+    "name": "stop it",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/ActiveEncodings",
+     "query": {
+      "DeviceId": "encdev",
+      "PlaySessionId": "enc-{{run.suffix}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "the same segment starts a new encode",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.alpha.id}}/hls1/main/0.ts?MediaSourceId={{item.alpha.id}}&DeviceId=encdev&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&PlaySessionId=enc-{{run.suffix}}&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^G"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the device does not matter",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/ActiveEncodings",
+     "query": {
+      "DeviceId": "encother",
+      "PlaySessionId": "enc-{{run.suffix}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "a segment further on after the stop",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.alpha.id}}/hls1/main/1.ts?MediaSourceId={{item.alpha.id}}&DeviceId=encdev&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&PlaySessionId=enc-{{run.suffix}}&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^G"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the case of the session does not matter",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/ActiveEncodings",
+     "query": {
+      "DeviceId": "encdev",
+      "PlaySessionId": "ENC-{{run.suffix}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "and again",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.alpha.id}}/hls1/main/0.ts?MediaSourceId={{item.alpha.id}}&DeviceId=encdev&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&PlaySessionId=enc-{{run.suffix}}&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^G"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a session that is not running leaves it",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/ActiveEncodings",
+     "query": {
+      "DeviceId": "encdev",
+      "PlaySessionId": "enc-other-{{run.suffix}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "still served",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.alpha.id}}/hls1/main/1.ts?MediaSourceId={{item.alpha.id}}&DeviceId=encdev&SegmentContainer=ts&SegmentLength=6&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&PlaySessionId=enc-{{run.suffix}}&runtimeTicks=0&actualSegmentLengthTicks=60000000"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "video/mp2t"
+     },
+     "text": [
+      {
+       "op": "matches",
+       "value": "(?s)^G"
+      }
+     ]
+    }
+   },
+   {
+    "name": "finally stop it",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Videos/ActiveEncodings",
+     "query": {
+      "DeviceId": "encdev",
+      "PlaySessionId": "enc-{{run.suffix}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.hls.rate-ten-bit",
+  "endpoint": "GET /Videos/{itemId}/master.m3u8",
+  "spec": "playback.md#hls",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "transcode"
+  ],
+  "covers": [
+   "playback.hls.R17"
+  ],
+  "requires": [
+   "library:rate10",
+   "item:r10-12000",
+   "item:r10-1500",
+   "item:r10-3000",
+   "item:r10-6000",
+   "item:r10-80",
+   "item:r10-800",
+   "item:r10-8000",
+   "item:r10-eight",
+   "item:r10-hevc"
+  ],
+  "steps": [
+   {
+    "name": "r10-80 announced as h264",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.r10-80.id}}/master.m3u8?MediaSourceId={{item.r10-80.id}}&DeviceId=conf&PlaySessionId=r10-{{run.suffix}}-0&SegmentContainer=ts&VideoCodec=h264&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=1482552,AVERAGE-BANDWIDTH=1482552,"
+      }
+     ]
+    }
+   },
+   {
+    "name": "r10-800 announced as h264",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.r10-800.id}}/master.m3u8?MediaSourceId={{item.r10-800.id}}&DeviceId=conf&PlaySessionId=r10-{{run.suffix}}-1&SegmentContainer=ts&VideoCodec=h264&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=3377280,AVERAGE-BANDWIDTH=3377280,"
+      }
+     ]
+    }
+   },
+   {
+    "name": "r10-1500 announced as h264",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.r10-1500.id}}/master.m3u8?MediaSourceId={{item.r10-1500.id}}&DeviceId=conf&PlaySessionId=r10-{{run.suffix}}-2&SegmentContainer=ts&VideoCodec=h264&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=6399510,AVERAGE-BANDWIDTH=6399510,"
+      }
+     ]
+    }
+   },
+   {
+    "name": "r10-3000 announced as h264",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.r10-3000.id}}/master.m3u8?MediaSourceId={{item.r10-3000.id}}&DeviceId=conf&PlaySessionId=r10-{{run.suffix}}-3&SegmentContainer=ts&VideoCodec=h264&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=5157336,AVERAGE-BANDWIDTH=5157336,"
+      }
+     ]
+    }
+   },
+   {
+    "name": "r10-6000 announced as h264",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.r10-6000.id}}/master.m3u8?MediaSourceId={{item.r10-6000.id}}&DeviceId=conf&PlaySessionId=r10-{{run.suffix}}-4&SegmentContainer=ts&VideoCodec=h264&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=8227231,AVERAGE-BANDWIDTH=8227231,"
+      }
+     ]
+    }
+   },
+   {
+    "name": "r10-8000 announced as h264",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.r10-8000.id}}/master.m3u8?MediaSourceId={{item.r10-8000.id}}&DeviceId=conf&PlaySessionId=r10-{{run.suffix}}-5&SegmentContainer=ts&VideoCodec=h264&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=10065833,AVERAGE-BANDWIDTH=10065833,"
+      }
+     ]
+    }
+   },
+   {
+    "name": "r10-12000 announced as h264",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.r10-12000.id}}/master.m3u8?MediaSourceId={{item.r10-12000.id}}&DeviceId=conf&PlaySessionId=r10-{{run.suffix}}-6&SegmentContainer=ts&VideoCodec=h264&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=14425312,AVERAGE-BANDWIDTH=14425312,"
+      }
+     ]
+    }
+   },
+   {
+    "name": "r10-hevc announced as h264",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.r10-hevc.id}}/master.m3u8?MediaSourceId={{item.r10-hevc.id}}&DeviceId=conf&PlaySessionId=r10-{{run.suffix}}-7&SegmentContainer=ts&VideoCodec=h264&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=6388863,AVERAGE-BANDWIDTH=6388863,"
+      }
+     ]
+    }
+   },
+   {
+    "name": "r10-eight announced as h264",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.r10-eight.id}}/master.m3u8?MediaSourceId={{item.r10-eight.id}}&DeviceId=conf&PlaySessionId=r10-{{run.suffix}}-8&SegmentContainer=ts&VideoCodec=h264&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=4518800,AVERAGE-BANDWIDTH=4518800,"
+      }
+     ]
+    }
+   },
+   {
+    "name": "r10-80 announced as hevc",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.r10-80.id}}/master.m3u8?MediaSourceId={{item.r10-80.id}}&DeviceId=conf&PlaySessionId=r10-{{run.suffix}}-9&SegmentContainer=ts&VideoCodec=hevc&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=1482552,AVERAGE-BANDWIDTH=1482552,"
+      }
+     ]
+    }
+   },
+   {
+    "name": "r10-800 announced as hevc",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.r10-800.id}}/master.m3u8?MediaSourceId={{item.r10-800.id}}&DeviceId=conf&PlaySessionId=r10-{{run.suffix}}-10&SegmentContainer=ts&VideoCodec=hevc&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=3377280,AVERAGE-BANDWIDTH=3377280,"
+      }
+     ]
+    }
+   },
+   {
+    "name": "r10-6000 announced as hevc",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.r10-6000.id}}/master.m3u8?MediaSourceId={{item.r10-6000.id}}&DeviceId=conf&PlaySessionId=r10-{{run.suffix}}-11&SegmentContainer=ts&VideoCodec=hevc&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=8227231,AVERAGE-BANDWIDTH=8227231,"
+      }
+     ]
+    }
+   },
+   {
+    "name": "r10-12000 announced as hevc",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.r10-12000.id}}/master.m3u8?MediaSourceId={{item.r10-12000.id}}&DeviceId=conf&PlaySessionId=r10-{{run.suffix}}-12&SegmentContainer=ts&VideoCodec=hevc&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=14425312,AVERAGE-BANDWIDTH=14425312,"
+      }
+     ]
+    }
+   },
+   {
+    "name": "r10-hevc announced as hevc",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.r10-hevc.id}}/master.m3u8?MediaSourceId={{item.r10-hevc.id}}&DeviceId=conf&PlaySessionId=r10-{{run.suffix}}-13&SegmentContainer=ts&VideoCodec=hevc&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=3833318,AVERAGE-BANDWIDTH=3833318,"
+      }
+     ]
+    }
+   },
+   {
+    "name": "r10-eight announced as hevc",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.r10-eight.id}}/master.m3u8?MediaSourceId={{item.r10-eight.id}}&DeviceId=conf&PlaySessionId=r10-{{run.suffix}}-14&SegmentContainer=ts&VideoCodec=hevc&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=4518800,AVERAGE-BANDWIDTH=4518800,"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playback.offer.dv7-real-el",
+  "endpoint": "POST /Items/{itemId}/PlaybackInfo",
+  "spec": "playback.md#offer",
+  "scope": "modern",
+  "tags": [
+   "playback",
+   "hdr"
+  ],
+  "covers": [
+   "playback.offer.R13"
+  ],
+  "requires": [
+   "library:matrix2",
+   "item:mx2-dv7real"
+  ],
+  "steps": [
+   {
+    "name": "base layer geometry and record of a stream that carries a real enhancement layer",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.mx2-dv7real.id}}/PlaybackInfo",
+     "query": {
+      "MediaSourceId": "{{item.mx2-dv7real.id}}"
+     },
+     "body": {}
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].VideoRangeType",
+       "op": "eq",
+       "value": "DOVIWithEL"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvProfile",
+       "op": "eq",
+       "value": 7
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].ElPresentFlag",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].RpuPresentFlag",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].BlPresentFlag",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DvBlSignalCompatibilityId",
+       "op": "eq",
+       "value": 6
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].DisplayTitle",
+       "op": "eq",
+       "value": "240p HEVC Dolby Vision Profile 7.6 (HDR10)"
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Width",
+       "op": "eq",
+       "value": 320
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].Height",
+       "op": "eq",
+       "value": 240
+      },
+      {
+       "path": "$.MediaSources[0].MediaStreams[0].BitRate",
+       "op": "eq",
+       "value": 82266
+      },
+      {
+       "path": "$.MediaSources",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "copied by HLS",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.mx2-dv7real.id}}/master.m3u8?MediaSourceId={{item.mx2-dv7real.id}}&DeviceId=conf&PlaySessionId=dv7-{{run.suffix}}&SegmentContainer=ts&VideoCodec=hevc&AudioCodec=aac&VideoBitrate=50000000"
+    },
+    "expect": {
+     "status": 200,
+     "text": [
+      {
+       "op": "contains",
+       "value": "BANDWIDTH=1361992,AVERAGE-BANDWIDTH=1361992,VIDEO-RANGE=PQ,CODECS=\"hvc1.2.4."
+      },
+      {
+       "op": "contains",
+       "value": ".B0,mp4a.40.2\",RESOLUTION=320x240,FRAME-RATE=12"
+      }
+     ]
+    }
+   }
+  ]
+ }
+]

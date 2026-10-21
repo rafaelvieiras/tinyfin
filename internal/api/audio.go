@@ -125,7 +125,9 @@ func (s *Server) streamAudioTranscode(w http.ResponseWriter, r *http.Request, it
 			break
 		}
 	}
-	as, err := s.transcode.StreamAudio(r.Context(), req)
+	encCtx, release := s.trackProgressiveEncoding(r)
+	defer release()
+	as, err := s.transcode.StreamAudio(encCtx, req)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -136,7 +138,7 @@ func (s *Server) streamAudioTranscode(w http.ResponseWriter, r *http.Request, it
 		// an ffmpeg without libopus: the built-in encoder does the same job
 		as.Close()
 		req.Encoder = "opus"
-		if as, err = s.transcode.StreamAudio(r.Context(), req); err != nil {
+		if as, err = s.transcode.StreamAudio(encCtx, req); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

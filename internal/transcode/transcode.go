@@ -116,6 +116,9 @@ type Request struct {
 	// unknown): the video bit rate is held to ten times it.
 	VideoSourceBitrate int
 	VideoSourceCodec   string
+	// VideoSourceBitDepth is the sample depth of the source's picture (0 =
+	// unknown): above 8 bits the rate cap is raised (CapVideoBitrate).
+	VideoSourceBitDepth int
 	// AudioChannels is the channel count of a re-encoded sound (0: stereo),
 	// AudioBoost doubles its volume (a surround mix folded down to stereo) and
 	// AudioEncoder, when set, is the encoder named in place of AudioCodec.

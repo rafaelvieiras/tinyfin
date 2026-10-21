@@ -9,7 +9,11 @@
     {"key": "rating17s1", "name": "rating17s1", "password": "Rating-Pass-17s", "policy": {"MaxParentalRating": 17, "MaxParentalSubRating": 1}},
     {"key": "blockunrated", "name": "blockunrated", "password": "Block-Pass-1", "policy": {"BlockUnratedItems": ["Movie"]}},
     {"key": "collmgr", "name": "collmgr", "password": "CollMgr-Pass-1", "policy": {"EnableCollectionManagement": true}},
-    {"key": "submgr", "name": "submgr", "password": "SubMgr-Pass-1", "policy": {"EnableSubtitleManagement": true}}
+    {"key": "submgr", "name": "submgr", "password": "SubMgr-Pass-1", "policy": {"EnableSubtitleManagement": true}},
+    {"key": "flagsnone", "name": "flagsnone", "password": "Flags-Pass-1", "policy": {"EnableAudioPlaybackTranscoding": false, "EnableVideoPlaybackTranscoding": false, "EnablePlaybackRemuxing": false}},
+    {"key": "flagsremux", "name": "flagsremux", "password": "Flags-Pass-1", "policy": {"EnableAudioPlaybackTranscoding": false, "EnableVideoPlaybackTranscoding": false, "EnablePlaybackRemuxing": true}},
+    {"key": "flagsaudio", "name": "flagsaudio", "password": "Flags-Pass-1", "policy": {"EnableAudioPlaybackTranscoding": true, "EnableVideoPlaybackTranscoding": false, "EnablePlaybackRemuxing": false}},
+    {"key": "flagsvideo", "name": "flagsvideo", "password": "Flags-Pass-1", "policy": {"EnableAudioPlaybackTranscoding": false, "EnableVideoPlaybackTranscoding": true, "EnablePlaybackRemuxing": false}}
   ],
   "libraries": [
     {"key": "movies", "name": "Movies", "type": "movies", "path": "Movies"},
@@ -78,7 +82,8 @@
     {"key": "music4", "name": "Music4", "type": "music", "path": "Music4", "lazy": true},
     {"key": "music5", "name": "Music5", "type": "music", "path": "Music5", "lazy": true},
     {"key": "musicvideos", "name": "MusicVideos", "type": "musicvideos", "path": "MusicVideos", "lazy": true},
-    {"key": "hls3", "name": "Hls3", "type": "movies", "path": "Hls3", "lazy": true}
+    {"key": "hls3", "name": "Hls3", "type": "movies", "path": "Hls3", "lazy": true},
+    {"key": "rate10", "name": "Rate10", "type": "movies", "path": "Rate10", "lazy": true}
   ],
   "items": [
     {"key": "alpha", "type": "Movie", "path": "Movies/Alpha Movie (2015)/Alpha Movie (2015).mp4"},
@@ -465,6 +470,7 @@
     {"key": "mx2-hlg", "type": "Movie", "library": "matrix2", "path": "Matrix2/Mx2 Hlg (2601)/Mx2 Hlg (2601).mkv"},
     {"key": "mx2-dv81-sdr", "type": "Movie", "library": "matrix2", "path": "Matrix2/Mx2 Dv81 Sdr Base (2722)/Mx2 Dv81 Sdr Base (2722).mkv"},
     {"key": "mx2-dv7el", "type": "Movie", "library": "matrix2", "path": "Matrix2/Mx2 Dv Cfg 7 6 El (2613)/Mx2 Dv Cfg 7 6 El (2613).mkv"},
+    {"key": "mx2-dv7real", "type": "Movie", "library": "matrix2", "path": "Matrix2/Mx2 Dv7 Real El (2730)/Mx2 Dv7 Real El (2730).mkv"},
     {"key": "mx2-opus", "type": "Movie", "library": "matrix2", "path": "Matrix2/Mx2 Audio Opus (2674)/Mx2 Audio Opus (2674).mkv"},
     {"key": "mx2-vorbis", "type": "Movie", "library": "matrix2", "path": "Matrix2/Mx2 Audio Vorbis (2675)/Mx2 Audio Vorbis (2675).mkv"},
     {"key": "mx2-h264", "type": "Movie", "library": "matrix2", "path": "Matrix2/Mx2 H264 Mkv (2620)/Mx2 H264 Mkv (2620).mkv"},
@@ -589,6 +595,15 @@
     {"key": "oddclip", "type": "Movie", "library": "hls3", "path": "Hls3/Odd Clip (2401)/Odd Clip (2401).mp4"},
     {"key": "tenbit", "type": "Movie", "library": "hls3", "path": "Hls3/Ten Bit (2402)/Ten Bit (2402).mp4"},
     {"key": "hevcclip", "type": "Movie", "library": "hls3", "path": "Hls3/Hevc Clip (2403)/Hevc Clip (2403).mp4"},
-    {"key": "sixchan", "type": "Movie", "library": "hls3", "path": "Hls3/Six Chan (2404)/Six Chan (2404).mkv"}
+    {"key": "sixchan", "type": "Movie", "library": "hls3", "path": "Hls3/Six Chan (2404)/Six Chan (2404).mkv"},
+    {"key": "r10-80", "type": "Movie", "library": "rate10", "path": "Rate10/Ten 80k (2801)/Ten 80k (2801).mkv"},
+    {"key": "r10-800", "type": "Movie", "library": "rate10", "path": "Rate10/Ten 800k (2802)/Ten 800k (2802).mkv"},
+    {"key": "r10-1500", "type": "Movie", "library": "rate10", "path": "Rate10/Ten 1500k (2803)/Ten 1500k (2803).mkv"},
+    {"key": "r10-3000", "type": "Movie", "library": "rate10", "path": "Rate10/Ten 3000k (2804)/Ten 3000k (2804).mkv"},
+    {"key": "r10-6000", "type": "Movie", "library": "rate10", "path": "Rate10/Ten 6000k (2805)/Ten 6000k (2805).mkv"},
+    {"key": "r10-8000", "type": "Movie", "library": "rate10", "path": "Rate10/Ten 8000k (2806)/Ten 8000k (2806).mkv"},
+    {"key": "r10-12000", "type": "Movie", "library": "rate10", "path": "Rate10/Ten 12000k (2807)/Ten 12000k (2807).mkv"},
+    {"key": "r10-hevc", "type": "Movie", "library": "rate10", "path": "Rate10/Ten Hevc 1000k (2808)/Ten Hevc 1000k (2808).mkv"},
+    {"key": "r10-eight", "type": "Movie", "library": "rate10", "path": "Rate10/Eight 800k (2809)/Eight 800k (2809).mkv"}
   ]
 }
