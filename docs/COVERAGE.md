@@ -20,7 +20,7 @@ How to read and edit this: [`docs/coverage/README.md`](coverage/README.md). Mach
 |---|---|
 | Reference operations (OpenAPI 12.2.0) | 364 |
 | Registered by Tinyfin | **198** (54%) |
-| Registered **and** a passing contract scenario | **160** (44%) |
+| Registered **and** a passing contract scenario | **162** (45%) |
 | Called by the official web client (docs/11) and registered | 129 of 164 (79%) |
 | Routes Tinyfin serves that the OpenAPI document lacks | 28 (legacy aliases the web client needs, `/socket`, HLS) |
 | Non-route features tracked | 112 (✅ 64 · 🟡 19 · 🗓️ 13 · ⛔ 16) |
@@ -58,11 +58,11 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 |---|---|---|---|---|---|
 | [Collections, playlists and mixes](coverage/api-collections-playlists.md) | 21 | 21 (100%) | 21 (100%) | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅↔️ | ✅ 20 · ↔️ 1 |
 | [Images](coverage/api-images.md) | 40 | 11 (28%) | 7 (18%) | ✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️ | ✅ 11 · 🗓️ 29 |
-| [Library administration](coverage/api-library-admin.md) | 32 | 13 (41%) | 6 (19%) | ✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔↔️ | ✅ 11 · 🗓️ 16 · ⛔ 3 · ↔️ 2 |
+| [Library administration](coverage/api-library-admin.md) | 32 | 13 (41%) | 7 (22%) | ✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔↔️ | ✅ 11 · 🗓️ 16 · ⛔ 3 · ↔️ 2 |
 | [Library browsing and metadata queries](coverage/api-library-browse.md) | 58 | 47 (81%) | 42 (72%) | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️ | ✅ 45 · 🟡 1 · 🗓️ 10 · ⛔ 1 · ↔️ 1 |
 | [Live TV and channels](coverage/api-live-tv.md) | 43 | 4 (9%) | 3 (7%) | ✅🟡⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 3 · 🟡 1 · ⛔ 39 |
 | [Playback, streaming and subtitles](coverage/api-playback.md) | 38 | 24 (63%) | 19 (50%) | ✅✅✅✅✅✅✅✅✅✅🟡🟡⛔⛔⛔⛔⛔⛔⛔↔️ | ✅ 19 · 🟡 3 · ⛔ 14 · ↔️ 2 |
-| [Sessions, play state and realtime](coverage/api-sessions-realtime.md) | 50 | 16 (32%) | 13 (26%) | ✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 15 · 🟡 1 · 🗓️ 13 · ⛔ 21 |
+| [Sessions, play state and realtime](coverage/api-sessions-realtime.md) | 50 | 16 (32%) | 14 (28%) | ✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 15 · 🟡 1 · 🗓️ 13 · ⛔ 21 |
 | [System, branding, localization and plugins](coverage/api-system.md) | 47 | 30 (64%) | 24 (51%) | ✅✅✅✅✅✅✅✅✅🟡🟡🟡🗓️🗓️⛔⛔⛔⛔⛔↔️ | ✅ 21 · 🟡 6 · 🗓️ 4 · ⛔ 13 · ↔️ 3 |
 | [Users, authentication and first-run setup](coverage/api-users-auth.md) | 35 | 32 (91%) | 25 (71%) | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️↔️↔️↔️↔️ | ✅ 25 · 🗓️ 3 · ↔️ 7 |
 
@@ -87,7 +87,7 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | ItemLookup | 11 | 0 | 0 | 🗓️ 11 |
 | ItemUpdate | 3 | 0 | 0 | ⛔ 3 |
 | Library | 34 | 26 | 22 | ✅ 25 · 🗓️ 8 · ↔️ 1 |
-| LibraryStructure | 8 | 5 | 3 | ✅ 5 · 🗓️ 3 |
+| LibraryStructure | 8 | 5 | 4 | ✅ 5 · 🗓️ 3 |
 | LiveTv | 38 | 3 | 2 | ✅ 2 · 🟡 1 · ⛔ 35 |
 | Localization | 4 | 4 | 4 | ✅ 4 |
 | Lyric | 6 | 1 | 1 | ✅ 1 · ⛔ 5 |
@@ -112,7 +112,7 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | Trailer | 1 | 0 | 0 | ⛔ 1 |
 | TrickPlay | 2 | 2 | 2 | ✅ 2 |
 | User | 10 | 10 | 10 | ✅ 7 · ↔️ 3 |
-| UserData | 8 | 6 | 5 | ✅ 6 · 🗓️ 2 |
+| UserData | 8 | 6 | 6 | ✅ 6 · 🗓️ 2 |
 | UserView | 2 | 1 | 1 | ✅ 1 · 🗓️ 1 |
 | Video | 8 | 5 | 3 | ✅ 5 · ⛔ 3 |
 | Year | 2 | 2 | 2 | ✅ 2 |

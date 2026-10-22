@@ -4,7 +4,7 @@
 
 Sessions, remote control, per-user item data, display preferences and SyncPlay.
 
-[Overview](../COVERAGE.md) · 50 operations · 16 registered (32%) · 13 verified · ✅ 15 · 🟡 1 · 🗓️ 13 · ⛔ 21
+[Overview](../COVERAGE.md) · 50 operations · 16 registered (32%) · 14 verified · ✅ 15 · 🟡 1 · 🗓️ 13 · ⛔ 21
 
 ✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔
 
@@ -25,10 +25,10 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | 🗓️ planned | `POST /Sessions/Capabilities` | DefaultAuthorization |  |  | The Full variant is served; the plain one is the older form of the same report. (priority: low) |
 | ✅ supported | `POST /Sessions/Capabilities/Full` | DefaultAuthorization | yes | 4/4 |  |
 | ✅ supported | `POST /Sessions/Logout` | DefaultAuthorization | yes | 1/1 |  |
-| ✅ supported | `POST /Sessions/Playing` | DefaultAuthorization | yes | 44/45 |  |
+| ✅ supported | `POST /Sessions/Playing` | DefaultAuthorization | yes | 45/45 |  |
 | ✅ supported | `POST /Sessions/Playing/Ping` | DefaultAuthorization |  | 5/5 |  |
-| ✅ supported | `POST /Sessions/Playing/Progress` | DefaultAuthorization | yes | 19/20 |  |
-| ✅ supported | `POST /Sessions/Playing/Stopped` | DefaultAuthorization | yes | 27/28 |  |
+| ✅ supported | `POST /Sessions/Playing/Progress` | DefaultAuthorization | yes | 20/20 |  |
+| ✅ supported | `POST /Sessions/Playing/Stopped` | DefaultAuthorization | yes | 28/28 |  |
 | 🗓️ planned | `POST /Sessions/Viewing` | DefaultAuthorization |  |  | Remote control of other sessions is not implemented (the /socket transport exists). (priority: low) |
 | 🗓️ planned | `POST /Sessions/{sessionId}/Command` | DefaultAuthorization | yes |  | Remote control of other sessions is not implemented (the /socket transport exists). (priority: low) |
 | 🗓️ planned | `POST /Sessions/{sessionId}/Command/{command}` | DefaultAuthorization |  |  | Remote control of other sessions is not implemented (the /socket transport exists). (priority: low) |
@@ -71,14 +71,14 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ✅ supported *(no scenario)* | `DELETE /UserFavoriteItems/{itemId}` | DefaultAuthorization |  | 0/1 |  |
-| ✅ supported | `POST /UserFavoriteItems/{itemId}` | DefaultAuthorization |  | 2/3 |  |
+| ✅ supported | `DELETE /UserFavoriteItems/{itemId}` | DefaultAuthorization |  | 1/1 |  |
+| ✅ supported | `POST /UserFavoriteItems/{itemId}` | DefaultAuthorization |  | 3/3 |  |
 | 🗓️ planned | `DELETE /UserItems/{itemId}/Rating` | DefaultAuthorization | yes |  | Star ratings are not implemented (likes are, through UserData). (priority: low) |
 | 🗓️ planned | `POST /UserItems/{itemId}/Rating` | DefaultAuthorization | yes |  | Star ratings are not implemented (likes are, through UserData). (priority: low) |
 | ✅ supported | `GET /UserItems/{itemId}/UserData` | DefaultAuthorization | yes | 15/15 |  |
-| ✅ supported | `POST /UserItems/{itemId}/UserData` | DefaultAuthorization | yes | 31/32 |  |
-| ✅ supported | `DELETE /UserPlayedItems/{itemId}` | DefaultAuthorization | yes | 19/23 |  |
-| ✅ supported | `POST /UserPlayedItems/{itemId}` | DefaultAuthorization | yes | 48/51 |  |
+| ✅ supported | `POST /UserItems/{itemId}/UserData` | DefaultAuthorization | yes | 32/32 |  |
+| ✅ supported | `DELETE /UserPlayedItems/{itemId}` | DefaultAuthorization | yes | 23/23 |  |
+| ✅ supported | `POST /UserPlayedItems/{itemId}` | DefaultAuthorization | yes | 51/51 |  |
 
 ## Related features
 

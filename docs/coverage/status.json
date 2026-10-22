@@ -16,7 +16,7 @@
    "planned": 75,
    "supported": 170
   },
-  "verified": 160
+  "verified": 162
  },
  "routes": [
   {
@@ -2712,7 +2712,7 @@
    "policy": "FirstTimeSetupOrElevated",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "admin.libraries.rename-during-scan",
@@ -5963,7 +5963,7 @@
    "policy": "DefaultAuthorization",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": false,
    "scenarios": [
     "playstate.push.resume-position"
