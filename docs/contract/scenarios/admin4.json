@@ -1,0 +1,319 @@
+[
+ {
+  "id": "admin.libraries.rename-during-scan",
+  "endpoint": "POST /Library/VirtualFolders/Name",
+  "spec": "admin.md#libraries",
+  "scope": "modern",
+  "tags": [
+   "admin",
+   "web-client"
+  ],
+  "covers": [
+   "admin.libraries.R1"
+  ],
+  "steps": [
+   {
+    "name": "add tmp-lib-rename-a",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "tmp-lib-rename-a",
+      "collectionType": "movies",
+      "refreshLibrary": "true"
+     },
+     "body": {
+      "LibraryOptions": {
+       "PathInfos": [
+        {
+         "Path": "{{server.mediaroot}}/Many"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "rename tmp-lib-rename-a to tmp-lib-rename-b",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Library/VirtualFolders/Name",
+     "query": {
+      "name": "tmp-lib-rename-a",
+      "newName": "tmp-lib-rename-b",
+      "refreshLibrary": "true"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "let the scan end",
+    "sleepMs": 6000
+   },
+   {
+    "name": "libraries now",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Library/VirtualFolders"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?Name=tmp-lib-rename-b].Name",
+       "op": "eq",
+       "value": "tmp-lib-rename-b"
+      },
+      {
+       "path": "$[?Name=tmp-lib-rename-a]",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "remove tmp-lib-rename-a",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "tmp-lib-rename-a",
+      "refreshLibrary": "false"
+     }
+    },
+    "expect": {}
+   },
+   {
+    "name": "remove tmp-lib-rename-b",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "tmp-lib-rename-b",
+      "refreshLibrary": "false"
+     }
+    },
+    "expect": {}
+   }
+  ]
+ },
+ {
+  "id": "admin.libraries.rename-rules",
+  "endpoint": "POST /Library/VirtualFolders/Name",
+  "spec": "admin.md#libraries",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.libraries.R2",
+   "admin.libraries.R3"
+  ],
+  "requires": [
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "add tmp-lib-rename-a",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "tmp-lib-rename-a",
+      "collectionType": "movies",
+      "refreshLibrary": "false"
+     },
+     "body": {
+      "LibraryOptions": {
+       "PathInfos": [
+        {
+         "Path": "{{server.mediaroot}}/Sizes"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "rename tmp-lib-rename-a to Movies",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Library/VirtualFolders/Name",
+     "query": {
+      "name": "tmp-lib-rename-a",
+      "newName": "Movies",
+      "refreshLibrary": "false"
+     }
+    },
+    "expect": {
+     "status": 409
+    }
+   },
+   {
+    "name": "libraries now",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Library/VirtualFolders"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?Name=tmp-lib-rename-a].Name",
+       "op": "eq",
+       "value": "tmp-lib-rename-a"
+      },
+      {
+       "path": "$[?Name=Movies].Name",
+       "op": "eq",
+       "value": "Movies"
+      }
+     ]
+    }
+   },
+   {
+    "name": "rename tmp-lib-rename-a to tmp-lib-rename-a",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Library/VirtualFolders/Name",
+     "query": {
+      "name": "tmp-lib-rename-a",
+      "newName": "tmp-lib-rename-a",
+      "refreshLibrary": "false"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "rename tmp-lib-rename-missing to tmp-lib-rename-c",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Library/VirtualFolders/Name",
+     "query": {
+      "name": "tmp-lib-rename-missing",
+      "newName": "tmp-lib-rename-c",
+      "refreshLibrary": "false"
+     }
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "libraries now",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Library/VirtualFolders"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?Name=tmp-lib-rename-a].Name",
+       "op": "eq",
+       "value": "tmp-lib-rename-a"
+      },
+      {
+       "path": "$[?Name=tmp-lib-rename-c]",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "rename tmp-lib-rename-a to tmp-lib-rename-b",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Library/VirtualFolders/Name",
+     "query": {
+      "name": "tmp-lib-rename-a",
+      "newName": "tmp-lib-rename-b",
+      "refreshLibrary": "false"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "libraries now",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Library/VirtualFolders"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[?Name=tmp-lib-rename-b].Name",
+       "op": "eq",
+       "value": "tmp-lib-rename-b"
+      },
+      {
+       "path": "$[?Name=Movies].Name",
+       "op": "eq",
+       "value": "Movies"
+      },
+      {
+       "path": "$[?Name=tmp-lib-rename-a]",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "remove tmp-lib-rename-a",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "tmp-lib-rename-a",
+      "refreshLibrary": "false"
+     }
+    },
+    "expect": {}
+   },
+   {
+    "name": "remove tmp-lib-rename-b",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "tmp-lib-rename-b",
+      "refreshLibrary": "false"
+     }
+    },
+    "expect": {}
+   }
+  ]
+ }
+]

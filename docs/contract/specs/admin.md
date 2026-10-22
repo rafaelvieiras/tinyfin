@@ -59,6 +59,14 @@ The administration pages call these on load; none carries state.
 - **admin.config.R3** A `POST` replaces the whole section: members left out fall back to their default (`{}` resets the section) and unknown members are ignored. The branding section is `{LoginDisclaimer, CustomCss, SplashscreenEnabled}`; the two strings are `null` (left out of the JSON) until set, `SplashscreenEnabled` is `false`.
 - **admin.config.R4** The network section has `BaseUrl` (""), `EnableHttps`/`RequireHttps` (false), `CertificatePath`/`CertificatePassword` (""), `InternalHttpPort` 8096, `InternalHttpsPort` 8920, `PublicHttpPort` 8096, `PublicHttpsPort` 8920, `AutoDiscovery` true, `EnableUPnP` false, `EnableIPv4` true, `EnableIPv6` false, `EnableRemoteAccess` true, `LocalNetworkSubnets`, `LocalNetworkAddresses`, `KnownProxies` (empty lists), `IgnoreVirtualInterfaces` true, `VirtualInterfaceNames` `["veth"]`, `EnablePublishedServerUriByRequest` false, `PublishedServerUriBySubnet`, `RemoteIPFilter` (empty), `IsRemoteIPFilterBlacklist` false. Same replace semantics as `admin.config.R3`.
 
+## <a id="libraries"></a>Library rename
+
+`POST /Library/VirtualFolders/Name?name=<current>&newName=<new>[&refreshLibrary=true]` (administrator).
+
+- **admin.libraries.R1** The rename answers `204`; `GET /Library/VirtualFolders` then lists the library under the new name and no longer under the old one. A library scan that is still running from `POST /Library/VirtualFolders` (or started by the rename itself with `refreshLibrary=true`) does not bring the old name back.
+- **admin.libraries.R2** A new name that another library already has (compared exactly, case-sensitive) answers `409` and changes nothing.
+- **admin.libraries.R3** Renaming a library to its own name answers `204` and changes nothing; an unknown `name` answers `404`.
+
 ## Known differences
 
 * **Task list.** Twenty tasks like the reference, but most only exist to keep the list and the dashboard identical: they complete at once and do nothing (`admin.tasks.R10`). `isEnabled` and `isHidden=true` filtering is by the trigger list and `IsHidden` here; the reference additionally treats the library tasks as disabled while no library exists.
@@ -99,3 +107,5 @@ The administration pages call these on load; none carries state.
 | `admin.config.R1`, `R2`, `R3` | `admin.config.encoding` |
 | `admin.config.R1`, `R3` | `admin.config.branding` |
 | `admin.config.R1`, `R4` | `admin.config.network-fields` |
+| `admin.libraries.R1` | `admin.libraries.rename-during-scan` |
+| `admin.libraries.R2`, `R3` | `admin.libraries.rename-rules` |

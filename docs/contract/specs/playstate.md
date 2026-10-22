@@ -347,6 +347,18 @@ modern routes; the difference is that the user id is a path segment and is requi
   unknown user 404; anonymous 401.
 - **playstate.legacy.R4** `DatePlayed` (any case) with ISO 8601 UTC is honored as in `mark-played.R4`.
 
+## <a id="realtime-push"></a>Realtime push
+
+A change of a user's data for an item is pushed to that user's open `/socket` connections as
+`{"MessageType":"UserDataChanged","Data":{"UserId":<id>,"UserDataList":[<user data>...]}}`. The web client's
+details page and lists re-read the item on it (the Play/Resume button, the played check mark and the progress bar
+follow the push, not only their own request).
+
+- **playstate.push.R1** Mark played, mark unplayed, favorite, unfavorite, the user-data update (`POST /UserItems/{itemId}/UserData`), a playback start and a playback stop each send one message after the change is stored. A progress report sends none.
+- **playstate.push.R2** `UserDataList[0]` is the item's user data as the mutating call returns it (`ItemId`, `Played`, `PlayCount`, `PlaybackPositionTicks`, `IsFavorite`, ...), taken after the change. For an item with a parent, the parent's user data (with `UnplayedItemCount` and `PlayedPercentage`) follows it in the list.
+- **playstate.push.R3** Only the sockets of the user whose data changed are told.
+- **playstate.push.R4** A playback start pushes the incremented `PlayCount`; a stop pushes the resulting state.
+
 ## Out of contract
 
 The deprecated `/PlayingItems/...` and `/Users/{userId}/PlayingItems/...` routes (see
@@ -470,3 +482,6 @@ Settled by probing the 12.2 reference:
 | `playstate.legacy.R2` | `legacy.mark-unplayed-path-user` |
 | `playstate.legacy.R3` | `legacy.other-user-forbidden`, `legacy.admin-on-behalf`, `legacy.unknown-item-and-anonymous` |
 | `playstate.legacy.R4` | `legacy.mark-played-path-user` |
+| `playstate.push.R1`, `R2` | `playstate.push.mark-played-and-unplayed`, `playstate.push.resume-position` |
+| `playstate.push.R3` | `playstate.push.only-the-users-sockets` |
+| `playstate.push.R4` | `playstate.push.playback-reports` |

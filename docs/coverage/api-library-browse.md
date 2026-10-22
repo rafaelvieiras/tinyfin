@@ -4,7 +4,7 @@
 
 Item listing, single items, genres/people/studios, search and the other browse endpoints.
 
-[Overview](../COVERAGE.md) · 58 operations · 47 registered (81%) · 41 verified · ✅ 45 · 🟡 1 · 🗓️ 10 · ⛔ 1 · ↔️ 1
+[Overview](../COVERAGE.md) · 58 operations · 47 registered (81%) · 42 verified · ✅ 45 · 🟡 1 · 🗓️ 10 · ⛔ 1 · ↔️ 1
 
 ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️
 
@@ -44,7 +44,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `GET /Items/Latest` | DefaultAuthorization | yes | 5/5 |  |
 | ✅ supported *(no scenario)* | `GET /Items/Root` | DefaultAuthorization | yes |  |  |
 | ✅ supported | `DELETE /Items/{itemId}` | DefaultAuthorization | yes | 10/10 |  |
-| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 232/234 |  |
+| ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 234/234 |  |
 | ✅ supported | `GET /Items/{itemId}/Ancestors` | DefaultAuthorization | yes | 2/2 |  |
 | ✅ supported | `GET /Items/{itemId}/Collections` | DefaultAuthorization | yes | 1/1 |  |
 | ✅ supported | `GET /Items/{itemId}/Download` | Download |  | 7/7 |  |
@@ -59,7 +59,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `GET /Items/{itemId}/ThemeVideos` | DefaultAuthorization |  | 3/3 |  |
 | ✅ supported *(no scenario)* | `GET /Libraries/AvailableOptions` | FirstTimeSetupOrDefault | yes |  |  |
 | 🗓️ planned | `POST /Library/Media/Updated` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
-| ✅ supported *(no scenario)* | `GET /Library/MediaFolders` | RequiresElevation |  | 0/1 |  |
+| ✅ supported | `GET /Library/MediaFolders` | RequiresElevation |  | 1/1 |  |
 | 🗓️ planned | `POST /Library/Movies/Added` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | 🗓️ planned | `POST /Library/Movies/Updated` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | 🗓️ planned | `GET /Library/PhysicalPaths` | RequiresElevation |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |

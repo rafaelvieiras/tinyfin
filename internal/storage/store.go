@@ -291,6 +291,11 @@ type LibraryStore interface {
 	GetLibrary(ctx context.Context, id LibraryID) (Library, error)
 	QueryLibraries(ctx context.Context) ([]Library, error)
 	UpsertLibrary(ctx context.Context, lib Library) error
+	// SetLibraryScanned records the end of a scan on an existing library
+	// without touching any other column, so a scan that started before a
+	// rename or an options save cannot write its stale copy back. A library
+	// deleted meanwhile is not recreated.
+	SetLibraryScanned(ctx context.Context, id LibraryID, at time.Time) error
 	DeleteLibrary(ctx context.Context, id LibraryID) error
 }
 

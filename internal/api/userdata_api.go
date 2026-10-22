@@ -176,6 +176,7 @@ func (s *Server) userItemDataPost(w http.ResponseWriter, r *http.Request, rawUse
 	}
 	dto := userItemDataFromState(state, item)
 	s.applyFolderUserData(r.Context(), target.ID, item, dto)
+	s.notifyUserDataChanged(r.Context(), target.ID, item)
 	writeJSON(w, http.StatusOK, dto)
 }
 

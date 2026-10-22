@@ -136,6 +136,7 @@ func (s *Server) markPlayed(w http.ResponseWriter, r *http.Request, rawUserID st
 		}
 		dto := userItemDataFromState(s.getPlaystateOrZero(r, target.ID, item.ID), item)
 		s.applyFolderUserData(r.Context(), target.ID, item, dto)
+		s.notifyUserDataChanged(r.Context(), target.ID, item)
 		writeJSON(w, http.StatusOK, dto)
 		return
 	}
@@ -235,6 +236,7 @@ func (s *Server) writeUserData(w http.ResponseWriter, r *http.Request, userID st
 	}
 	dto := userItemDataFromState(state, item)
 	s.applyFolderUserData(r.Context(), userID, item, dto)
+	s.notifyUserDataChanged(r.Context(), userID, item)
 	writeJSON(w, http.StatusOK, dto)
 }
 
@@ -476,7 +478,9 @@ func (s *Server) recordPlaybackUserData(ctx context.Context, userID storage.User
 			applyReportedPosition(&state, runtime, *rep.PositionTicks, now)
 		}
 	}
-	_ = s.store.SetPlaystate(ctx, userID, item.ID, state)
+	if err := s.store.SetPlaystate(ctx, userID, item.ID, state); err == nil && kind != reportProgress {
+		s.notifyUserDataChanged(ctx, userID, item)
+	}
 }
 
 // updatePlaybackSession mirrors a report on the caller's session

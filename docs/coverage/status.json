@@ -16,7 +16,7 @@
    "planned": 75,
    "supported": 170
   },
-  "verified": 145
+  "verified": 160
  },
  "routes": [
   {
@@ -207,7 +207,7 @@
    "policy": "RequiresElevation",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "admin.auth.providers",
@@ -221,7 +221,7 @@
    "policy": "RequiresElevation",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "admin.auth.providers",
@@ -599,7 +599,7 @@
    "policy": "Anonymous",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "admin.config.branding",
@@ -613,7 +613,7 @@
    "policy": "Anonymous",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "admin.config.branding"
@@ -636,7 +636,7 @@
    "policy": "DefaultAuthorization",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": false,
    "scenarios": [
     "admin.channels.list"
@@ -788,7 +788,7 @@
    "policy": "RequiresElevation",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "admin.devices.list"
@@ -801,7 +801,7 @@
    "policy": "RequiresElevation",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "admin.devices.list"
@@ -2507,7 +2507,7 @@
    "policy": "RequiresElevation",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": false,
    "scenarios": [
     "admin.mediafolders.list"
@@ -2667,6 +2667,8 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "admin.libraries.rename-during-scan",
+    "admin.libraries.rename-rules",
     "collections.list.by-content-library",
     "collections.list.library",
     "collections.visibility.partial-members",
@@ -2684,6 +2686,8 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "admin.libraries.rename-during-scan",
+    "admin.libraries.rename-rules",
     "collections.auto.build",
     "collections.auto.option-off"
    ]
@@ -2709,7 +2713,11 @@
    "status": "supported",
    "registered": true,
    "verified": false,
-   "web": true
+   "web": true,
+   "scenarios": [
+    "admin.libraries.rename-during-scan",
+    "admin.libraries.rename-rules"
+   ]
   },
   {
    "id": "DELETE /Library/VirtualFolders/Paths",
@@ -2814,7 +2822,7 @@
    "policy": "LiveTvAccess",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": false,
    "scenarios": [
     "admin.livetv.info"
@@ -2934,7 +2942,7 @@
    "policy": "LiveTvAccess",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": false,
    "scenarios": [
     "misc.home.recommended-programs"
@@ -4128,7 +4136,7 @@
    "policy": "DefaultAuthorization",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "playstate.session.transcoding-info-copy-and-mp4",
@@ -4170,6 +4178,7 @@
     "playstate.progress.mid-short-video",
     "playstate.progress.negative-position",
     "playstate.progress.position-omitted",
+    "playstate.push.playback-reports",
     "playstate.resume.long-runtime-listed",
     "playstate.session.defaults",
     "playstate.session.direct-stream-kept",
@@ -4247,6 +4256,7 @@
     "playstate.progress.no-item",
     "playstate.progress.position-omitted",
     "playstate.progress.without-start",
+    "playstate.push.playback-reports",
     "playstate.resume.below-minimum-removes-entry",
     "playstate.session.progress-replaces-state",
     "playstate.session.queue-stored-only-by-stopped",
@@ -4268,6 +4278,7 @@
     "playstate.percent.leaf",
     "playstate.progress.below-minimum-keeps-date",
     "playstate.progress.negative-position",
+    "playstate.push.playback-reports",
     "playstate.resume.long-runtime-listed",
     "playstate.session.queue-stored-only-by-stopped",
     "playstate.session.stopped-clears-now-playing",
@@ -4792,7 +4803,7 @@
    "policy": "SyncPlayJoinGroup",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "misc.home.syncplay-list"
@@ -5100,7 +5111,7 @@
    "policy": "RequiresElevation",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "admin.config.branding"
@@ -5125,7 +5136,7 @@
    "policy": "DefaultAuthorization",
    "status": "partial",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "admin.config.branding",
@@ -5142,7 +5153,7 @@
    "policy": "RequiresElevation",
    "status": "partial",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "admin.config.encoding",
@@ -5953,7 +5964,10 @@
    "status": "supported",
    "registered": true,
    "verified": false,
-   "web": false
+   "web": false,
+   "scenarios": [
+    "playstate.push.resume-position"
+   ]
   },
   {
    "id": "POST /UserFavoriteItems/{itemId}",
@@ -5966,7 +5980,8 @@
    "web": false,
    "scenarios": [
     "musicvideos.playstate",
-    "playstate.mark-unplayed.keeps-favorite"
+    "playstate.mark-unplayed.keeps-favorite",
+    "playstate.push.resume-position"
    ]
   },
   {
@@ -6058,6 +6073,7 @@
     "playstate.mark-played.resets-position",
     "playstate.mark-unplayed.resets-position",
     "playstate.progress.below-minimum-clears-position",
+    "playstate.push.resume-position",
     "playstate.resume.below-minimum-removes-entry",
     "playstate.resume.saved-position-listed-until-played",
     "wire.date.user-data-precision"
@@ -6087,6 +6103,10 @@
     "playstate.mark-unplayed.never-played",
     "playstate.mark-unplayed.resets-everything",
     "playstate.mark-unplayed.resets-position",
+    "playstate.push.mark-played-and-unplayed",
+    "playstate.push.only-the-users-sockets",
+    "playstate.push.playback-reports",
+    "playstate.push.resume-position",
     "playstate.user.admin-on-behalf-unmark",
     "playstate.user.admin-unknown-user",
     "playstate.user.invalid-guid",
@@ -6138,6 +6158,9 @@
     "playstate.mark-unplayed.keeps-favorite",
     "playstate.mark-unplayed.resets-everything",
     "playstate.percent.folder",
+    "playstate.push.mark-played-and-unplayed",
+    "playstate.push.only-the-users-sockets",
+    "playstate.push.resume-position",
     "playstate.resume.saved-position-listed-until-played",
     "playstate.start.rewatch-keeps-last-played",
     "playstate.user.admin-on-behalf-mark",
@@ -7743,15 +7766,20 @@
    "id": "realtime.websocket",
    "title": "WebSocket `/socket`",
    "status": "partial",
-   "description": "Upgrade with `ApiKey`; server messages: ForceKeepAlive, Sessions, ScheduledTasksInfo, ActivityLogEntry, UserUpdated; client messages: KeepAlive and the *Start/*Stop subscriptions.",
-   "reference": "Also UserDataChanged, LibraryChanged, PlaybackStart/Stop, GeneralCommand, Play/Playstate, RestartRequired, PackageInstalling.",
-   "notes": "Library and user-data change pushes are not sent; remote commands do not exist.",
+   "description": "Upgrade with `ApiKey`; server messages: ForceKeepAlive, Sessions, ScheduledTasksInfo, ActivityLogEntry, UserUpdated, UserDataChanged; client messages: KeepAlive and the *Start/*Stop subscriptions.",
+   "reference": "Also LibraryChanged, PlaybackStart/Stop, GeneralCommand, Play/Playstate, RestartRequired, PackageInstalling.",
+   "notes": "Library change pushes are not sent (user-data pushes are, except for a library-root parent entry and folder marks' leaf entries); remote commands do not exist.",
    "spec_rules": [
-    "users.socket.R1"
+    "users.socket.R1",
+    "playstate.push.R1"
    ],
    "scenarios": [
     "users.socket.upgrade",
-    "users.socket.refused-without-credential"
+    "users.socket.refused-without-credential",
+    "playstate.push.mark-played-and-unplayed",
+    "playstate.push.resume-position",
+    "playstate.push.only-the-users-sockets",
+    "playstate.push.playback-reports"
    ],
    "code": [
     "internal/api/websocket.go"

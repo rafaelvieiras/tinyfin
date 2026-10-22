@@ -4,7 +4,7 @@
 
 Accounts, login, QuickConnect, API keys, the startup wizard and device management.
 
-[Overview](../COVERAGE.md) · 35 operations · 32 registered (91%) · 21 verified · ✅ 25 · 🗓️ 3 · ↔️ 7
+[Overview](../COVERAGE.md) · 35 operations · 32 registered (91%) · 25 verified · ✅ 25 · 🗓️ 3 · ↔️ 7
 
 ✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️↔️↔️↔️↔️
 
@@ -17,13 +17,13 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `GET /Auth/Keys` | RequiresElevation | yes | 5/5 |  |
 | ✅ supported | `POST /Auth/Keys` | RequiresElevation | yes | 5/5 |  |
 | ✅ supported | `DELETE /Auth/Keys/{key}` | RequiresElevation | yes | 3/3 |  |
-| ✅ supported *(no scenario)* | `GET /Auth/PasswordResetProviders` | RequiresElevation | yes | 0/2 |  |
-| ✅ supported *(no scenario)* | `GET /Auth/Providers` | RequiresElevation | yes | 0/2 |  |
+| ✅ supported | `GET /Auth/PasswordResetProviders` | RequiresElevation | yes | 2/2 |  |
+| ✅ supported | `GET /Auth/Providers` | RequiresElevation | yes | 2/2 |  |
 | ✅ supported | `POST /QuickConnect/Authorize` | DefaultAuthorization |  | 18/18 |  |
 | ✅ supported | `GET /QuickConnect/Connect` | Anonymous |  | 8/8 |  |
 | ✅ supported | `GET /QuickConnect/Enabled` | Anonymous | yes | 3/3 |  |
 | ✅ supported | `POST /QuickConnect/Initiate` | Anonymous | yes | 21/21 |  |
-| ✅ supported | `POST /Users/AuthenticateByName` | Anonymous | yes | 132/137 |  |
+| ✅ supported | `POST /Users/AuthenticateByName` | Anonymous | yes | 134/137 |  |
 | ↔️ divergent-by-design | `POST /Users/AuthenticateWithQuickConnect` | Anonymous |  | 13/13 | A secret is single use and a disabled account is refused (the reference replays secrets and logs disabled accounts in). Recorded as a divergence in the contract scenarios. |
 | ↔️ divergent-by-design | `POST /Users/ForgotPassword` | Anonymous |  | 7/7 | PinFile carries the bare file name, not the absolute server path. Recorded as a divergence in the contract scenarios. |
 | ↔️ divergent-by-design | `POST /Users/ForgotPassword/Pin` | Anonymous |  | 4/4 | Redeem attempts are rate limited (the reference does not throttle). Recorded as a divergence in the contract scenarios. |
@@ -33,8 +33,8 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
 | 🗓️ planned | `DELETE /Devices` | RequiresElevation | yes |  | Devices are stored (internal/storage/device.go) and appear in sessions, but there are no device-management routes, so the dashboard's Devices page 404s. (priority: medium) |
-| ✅ supported *(no scenario)* | `GET /Devices` | RequiresElevation | yes | 0/1 |  |
-| ✅ supported *(no scenario)* | `GET /Devices/Info` | RequiresElevation | yes | 0/1 |  |
+| ✅ supported | `GET /Devices` | RequiresElevation | yes | 1/1 |  |
+| ✅ supported | `GET /Devices/Info` | RequiresElevation | yes | 1/1 |  |
 | 🗓️ planned | `GET /Devices/Options` | RequiresElevation | yes |  | Devices are stored (internal/storage/device.go) and appear in sessions, but there are no device-management routes, so the dashboard's Devices page 404s. (priority: medium) |
 | 🗓️ planned | `POST /Devices/Options` | RequiresElevation | yes |  | Devices are stored (internal/storage/device.go) and appear in sessions, but there are no device-management routes, so the dashboard's Devices page 404s. (priority: medium) |
 
@@ -55,15 +55,15 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
 | ✅ supported | `GET /Users` | DefaultAuthorization | yes | 17/18 |  |
-| ↔️ divergent-by-design | `POST /Users` | DefaultAuthorization | yes | 15/16 | An explicit null Configuration resets preferences (the reference answers 500). Recorded as a divergence in the contract scenarios. |
+| ↔️ divergent-by-design | `POST /Users` | DefaultAuthorization | yes | 16/16 | An explicit null Configuration resets preferences (the reference answers 500). Recorded as a divergence in the contract scenarios. |
 | ✅ supported | `POST /Users/Configuration` | DefaultAuthorization |  | 16/16 |  |
 | ✅ supported | `GET /Users/Me` | DefaultAuthorization | yes | 35/36 |  |
-| ✅ supported | `POST /Users/New` | RequiresElevation | yes | 180/184 |  |
+| ✅ supported | `POST /Users/New` | RequiresElevation | yes | 182/184 |  |
 | ✅ supported | `POST /Users/Password` | DefaultAuthorization |  | 20/20 |  |
 | ✅ supported | `GET /Users/Public` | Anonymous | yes | 8/10 |  |
 | ↔️ divergent-by-design | `DELETE /Users/{userId}` | RequiresElevation | yes | 11/11 | A refused deletion of the last administrator revokes nothing (the reference logs them out first). Recorded as a divergence in the contract scenarios. |
-| ↔️ divergent-by-design | `GET /Users/{userId}` | IgnoreParentalControl | yes | 107/108 | HasPassword reflects whether a password is set (the reference reports true for everyone). Recorded as a divergence in the contract scenarios. |
-| ✅ supported | `POST /Users/{userId}/Policy` | RequiresElevation |  | 78/79 |  |
+| ↔️ divergent-by-design | `GET /Users/{userId}` | IgnoreParentalControl | yes | 108/108 | HasPassword reflects whether a password is set (the reference reports true for everyone). Recorded as a divergence in the contract scenarios. |
+| ✅ supported | `POST /Users/{userId}/Policy` | RequiresElevation |  | 79/79 |  |
 
 ## Related features
 

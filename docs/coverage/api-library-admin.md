@@ -49,10 +49,10 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
 | ✅ supported *(no scenario)* | `DELETE /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes |  |  |
-| ✅ supported | `GET /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes | 5/5 |  |
-| ✅ supported | `POST /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes | 2/2 |  |
+| ✅ supported | `GET /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes | 5/7 |  |
+| ✅ supported | `POST /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes | 2/4 |  |
 | ✅ supported | `POST /Library/VirtualFolders/LibraryOptions` | FirstTimeSetupOrElevated | yes | 1/1 |  |
-| ✅ supported *(no scenario)* | `POST /Library/VirtualFolders/Name` | FirstTimeSetupOrElevated | yes |  |  |
+| ✅ supported *(no scenario)* | `POST /Library/VirtualFolders/Name` | FirstTimeSetupOrElevated | yes | 0/2 |  |
 | 🗓️ planned | `DELETE /Library/VirtualFolders/Paths` | FirstTimeSetupOrElevated | yes |  | Adding, removing and updating the paths of an existing library is not implemented; a library's paths are set when it is created. (priority: medium) |
 | 🗓️ planned | `POST /Library/VirtualFolders/Paths` | FirstTimeSetupOrElevated | yes |  | Adding, removing and updating the paths of an existing library is not implemented; a library's paths are set when it is created. (priority: medium) |
 | 🗓️ planned | `POST /Library/VirtualFolders/Paths/Update` | FirstTimeSetupOrElevated | yes |  | Adding, removing and updating the paths of an existing library is not implemented; a library's paths are set when it is created. (priority: medium) |
@@ -61,10 +61,10 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ↔️ divergent-by-design | `GET /ScheduledTasks` | RequiresElevation | yes | 2/4 | Lists only the tasks Tinyfin really runs (RefreshLibrary, RefreshTrickplayImages, CleanActivityLog) with the reference's Ids and Keys; the reference's ~20 tasks (plugin updates, subtitle/lyric downloads, ...) belong to subsystems that do not exist. See specs/admin.md. |
+| ↔️ divergent-by-design | `GET /ScheduledTasks` | RequiresElevation | yes | 4/4 | Lists only the tasks Tinyfin really runs (RefreshLibrary, RefreshTrickplayImages, CleanActivityLog) with the reference's Ids and Keys; the reference's ~20 tasks (plugin updates, subtitle/lyric downloads, ...) belong to subsystems that do not exist. See specs/admin.md. |
 | ↔️ divergent-by-design | `DELETE /ScheduledTasks/Running/{taskId}` | RequiresElevation | yes | 2/2 | Cancels a running library scan or trickplay batch; stopping a task that is not running is a 204 no-op (the reference answers 500). |
-| 🗓️ planned | `POST /ScheduledTasks/Running/{taskId}` | RequiresElevation | yes | 4/5 | Only the library-scan task and its start route exist. (priority: low) |
-| ✅ supported | `GET /ScheduledTasks/{taskId}` | RequiresElevation | yes | 3/4 |  |
+| 🗓️ planned | `POST /ScheduledTasks/Running/{taskId}` | RequiresElevation | yes | 5/5 | Only the library-scan task and its start route exist. (priority: low) |
+| ✅ supported | `GET /ScheduledTasks/{taskId}` | RequiresElevation | yes | 4/4 |  |
 | 🗓️ planned | `POST /ScheduledTasks/{taskId}/Triggers` | RequiresElevation |  | 1/1 | Only the library-scan task and its start route exist. (priority: low) |
 
 ## Related features

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
@@ -87,6 +88,13 @@ func (s *Store) UpsertLibrary(ctx context.Context, lib storage.Library) error {
 	_, err = s.exec(ctx, query, string(lib.ID), lib.Name, string(lib.CollectionType), pathsJSON, ptrToAny(lib.LastScannedAt), string(lib.LibraryOptions))
 	if err != nil {
 		return fmt.Errorf("sqlite: upserting library %q: %w", lib.ID, err)
+	}
+	return nil
+}
+
+func (s *Store) SetLibraryScanned(ctx context.Context, id storage.LibraryID, at time.Time) error {
+	if _, err := s.exec(ctx, `UPDATE libraries SET last_scanned_at = ? WHERE id = ?`, ptrToAny(&at), string(id)); err != nil {
+		return fmt.Errorf("sqlite: marking library %q scanned: %w", id, err)
 	}
 	return nil
 }

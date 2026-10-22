@@ -1,0 +1,665 @@
+[
+ {
+  "id": "playstate.push.mark-played-and-unplayed",
+  "endpoint": "POST /UserPlayedItems/{itemId}",
+  "spec": "playstate.md#realtime-push",
+  "scope": "modern",
+  "tags": [
+   "playstate",
+   "websocket",
+   "web-client"
+  ],
+  "covers": [
+   "playstate.push.R1",
+   "playstate.push.R2"
+  ],
+  "requires": [
+   "item:alpha",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "reset",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.alpha.id}}",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "alice's socket",
+    "ws": {
+     "open": "a",
+     "as": "alice"
+    }
+   },
+   {
+    "name": "mark played",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/UserPlayedItems/{{item.alpha.id}}",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "pushed: played",
+    "ws": {
+     "wait": "a",
+     "type": "UserDataChanged",
+     "timeoutMs": 5000
+    },
+    "expect": {
+     "json": [
+      {
+       "path": "$.Data.UserId",
+       "op": "eq",
+       "value": "{{user.alice.id}}"
+      },
+      {
+       "path": "$.Data.UserDataList[0].ItemId",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.MessageType",
+       "op": "eq",
+       "value": "UserDataChanged"
+      },
+      {
+       "path": "$.Data.UserDataList[0].Played",
+       "op": "eq",
+       "value": true
+      },
+      {
+       "path": "$.Data.UserDataList[0].PlayCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "mark unplayed",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.alpha.id}}",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "pushed: unplayed",
+    "ws": {
+     "wait": "a",
+     "type": "UserDataChanged",
+     "timeoutMs": 5000
+    },
+    "expect": {
+     "json": [
+      {
+       "path": "$.Data.UserId",
+       "op": "eq",
+       "value": "{{user.alice.id}}"
+      },
+      {
+       "path": "$.Data.UserDataList[0].ItemId",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Data.UserDataList[0].Played",
+       "op": "eq",
+       "value": false
+      },
+      {
+       "path": "$.Data.UserDataList[0].PlayCount",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Data.UserDataList[0].PlaybackPositionTicks",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "reset",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.alpha.id}}",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   }
+  ]
+ },
+ {
+  "id": "playstate.push.resume-position",
+  "endpoint": "POST /UserItems/{itemId}/UserData",
+  "spec": "playstate.md#realtime-push",
+  "scope": "modern",
+  "tags": [
+   "playstate",
+   "websocket",
+   "web-client",
+   "depends:userdata-update"
+  ],
+  "covers": [
+   "playstate.push.R1",
+   "playstate.push.R2"
+  ],
+  "requires": [
+   "item:alpha",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "reset",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.alpha.id}}",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "alice's socket",
+    "ws": {
+     "open": "a",
+     "as": "alice"
+    }
+   },
+   {
+    "name": "save a resume position",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/UserItems/{{item.alpha.id}}/UserData",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     },
+     "body": {
+      "PlaybackPositionTicks": 30000000
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "pushed with the position",
+    "ws": {
+     "wait": "a",
+     "type": "UserDataChanged",
+     "timeoutMs": 5000
+    },
+    "expect": {
+     "json": [
+      {
+       "path": "$.Data.UserId",
+       "op": "eq",
+       "value": "{{user.alice.id}}"
+      },
+      {
+       "path": "$.Data.UserDataList[0].ItemId",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Data.UserDataList[0].PlaybackPositionTicks",
+       "op": "eq",
+       "value": 30000000
+      },
+      {
+       "path": "$.Data.UserDataList[0].Played",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "favorite",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/UserFavoriteItems/{{item.alpha.id}}",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "pushed: favorite",
+    "ws": {
+     "wait": "a",
+     "type": "UserDataChanged",
+     "timeoutMs": 5000
+    },
+    "expect": {
+     "json": [
+      {
+       "path": "$.Data.UserId",
+       "op": "eq",
+       "value": "{{user.alice.id}}"
+      },
+      {
+       "path": "$.Data.UserDataList[0].ItemId",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Data.UserDataList[0].IsFavorite",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "unfavorite",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserFavoriteItems/{{item.alpha.id}}",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "pushed: unfavorite",
+    "ws": {
+     "wait": "a",
+     "type": "UserDataChanged",
+     "timeoutMs": 5000
+    },
+    "expect": {
+     "json": [
+      {
+       "path": "$.Data.UserId",
+       "op": "eq",
+       "value": "{{user.alice.id}}"
+      },
+      {
+       "path": "$.Data.UserDataList[0].ItemId",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Data.UserDataList[0].IsFavorite",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "mark played clears the position",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/UserPlayedItems/{{item.alpha.id}}",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "pushed: position cleared",
+    "ws": {
+     "wait": "a",
+     "type": "UserDataChanged",
+     "timeoutMs": 5000
+    },
+    "expect": {
+     "json": [
+      {
+       "path": "$.Data.UserId",
+       "op": "eq",
+       "value": "{{user.alice.id}}"
+      },
+      {
+       "path": "$.Data.UserDataList[0].ItemId",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Data.UserDataList[0].PlaybackPositionTicks",
+       "op": "eq",
+       "value": 0
+      },
+      {
+       "path": "$.Data.UserDataList[0].Played",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "reset",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.alpha.id}}",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   }
+  ]
+ },
+ {
+  "id": "playstate.push.only-the-users-sockets",
+  "endpoint": "POST /UserPlayedItems/{itemId}",
+  "spec": "playstate.md#realtime-push",
+  "scope": "modern",
+  "tags": [
+   "playstate",
+   "websocket"
+  ],
+  "covers": [
+   "playstate.push.R3"
+  ],
+  "requires": [
+   "item:alpha",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "reset",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.alpha.id}}",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "alice's socket",
+    "ws": {
+     "open": "a",
+     "as": "alice"
+    }
+   },
+   {
+    "name": "the administrator's socket",
+    "ws": {
+     "open": "adm",
+     "as": "admin"
+    }
+   },
+   {
+    "name": "mark played",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/UserPlayedItems/{{item.alpha.id}}",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "alice is told",
+    "ws": {
+     "wait": "a",
+     "type": "UserDataChanged",
+     "timeoutMs": 5000
+    },
+    "expect": {
+     "json": [
+      {
+       "path": "$.Data.UserId",
+       "op": "eq",
+       "value": "{{user.alice.id}}"
+      },
+      {
+       "path": "$.Data.UserDataList[0].ItemId",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the administrator is not",
+    "ws": {
+     "wait": "adm",
+     "type": "UserDataChanged",
+     "timeoutMs": 2000,
+     "absent": true
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "reset",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.alpha.id}}",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   }
+  ]
+ },
+ {
+  "id": "playstate.push.playback-reports",
+  "endpoint": "POST /Sessions/Playing",
+  "spec": "playstate.md#realtime-push",
+  "scope": "modern",
+  "tags": [
+   "playstate",
+   "websocket"
+  ],
+  "covers": [
+   "playstate.push.R4"
+  ],
+  "requires": [
+   "item:alpha",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "reset",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.alpha.id}}",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "alice's socket",
+    "ws": {
+     "open": "a",
+     "as": "alice"
+    }
+   },
+   {
+    "name": "start",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/Sessions/Playing",
+     "body": {
+      "ItemId": "{{item.alpha.id}}",
+      "PositionTicks": 0
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "pushed: play count",
+    "ws": {
+     "wait": "a",
+     "type": "UserDataChanged",
+     "timeoutMs": 5000
+    },
+    "expect": {
+     "json": [
+      {
+       "path": "$.Data.UserId",
+       "op": "eq",
+       "value": "{{user.alice.id}}"
+      },
+      {
+       "path": "$.Data.UserDataList[0].ItemId",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Data.UserDataList[0].PlayCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "progress",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/Sessions/Playing/Progress",
+     "body": {
+      "ItemId": "{{item.alpha.id}}",
+      "PositionTicks": 20000000
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "progress is silent",
+    "ws": {
+     "wait": "a",
+     "type": "UserDataChanged",
+     "timeoutMs": 2000,
+     "absent": true
+    }
+   },
+   {
+    "name": "stopped",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/Sessions/Playing/Stopped",
+     "body": {
+      "ItemId": "{{item.alpha.id}}",
+      "PositionTicks": 20000000
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "pushed: stopped",
+    "ws": {
+     "wait": "a",
+     "type": "UserDataChanged",
+     "timeoutMs": 5000
+    },
+    "expect": {
+     "json": [
+      {
+       "path": "$.Data.UserId",
+       "op": "eq",
+       "value": "{{user.alice.id}}"
+      },
+      {
+       "path": "$.Data.UserDataList[0].ItemId",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "reset",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.alpha.id}}",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   }
+  ]
+ }
+]

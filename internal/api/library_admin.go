@@ -218,6 +218,8 @@ func (s *Server) handleSaveLibraryOptions(w http.ResponseWriter, r *http.Request
 // drops metadata, too destructive to test against a persistent
 // test fixture) — route shape is from static analysis of @jellyfin/sdk's
 // generated client, same sanctioned source as the rest of this file.
+// The scan it may start only records its end time (SetLibraryScanned): a
+// scan that began before the rename must not write the old name back.
 func (s *Server) handleRenameVirtualFolder(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	name := q.Get("name")
@@ -235,6 +237,14 @@ func (s *Server) handleRenameVirtualFolder(w http.ResponseWriter, r *http.Reques
 	for _, lib := range libs {
 		if lib.Name != name {
 			continue
+		}
+		// A name another library already has is refused (matched exactly,
+		// like the reference); renaming to its own name changes nothing.
+		for _, other := range libs {
+			if other.ID != lib.ID && other.Name == newName {
+				writeJSON(w, http.StatusConflict, "The media library already exists.")
+				return
+			}
 		}
 		lib.Name = newName
 		if err := s.store.UpsertLibrary(r.Context(), lib); err != nil {

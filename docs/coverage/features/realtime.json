@@ -50,15 +50,20 @@
    "id": "realtime.websocket",
    "title": "WebSocket `/socket`",
    "status": "partial",
-   "description": "Upgrade with `ApiKey`; server messages: ForceKeepAlive, Sessions, ScheduledTasksInfo, ActivityLogEntry, UserUpdated; client messages: KeepAlive and the *Start/*Stop subscriptions.",
-   "reference": "Also UserDataChanged, LibraryChanged, PlaybackStart/Stop, GeneralCommand, Play/Playstate, RestartRequired, PackageInstalling.",
-   "notes": "Library and user-data change pushes are not sent; remote commands do not exist.",
+   "description": "Upgrade with `ApiKey`; server messages: ForceKeepAlive, Sessions, ScheduledTasksInfo, ActivityLogEntry, UserUpdated, UserDataChanged; client messages: KeepAlive and the *Start/*Stop subscriptions.",
+   "reference": "Also LibraryChanged, PlaybackStart/Stop, GeneralCommand, Play/Playstate, RestartRequired, PackageInstalling.",
+   "notes": "Library change pushes are not sent (user-data pushes are, except for a library-root parent entry and folder marks' leaf entries); remote commands do not exist.",
    "spec_rules": [
-    "users.socket.R1"
+    "users.socket.R1",
+    "playstate.push.R1"
    ],
    "scenarios": [
     "users.socket.upgrade",
-    "users.socket.refused-without-credential"
+    "users.socket.refused-without-credential",
+    "playstate.push.mark-played-and-unplayed",
+    "playstate.push.resume-position",
+    "playstate.push.only-the-users-sockets",
+    "playstate.push.playback-reports"
    ],
    "code": [
     "internal/api/websocket.go"

@@ -468,3 +468,60 @@ func (s *Server) notifyUserUpdated(ctx context.Context, u storage.User) {
 		c.send(ctx, "UserUpdated", payload)
 	}
 }
+
+// userDataChangedDto is the Data of a "UserDataChanged" message.
+type userDataChangedDto struct {
+	UserID       string             `json:"UserId"`
+	UserDataList []*userItemDataDto `json:"UserDataList"`
+}
+
+// notifyUserDataChanged pushes "UserDataChanged" to the open sockets of the
+// user whose data changed (users.socket / playstate.push): the list holds, for
+// every changed item in order, its user data followed by the user data of
+// its immediate parent (which carries the parent's played percentage and
+// unplayed count), each item once. Callers pass only the items a client
+// would see change; progress reports do not push. Failures are ignored: the
+// push is a courtesy, the write already succeeded.
+func (s *Server) notifyUserDataChanged(ctx context.Context, userID storage.UserID, items ...storage.Item) {
+	var conns []*wsConn
+	for _, c := range s.hub.snapshot() {
+		c.mu.Lock()
+		match := c.userID == string(userID)
+		c.mu.Unlock()
+		if match {
+			conns = append(conns, c)
+		}
+	}
+	if len(conns) == 0 || len(items) == 0 {
+		return
+	}
+	ctx = context.WithoutCancel(ctx)
+	seen := map[storage.ItemID]bool{}
+	list := []*userItemDataDto{}
+	add := func(it storage.Item) {
+		if seen[it.ID] {
+			return
+		}
+		seen[it.ID] = true
+		state, err := s.store.GetPlaystate(ctx, userID, it.ID)
+		if err != nil {
+			state = storage.Playstate{}
+		}
+		dto := userItemDataFromState(state, it)
+		s.applyFolderUserData(ctx, userID, it, dto)
+		list = append(list, dto)
+	}
+	for _, it := range items {
+		add(it)
+		if it.ParentID == nil {
+			continue
+		}
+		if parent, err := s.store.GetItem(ctx, *it.ParentID); err == nil {
+			add(parent)
+		}
+	}
+	payload := userDataChangedDto{UserID: string(userID), UserDataList: list}
+	for _, c := range conns {
+		c.send(ctx, "UserDataChanged", payload)
+	}
+}

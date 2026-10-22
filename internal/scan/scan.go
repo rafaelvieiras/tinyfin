@@ -312,7 +312,7 @@ func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, 
 
 	now := time.Now().UTC()
 	lib.LastScannedAt = &now
-	if err := s.store.UpsertLibrary(ctx, lib); err != nil {
+	if err := s.store.SetLibraryScanned(ctx, lib.ID, now); err != nil {
 		return stats, fmt.Errorf("scan: persisting LastScannedAt for library %q: %w", lib.Name, err)
 	}
 	return stats, nil
