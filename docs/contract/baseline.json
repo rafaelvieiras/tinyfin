@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 895
+    "pass": 901
   },
   "scenarios": {
     "admin.auth.providers": "pass",
@@ -11,6 +11,8 @@
     "admin.config.encoding": "pass",
     "admin.config.network-fields": "pass",
     "admin.devices.list": "pass",
+    "admin.libraries.rename-during-scan": "pass",
+    "admin.libraries.rename-rules": "pass",
     "admin.livetv.info": "pass",
     "admin.logs.file": "pass",
     "admin.logs.list": "pass",
@@ -501,6 +503,10 @@
     "playstate.progress.no-item": "pass",
     "playstate.progress.position-omitted": "pass",
     "playstate.progress.without-start": "pass",
+    "playstate.push.mark-played-and-unplayed": "pass",
+    "playstate.push.only-the-users-sockets": "pass",
+    "playstate.push.playback-reports": "pass",
+    "playstate.push.resume-position": "pass",
     "playstate.resume.below-minimum-removes-entry": "pass",
     "playstate.resume.long-runtime-listed": "pass",
     "playstate.resume.saved-position-listed-until-played": "pass",

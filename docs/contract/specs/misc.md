@@ -15,7 +15,7 @@ Scenarios: [`../scenarios/misc.json`](../scenarios/misc.json). Rule IDs are stab
 
 ### Rules
 
-- **misc.time.R1** `GET /GetUtcTime` answers `200` with `{"RequestReceptionTime", "ResponseTransmissionTime"}`, both server UTC instants in the wire date format (`YYYY-MM-DDTHH:MM:SS.fffffffZ`, wire.date), the second not before the first; no authentication.
+- **misc.time.R1** `GET /GetUtcTime` answers `200` with `{"RequestReceptionTime", "ResponseTransmissionTime"}`, both server UTC instants in the wire date format (`YYYY-MM-DDTHH:MM:SS.fffffffZ` with trailing zeros of the fraction dropped, wire.date), the second not before the first; no authentication.
 
 ## <a id="localization"></a>GET /Localization/*
 

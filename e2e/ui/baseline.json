@@ -11,6 +11,7 @@
     "admin-libraries.spec.ts > edit library options and persist them",
     "admin-libraries.spec.ts > libraries page lists the fixture libraries",
     "admin-libraries.spec.ts > remove a library from the list",
+    "admin-libraries.spec.ts > rename a library",
     "admin-pages.spec.ts > activity log lists authentication entries and filters",
     "admin-pages.spec.ts > dashboard home shows server info, activity and devices",
     "admin-pages.spec.ts > dashboard side menu lists the admin sections",
@@ -64,6 +65,7 @@
     "userdata.spec.ts > api trace favorite and played flows match the reference",
     "userdata.spec.ts > favorite toggle on a movie shows in the Favorites tab",
     "userdata.spec.ts > favorite toggle persists server-side and from the card overlay",
-    "userdata.spec.ts > mark played / unplayed toggles the indicator"
+    "userdata.spec.ts > mark played / unplayed toggles the indicator",
+    "userdata.spec.ts > resume position shows Resume, progress bar and Continue Watching"
   ]
 }

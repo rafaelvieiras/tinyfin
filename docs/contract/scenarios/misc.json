@@ -110,12 +110,12 @@
       {
        "path": "$.RequestReceptionTime",
        "op": "matches",
-       "value": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d\\.\\d{7}Z$"
+       "value": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d\\.\\d{1,7}Z$"
       },
       {
        "path": "$.ResponseTransmissionTime",
        "op": "matches",
-       "value": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d\\.\\d{7}Z$"
+       "value": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d\\.\\d{1,7}Z$"
       }
      ]
     }
