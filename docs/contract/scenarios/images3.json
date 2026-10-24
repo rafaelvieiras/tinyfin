@@ -1,0 +1,509 @@
+[
+  {
+    "id": "images.frame.extras-movie",
+    "endpoint": "GET /Items/{itemId}/Images/{imageType}",
+    "spec": "images.md#frames",
+    "scope": "modern",
+    "tags": [
+      "images",
+      "extras"
+    ],
+    "covers": [
+      "images.frame.R3"
+    ],
+    "requires": [
+      "item:ex-all",
+      "library:extras"
+    ],
+    "steps": [
+      {
+        "name": "special features carry a Primary tag",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.ex-all.id}}/SpecialFeatures"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[*].ImageTags.Primary",
+              "op": "hex32"
+            },
+            {
+              "path": "$[*].ImageBlurHashes.Primary",
+              "op": "exists"
+            },
+            {
+              "path": "$[*].PrimaryImageAspectRatio",
+              "op": "exists"
+            }
+          ]
+        },
+        "capture": {
+          "sf": "$[0].Id"
+        },
+        "retryMs": 30000
+      },
+      {
+        "name": "a special feature: the picture is a JPEG of the video's size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{capture.sf}}/Images/Primary"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "/^image\\/jpeg/"
+          },
+          "image": {
+            "width": 320,
+            "height": 240
+          }
+        }
+      },
+      {
+        "name": "a special feature: it is listed with the video's size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{capture.sf}}/Images"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[?ImageType=Primary].Width",
+              "op": "eq",
+              "value": 320
+            },
+            {
+              "path": "$[?ImageType=Primary].Height",
+              "op": "eq",
+              "value": 240
+            }
+          ]
+        }
+      },
+      {
+        "name": "local trailers carry a Primary tag",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.ex-all.id}}/LocalTrailers"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[*].ImageTags.Primary",
+              "op": "hex32"
+            },
+            {
+              "path": "$[*].ImageBlurHashes.Primary",
+              "op": "exists"
+            },
+            {
+              "path": "$[*].PrimaryImageAspectRatio",
+              "op": "exists"
+            }
+          ]
+        },
+        "capture": {
+          "tr": "$[0].Id"
+        },
+        "retryMs": 30000
+      },
+      {
+        "name": "a trailer: the picture is a JPEG of the video's size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{capture.tr}}/Images/Primary"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "/^image\\/jpeg/"
+          },
+          "image": {
+            "width": 320,
+            "height": 240
+          }
+        }
+      },
+      {
+        "name": "a trailer: it is listed with the video's size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{capture.tr}}/Images"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[?ImageType=Primary].Width",
+              "op": "eq",
+              "value": 320
+            },
+            {
+              "path": "$[?ImageType=Primary].Height",
+              "op": "eq",
+              "value": 240
+            }
+          ]
+        }
+      },
+      {
+        "name": "theme videos carry a Primary tag",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.ex-all.id}}/ThemeVideos"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[*].ImageTags.Primary",
+              "op": "hex32"
+            },
+            {
+              "path": "$.Items[*].ImageBlurHashes.Primary",
+              "op": "exists"
+            },
+            {
+              "path": "$.Items[*].PrimaryImageAspectRatio",
+              "op": "exists"
+            }
+          ]
+        },
+        "capture": {
+          "tv": "$.Items[0].Id"
+        },
+        "retryMs": 30000
+      },
+      {
+        "name": "a theme video: the picture is a JPEG of the video's size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{capture.tv}}/Images/Primary"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "/^image\\/jpeg/"
+          },
+          "image": {
+            "width": 320,
+            "height": 240
+          }
+        }
+      },
+      {
+        "name": "a theme video: it is listed with the video's size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{capture.tv}}/Images"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[?ImageType=Primary].Width",
+              "op": "eq",
+              "value": 320
+            },
+            {
+              "path": "$[?ImageType=Primary].Height",
+              "op": "eq",
+              "value": 240
+            }
+          ]
+        }
+      },
+      {
+        "name": "theme songs (audio) get no picture",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.ex-all.id}}/ThemeSongs"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[*].ImageTags.Primary",
+              "op": "absent"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": []
+  },
+  {
+    "id": "images.frame.extras-parts",
+    "endpoint": "GET /Items/{itemId}/Images/{imageType}",
+    "spec": "images.md#frames",
+    "scope": "modern",
+    "tags": [
+      "images",
+      "extras"
+    ],
+    "covers": [
+      "images.frame.R3"
+    ],
+    "requires": [
+      "item:ex-parts",
+      "library:extras"
+    ],
+    "steps": [
+      {
+        "name": "additional parts carry a Primary tag",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.ex-parts.id}}/AdditionalParts"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.Items[*].ImageTags.Primary",
+              "op": "hex32"
+            },
+            {
+              "path": "$.Items[*].ImageBlurHashes.Primary",
+              "op": "exists"
+            },
+            {
+              "path": "$.Items[*].PrimaryImageAspectRatio",
+              "op": "exists"
+            }
+          ]
+        },
+        "capture": {
+          "pt": "$.Items[0].Id"
+        },
+        "retryMs": 30000
+      },
+      {
+        "name": "an additional part: the picture is a JPEG of the video's size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{capture.pt}}/Images/Primary"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "/^image\\/jpeg/"
+          },
+          "image": {
+            "width": 320,
+            "height": 240
+          }
+        }
+      },
+      {
+        "name": "an additional part: it is listed with the video's size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{capture.pt}}/Images"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[?ImageType=Primary].Width",
+              "op": "eq",
+              "value": 320
+            },
+            {
+              "path": "$[?ImageType=Primary].Height",
+              "op": "eq",
+              "value": 240
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": []
+  },
+  {
+    "id": "images.frame.extras-series",
+    "endpoint": "GET /Items/{itemId}/Images/{imageType}",
+    "spec": "images.md#frames",
+    "scope": "modern",
+    "tags": [
+      "images",
+      "extras"
+    ],
+    "covers": [
+      "images.frame.R3"
+    ],
+    "requires": [
+      "item:extra-show",
+      "item:extra-season1",
+      "item:extra-ep1",
+      "library:extrashows"
+    ],
+    "steps": [
+      {
+        "name": "series features",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.extra-show.id}}/SpecialFeatures"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[*].ImageTags.Primary",
+              "op": "hex32"
+            },
+            {
+              "path": "$[*].ImageBlurHashes.Primary",
+              "op": "exists"
+            },
+            {
+              "path": "$[*].PrimaryImageAspectRatio",
+              "op": "exists"
+            }
+          ]
+        },
+        "capture": {
+          "sf": "$[0].Id"
+        },
+        "retryMs": 30000
+      },
+      {
+        "name": "series trailers",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.extra-show.id}}/LocalTrailers"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[*].ImageTags.Primary",
+              "op": "hex32"
+            },
+            {
+              "path": "$[*].ImageBlurHashes.Primary",
+              "op": "exists"
+            },
+            {
+              "path": "$[*].PrimaryImageAspectRatio",
+              "op": "exists"
+            }
+          ]
+        },
+        "retryMs": 30000
+      },
+      {
+        "name": "season features",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.extra-season1.id}}/SpecialFeatures"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[*].ImageTags.Primary",
+              "op": "hex32"
+            },
+            {
+              "path": "$[*].ImageBlurHashes.Primary",
+              "op": "exists"
+            },
+            {
+              "path": "$[*].PrimaryImageAspectRatio",
+              "op": "exists"
+            }
+          ]
+        },
+        "retryMs": 30000
+      },
+      {
+        "name": "season trailers",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{item.extra-season1.id}}/LocalTrailers"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[*].ImageTags.Primary",
+              "op": "hex32"
+            },
+            {
+              "path": "$[*].ImageBlurHashes.Primary",
+              "op": "exists"
+            },
+            {
+              "path": "$[*].PrimaryImageAspectRatio",
+              "op": "exists"
+            }
+          ]
+        },
+        "retryMs": 30000
+      },
+      {
+        "name": "a series feature: the picture is a JPEG of the video's size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{capture.sf}}/Images/Primary"
+        },
+        "expect": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "/^image\\/jpeg/"
+          },
+          "image": {
+            "width": 320,
+            "height": 240
+          }
+        }
+      },
+      {
+        "name": "a series feature: it is listed with the video's size",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Items/{{capture.sf}}/Images"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[?ImageType=Primary].Width",
+              "op": "eq",
+              "value": 320
+            },
+            {
+              "path": "$[?ImageType=Primary].Height",
+              "op": "eq",
+              "value": 240
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": []
+  }
+]

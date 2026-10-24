@@ -47,7 +47,8 @@ func (s *Scanner) isFrameImage(path string) bool {
 	return s.imageDir != "" && strings.HasPrefix(path, filepath.Join(s.imageDir, frameDirName)+string(filepath.Separator))
 }
 
-// seedVideoFrames gives every movie, episode, home video and music video of
+// seedVideoFrames gives every movie, episode, home video, music video and
+// video extra (trailer, featurette, theme video, additional part) of
 // lib that has no Primary picture one extracted from its video. A frame made
 // by an earlier scan is kept while the video file is unchanged; a picture
 // that sits beside the media, or that a provider supplied, always wins and
@@ -60,8 +61,8 @@ func (s *Scanner) seedVideoFrames(ctx context.Context, lib storage.Library) {
 	var todo []storage.Item
 	for off := 0; ctx.Err() == nil; off += 500 {
 		page, err := s.store.QueryItems(ctx, storage.ItemFilter{
-			LibraryID: &id, Recursive: true, Limit: 500, Offset: off,
-			ItemTypes: []storage.ItemType{storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeVideo, storage.ItemTypeMusicVideo},
+			LibraryID: &id, Recursive: true, Limit: 500, Offset: off, IncludeExtras: true,
+			ItemTypes: []storage.ItemType{storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeVideo, storage.ItemTypeMusicVideo, storage.ItemTypeTrailer},
 		})
 		if err != nil {
 			log.Printf("scan: listing library %q for frames: %v", lib.Name, err)

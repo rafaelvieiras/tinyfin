@@ -1,0 +1,983 @@
+[
+  {
+    "id": "playstate.session.transcoding-info-container",
+    "endpoint": "GET /Sessions",
+    "spec": "playstate.md#session-state",
+    "scope": "modern",
+    "tags": [
+      "playstate",
+      "transcode"
+    ],
+    "covers": [
+      "playstate.session.R17"
+    ],
+    "requires": [
+      "library:avtrack",
+      "item:av-multi",
+      "item:av-plain"
+    ],
+    "steps": [
+      {
+        "name": "register the session",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Capabilities/Full",
+          "body": {
+            "PlayableMediaTypes": [
+              "Video"
+            ],
+            "SupportedCommands": []
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "forget the previous stream",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.av-multi.id}}",
+            "PlaySessionId": "cont-ts"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "transcode, SegmentContainer ts, .ts: request the first segment",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.av-multi.id}}/hls1/main/0.ts?MediaSourceId={{item.av-multi.id}}&PlaySessionId=cont-ts&DeviceId={{device.admin}}&SegmentLength=3&SegmentContainer=ts&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000&runtimeTicks=0&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "transcode, SegmentContainer ts, .ts: the session",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo.Container",
+              "op": "eq",
+              "value": "ts"
+            },
+            {
+              "path": "$[0].TranscodingInfo.IsVideoDirect",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "forget the previous stream",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.av-multi.id}}",
+            "PlaySessionId": "cont-mp4"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "transcode, SegmentContainer mp4, .mp4: request the first segment",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.av-multi.id}}/hls1/main/0.mp4?MediaSourceId={{item.av-multi.id}}&PlaySessionId=cont-mp4&DeviceId={{device.admin}}&SegmentLength=3&SegmentContainer=mp4&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000&runtimeTicks=0&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "transcode, SegmentContainer mp4, .mp4: the session",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo.Container",
+              "op": "eq",
+              "value": "mp4"
+            },
+            {
+              "path": "$[0].TranscodingInfo.IsVideoDirect",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "forget the previous stream",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.av-multi.id}}",
+            "PlaySessionId": "cont-mp4b"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "the file extension decides, not SegmentContainer: ts asked, .mp4 requested: request the first segment",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.av-multi.id}}/hls1/main/0.mp4?MediaSourceId={{item.av-multi.id}}&PlaySessionId=cont-mp4b&DeviceId={{device.admin}}&SegmentLength=3&SegmentContainer=ts&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000&runtimeTicks=0&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "the file extension decides, not SegmentContainer: ts asked, .mp4 requested: the session",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo.Container",
+              "op": "eq",
+              "value": "mp4"
+            },
+            {
+              "path": "$[0].TranscodingInfo.IsVideoDirect",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "forget the previous stream",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.av-multi.id}}",
+            "PlaySessionId": "cont-tsb"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "the file extension decides, not SegmentContainer: mp4 asked, .ts requested: request the first segment",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.av-multi.id}}/hls1/main/0.ts?MediaSourceId={{item.av-multi.id}}&PlaySessionId=cont-tsb&DeviceId={{device.admin}}&SegmentLength=3&SegmentContainer=mp4&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000&runtimeTicks=0&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "the file extension decides, not SegmentContainer: mp4 asked, .ts requested: the session",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo.Container",
+              "op": "eq",
+              "value": "ts"
+            },
+            {
+              "path": "$[0].TranscodingInfo.IsVideoDirect",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "forget the previous stream",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.av-multi.id}}",
+            "PlaySessionId": "cont-mp4c"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "no SegmentContainer at all, .mp4 requested: request the first segment",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.av-multi.id}}/hls1/main/0.mp4?MediaSourceId={{item.av-multi.id}}&PlaySessionId=cont-mp4c&DeviceId={{device.admin}}&SegmentLength=3&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000&runtimeTicks=0&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "no SegmentContainer at all, .mp4 requested: the session",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo.Container",
+              "op": "eq",
+              "value": "mp4"
+            },
+            {
+              "path": "$[0].TranscodingInfo.IsVideoDirect",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "forget the previous stream",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.av-multi.id}}",
+            "PlaySessionId": "cont-tsup"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "the extension is reported as written: request the first segment",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.av-multi.id}}/hls1/main/0.TS?MediaSourceId={{item.av-multi.id}}&PlaySessionId=cont-tsup&DeviceId={{device.admin}}&SegmentLength=3&SegmentContainer=ts&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=500000&runtimeTicks=0&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "the extension is reported as written: the session",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo.Container",
+              "op": "eq",
+              "value": "TS"
+            },
+            {
+              "path": "$[0].TranscodingInfo.IsVideoDirect",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "forget the previous stream",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.av-plain.id}}",
+            "PlaySessionId": "cont-dsts"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "direct stream (picture copied), .ts: request the first segment",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.av-plain.id}}/hls1/main/0.ts?MediaSourceId={{item.av-plain.id}}&PlaySessionId=cont-dsts&DeviceId={{device.admin}}&SegmentLength=3&SegmentContainer=ts&VideoCodec=h264&AudioCodec=mp3&VideoBitrate=500000&runtimeTicks=0&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "direct stream (picture copied), .ts: the session",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo.Container",
+              "op": "eq",
+              "value": "ts"
+            },
+            {
+              "path": "$[0].TranscodingInfo.IsVideoDirect",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "forget the previous stream",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.av-plain.id}}",
+            "PlaySessionId": "cont-dsmp4"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "direct stream (picture copied), .mp4: request the first segment",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.av-plain.id}}/hls1/main/0.mp4?MediaSourceId={{item.av-plain.id}}&PlaySessionId=cont-dsmp4&DeviceId={{device.admin}}&SegmentLength=3&SegmentContainer=mp4&VideoCodec=h264&AudioCodec=mp3&VideoBitrate=500000&runtimeTicks=0&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "direct stream (picture copied), .mp4: the session",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo.Container",
+              "op": "eq",
+              "value": "mp4"
+            },
+            {
+              "path": "$[0].TranscodingInfo.IsVideoDirect",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "forget the previous stream",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.av-plain.id}}",
+            "PlaySessionId": "cont-rmp4"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "remux (everything copied), .mp4: request the first segment",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.av-plain.id}}/hls1/main/0.mp4?MediaSourceId={{item.av-plain.id}}&PlaySessionId=cont-rmp4&DeviceId={{device.admin}}&SegmentLength=3&SegmentContainer=mp4&VideoCodec=h264&AudioCodec=aac&runtimeTicks=0&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "remux (everything copied), .mp4: the session",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo.Container",
+              "op": "eq",
+              "value": "mp4"
+            },
+            {
+              "path": "$[0].TranscodingInfo.IsVideoDirect",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "forget the previous stream",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.av-plain.id}}",
+            "PlaySessionId": "cont-rmts"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "remux (everything copied), .ts: request the first segment",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.av-plain.id}}/hls1/main/0.ts?MediaSourceId={{item.av-plain.id}}&PlaySessionId=cont-rmts&DeviceId={{device.admin}}&SegmentLength=3&SegmentContainer=ts&VideoCodec=h264&AudioCodec=aac&runtimeTicks=0&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "remux (everything copied), .ts: the session",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo.Container",
+              "op": "eq",
+              "value": "ts"
+            },
+            {
+              "path": "$[0].TranscodingInfo.IsVideoDirect",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "cleanup: close playback",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.av-multi.id}}",
+            "PlaySessionId": "cont-ts",
+            "Failed": true
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      }
+    ]
+  },
+  {
+    "id": "playstate.session.transcoding-info-segment-restart",
+    "endpoint": "GET /Sessions",
+    "spec": "playstate.md#session-state",
+    "scope": "modern",
+    "tags": [
+      "playstate",
+      "transcode"
+    ],
+    "covers": [
+      "playstate.session.R18",
+      "playstate.session.R19"
+    ],
+    "requires": [
+      "library:long",
+      "item:long"
+    ],
+    "steps": [
+      {
+        "name": "register the session",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Capabilities/Full",
+          "body": {
+            "PlayableMediaTypes": [
+              "Video"
+            ],
+            "SupportedCommands": []
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "forget the previous stream",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.long.id}}",
+            "PlaySessionId": "cache1"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "a transcode starts at segment 20",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.long.id}}/hls1/main/20.ts?MediaSourceId={{item.long.id}}&PlaySessionId=cache1&DeviceId={{device.admin}}&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=300000&runtimeTicks=600000000&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "the job describes itself",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo",
+              "op": "exists"
+            }
+          ]
+        }
+      },
+      {
+        "name": "playback starts as a transcode",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing",
+          "body": {
+            "ItemId": "{{item.long.id}}",
+            "PlaySessionId": "cache1",
+            "PlayMethod": "Transcode"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "a progress report that is not a transcode hides the description",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Progress",
+          "body": {
+            "ItemId": "{{item.long.id}}",
+            "PlaySessionId": "cache1",
+            "PlayMethod": "DirectStream"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "hidden",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "segment 20 again: served from the job",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.long.id}}/hls1/main/20.ts?MediaSourceId={{item.long.id}}&PlaySessionId=cache1&DeviceId={{device.admin}}&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=300000&runtimeTicks=600000000&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "still hidden",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "segment 21: the next one, same job",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.long.id}}/hls1/main/21.ts?MediaSourceId={{item.long.id}}&PlaySessionId=cache1&DeviceId={{device.admin}}&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=300000&runtimeTicks=630000000&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "still hidden",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "segment 10: before the job's first segment, a new job",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.long.id}}/hls1/main/10.ts?MediaSourceId={{item.long.id}}&PlaySessionId=cache1&DeviceId={{device.admin}}&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=300000&runtimeTicks=300000000&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "the new job describes itself",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo",
+              "op": "exists"
+            }
+          ]
+        }
+      },
+      {
+        "name": "playback starts as a transcode",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing",
+          "body": {
+            "ItemId": "{{item.long.id}}",
+            "PlaySessionId": "cache1",
+            "PlayMethod": "Transcode"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "a progress report that is not a transcode hides the description",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Progress",
+          "body": {
+            "ItemId": "{{item.long.id}}",
+            "PlaySessionId": "cache1",
+            "PlayMethod": "DirectStream"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "segment 10 again: already produced",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.long.id}}/hls1/main/10.ts?MediaSourceId={{item.long.id}}&PlaySessionId=cache1&DeviceId={{device.admin}}&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=300000&runtimeTicks=300000000&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "hidden again, no restart",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "segment 11: the next one, same job",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.long.id}}/hls1/main/11.ts?MediaSourceId={{item.long.id}}&PlaySessionId=cache1&DeviceId={{device.admin}}&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=300000&runtimeTicks=330000000&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "still hidden",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a stopped report forgets the stream",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.long.id}}",
+            "PlaySessionId": "cache1"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "nothing described",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "segment 10 once more: produced earlier, but the device has no stream",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Videos/{{item.long.id}}/hls1/main/10.ts?MediaSourceId={{item.long.id}}&PlaySessionId=cache1&DeviceId={{device.admin}}&SegmentContainer=ts&SegmentLength=3&VideoCodec=h264&AudioCodec=aac&MaxWidth=160&VideoBitrate=300000&runtimeTicks=300000000&actualSegmentLengthTicks=30000000"
+        },
+        "expect": {
+          "status": 200
+        }
+      },
+      {
+        "name": "the description is back, with no new job",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions",
+          "query": {
+            "deviceId": "{{device.admin}}"
+          }
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[0].TranscodingInfo",
+              "op": "exists"
+            }
+          ]
+        }
+      }
+    ],
+    "cleanup": [
+      {
+        "name": "cleanup: close playback",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Playing/Stopped",
+          "body": {
+            "ItemId": "{{item.long.id}}",
+            "PlaySessionId": "cache1",
+            "Failed": true
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      }
+    ]
+  }
+]

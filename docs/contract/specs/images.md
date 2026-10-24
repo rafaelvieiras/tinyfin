@@ -45,6 +45,7 @@ Scenarios: [`../scenarios/images.json`](../scenarios/images.json). Fixture state
 ## <a id="frames"></a>Pictures taken from the video
 
 - **images.frame.R1** A movie, episode, home video or music video that has no Primary picture of its own gets one taken from its video once its library has been scanned: `ImageTags.Primary` (32 hex digits), an entry in `ImageBlurHashes.Primary` and `PrimaryImageAspectRatio` (width over height of the video) are set, `GET /Items/{itemId}/Images/Primary` answers a JPEG at the video's own pixel size and `GET /Items/{itemId}/Images` lists it with that `Width` and `Height`.
+- **images.frame.R3** The same holds for the video extras of an item: local trailers, special features (featurettes, behind the scenes, deleted scenes, interviews, scenes, shorts, samples, clips, unnamed extras), theme videos and the additional parts of a stacked movie, whether they hang off a movie, a series or a season. Each gets a `Primary` picture taken from its video (`ImageTags.Primary`, `ImageBlurHashes.Primary`, `PrimaryImageAspectRatio`, `GET /Items/{id}/Images/Primary` a JPEG at the video's own size, and the entry of `/Images`). Theme songs (audio) get none.
 - **images.frame.R2** [untestable: the frame position is approximate and the fixture videos are too uniform to tell frames apart] The frame is taken a little into the video (about a tenth of the way in plus a fraction of a second, never past the end); the exact frame is not part of the contract. A picture file beside the media, or one a provider supplies, takes the place of the frame.
 
 ## Known differences
@@ -55,7 +56,7 @@ Observed on the reference and deliberately not reproduced (not asserted by a sce
 * **Order inside a folder of pictures.** The pictures of `extrafanart/`, and every backdrop of a season or of a plain folder item, come in the order of the folder's entries on the reference; Tinyfin lists them by name (`extrafanart/`) or in the order of R1.
 * **Several episode pictures.** For `<episode>-thumb` and `<episode>` of one episode the reference's choice follows the folder's entry order; Tinyfin takes `-thumb` first, then the plain name, then the same two in `metadata/`.
 * **Person pictures.** The reference reads none from `.actors/` or `metadata/people/` (an actor has no picture); Tinyfin reads none either, and does not catalog `<actor>` entries of an `.nfo` as people.
-* **Extracted frames.** The reference also extracts a `Primary` picture for extras; Tinyfin does so for movies, episodes, home videos and music videos only (`images.frame.R1`). The frame chosen differs slightly from the reference's.
+* **Extracted frames.** The reference also extracts a `Primary` picture for extras, and so does Tinyfin (`images.frame.R3`). The frame chosen differs slightly from the reference's.
 * **Picture decoding.** Tinyfin reads the size of `jpeg`, `png`, `gif` and `webp` content (`tbn` is read as whichever of them it holds) and the BlurHash of the first three; a `webp` picture has `Width`/`Height` but no BlurHash.
 
 ## Rule → scenarios
@@ -75,3 +76,4 @@ Observed on the reference and deliberately not reproduced (not asserted by a sce
 | `images.api.R1` | `images.local.kinds`, `images.local.backdrops` |
 | `images.api.R2`, `R3` | `images.api.index-lookup` |
 | `images.frame.R1` | `images.frame.movie`, `images.frame.episode` |
+| `images.frame.R3` | `images.frame.extras-movie`, `images.frame.extras-parts`, `images.frame.extras-series` |

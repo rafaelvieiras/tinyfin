@@ -322,13 +322,16 @@ set `IsPaused=true`.
   A report sent before the first segment request is therefore recorded as `DirectPlay` and the next progress
   report as `Transcode`.
 - **playstate.session.R13** `TranscodingInfo` members: `VideoCodec` and `AudioCodec` (the target codec, the source's
-  own when that stream is copied), `Container` (the segment container: `ts` or `mp4`), `IsVideoDirect`/`IsAudioDirect`
+  own when that stream is copied), `Container` (R17), `IsVideoDirect`/`IsAudioDirect`
   (the stream is copied), `Bitrate`, `Width`, `Height` (the picture after the width limit), `AudioChannels`,
   `HardwareAccelerationType` (`none`) and `TranscodeReasons` (the `TranscodeReasons` query value split on commas, `[]`
   when absent). `Framerate` and `CompletionPercentage` are absent on an HLS stream.
 - **playstate.session.R14** `Bitrate` is the bandwidth announced for the variant of the master playlist: the
   requested video bit rate held to the source picture's rate (`playback.hls` rules) plus 128000 per output channel of
   the sound (it counts the video rate even when the picture is copied); `Width`/`Height` of a copied picture are the source's.
+- **playstate.session.R17** `Container` is the extension of the segment file the request that started the job asked for, spelled as written (`0.ts` gives `ts`, `0.mp4` `mp4`, `0.TS` `TS`), whatever `SegmentContainer` says: a `.mp4` request with `SegmentContainer=ts` reports `mp4`, a `.ts` one with `SegmentContainer=mp4` reports `ts`, and a request without `SegmentContainer` follows the extension too. The same holds for an encode, a direct stream (picture copied) and a remux. A later request of the same job does not change it; a job started by another request (another play session, a restart at a new position) describes itself by its own first segment. Tinyfin writes MPEG-TS segments whatever the extension (the reference writes fragmented MP4 for `SegmentContainer=mp4`, see the notes).
+- **playstate.session.R18** A segment request starts a job only when no running or finished job of the stream can serve it: a segment the job already produced, or the one it is writing, is served without a restart (the description stays hidden after R11), while a request before the job's first segment starts a new job (the description is back, R10). A request far ahead of a job that has only just started restarts it on the reference at a smaller distance than on Tinyfin (the decision depends on how far the encoder has got, so it is not part of the contract). Not visible through the API: the cache itself, no timing or header difference was found between a produced and a fresh segment.
+- **playstate.session.R19** A segment served from what a job already produced (no job starts) describes the stream again when the device has none on record, which a stopped report for the item leaves it with (R10); with the description merely hidden (R11) it stays hidden, and when another job is on record that one stays.
 - **playstate.session.R15** A second job for the same device (another container, a restart) replaces the description.
 - **playstate.session.R16** A request carrying another `DeviceId` value describes the stream of that device only.
 
@@ -480,6 +483,9 @@ Settled by probing the 12.2 reference:
 | `playstate.session.R14` | `session.transcoding-info-copy-and-mp4` |
 | `playstate.session.R15` | `session.transcoding-info-copy-and-mp4` |
 | `playstate.session.R16` | `session.transcoding-info-device` |
+| `playstate.session.R19` | `session.transcoding-info-segment-restart` |
+| `playstate.session.R18` | `session.transcoding-info-segment-restart` |
+| `playstate.session.R17` | `session.transcoding-info-container` |
 | `playstate.legacy.R1` | `legacy.mark-played-path-user`, `legacy.unknown-item-and-anonymous` |
 | `playstate.legacy.R2` | `legacy.mark-unplayed-path-user` |
 | `playstate.legacy.R3` | `legacy.other-user-forbidden`, `legacy.admin-on-behalf`, `legacy.unknown-item-and-anonymous` |
