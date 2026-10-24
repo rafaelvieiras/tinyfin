@@ -38,9 +38,9 @@ func TestSessionRegistryTranscodeLifecycle(t *testing.T) {
 }
 
 func TestTranscodingInfoReasons(t *testing.T) {
-	q := url.Values{"transcodereasons": {"A, B,,C"}, "segmentcontainer": {"MP4"}}
+	q := url.Values{"transcodereasons": {"A, B,,C"}}
 	info := transcodingInfoFor(hlsRequest{}, q)
-	if len(info.TranscodeReasons) != 3 || info.TranscodeReasons[1] != "B" || info.Container != "mp4" {
+	if len(info.TranscodeReasons) != 3 || info.TranscodeReasons[1] != "B" {
 		t.Fatalf("%+v", info)
 	}
 }

@@ -18,7 +18,13 @@ func (s *Server) noteTranscodeSession(r *http.Request, h hlsRequest) {
 			dev = ac.DeviceID
 		}
 	}
-	s.sessions.setTranscode(dev, h.key, h.item.ID, q.Get("playsessionid"), transcodingInfoFor(h, q))
+	info := transcodingInfoFor(h, q)
+	// the container is the extension of the segment the job was started for,
+	// as the request spelled it (playstate.session.R13)
+	if seg := r.PathValue("segment"); strings.Contains(seg, ".") {
+		info.Container = seg[strings.LastIndex(seg, ".")+1:]
+	}
+	s.sessions.setTranscode(dev, h.key, h.item.ID, q.Get("playsessionid"), info)
 }
 
 // transcodingInfoFor describes the stream a job serves, in the terms of its
@@ -47,10 +53,6 @@ func transcodingInfoFor(h hlsRequest, q url.Values) *transcodingInfoDto {
 		case !m.audioCopy:
 			info.AudioChannels, _, _ = audioPlan(m.audio, q)
 		}
-	}
-	// the segment container the URL names is the one reported
-	if c := strings.ToLower(strings.TrimSpace(q.Get("segmentcontainer"))); c != "" {
-		info.Container = c
 	}
 	if info.AudioCodec == "" && h.req.AudioCodec != "" && h.req.AudioCodec != "copy" {
 		info.AudioCodec = h.req.AudioCodec
