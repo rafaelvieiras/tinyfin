@@ -8,13 +8,13 @@
    "supported": 64
   },
   "operations": 364,
-  "registered": 198,
+  "registered": 200,
   "routes_by_status": {
    "divergent-by-design": 16,
    "not-planned": 91,
    "partial": 12,
-   "planned": 75,
-   "supported": 170
+   "planned": 73,
+   "supported": 172
   },
   "verified": 162
  },
@@ -1969,6 +1969,8 @@
     "scan.ignore.root-extras",
     "scan.monitor.changes",
     "scan.options.photos",
+    "scan.push.add-and-remove",
+    "scan.push.library-add-and-remove",
     "search.items.matching",
     "search.items.names",
     "trickplay.item.list",
@@ -2017,7 +2019,10 @@
    "status": "supported",
    "registered": true,
    "verified": false,
-   "web": true
+   "web": true,
+   "scenarios": [
+    "scan.push.library-add-and-remove"
+   ]
   },
   {
    "id": "DELETE /Items/{itemId}",
@@ -2395,7 +2400,10 @@
     "scan.forget.folder",
     "scan.forget.library-folder",
     "scan.forget.series",
-    "scan.forget.user-data"
+    "scan.forget.user-data",
+    "scan.push.add-and-remove",
+    "scan.push.item-refresh",
+    "scan.push.library-add-and-remove"
    ]
   },
   {
@@ -2655,7 +2663,10 @@
    "status": "supported",
    "registered": true,
    "verified": false,
-   "web": true
+   "web": true,
+   "scenarios": [
+    "scan.push.library-add-and-remove"
+   ]
   },
   {
    "id": "GET /Library/VirtualFolders",
@@ -2673,7 +2684,8 @@
     "collections.list.library",
     "collections.visibility.partial-members",
     "collections.visibility.restricted-user",
-    "musicvideos.views"
+    "musicvideos.views",
+    "scan.push.library-add-and-remove"
    ]
   },
   {
@@ -2689,7 +2701,8 @@
     "admin.libraries.rename-during-scan",
     "admin.libraries.rename-rules",
     "collections.auto.build",
-    "collections.auto.option-off"
+    "collections.auto.option-off",
+    "scan.push.library-add-and-remove"
    ]
   },
   {
@@ -5989,24 +6002,26 @@
    "tag": "UserData",
    "group": "sessions-realtime",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": true,
-   "notes": "Star ratings are not implemented (likes are, through UserData).",
-   "priority": "low"
+   "scenarios": [
+    "playstate.push.rating"
+   ]
   },
   {
    "id": "POST /UserItems/{itemId}/Rating",
    "tag": "UserData",
    "group": "sessions-realtime",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": true,
-   "notes": "Star ratings are not implemented (likes are, through UserData).",
-   "priority": "low"
+   "scenarios": [
+    "playstate.push.rating"
+   ]
   },
   {
    "id": "GET /UserItems/{itemId}/UserData",
@@ -6103,9 +6118,11 @@
     "playstate.mark-unplayed.never-played",
     "playstate.mark-unplayed.resets-everything",
     "playstate.mark-unplayed.resets-position",
+    "playstate.push.library-root-parent",
     "playstate.push.mark-played-and-unplayed",
     "playstate.push.only-the-users-sockets",
     "playstate.push.playback-reports",
+    "playstate.push.rating",
     "playstate.push.resume-position",
     "playstate.user.admin-on-behalf-unmark",
     "playstate.user.admin-unknown-user",
@@ -6158,6 +6175,7 @@
     "playstate.mark-unplayed.keeps-favorite",
     "playstate.mark-unplayed.resets-everything",
     "playstate.percent.folder",
+    "playstate.push.library-root-parent",
     "playstate.push.mark-played-and-unplayed",
     "playstate.push.only-the-users-sockets",
     "playstate.push.resume-position",
@@ -8756,6 +8774,7 @@
  ],
  "registered_not_in_openapi": [
   "DELETE /Users/{userId}/FavoriteItems/{itemId}",
+  "DELETE /Users/{userId}/Items/{itemId}/Rating",
   "DELETE /Users/{userId}/PlayedItems/{itemId}",
   "DELETE /Videos/ActiveEncodings",
   "GET /Artists/InstantMix",
@@ -8780,6 +8799,7 @@
   "POST /Users/{userId}",
   "POST /Users/{userId}/Configuration",
   "POST /Users/{userId}/FavoriteItems/{itemId}",
+  "POST /Users/{userId}/Items/{itemId}/Rating",
   "POST /Users/{userId}/Items/{itemId}/UserData",
   "POST /Users/{userId}/Password",
   "POST /Users/{userId}/PlayedItems/{itemId}"

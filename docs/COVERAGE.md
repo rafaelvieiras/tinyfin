@@ -19,21 +19,21 @@ How to read and edit this: [`docs/coverage/README.md`](coverage/README.md). Mach
 | Measure | Value |
 |---|---|
 | Reference operations (OpenAPI 12.2.0) | 364 |
-| Registered by Tinyfin | **198** (54%) |
+| Registered by Tinyfin | **200** (55%) |
 | Registered **and** a passing contract scenario | **162** (45%) |
-| Called by the official web client (docs/11) and registered | 129 of 164 (79%) |
-| Routes Tinyfin serves that the OpenAPI document lacks | 28 (legacy aliases the web client needs, `/socket`, HLS) |
+| Called by the official web client (docs/11) and registered | 131 of 164 (80%) |
+| Routes Tinyfin serves that the OpenAPI document lacks | 30 (legacy aliases the web client needs, `/socket`, HLS) |
 | Non-route features tracked | 112 (✅ 64 · 🟡 19 · 🗓️ 13 · ⛔ 16) |
 
 ### Routes by status
 
-✅✅✅✅✅✅✅✅✅🟡🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔↔️ ✅ 170 · 🟡 12 · 🗓️ 75 · ⛔ 91 · ↔️ 16
+✅✅✅✅✅✅✅✅✅🟡🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔↔️ ✅ 172 · 🟡 12 · 🗓️ 73 · ⛔ 91 · ↔️ 16
 
 ```mermaid
 pie showData title Reference operations by status
-    "supported" : 170
+    "supported" : 172
     "partial" : 12
-    "planned" : 75
+    "planned" : 73
     "not-planned" : 91
     "divergent-by-design" : 16
 ```
@@ -62,7 +62,7 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | [Library browsing and metadata queries](coverage/api-library-browse.md) | 58 | 47 (81%) | 42 (72%) | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️ | ✅ 45 · 🟡 1 · 🗓️ 10 · ⛔ 1 · ↔️ 1 |
 | [Live TV and channels](coverage/api-live-tv.md) | 43 | 4 (9%) | 3 (7%) | ✅🟡⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 3 · 🟡 1 · ⛔ 39 |
 | [Playback, streaming and subtitles](coverage/api-playback.md) | 38 | 24 (63%) | 19 (50%) | ✅✅✅✅✅✅✅✅✅✅🟡🟡⛔⛔⛔⛔⛔⛔⛔↔️ | ✅ 19 · 🟡 3 · ⛔ 14 · ↔️ 2 |
-| [Sessions, play state and realtime](coverage/api-sessions-realtime.md) | 50 | 16 (32%) | 14 (28%) | ✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 15 · 🟡 1 · 🗓️ 13 · ⛔ 21 |
+| [Sessions, play state and realtime](coverage/api-sessions-realtime.md) | 50 | 18 (36%) | 14 (28%) | ✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 17 · 🟡 1 · 🗓️ 11 · ⛔ 21 |
 | [System, branding, localization and plugins](coverage/api-system.md) | 47 | 30 (64%) | 24 (51%) | ✅✅✅✅✅✅✅✅✅🟡🟡🟡🗓️🗓️⛔⛔⛔⛔⛔↔️ | ✅ 21 · 🟡 6 · 🗓️ 4 · ⛔ 13 · ↔️ 3 |
 | [Users, authentication and first-run setup](coverage/api-users-auth.md) | 35 | 32 (91%) | 25 (71%) | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️↔️↔️↔️↔️ | ✅ 25 · 🗓️ 3 · ↔️ 7 |
 
@@ -112,7 +112,7 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | Trailer | 1 | 0 | 0 | ⛔ 1 |
 | TrickPlay | 2 | 2 | 2 | ✅ 2 |
 | User | 10 | 10 | 10 | ✅ 7 · ↔️ 3 |
-| UserData | 8 | 6 | 6 | ✅ 6 · 🗓️ 2 |
+| UserData | 8 | 8 | 6 | ✅ 8 |
 | UserView | 2 | 1 | 1 | ✅ 1 · 🗓️ 1 |
 | Video | 8 | 5 | 3 | ✅ 5 · ⛔ 3 |
 | Year | 2 | 2 | 2 | ✅ 2 |
@@ -152,17 +152,17 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [musicvideos](contract/specs/musicvideos.md) | 26 | 26 | 17 | 17 |
 | [playback](contract/specs/playback.md) | 60 | 59 | 7 | 7 |
 | [playlists](contract/specs/playlists.md) | 33 | 33 | 23 | 23 |
-| [playstate](contract/specs/playstate.md) | 102 | 100 | 107 | 107 |
+| [playstate](contract/specs/playstate.md) | 104 | 102 | 107 | 107 |
 | [policy](contract/specs/policy.md) | 19 | 18 | 8 | 8 |
 | [quickconnect](contract/specs/quickconnect.md) | 26 | 26 | 23 | 23 |
-| [scan](contract/specs/scan.md) | 28 | 28 | 23 | 23 |
+| [scan](contract/specs/scan.md) | 36 | 36 | 23 | 23 |
 | [search](contract/specs/search.md) | 16 | 16 | 14 | 14 |
 | [startup](contract/specs/startup.md) | 25 | 23 | 3 | 0 |
 | [subtitles](contract/specs/subtitles.md) | 49 | 49 | 23 | 23 |
 | [trickplay](contract/specs/trickplay.md) | 11 | 11 | 10 | 10 |
 | [users](contract/specs/users.md) | 189 | 189 | 195 | 195 |
 | [wire](contract/specs/wire.md) | 15 | 14 | 14 | 14 |
-| **total** | 1079 | 1048 | 740 | 737 |
+| **total** | 1089 | 1058 | 740 | 737 |
 
 ## Biggest gaps (planned or not planned, web-client facing)
 
@@ -199,6 +199,4 @@ Operations the official web client mentions (docs/11) that Tinyfin does not regi
 | `POST /ClientLog/Document` | 🗓️ planned | System, branding, localization and plugins | Not implemented. |
 | `POST /System/Restart` | 🗓️ planned | System, branding, localization and plugins | Not implemented; a supervisor restarts the process. |
 | `POST /System/Shutdown` | 🗓️ planned | System, branding, localization and plugins | Not implemented. |
-| `DELETE /UserItems/{itemId}/Rating` | 🗓️ planned | Sessions, play state and realtime | Star ratings are not implemented (likes are, through UserData). |
-| `POST /UserItems/{itemId}/Rating` | 🗓️ planned | Sessions, play state and realtime | Star ratings are not implemented (likes are, through UserData). |
 

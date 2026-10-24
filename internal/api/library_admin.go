@@ -101,6 +101,7 @@ func (s *Server) handleAddVirtualFolder(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	s.kickMonitor()
+	s.queueLibraryAdded(lib)
 
 	if q.Get("refreshLibrary") == "true" {
 		go s.runScan(lib)
@@ -170,10 +171,15 @@ func (s *Server) handleRemoveVirtualFolder(w http.ResponseWriter, r *http.Reques
 	}
 	for _, lib := range libs {
 		if lib.Name == name {
+			before := s.snapshotLibrary(r.Context(), lib.ID)
 			if err := s.store.DeleteLibrary(r.Context(), lib.ID); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
+			d := diffLibrary(lib.ID, before, nil)
+			d.removedFrom[userRootItemID] = libraryChangeScopeAll
+			d.updated[userRootItemID] = libraryChangeScopeAll
+			s.queueLibraryChange(d)
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}

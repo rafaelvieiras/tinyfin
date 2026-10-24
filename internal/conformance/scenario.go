@@ -134,6 +134,10 @@ type WSStep struct {
 	// type when empty), within TimeoutMs (default 5000).
 	Wait string `json:"wait,omitempty"`
 	Type string `json:"type,omitempty"`
+	// Where narrows a Wait: only a message of Type for which every assertion
+	// holds counts (the others are skipped and consumed). It lets a scenario
+	// ignore pushes that belong to earlier, unrelated library changes.
+	Where []Assert `json:"where,omitempty"`
 	// Absent inverts Wait: no such message may arrive within TimeoutMs.
 	Absent    bool `json:"absent,omitempty"`
 	TimeoutMs int  `json:"timeoutMs,omitempty"`

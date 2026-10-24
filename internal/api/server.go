@@ -177,6 +177,7 @@ type Server struct {
 	scanLibSem chan struct{}
 	sessions   *sessionRegistry
 	hub        *wsHub
+	libPush    libraryPush
 	quick      *quickConnectState
 	// qcOverride is the runtime QuickConnect setting: 0 unset (the
 	// command-line default applies), 1 enabled, 2 disabled.
@@ -375,7 +376,9 @@ func (s *Server) runScanCtx(ctx context.Context, lib storage.Library) {
 	// while it waits for a slot.
 	s.scanLibSem <- struct{}{}
 	defer func() { <-s.scanLibSem }()
-	stats, err := s.scanner.ScanLibrary(ctx, lib)
+	var stats scan.Stats
+	var err error
+	s.trackLibraryChanges(ctx, lib.ID, func() { stats, err = s.scanner.ScanLibrary(ctx, lib) })
 	s.scanState.end(err)
 	s.notifyScanEnded(ctx)
 	if err != nil {
@@ -426,6 +429,20 @@ func (s *Server) notifyScanEnded(ctx context.Context) {
 // mechanism yet — a documented gap (docs/11), not something this function
 // should paper over by borrowing the library-scan tracker.
 func (s *Server) runItemRefresh(itemID storage.ItemID, replaceImages bool) {
+	// What the refresh changes is pushed to the sockets as a LibraryChanged
+	// batch (ws.library.R*): the item itself is always an update, and what
+	// the re-walk of a folder added or forgot comes with it.
+	if item, err := s.store.GetItem(context.Background(), itemID); err == nil && item.LibraryID != "" {
+		s.trackLibraryChanges(context.Background(), item.LibraryID, func() { s.refreshItemNow(itemID, replaceImages) })
+		d := newLibDelta()
+		d.updated[string(itemID)] = item.LibraryID
+		s.queueLibraryChange(d)
+		return
+	}
+	s.refreshItemNow(itemID, replaceImages)
+}
+
+func (s *Server) refreshItemNow(itemID storage.ItemID, replaceImages bool) {
 	// A folder (series, season, folder of a library) is re-walked first: what
 	// is new on disk is cataloged and what is gone is forgotten, like a
 	// library scan does for the part of the library it stands for.
@@ -859,6 +876,10 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("DELETE /UserPlayedItems/{itemId}", requireAuth(s.handleUserPlayedItemsUnmark))
 	s.mux.HandleFunc("POST /UserFavoriteItems/{itemId}", requireAuth(s.handleUserFavoriteItemAdd))
 	s.mux.HandleFunc("DELETE /UserFavoriteItems/{itemId}", requireAuth(s.handleUserFavoriteItemRemove))
+	s.mux.HandleFunc("POST /UserItems/{itemId}/Rating", requireAuth(s.handleUserItemRatingSet))
+	s.mux.HandleFunc("DELETE /UserItems/{itemId}/Rating", requireAuth(s.handleUserItemRatingDelete))
+	s.mux.HandleFunc("POST /Users/{userId}/Items/{itemId}/Rating", requireAuth(s.handleLegacyUserItemRatingSet))
+	s.mux.HandleFunc("DELETE /Users/{userId}/Items/{itemId}/Rating", requireAuth(s.handleLegacyUserItemRatingDelete))
 	s.mux.HandleFunc("POST /Sessions/Playing/Ping", requireAuth(s.handleSessionsPlayingPing))
 	s.mux.HandleFunc("GET /MediaSegments/{itemId}", requireAuth(s.handleMediaSegments))
 

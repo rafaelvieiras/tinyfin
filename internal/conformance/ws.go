@@ -51,11 +51,11 @@ func (w *wsConn) readLoop(ctx context.Context) {
 
 // take returns the first unconsumed message of the given type (any type when
 // empty) and consumes everything up to and including it.
-func (w *wsConn) take(typ string) (map[string]any, bool) {
+func (w *wsConn) take(typ string, accept func(map[string]any) bool) (map[string]any, bool) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	for i := w.next; i < len(w.msgs); i++ {
-		if typ == "" || w.msgs[i]["MessageType"] == typ {
+		if (typ == "" || w.msgs[i]["MessageType"] == typ) && (accept == nil || accept(w.msgs[i])) {
 			w.next = i + 1
 			return w.msgs[i], true
 		}
@@ -64,11 +64,11 @@ func (w *wsConn) take(typ string) (map[string]any, bool) {
 }
 
 // waitFor blocks until take succeeds or the timeout elapses.
-func (w *wsConn) waitFor(ctx context.Context, typ string, timeout time.Duration) (map[string]any, bool) {
+func (w *wsConn) waitFor(ctx context.Context, typ string, accept func(map[string]any) bool, timeout time.Duration) (map[string]any, bool) {
 	deadline := time.NewTimer(timeout)
 	defer deadline.Stop()
 	for {
-		if m, ok := w.take(typ); ok {
+		if m, ok := w.take(typ, accept); ok {
 			return m, true
 		}
 		select {
@@ -166,7 +166,20 @@ func (c *Client) runWS(ctx context.Context, ws *WSStep, rs *runState) (*Response
 		if timeout <= 0 {
 			timeout = 5 * time.Second
 		}
-		m, ok := w.waitFor(ctx, ws.Type, timeout)
+		var accept func(map[string]any) bool
+		if len(ws.Where) > 0 {
+			accept = func(m map[string]any) bool {
+				b, _ := json.Marshal(m)
+				r := &Response{Status: 200, Body: b, JSON: m}
+				for _, a := range ws.Where {
+					if c.checkAssert(r, a, rs.scratch) != nil {
+						return false
+					}
+				}
+				return true
+			}
+		}
+		m, ok := w.waitFor(ctx, ws.Type, accept, timeout)
 		if ws.Absent {
 			if ok {
 				return nil, fmt.Errorf("socket %s: unexpected %q message %s", ws.Wait, ws.Type, show(m))

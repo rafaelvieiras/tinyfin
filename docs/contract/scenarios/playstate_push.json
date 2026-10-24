@@ -661,5 +661,327 @@
     }
    }
   ]
+ },
+ {
+  "id": "playstate.push.rating",
+  "endpoint": "POST /UserItems/{itemId}/Rating",
+  "spec": "playstate.md#realtime-push",
+  "scope": "modern",
+  "tags": [
+   "playstate",
+   "websocket"
+  ],
+  "covers": [
+   "playstate.push.R5"
+  ],
+  "requires": [
+   "item:alpha",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "reset",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.alpha.id}}",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "alice's socket",
+    "ws": {
+     "open": "a",
+     "as": "alice"
+    }
+   },
+   {
+    "name": "like",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/UserItems/{{item.alpha.id}}/Rating",
+     "query": {
+      "userId": "{{user.alice.id}}",
+      "likes": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Rating",
+       "op": "eq",
+       "value": 10
+      },
+      {
+       "path": "$.Likes",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "pushed: liked",
+    "ws": {
+     "wait": "a",
+     "type": "UserDataChanged",
+     "timeoutMs": 5000
+    },
+    "expect": {
+     "json": [
+      {
+       "path": "$.Data.UserId",
+       "op": "eq",
+       "value": "{{user.alice.id}}"
+      },
+      {
+       "path": "$.Data.UserDataList[0].ItemId",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Data.UserDataList[0].Rating",
+       "op": "eq",
+       "value": 10
+      },
+      {
+       "path": "$.Data.UserDataList[0].Likes",
+       "op": "eq",
+       "value": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "dislike",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/UserItems/{{item.alpha.id}}/Rating",
+     "query": {
+      "userId": "{{user.alice.id}}",
+      "likes": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Rating",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Likes",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "pushed: disliked",
+    "ws": {
+     "wait": "a",
+     "type": "UserDataChanged",
+     "timeoutMs": 5000
+    },
+    "expect": {
+     "json": [
+      {
+       "path": "$.Data.UserDataList[0].Rating",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Data.UserDataList[0].Likes",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "remove the rating",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserItems/{{item.alpha.id}}/Rating",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Rating",
+       "op": "absent"
+      },
+      {
+       "path": "$.Likes",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "pushed: cleared",
+    "ws": {
+     "wait": "a",
+     "type": "UserDataChanged",
+     "timeoutMs": 5000
+    },
+    "expect": {
+     "json": [
+      {
+       "path": "$.Data.UserDataList[0].ItemId",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Data.UserDataList[0].Rating",
+       "op": "absent"
+      },
+      {
+       "path": "$.Data.UserDataList[0].Likes",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "clear the rating",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserItems/{{item.alpha.id}}/Rating",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     }
+    },
+    "expect": {
+     "status": [
+      200,
+      404
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "playstate.push.library-root-parent",
+  "endpoint": "POST /UserPlayedItems/{itemId}",
+  "spec": "playstate.md#realtime-push",
+  "scope": "modern",
+  "tags": [
+   "playstate",
+   "websocket"
+  ],
+  "covers": [
+   "playstate.push.R6"
+  ],
+  "requires": [
+   "item:alpha",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "reset",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.alpha.id}}",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "alice's socket",
+    "ws": {
+     "open": "a",
+     "as": "alice"
+    }
+   },
+   {
+    "name": "mark played",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/UserPlayedItems/{{item.alpha.id}}",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "the library folder follows the item",
+    "ws": {
+     "wait": "a",
+     "type": "UserDataChanged",
+     "timeoutMs": 5000
+    },
+    "expect": {
+     "json": [
+      {
+       "path": "$.Data.UserDataList",
+       "op": "len",
+       "value": 2
+      },
+      {
+       "path": "$.Data.UserDataList[0].ItemId",
+       "op": "eq",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Data.UserDataList[1].ItemId",
+       "op": "ne",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Data.UserDataList[1].UnplayedItemCount",
+       "op": "exists"
+      },
+      {
+       "path": "$.Data.UserDataList[1].PlayedPercentage",
+       "op": "gte",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "unmark",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/UserPlayedItems/{{item.alpha.id}}",
+     "query": {
+      "userId": "{{user.alice.id}}"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   }
+  ]
  }
 ]

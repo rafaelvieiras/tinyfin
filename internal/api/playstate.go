@@ -52,6 +52,9 @@ func (s *Server) applyFolderUserData(ctx context.Context, userID storage.UserID,
 		s.playlistUserData(ctx, userID, item, dto)
 		return
 	}
+	if s.libraryRootUserData(ctx, userID, item, dto) {
+		return
+	}
 	if !childCountItemTypes[item.Type] {
 		return
 	}
@@ -602,4 +605,77 @@ func (s *Server) logPlaybackActivity(r *http.Request, ac *AuthContext, item stor
 		return
 	}
 	s.notifyActivityLog(r.Context())
+}
+
+// libraryRootFolderOf returns the library root folder item an item sits
+// directly under. The scanner leaves such items without a ParentID (the root
+// folder is a separate row, recorded by path), while the reference reports
+// that folder as their parent (playstate.push.R2).
+func (s *Server) libraryRootFolderOf(ctx context.Context, item storage.Item) (storage.Item, bool) {
+	if item.ParentID != nil || item.LibraryID == "" || s.isLibraryRoot(ctx, item) {
+		return storage.Item{}, false
+	}
+	lib, err := s.store.GetLibrary(ctx, item.LibraryID)
+	if err != nil {
+		return storage.Item{}, false
+	}
+	best := ""
+	for _, p := range lib.Paths {
+		if strings.HasPrefix(item.Path, strings.TrimRight(p, "/")+"/") && len(p) > len(best) {
+			best = p
+		}
+	}
+	if best == "" {
+		return storage.Item{}, false
+	}
+	id := lib.ID
+	page, err := s.store.QueryItems(ctx, storage.ItemFilter{LibraryID: &id, Path: best, ItemTypes: []storage.ItemType{storage.ItemTypeFolder}, Limit: 1})
+	if err != nil || len(page.Items) == 0 {
+		return storage.Item{}, false
+	}
+	return page.Items[0], true
+}
+
+// isLibraryRoot reports whether item is the root folder row of its library.
+func (s *Server) isLibraryRoot(ctx context.Context, item storage.Item) bool {
+	if item.Type != storage.ItemTypeFolder || item.ParentID != nil || item.LibraryID == "" {
+		return false
+	}
+	lib, err := s.store.GetLibrary(ctx, item.LibraryID)
+	if err != nil {
+		return false
+	}
+	for _, p := range lib.Paths {
+		if p == item.Path {
+			return true
+		}
+	}
+	return false
+}
+
+// libraryRootUserData completes the user data of a library root folder the
+// way the reference reports it: the share of the library's leaves that are
+// played, and how many are not. It reports whether item was such a folder.
+func (s *Server) libraryRootUserData(ctx context.Context, userID storage.UserID, item storage.Item, dto *userItemDataDto) bool {
+	if !s.isLibraryRoot(ctx, item) {
+		return false
+	}
+	id := item.LibraryID
+	all, err := s.store.QueryItems(ctx, storage.ItemFilter{LibraryID: &id, ExcludeItemTypes: storage.FolderItemTypes, Limit: 1})
+	if err != nil {
+		return true
+	}
+	played := false
+	left, err := s.store.QueryItems(ctx, storage.ItemFilter{LibraryID: &id, ExcludeItemTypes: storage.FolderItemTypes, UserID: &userID, Played: &played, Limit: 1})
+	if err != nil {
+		return true
+	}
+	unplayed := left.TotalCount
+	dto.UnplayedItemCount = &unplayed
+	if all.TotalCount > 0 {
+		dto.Played = unplayed == 0
+		pct := float64(all.TotalCount-unplayed) * 100 / float64(all.TotalCount)
+		dto.PlayedPercentage = &pct
+	}
+	return true
 }

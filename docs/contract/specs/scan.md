@@ -54,6 +54,20 @@ Members the reference accepts and does not apply to a scan here: `Enabled` (a di
 - **scan.monitor.R1** A library whose options say `EnableRealtimeMonitor` true is watched: a file or folder that appears, changes or goes away below one of its folders is cataloged or forgotten without any refresh, once the change has been quiet for a while (tens of seconds on the reference; 30 s here). A library created without the option (the default of a request body that does not carry it) is not watched.
 - **scan.monitor.R2** Only the first-level folder of the library that changed is re-walked, as a refresh of it would; a change among the library folder's own files is a scan of the library.
 
+## <a id="realtime-push"></a>Realtime push of library changes
+
+A change to what the libraries hold is announced to the open `/socket` connections as
+`{"MessageType":"LibraryChanged","Data":{...}}`. The web client's views refresh on it. Probed black-box against the reference: nothing is sent for a refresh that changed nothing; the message comes in batches.
+
+- **scan.push.R1** A scan or refresh that catalogs an item sends a `LibraryChanged` whose `ItemsAdded` contains the item's id and whose `FoldersAddedTo` contains the folder it was added to. It is not sent at once: the first change after a quiet period starts a timer (30 s on both the reference and Tinyfin) and the message is sent when it fires.
+- **scan.push.R2** An item a scan forgets is in `ItemsRemoved` of the message, and `FoldersRemovedFrom` names the folder it left.
+- **scan.push.R3** Changes that land before the timer fires share one message: two movies cataloged a few seconds apart arrive in the same `ItemsAdded`.
+- **scan.push.R4** `Data` always carries the arrays `FoldersAddedTo`, `FoldersRemovedFrom`, `ItemsAdded`, `ItemsRemoved`, `ItemsUpdated` and `CollectionFolders` (the library folders, plus the playlists folder, whenever something was added or removed; otherwise empty) and `IsEmpty` `false`.
+- **scan.push.R5** The message is sent to every user's sockets, each one told only what their libraries let them see: a user without access to a library gets none of its `ItemsAdded`, and no message at all when nothing in the batch is visible to them. `ItemsRemoved` is passed on to everyone (the items no longer exist to be checked).
+- **scan.push.R6** A refresh of an item (`POST /Items/{itemId}/Refresh`) puts the item in `ItemsUpdated` of a message.
+- **scan.push.R7** Creating a library puts its library folder id (the `ItemId` of `GET /Library/VirtualFolders`) and, once scanned, the items it catalogs in `ItemsAdded`, and the user root folder (`GET /Items/Root`) in `FoldersAddedTo` and `ItemsUpdated`.
+- **scan.push.R8** Removing a library (as the web client does, with `refreshLibrary=true`) puts its items in `ItemsRemoved` (asserted only as an array) and the user root folder in `FoldersRemovedFrom` and `ItemsUpdated`.
+
 ## Known differences
 
 - **Container names.** The reference gives an item's `Container` as the probed format name (`mov,mp4,m4a,3gp,3g2,mj2`) and its media source the file extension (`mp4`); Tinyfin gives the same value on both. Disc media sources follow the reference.
@@ -63,3 +77,6 @@ Members the reference accepts and does not apply to a scan here: `Enabled` (a di
 - **Streaming a disc folder.** A disc folder has no single file to send. The reference answers `500` to the first request for it and `200` with no body afterwards; Tinyfin answers `200` with no body when the disc was read (it has streams) and `500` when it was not. Not asserted.
 - **Watching.** The monitor uses inotify and exists on Linux only; other platforms ignore the option. The quiet period before a folder is re-walked is 30 s on Tinyfin and about 40 s on the reference.
 - **Empty `.strm`.** The reference reports `Size` `0` for it, Tinyfin leaves the member out.
+- **Updated items.** The reference puts items in `ItemsUpdated` that a refresh merely touched (a changed modification time re-saves every item of the folder); Tinyfin lists only an item whose own data changed and the item of an item refresh. Not asserted beyond `scan.push.R6`. A change of a file's modification time alone, the `POST /Items/{itemId}` metadata edit (not implemented) and the deletion of media through `DELETE /Items/{itemId}` (never done by Tinyfin) therefore push nothing.
+- **Parental limits.** Whether a user may see an item is decided by the libraries they may access; a user's parental rating or tag limits do not narrow the message.
+- **Library removal without a refresh.** With `refreshLibrary=false` the reference forgets the removed library's items only with the next library scan, so its message comes then; Tinyfin forgets them at once and announces them at once. Creating a library with `refreshLibrary=false` announces its library folder alone (the items follow with the first scan) on both.
