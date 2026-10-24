@@ -4,9 +4,9 @@
 
 Sessions, remote control, per-user item data, display preferences and SyncPlay.
 
-[Overview](../COVERAGE.md) · 50 operations · 16 registered (32%) · 14 verified · ✅ 15 · 🟡 1 · 🗓️ 13 · ⛔ 21
+[Overview](../COVERAGE.md) · 50 operations · 18 registered (36%) · 14 verified · ✅ 17 · 🟡 1 · 🗓️ 11 · ⛔ 21
 
-✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔
+✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔
 
 Columns: **Auth** is the reference's authorization policy; **Web** = mentioned in docs/11 (called by the official web client); **Tests** = scenarios that exercise the route (passing / total).
 
@@ -73,12 +73,12 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 |---|---|---|---|---|---|
 | ✅ supported | `DELETE /UserFavoriteItems/{itemId}` | DefaultAuthorization |  | 1/1 |  |
 | ✅ supported | `POST /UserFavoriteItems/{itemId}` | DefaultAuthorization |  | 3/3 |  |
-| 🗓️ planned | `DELETE /UserItems/{itemId}/Rating` | DefaultAuthorization | yes |  | Star ratings are not implemented (likes are, through UserData). (priority: low) |
-| 🗓️ planned | `POST /UserItems/{itemId}/Rating` | DefaultAuthorization | yes |  | Star ratings are not implemented (likes are, through UserData). (priority: low) |
+| ✅ supported *(no scenario)* | `DELETE /UserItems/{itemId}/Rating` | DefaultAuthorization | yes | 0/1 |  |
+| ✅ supported *(no scenario)* | `POST /UserItems/{itemId}/Rating` | DefaultAuthorization | yes | 0/1 |  |
 | ✅ supported | `GET /UserItems/{itemId}/UserData` | DefaultAuthorization | yes | 15/15 |  |
 | ✅ supported | `POST /UserItems/{itemId}/UserData` | DefaultAuthorization | yes | 32/32 |  |
-| ✅ supported | `DELETE /UserPlayedItems/{itemId}` | DefaultAuthorization | yes | 23/23 |  |
-| ✅ supported | `POST /UserPlayedItems/{itemId}` | DefaultAuthorization | yes | 51/51 |  |
+| ✅ supported | `DELETE /UserPlayedItems/{itemId}` | DefaultAuthorization | yes | 23/25 |  |
+| ✅ supported | `POST /UserPlayedItems/{itemId}` | DefaultAuthorization | yes | 51/52 |  |
 
 ## Related features
 

@@ -358,6 +358,8 @@ follow the push, not only their own request).
 - **playstate.push.R2** `UserDataList[0]` is the item's user data as the mutating call returns it (`ItemId`, `Played`, `PlayCount`, `PlaybackPositionTicks`, `IsFavorite`, ...), taken after the change. For an item with a parent, the parent's user data (with `UnplayedItemCount` and `PlayedPercentage`) follows it in the list.
 - **playstate.push.R3** Only the sockets of the user whose data changed are told.
 - **playstate.push.R4** A playback start pushes the incremented `PlayCount`; a stop pushes the resulting state.
+- **playstate.push.R5** The rating routes (`POST` and `DELETE /UserItems/{itemId}/Rating`, and their legacy form `/Users/{userId}/Items/{itemId}/Rating`) push too, with `Rating` and `Likes` in `UserDataList[0]`: `likes=true` stores rating 10, `likes=false` rating 1, a delete (or a set without `likes`) clears both. The response is the same user data.
+- **playstate.push.R6** An item that sits directly in a library folder has that library folder (the folder item `GET /Items` lists, with `UnplayedItemCount` and `PlayedPercentage` over the leaves the library holds) as the parent entry after it in `UserDataList`, like any other parent.
 
 ## Out of contract
 
@@ -485,3 +487,5 @@ Settled by probing the 12.2 reference:
 | `playstate.push.R1`, `R2` | `playstate.push.mark-played-and-unplayed`, `playstate.push.resume-position` |
 | `playstate.push.R3` | `playstate.push.only-the-users-sockets` |
 | `playstate.push.R4` | `playstate.push.playback-reports` |
+| `playstate.push.R5` | `playstate.push.rating` |
+| `playstate.push.R6` | `playstate.push.library-root-parent` |

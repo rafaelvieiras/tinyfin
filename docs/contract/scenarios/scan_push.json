@@ -1,0 +1,705 @@
+[
+ {
+  "id": "scan.push.add-and-remove",
+  "endpoint": "GET /socket",
+  "spec": "scan.md#realtime-push",
+  "scope": "modern",
+  "tags": [
+   "scan",
+   "websocket",
+   "slow",
+   "web-client"
+  ],
+  "covers": [
+   "scan.push.R1",
+   "scan.push.R2",
+   "scan.push.R3",
+   "scan.push.R4",
+   "scan.push.R5"
+  ],
+  "requires": [
+   "fs:write",
+   "library:forget",
+   "item:forget-gone",
+   "user:nofolders"
+  ],
+  "steps": [
+   {
+    "name": "admin's socket",
+    "ws": {
+     "open": "a",
+     "as": "admin"
+    }
+   },
+   {
+    "name": "nofolders's socket",
+    "ws": {
+     "open": "n",
+     "as": "nofolders"
+    }
+   },
+   {
+    "name": "a movie is copied in",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "copy": "Forget/Forget Gone (2352)/Forget Gone (2352).mp4",
+     "to": "Forget/Push One (2398)/Push One (2398).mp4"
+    }
+   },
+   {
+    "name": "scan the library",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{library.forget.id}}/Refresh",
+     "query": {
+      "Recursive": "true",
+      "MetadataRefreshMode": "Default",
+      "ImageRefreshMode": "Default"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "it is cataloged",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.forget.id}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "Limit": "20",
+      "SearchTerm": "Push One"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    },
+    "retryMs": 30000,
+    "capture": {
+     "one": "$.Items[0].Id"
+    }
+   },
+   {
+    "name": "a few seconds later a second movie",
+    "sleepMs": 4000
+   },
+   {
+    "name": "a second movie is copied in",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "copy": "Forget/Forget Gone (2352)/Forget Gone (2352).mp4",
+     "to": "Forget/Push Two (2399)/Push Two (2399).mp4"
+    }
+   },
+   {
+    "name": "scan the library",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{library.forget.id}}/Refresh",
+     "query": {
+      "Recursive": "true",
+      "MetadataRefreshMode": "Default",
+      "ImageRefreshMode": "Default"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "it is cataloged too",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.forget.id}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "Limit": "20",
+      "SearchTerm": "Push Two"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    },
+    "retryMs": 30000,
+    "capture": {
+     "two": "$.Items[0].Id"
+    }
+   },
+   {
+    "name": "one batched push carries both",
+    "ws": {
+     "wait": "a",
+     "type": "LibraryChanged",
+     "timeoutMs": 60000,
+     "where": [
+      {
+       "path": "$.Data.ItemsAdded",
+       "op": "contains",
+       "value": "{{capture.one}}"
+      }
+     ]
+    },
+    "expect": {
+     "json": [
+      {
+       "path": "$.Data.ItemsAdded",
+       "op": "contains",
+       "value": "{{capture.one}}"
+      },
+      {
+       "path": "$.Data.ItemsAdded",
+       "op": "contains",
+       "value": "{{capture.two}}"
+      },
+      {
+       "path": "$.Data.FoldersAddedTo",
+       "op": "type",
+       "value": "array"
+      },
+      {
+       "path": "$.Data.FoldersRemovedFrom",
+       "op": "type",
+       "value": "array"
+      },
+      {
+       "path": "$.Data.ItemsRemoved",
+       "op": "type",
+       "value": "array"
+      },
+      {
+       "path": "$.Data.ItemsUpdated",
+       "op": "type",
+       "value": "array"
+      },
+      {
+       "path": "$.Data.CollectionFolders",
+       "op": "type",
+       "value": "array"
+      },
+      {
+       "path": "$.Data.IsEmpty",
+       "op": "eq",
+       "value": false
+      }
+     ]
+    }
+   },
+   {
+    "name": "a user without the library is not told about its items",
+    "ws": {
+     "wait": "n",
+     "type": "LibraryChanged",
+     "timeoutMs": 3000,
+     "where": [
+      {
+       "path": "$.Data.ItemsAdded",
+       "op": "contains",
+       "value": "{{capture.one}}"
+      }
+     ],
+     "absent": true
+    }
+   },
+   {
+    "name": "the first folder goes away",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "remove": "Forget/Push One (2398)"
+    }
+   },
+   {
+    "name": "scan the library",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{library.forget.id}}/Refresh",
+     "query": {
+      "Recursive": "true",
+      "MetadataRefreshMode": "Default",
+      "ImageRefreshMode": "Default"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "it is forgotten",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{library.forget.id}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "Limit": "20",
+      "SearchTerm": "Push One"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 0
+      }
+     ]
+    },
+    "retryMs": 30000
+   },
+   {
+    "name": "the removal is pushed",
+    "ws": {
+     "wait": "a",
+     "type": "LibraryChanged",
+     "timeoutMs": 60000,
+     "where": [
+      {
+       "path": "$.Data.ItemsRemoved",
+       "op": "contains",
+       "value": "{{capture.one}}"
+      }
+     ]
+    },
+    "expect": {
+     "json": [
+      {
+       "path": "$.Data.ItemsRemoved",
+       "op": "contains",
+       "value": "{{capture.one}}"
+      },
+      {
+       "path": "$.Data.ItemsAdded",
+       "op": "notcontains",
+       "value": "{{capture.one}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a user without the library still hears of the removal",
+    "ws": {
+     "wait": "n",
+     "type": "LibraryChanged",
+     "timeoutMs": 10000,
+     "where": [
+      {
+       "path": "$.Data.ItemsRemoved",
+       "op": "contains",
+       "value": "{{capture.one}}"
+      }
+     ]
+    },
+    "expect": {
+     "json": [
+      {
+       "path": "$.Data.ItemsRemoved",
+       "op": "contains",
+       "value": "{{capture.one}}"
+      },
+      {
+       "path": "$.Data.ItemsAdded",
+       "op": "len",
+       "value": 0
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "remove the copies",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "remove": "Forget/Push One (2398)"
+    }
+   },
+   {
+    "name": "remove the second copy",
+    "request": {
+     "method": "",
+     "path": ""
+    },
+    "expect": {},
+    "fs": {
+     "remove": "Forget/Push Two (2399)"
+    }
+   },
+   {
+    "name": "scan again",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{library.forget.id}}/Refresh",
+     "query": {
+      "Recursive": "true",
+      "MetadataRefreshMode": "Default",
+      "ImageRefreshMode": "Default"
+     }
+    },
+    "expect": {
+     "status": [
+      200,
+      204
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "scan.push.item-refresh",
+  "endpoint": "POST /Items/{itemId}/Refresh",
+  "spec": "scan.md#realtime-push",
+  "scope": "modern",
+  "tags": [
+   "scan",
+   "websocket",
+   "slow"
+  ],
+  "covers": [
+   "scan.push.R6"
+  ],
+  "requires": [
+   "item:alpha"
+  ],
+  "steps": [
+   {
+    "name": "admin's socket",
+    "ws": {
+     "open": "a",
+     "as": "admin"
+    }
+   },
+   {
+    "name": "refresh one item",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{item.alpha.id}}/Refresh",
+     "query": {
+      "MetadataRefreshMode": "FullRefresh",
+      "ImageRefreshMode": "None",
+      "ReplaceAllMetadata": "false"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "it is pushed as updated",
+    "ws": {
+     "wait": "a",
+     "type": "LibraryChanged",
+     "timeoutMs": 60000,
+     "where": [
+      {
+       "path": "$.Data.ItemsUpdated",
+       "op": "contains",
+       "value": "{{item.alpha.id}}"
+      }
+     ]
+    },
+    "expect": {
+     "json": [
+      {
+       "path": "$.Data.ItemsUpdated",
+       "op": "contains",
+       "value": "{{item.alpha.id}}"
+      },
+      {
+       "path": "$.Data.ItemsRemoved",
+       "op": "notcontains",
+       "value": "{{item.alpha.id}}"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "scan.push.library-add-and-remove",
+  "endpoint": "POST /Library/VirtualFolders",
+  "spec": "scan.md#realtime-push",
+  "scope": "modern",
+  "tags": [
+   "scan",
+   "websocket",
+   "slow",
+   "web-client"
+  ],
+  "covers": [
+   "scan.push.R7",
+   "scan.push.R8"
+  ],
+  "requires": [
+   "fs:write"
+  ],
+  "steps": [
+   {
+    "name": "the user root",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Root"
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "root": "$.Id"
+    }
+   },
+   {
+    "name": "admin's socket",
+    "ws": {
+     "open": "a",
+     "as": "admin"
+    }
+   },
+   {
+    "name": "a library over a media folder",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "PushLibDev",
+      "collectionType": "movies",
+      "refreshLibrary": "true"
+     },
+     "body": {
+      "LibraryOptions": {
+       "PathInfos": [
+        {
+         "Path": "{{server.mediaroot}}/Punct"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "its id",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Library/VirtualFolders"
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "lib": "$[?Name=PushLibDev].ItemId"
+    }
+   },
+   {
+    "name": "scan it",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Items/{{capture.lib}}/Refresh",
+     "query": {
+      "Recursive": "true",
+      "MetadataRefreshMode": "Default",
+      "ImageRefreshMode": "Default"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "its movies",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "ParentId": "{{capture.lib}}",
+      "Recursive": "true",
+      "IncludeItemTypes": "Movie",
+      "Limit": "5"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "gte",
+       "value": 1
+      }
+     ]
+    },
+    "retryMs": 30000,
+    "capture": {
+     "movie": "$.Items[0].Id"
+    }
+   },
+   {
+    "name": "the add is pushed",
+    "ws": {
+     "wait": "a",
+     "type": "LibraryChanged",
+     "timeoutMs": 60000,
+     "where": [
+      {
+       "path": "$.Data.ItemsAdded",
+       "op": "contains",
+       "value": "{{capture.lib}}"
+      }
+     ]
+    },
+    "expect": {
+     "json": [
+      {
+       "path": "$.Data.ItemsAdded",
+       "op": "contains",
+       "value": "{{capture.lib}}"
+      },
+      {
+       "path": "$.Data.FoldersAddedTo",
+       "op": "contains",
+       "value": "{{capture.root}}"
+      },
+      {
+       "path": "$.Data.ItemsUpdated",
+       "op": "contains",
+       "value": "{{capture.root}}"
+      },
+      {
+       "path": "$.Data.CollectionFolders",
+       "op": "contains",
+       "value": "{{capture.lib}}"
+      },
+      {
+       "path": "$.Data.ItemsAdded",
+       "op": "contains",
+       "value": "{{capture.movie}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "remove the library",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "PushLibDev",
+      "refreshLibrary": "true"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "the removal is pushed",
+    "ws": {
+     "wait": "a",
+     "type": "LibraryChanged",
+     "timeoutMs": 60000,
+     "where": [
+      {
+       "path": "$.Data.ItemsRemoved",
+       "op": "contains",
+       "value": "{{capture.movie}}"
+      }
+     ]
+    },
+    "expect": {
+     "json": [
+      {
+       "path": "$.Data.FoldersRemovedFrom",
+       "op": "contains",
+       "value": "{{capture.root}}"
+      },
+      {
+       "path": "$.Data.ItemsUpdated",
+       "op": "contains",
+       "value": "{{capture.root}}"
+      },
+      {
+       "path": "$.Data.ItemsRemoved",
+       "op": "type",
+       "value": "array"
+      },
+      {
+       "path": "$.Data.ItemsRemoved",
+       "op": "contains",
+       "value": "{{capture.movie}}"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "drop the library",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "PushLibDev",
+      "refreshLibrary": "true"
+     }
+    },
+    "expect": {
+     "status": [
+      204,
+      404
+     ]
+    }
+   }
+  ]
+ }
+]

@@ -514,6 +514,9 @@ func (s *Server) notifyUserDataChanged(ctx context.Context, userID storage.UserI
 	for _, it := range items {
 		add(it)
 		if it.ParentID == nil {
+			if root, ok := s.libraryRootFolderOf(ctx, it); ok {
+				add(root)
+			}
 			continue
 		}
 		if parent, err := s.store.GetItem(ctx, *it.ParentID); err == nil {

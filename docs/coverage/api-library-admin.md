@@ -48,9 +48,9 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ✅ supported *(no scenario)* | `DELETE /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes |  |  |
-| ✅ supported | `GET /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes | 7/7 |  |
-| ✅ supported | `POST /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes | 4/4 |  |
+| ✅ supported *(no scenario)* | `DELETE /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes | 0/1 |  |
+| ✅ supported | `GET /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes | 7/8 |  |
+| ✅ supported | `POST /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes | 4/5 |  |
 | ✅ supported | `POST /Library/VirtualFolders/LibraryOptions` | FirstTimeSetupOrElevated | yes | 1/1 |  |
 | ✅ supported | `POST /Library/VirtualFolders/Name` | FirstTimeSetupOrElevated | yes | 2/2 |  |
 | 🗓️ planned | `DELETE /Library/VirtualFolders/Paths` | FirstTimeSetupOrElevated | yes |  | Adding, removing and updating the paths of an existing library is not implemented; a library's paths are set when it is created. (priority: medium) |

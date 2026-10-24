@@ -168,6 +168,8 @@ var routePaths = []string{
 	"/Albums/{itemId}/Similar",
 	"/Users/{userId}/Items/{itemId}/Intros",
 	"/Users/{userId}/Items/{itemId}/UserData",
+	"/UserItems/{itemId}/Rating",
+	"/Users/{userId}/Items/{itemId}/Rating",
 	"/Playlists",
 	"/Playlists/{playlistId}",
 	"/Playlists/{playlistId}/Items",
