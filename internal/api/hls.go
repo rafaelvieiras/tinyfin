@@ -416,9 +416,11 @@ func (s *Server) segmentJob(r *http.Request, h hlsRequest, n int, startTicks int
 		last := job.Written(ext)
 		if job.Done() {
 			if _, err := os.Stat(filepath.Join(job.Dir(), fmt.Sprintf("seg_%05d.%s", n, ext))); err == nil {
+				s.renoteTranscodeSession(r, h)
 				return job, nil
 			}
 		} else if n <= last+hlsSegmentLookahead {
+			s.renoteTranscodeSession(r, h)
 			return job, nil
 		}
 	}

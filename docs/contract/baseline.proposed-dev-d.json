@@ -1,0 +1,9 @@
+{
+  "pass": [
+    "images.frame.extras-movie",
+    "images.frame.extras-parts",
+    "images.frame.extras-series",
+    "playstate.session.transcoding-info-container",
+    "playstate.session.transcoding-info-segment-restart"
+  ]
+}

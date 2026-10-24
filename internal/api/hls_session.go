@@ -12,12 +12,7 @@ import (
 // DeviceId of the request URL, else the one the request authenticated with.
 func (s *Server) noteTranscodeSession(r *http.Request, h hlsRequest) {
 	q := hlsQuery(r)
-	dev := q.Get("deviceid")
-	if dev == "" {
-		if ac, ok := AuthFromContext(r.Context()); ok && ac != nil {
-			dev = ac.DeviceID
-		}
-	}
+	dev := hlsDevice(r, q)
 	info := transcodingInfoFor(h, q)
 	// the container is the extension of the segment the job was started for,
 	// as the request spelled it (playstate.session.R13)
@@ -25,6 +20,29 @@ func (s *Server) noteTranscodeSession(r *http.Request, h hlsRequest) {
 		info.Container = seg[strings.LastIndex(seg, ".")+1:]
 	}
 	s.sessions.setTranscode(dev, h.key, h.item.ID, q.Get("playsessionid"), info)
+}
+
+// hlsDevice is the DeviceId of the request URL, else the one the request
+// authenticated with.
+func hlsDevice(r *http.Request, q url.Values) string {
+	dev := q.Get("deviceid")
+	if dev == "" {
+		if ac, ok := AuthFromContext(r.Context()); ok && ac != nil {
+			dev = ac.DeviceID
+		}
+	}
+	return dev
+}
+
+// renoteTranscodeSession is noteTranscodeSession for a segment a running or
+// finished job serves from what it already produced: no job starts, but a
+// device that has no stream on record (a stopped report forgot it) gets its
+// description back (playstate.session.R19). A hidden description (R11) and
+// the stream of another job stay as they are.
+func (s *Server) renoteTranscodeSession(r *http.Request, h hlsRequest) {
+	if dev := hlsDevice(r, hlsQuery(r)); dev != "" && !s.sessions.hasTranscode(dev) {
+		s.noteTranscodeSession(r, h)
+	}
 }
 
 // transcodingInfoFor describes the stream a job serves, in the terms of its

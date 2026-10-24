@@ -223,6 +223,14 @@ func (r *sessionRegistry) setTranscode(deviceID, key string, item storage.ItemID
 	r.transcodes[deviceID] = &deviceTranscode{key: key, item: item, playSession: playSession, info: info}
 }
 
+// hasTranscode reports whether deviceID has a stream on record, hidden or not.
+func (r *sessionRegistry) hasTranscode(deviceID string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	_, ok := r.transcodes[deviceID]
+	return ok
+}
+
 // transcodeKey is the key of the job deviceID was last served for item, when
 // it belongs to the reported play session (an empty one matches any).
 func (r *sessionRegistry) transcodeKey(deviceID string, item storage.ItemID, playSession string) (string, bool) {
