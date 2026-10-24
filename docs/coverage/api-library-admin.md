@@ -4,7 +4,7 @@
 
 Virtual folders, remote metadata search/apply, metadata editing, the file-system browser and scheduled tasks.
 
-[Overview](../COVERAGE.md) · 32 operations · 13 registered (41%) · 7 verified · ✅ 11 · 🗓️ 16 · ⛔ 3 · ↔️ 2
+[Overview](../COVERAGE.md) · 32 operations · 13 registered (41%) · 8 verified · ✅ 11 · 🗓️ 16 · ⛔ 3 · ↔️ 2
 
 ✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔↔️
 
@@ -48,9 +48,9 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ✅ supported *(no scenario)* | `DELETE /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes | 0/1 |  |
-| ✅ supported | `GET /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes | 7/8 |  |
-| ✅ supported | `POST /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes | 4/5 |  |
+| ✅ supported | `DELETE /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes | 1/1 |  |
+| ✅ supported | `GET /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes | 8/8 |  |
+| ✅ supported | `POST /Library/VirtualFolders` | FirstTimeSetupOrElevated | yes | 5/5 |  |
 | ✅ supported | `POST /Library/VirtualFolders/LibraryOptions` | FirstTimeSetupOrElevated | yes | 1/1 |  |
 | ✅ supported | `POST /Library/VirtualFolders/Name` | FirstTimeSetupOrElevated | yes | 2/2 |  |
 | 🗓️ planned | `DELETE /Library/VirtualFolders/Paths` | FirstTimeSetupOrElevated | yes |  | Adding, removing and updating the paths of an existing library is not implemented; a library's paths are set when it is created. (priority: medium) |

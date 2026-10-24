@@ -126,7 +126,7 @@ implementations are in today.
 <!-- coverage:start -->
 ![API routes](docs/coverage/badge-routes.svg) ![contract-verified](docs/coverage/badge-verified.svg)
 
-Measured against the Jellyfin 12.2.0 OpenAPI document (364 operations): **203 registered (56%)**, **162 with a passing contract scenario (45%)**.
+Measured against the Jellyfin 12.2.0 OpenAPI document (364 operations): **203 registered (56%)**, **171 with a passing contract scenario (47%)**.
 
 | Route status | Count | Non-route features | Count |
 |---|---|---|---|

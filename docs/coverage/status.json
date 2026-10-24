@@ -16,7 +16,7 @@
    "planned": 70,
    "supported": 175
   },
-  "verified": 162
+  "verified": 171
  },
  "routes": [
   {
@@ -781,7 +781,7 @@
    "policy": "RequiresElevation",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "devices.delete.revokes-tokens"
@@ -828,7 +828,7 @@
    "policy": "RequiresElevation",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "devices.delete.revokes-tokens",
@@ -842,7 +842,7 @@
    "policy": "RequiresElevation",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "devices.delete.revokes-tokens",
@@ -2045,7 +2045,7 @@
    "policy": "DefaultAuthorization",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "scan.push.library-add-and-remove"
@@ -2696,7 +2696,7 @@
    "policy": "FirstTimeSetupOrElevated",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "scan.push.library-add-and-remove"
@@ -5142,7 +5142,7 @@
    "policy": "DefaultAuthorization",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "admin.config.root-any-user",
@@ -5157,7 +5157,7 @@
    "policy": "RequiresElevation",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "admin.config.root-any-user"
@@ -6065,7 +6065,7 @@
    "policy": "DefaultAuthorization",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "playstate.push.rating"
@@ -6078,7 +6078,7 @@
    "policy": "DefaultAuthorization",
    "status": "supported",
    "registered": true,
-   "verified": false,
+   "verified": true,
    "web": true,
    "scenarios": [
     "playstate.push.rating"

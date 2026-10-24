@@ -4,7 +4,7 @@
 
 Server information and configuration, logs, backup, branding, localization, plugins and packages.
 
-[Overview](../COVERAGE.md) · 47 operations · 30 registered (64%) · 24 verified · ✅ 21 · 🟡 6 · 🗓️ 4 · ⛔ 13 · ↔️ 3
+[Overview](../COVERAGE.md) · 47 operations · 30 registered (64%) · 26 verified · ✅ 21 · 🟡 6 · 🗓️ 4 · ⛔ 13 · ↔️ 3
 
 ✅✅✅✅✅✅✅✅✅🟡🟡🟡🗓️🗓️⛔⛔⛔⛔⛔↔️
 
@@ -65,12 +65,12 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | 🗓️ planned | `POST /ClientLog/Document` | DefaultAuthorization | yes |  | Not implemented. (priority: low) |
 | ✅ supported | `GET /GetUtcTime` | Anonymous | yes | 1/1 |  |
 | ✅ supported | `GET /System/ActivityLog/Entries` | RequiresElevation | yes | 18/18 |  |
-| ✅ supported *(no scenario)* | `GET /System/Configuration` | DefaultAuthorization | yes | 0/3 |  |
-| ✅ supported *(no scenario)* | `POST /System/Configuration` | RequiresElevation | yes | 0/1 |  |
-| ✅ supported | `POST /System/Configuration/Branding` | RequiresElevation | yes | 1/2 |  |
+| ✅ supported | `GET /System/Configuration` | DefaultAuthorization | yes | 1/3 |  |
+| ✅ supported | `POST /System/Configuration` | RequiresElevation | yes | 1/1 |  |
+| ✅ supported | `POST /System/Configuration/Branding` | RequiresElevation | yes | 2/2 |  |
 | 🗓️ planned | `GET /System/Configuration/MetadataOptions/Default` | RequiresElevation |  |  | Not implemented. (priority: low) |
-| 🟡 partial | `GET /System/Configuration/{key}` | DefaultAuthorization | yes | 3/7 | Only the network key is served (GET /System/Configuration/network). |
-| 🟡 partial | `POST /System/Configuration/{key}` | RequiresElevation | yes | 2/5 | Only the network key is served (POST /System/Configuration/network). |
+| 🟡 partial | `GET /System/Configuration/{key}` | DefaultAuthorization | yes | 6/7 | Only the network key is served (GET /System/Configuration/network). |
+| 🟡 partial | `POST /System/Configuration/{key}` | RequiresElevation | yes | 5/5 | Only the network key is served (POST /System/Configuration/network). |
 | ✅ supported *(no scenario)* | `GET /System/Endpoint` | DefaultAuthorization | yes |  |  |
 | ✅ supported | `GET /System/Info` | FirstTimeSetupOrIgnoreParentalControl | yes | 2/4 |  |
 | ✅ supported | `GET /System/Info/Public` | Anonymous | yes | 4/6 |  |
