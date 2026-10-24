@@ -1,0 +1,913 @@
+[
+ {
+  "id": "admin.mediafolders.path-etag",
+  "endpoint": "GET /Library/MediaFolders",
+  "spec": "admin.md#pages",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.pages.R5"
+  ],
+  "requires": [
+   "user:alice",
+   "library:movies"
+  ],
+  "steps": [
+   {
+    "name": "first read",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Library/MediaFolders"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[?Name=Movies].Path",
+       "op": "type",
+       "value": "string"
+      },
+      {
+       "path": "$.Items[?Name=Movies].Etag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      },
+      {
+       "path": "$.Items[?Name=Playlists].Path",
+       "op": "type",
+       "value": "string"
+      },
+      {
+       "path": "$.Items[?Name=Playlists].Etag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      },
+      {
+       "path": "$.Items[?Name=Movies].Type",
+       "op": "eq",
+       "value": "CollectionFolder"
+      },
+      {
+       "path": "$.Items[?Name=Playlists].Type",
+       "op": "eq",
+       "value": "ManualPlaylistsFolder"
+      }
+     ]
+    }
+   },
+   {
+    "name": "capture",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Library/MediaFolders"
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "movies_etag": "$.Items[?Name=Movies].Etag"
+    }
+   },
+   {
+    "name": "etag is stable",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Library/MediaFolders"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[?Name=Movies].Etag",
+       "op": "eq",
+       "value": "{{capture.movies_etag}}"
+      },
+      {
+       "path": "$.Items[?Name=Movies].Path",
+       "op": "matches",
+       "value": "^/.+"
+      }
+     ]
+    }
+   },
+   {
+    "name": "hidden filter keeps the fields",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Library/MediaFolders?isHidden=true"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].Etag",
+       "op": "matches",
+       "value": "^[0-9a-f]{32}$"
+      },
+      {
+       "path": "$.Items[0].Path",
+       "op": "matches",
+       "value": "^/.+"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.config.root-any-user",
+  "endpoint": "GET /System/Configuration",
+  "spec": "admin.md#config",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.config.R6"
+  ],
+  "requires": [
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "admin reads",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ServerName",
+       "op": "type",
+       "value": "string"
+      },
+      {
+       "path": "$.QuickConnectAvailable",
+       "op": "type",
+       "value": "boolean"
+      },
+      {
+       "path": "$.UICulture",
+       "op": "type",
+       "value": "string"
+      }
+     ]
+    }
+   },
+   {
+    "name": "non-admin reads",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.ServerName",
+       "op": "type",
+       "value": "string"
+      },
+      {
+       "path": "$.QuickConnectAvailable",
+       "op": "type",
+       "value": "boolean"
+      },
+      {
+       "path": "$.UICulture",
+       "op": "type",
+       "value": "string"
+      },
+      {
+       "path": "$.MetadataCountryCode",
+       "op": "type",
+       "value": "string"
+      }
+     ]
+    }
+   },
+   {
+    "name": "anonymous read",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration"
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "non-admin write",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration",
+     "body": {}
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "anonymous write",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration",
+     "body": {}
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "non-admin network write",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/network",
+     "body": {}
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "non-admin encoding write",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {}
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "non-admin branding write",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/branding",
+     "body": {}
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "non-admin unknown section write",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/nosuchsection",
+     "body": {}
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "unknown section read",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/nosuchsection"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "unknown section anonymous",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/nosuchsection"
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.config.hwaccel-valid",
+  "endpoint": "POST /System/Configuration/encoding",
+  "spec": "admin.md#config",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.config.R7"
+  ],
+  "requires": [],
+  "steps": [
+   {
+    "name": "remember the section",
+    "config": {
+     "section": "encoding",
+     "set": {}
+    }
+   },
+   {
+    "name": "set vaapi",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {
+      "HardwareAccelerationType": "vaapi"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "read vaapi",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.HardwareAccelerationType",
+       "op": "eq",
+       "value": "vaapi"
+      }
+     ]
+    }
+   },
+   {
+    "name": "set qsv",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {
+      "HardwareAccelerationType": "qsv"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "read qsv",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.HardwareAccelerationType",
+       "op": "eq",
+       "value": "qsv"
+      }
+     ]
+    }
+   },
+   {
+    "name": "set nvenc",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {
+      "HardwareAccelerationType": "nvenc"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "read nvenc",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.HardwareAccelerationType",
+       "op": "eq",
+       "value": "nvenc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "set amf",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {
+      "HardwareAccelerationType": "amf"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "read amf",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.HardwareAccelerationType",
+       "op": "eq",
+       "value": "amf"
+      }
+     ]
+    }
+   },
+   {
+    "name": "set videotoolbox",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {
+      "HardwareAccelerationType": "videotoolbox"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "read videotoolbox",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.HardwareAccelerationType",
+       "op": "eq",
+       "value": "videotoolbox"
+      }
+     ]
+    }
+   },
+   {
+    "name": "set v4l2m2m",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {
+      "HardwareAccelerationType": "v4l2m2m"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "read v4l2m2m",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.HardwareAccelerationType",
+       "op": "eq",
+       "value": "v4l2m2m"
+      }
+     ]
+    }
+   },
+   {
+    "name": "set rkmpp",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {
+      "HardwareAccelerationType": "rkmpp"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "read rkmpp",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.HardwareAccelerationType",
+       "op": "eq",
+       "value": "rkmpp"
+      }
+     ]
+    }
+   },
+   {
+    "name": "set none",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {
+      "HardwareAccelerationType": "none"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "read none",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.HardwareAccelerationType",
+       "op": "eq",
+       "value": "none"
+      }
+     ]
+    }
+   },
+   {
+    "name": "upper case",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {
+      "HardwareAccelerationType": "VAAPI"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "canonical lower case",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.HardwareAccelerationType",
+       "op": "eq",
+       "value": "vaapi"
+      }
+     ]
+    }
+   },
+   {
+    "name": "mixed case with spaces",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {
+      "HardwareAccelerationType": " Nvenc "
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "trimmed",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.HardwareAccelerationType",
+       "op": "eq",
+       "value": "nvenc"
+      }
+     ]
+    }
+   },
+   {
+    "name": "member left out falls back to default",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {}
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "default",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.HardwareAccelerationType",
+       "op": "eq",
+       "value": "none"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": []
+ },
+ {
+  "id": "admin.config.hwaccel-invalid",
+  "endpoint": "POST /System/Configuration/encoding",
+  "spec": "admin.md#config",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.config.R8"
+  ],
+  "requires": [],
+  "steps": [
+   {
+    "name": "remember the section",
+    "config": {
+     "section": "encoding",
+     "set": {}
+    }
+   },
+   {
+    "name": "known value",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {
+      "HardwareAccelerationType": "qsv"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "unknown name",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {
+      "HardwareAccelerationType": "bogus"
+     }
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "unchanged after unknown name",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.HardwareAccelerationType",
+       "op": "eq",
+       "value": "qsv"
+      }
+     ]
+    }
+   },
+   {
+    "name": "empty string",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {
+      "HardwareAccelerationType": ""
+     }
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "unchanged after empty string",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.HardwareAccelerationType",
+       "op": "eq",
+       "value": "qsv"
+      }
+     ]
+    }
+   },
+   {
+    "name": "null",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {
+      "HardwareAccelerationType": null
+     }
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "unchanged after null",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.HardwareAccelerationType",
+       "op": "eq",
+       "value": "qsv"
+      }
+     ]
+    }
+   },
+   {
+    "name": "number",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {
+      "HardwareAccelerationType": 99
+     }
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "unchanged after number",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.HardwareAccelerationType",
+       "op": "eq",
+       "value": "qsv"
+      }
+     ]
+    }
+   },
+   {
+    "name": "boolean",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {
+      "HardwareAccelerationType": true
+     }
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "unchanged after boolean",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.HardwareAccelerationType",
+       "op": "eq",
+       "value": "qsv"
+      }
+     ]
+    }
+   },
+   {
+    "name": "numeric string",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/System/Configuration/encoding",
+     "body": {
+      "HardwareAccelerationType": "1"
+     }
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "unchanged after numeric string",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/System/Configuration/encoding"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.HardwareAccelerationType",
+       "op": "eq",
+       "value": "qsv"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [],
+  "divergence": {
+   "reason": "The reference answers 500 (plain-text 'Error processing request.') for an unknown, empty, null, numeric out-of-range or non-string HardwareAccelerationType, and accepts the numeric spellings 1 and \"1\" as enum ordinals. Tinyfin refuses every value that is not a known name (case-insensitive, trimmed) with 400 and leaves the section unchanged; a 500 for a bad request is not reproduced."
+  }
+ }
+]

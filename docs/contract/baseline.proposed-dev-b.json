@@ -1,0 +1,8 @@
+{
+  "scenarios": {
+    "admin.config.hwaccel-invalid": "pass",
+    "admin.config.hwaccel-valid": "pass",
+    "admin.config.root-any-user": "pass",
+    "admin.mediafolders.path-etag": "pass"
+  }
+}

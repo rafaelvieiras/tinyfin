@@ -2510,7 +2510,8 @@
    "verified": true,
    "web": false,
    "scenarios": [
-    "admin.mediafolders.list"
+    "admin.mediafolders.list",
+    "admin.mediafolders.path-etag"
    ]
   },
   {
@@ -5090,6 +5091,7 @@
    "verified": false,
    "web": true,
    "scenarios": [
+    "admin.config.root-any-user",
     "startup.wizard.pre-setup",
     "startup.wizard.user-and-complete"
    ]
@@ -5102,7 +5104,10 @@
    "status": "supported",
    "registered": true,
    "verified": false,
-   "web": true
+   "web": true,
+   "scenarios": [
+    "admin.config.root-any-user"
+   ]
   },
   {
    "id": "POST /System/Configuration/Branding",
@@ -5114,7 +5119,8 @@
    "verified": true,
    "web": true,
    "scenarios": [
-    "admin.config.branding"
+    "admin.config.branding",
+    "admin.config.root-any-user"
    ]
   },
   {
@@ -5141,7 +5147,10 @@
    "scenarios": [
     "admin.config.branding",
     "admin.config.encoding",
+    "admin.config.hwaccel-invalid",
+    "admin.config.hwaccel-valid",
     "admin.config.network-fields",
+    "admin.config.root-any-user",
     "startup.wizard.user-and-complete"
    ],
    "notes": "Only the network key is served (GET /System/Configuration/network)."
@@ -5157,7 +5166,10 @@
    "web": true,
    "scenarios": [
     "admin.config.encoding",
-    "admin.config.network-fields"
+    "admin.config.hwaccel-invalid",
+    "admin.config.hwaccel-valid",
+    "admin.config.network-fields",
+    "admin.config.root-any-user"
    ],
    "notes": "Only the network key is served (POST /System/Configuration/network)."
   },
@@ -8777,6 +8789,7 @@
   "GET /socket",
   "POST /ScheduledTasks/{first}/{second}",
   "POST /System/Configuration/encoding",
+  "POST /System/Configuration/network",
   "POST /Users/{userId}",
   "POST /Users/{userId}/Configuration",
   "POST /Users/{userId}/FavoriteItems/{itemId}",

@@ -1,6 +1,8 @@
 package api
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"net/http"
 	"sort"
 	"strings"
@@ -105,9 +107,18 @@ func (s *Server) handleMediaFolders(w http.ResponseWriter, r *http.Request) {
 		if lib.CollectionType == storage.CollectionTypePlaylists || lib.CollectionType == storage.CollectionTypeBoxSets {
 			continue
 		}
-		items = append(items, s.libraryBaseItemDto(r.Context(), lib))
+		dto := s.libraryBaseItemDto(r.Context(), lib)
+		dto.Path = "/root/default/" + lib.Name
+		if len(lib.Paths) > 0 {
+			dto.Path = lib.Paths[0]
+		}
+		dto.Etag = mediaFolderEtag(dto.ID, dto.Name)
+		items = append(items, dto)
 	}
 	pl := s.playlistsViewDto(r.Context())
+	pl.Type = "ManualPlaylistsFolder"
+	pl.Path = "/data/playlists"
+	pl.Etag = mediaFolderEtag(pl.ID, pl.Name)
 	switch strings.ToLower(r.URL.Query().Get("isHidden")) {
 	case "true":
 		items = []baseItemDto{pl}
@@ -117,6 +128,13 @@ func (s *Server) handleMediaFolders(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.SliceStable(items, func(i, j int) bool { return strings.ToLower(items[i].Name) < strings.ToLower(items[j].Name) })
 	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{Items: items, TotalRecordCount: len(items), StartIndex: 0})
+}
+
+// mediaFolderEtag is the folder's Etag: 32 lowercase hex digits, stable for
+// a given folder (admin.pages.R5).
+func mediaFolderEtag(id, name string) string {
+	sum := md5.Sum([]byte(id + "|" + name))
+	return hex.EncodeToString(sum[:])
 }
 
 // authProviderDto is one entry of the authentication / password reset

@@ -3,7 +3,9 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
+	"strings"
 )
 
 // Named configuration sections (GET|POST /System/Configuration/{key}): the
@@ -100,11 +102,41 @@ func (s *Server) handleEncodingConfigurationGet(w http.ResponseWriter, r *http.R
 	writeJSON(w, http.StatusOK, cfg)
 }
 
+// hardwareAccelerationTypes are the accepted HardwareAccelerationType values.
+var hardwareAccelerationTypes = []string{"none", "amf", "qsv", "nvenc", "vaapi", "rkmpp", "videotoolbox", "v4l2m2m"}
+
+// canonicalHardwareAccelerationType matches a name ignoring case and
+// surrounding whitespace, as the reference does. Numeric spellings are not
+// names and are refused.
+func canonicalHardwareAccelerationType(v string) (string, bool) {
+	v = strings.ToLower(strings.TrimSpace(v))
+	for _, t := range hardwareAccelerationTypes {
+		if v == t {
+			return t, true
+		}
+	}
+	return "", false
+}
+
 func (s *Server) handleEncodingConfigurationPost(w http.ResponseWriter, r *http.Request) {
 	cfg := defaultEncodingConfiguration()
-	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil || json.Unmarshal(body, &cfg) != nil {
 		writeInvalidBody(w)
 		return
+	}
+	// admin.config.R6: an unknown HardwareAccelerationType is refused (400);
+	// the reference answers 500 here. A known one is stored in its canonical
+	// lower-case spelling.
+	var members map[string]json.RawMessage
+	_ = json.Unmarshal(body, &members)
+	if _, present := members["HardwareAccelerationType"]; present {
+		canon, ok := canonicalHardwareAccelerationType(cfg.HardwareAccelerationType)
+		if !ok || string(members["HardwareAccelerationType"]) == "null" {
+			writeProblemDoc(w, http.StatusBadRequest, problemTypeBadRequest, "One or more validation errors occurred.", nil)
+			return
+		}
+		cfg.HardwareAccelerationType = canon
 	}
 	cfg.EncoderAppPathDisplay = ""
 	if cfg.HardwareDecodingCodecs == nil {

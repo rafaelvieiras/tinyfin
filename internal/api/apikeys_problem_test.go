@@ -218,8 +218,8 @@ func TestSystemConfigurationQuickConnectToggle(t *testing.T) {
 	admin := policyLogin(t, ts.URL, "admin", "adminpass")
 	alice := policyLogin(t, ts.URL, "alice", "pw")
 
-	if code, _ := policyDo(t, ts.URL, alice, http.MethodGet, "/System/Configuration", ""); code != http.StatusForbidden {
-		t.Errorf("non-admin get: %d, want 403", code)
+	if code, _ := policyDo(t, ts.URL, alice, http.MethodGet, "/System/Configuration", ""); code != http.StatusOK {
+		t.Errorf("non-admin get: %d, want 200 (admin.config.R6)", code)
 	}
 	code, body := policyDo(t, ts.URL, admin, http.MethodGet, "/System/Configuration", "")
 	var cfg map[string]any

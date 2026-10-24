@@ -827,13 +827,20 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /Auth/Keys", requireAdmin(s.handleAuthKeysList))
 	s.mux.HandleFunc("POST /Auth/Keys", requireAdmin(s.handleAuthKeysCreate))
 	s.mux.HandleFunc("DELETE /Auth/Keys/{key}", requireAdmin(s.handleAuthKeysRevoke))
-	s.mux.HandleFunc("GET /System/Configuration", requireAdmin(s.handleSystemConfigurationGet))
+	s.mux.HandleFunc("GET /System/Configuration", requireAuth(s.handleSystemConfigurationGet))
 	s.mux.HandleFunc("POST /System/Configuration", requireAdmin(s.handleSystemConfigurationPost))
 	s.mux.HandleFunc("GET /System/Configuration/network", requireAuth(s.handleNetworkConfigurationGet))
 	s.mux.HandleFunc("GET /System/Configuration/encoding", requireAuth(s.handleEncodingConfigurationGet))
 	s.mux.HandleFunc("POST /System/Configuration/encoding", requireAdmin(s.handleEncodingConfigurationPost))
 	s.mux.HandleFunc("GET /System/Configuration/branding", requireAuth(s.handleBrandingConfigurationGet))
 	s.mux.HandleFunc("POST /System/Configuration/branding", requireAdmin(s.handleBrandingConfigurationPost))
+	// An unknown section: refused for non-administrators like the named ones
+	// (403), 404 for administrators (the reference answers 500; admin.config.R6).
+	unknownSection := func(w http.ResponseWriter, r *http.Request) {
+		writeProblemDoc(w, http.StatusNotFound, problemTypeNotFound, "Not Found", nil)
+	}
+	s.mux.HandleFunc("POST /System/Configuration/{key}", requireAdmin(unknownSection))
+	s.mux.HandleFunc("GET /System/Configuration/{key}", requireAuth(unknownSection))
 	s.mux.HandleFunc("GET /Branding/Css", s.handleBrandingCss)
 	s.mux.HandleFunc("GET /Branding/Css.css", s.handleBrandingCss)
 	s.mux.HandleFunc("GET /Devices", requireAdmin(s.handleDevices))

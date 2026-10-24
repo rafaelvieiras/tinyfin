@@ -59,7 +59,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `GET /Items/{itemId}/ThemeVideos` | DefaultAuthorization |  | 3/3 |  |
 | ✅ supported *(no scenario)* | `GET /Libraries/AvailableOptions` | FirstTimeSetupOrDefault | yes |  |  |
 | 🗓️ planned | `POST /Library/Media/Updated` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
-| ✅ supported | `GET /Library/MediaFolders` | RequiresElevation |  | 1/1 |  |
+| ✅ supported | `GET /Library/MediaFolders` | RequiresElevation |  | 1/2 |  |
 | 🗓️ planned | `POST /Library/Movies/Added` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | 🗓️ planned | `POST /Library/Movies/Updated` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | 🗓️ planned | `GET /Library/PhysicalPaths` | RequiresElevation |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
