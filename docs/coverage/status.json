@@ -8,13 +8,13 @@
    "supported": 64
   },
   "operations": 364,
-  "registered": 201,
+  "registered": 203,
   "routes_by_status": {
    "divergent-by-design": 16,
    "not-planned": 91,
    "partial": 12,
-   "planned": 72,
-   "supported": 173
+   "planned": 70,
+   "supported": 175
   },
   "verified": 162
  },
@@ -1098,6 +1098,9 @@
    "scenarios": [
     "images.episode.names",
     "images.frame.episode",
+    "images.frame.extras-movie",
+    "images.frame.extras-parts",
+    "images.frame.extras-series",
     "images.frame.movie",
     "images.local.extension-order",
     "images.local.extensions-recognized",
@@ -1132,6 +1135,9 @@
     "chapters.images.generate",
     "images.api.index-lookup",
     "images.frame.episode",
+    "images.frame.extras-movie",
+    "images.frame.extras-parts",
+    "images.frame.extras-series",
     "images.frame.movie",
     "music.image.album",
     "music2.artist.images",
@@ -1151,6 +1157,9 @@
     "chapters.images.generate",
     "images.api.index-lookup",
     "images.frame.episode",
+    "images.frame.extras-movie",
+    "images.frame.extras-parts",
+    "images.frame.extras-series",
     "images.frame.movie",
     "music.image.album",
     "music2.artist.images",
@@ -1987,6 +1996,8 @@
     "scan.ignore.root-extras",
     "scan.monitor.changes",
     "scan.options.photos",
+    "scan.push.add-and-remove",
+    "scan.push.library-add-and-remove",
     "search.items.matching",
     "search.items.names",
     "trickplay.item.list",
@@ -2035,7 +2046,10 @@
    "status": "supported",
    "registered": true,
    "verified": false,
-   "web": true
+   "web": true,
+   "scenarios": [
+    "scan.push.library-add-and-remove"
+   ]
   },
   {
    "id": "DELETE /Items/{itemId}",
@@ -2392,7 +2406,9 @@
     "extras.local.trailers",
     "extras.local.unowned",
     "extras.routes.errors",
-    "extras.series.series-and-season"
+    "extras.series.series-and-season",
+    "images.frame.extras-movie",
+    "images.frame.extras-series"
    ]
   },
   {
@@ -2413,7 +2429,10 @@
     "scan.forget.folder",
     "scan.forget.library-folder",
     "scan.forget.series",
-    "scan.forget.user-data"
+    "scan.forget.user-data",
+    "scan.push.add-and-remove",
+    "scan.push.item-refresh",
+    "scan.push.library-add-and-remove"
    ]
   },
   {
@@ -2447,7 +2466,9 @@
     "extras.local.special-features",
     "extras.local.unowned",
     "extras.routes.errors",
-    "extras.series.series-and-season"
+    "extras.series.series-and-season",
+    "images.frame.extras-movie",
+    "images.frame.extras-series"
    ]
   },
   {
@@ -2478,7 +2499,8 @@
     "extras.local.unowned",
     "extras.routes.errors",
     "extras.theme.inherit",
-    "extras.theme.songs-and-videos"
+    "extras.theme.songs-and-videos",
+    "images.frame.extras-movie"
    ]
   },
   {
@@ -2493,7 +2515,8 @@
    "scenarios": [
     "extras.routes.errors",
     "extras.theme.inherit",
-    "extras.theme.songs-and-videos"
+    "extras.theme.songs-and-videos",
+    "images.frame.extras-movie"
    ]
   },
   {
@@ -2674,7 +2697,10 @@
    "status": "supported",
    "registered": true,
    "verified": false,
-   "web": true
+   "web": true,
+   "scenarios": [
+    "scan.push.library-add-and-remove"
+   ]
   },
   {
    "id": "GET /Library/VirtualFolders",
@@ -2692,7 +2718,8 @@
     "collections.list.library",
     "collections.visibility.partial-members",
     "collections.visibility.restricted-user",
-    "musicvideos.views"
+    "musicvideos.views",
+    "scan.push.library-add-and-remove"
    ]
   },
   {
@@ -2708,7 +2735,8 @@
     "admin.libraries.rename-during-scan",
     "admin.libraries.rename-rules",
     "collections.auto.build",
-    "collections.auto.option-off"
+    "collections.auto.option-off",
+    "scan.push.library-add-and-remove"
    ]
   },
   {
@@ -4126,9 +4154,11 @@
     "playstate.session.queue-stored-only-by-stopped",
     "playstate.session.stopped-clears-now-playing",
     "playstate.session.transcode-without-job-is-direct-play",
+    "playstate.session.transcoding-info-container",
     "playstate.session.transcoding-info-copy-and-mp4",
     "playstate.session.transcoding-info-device",
     "playstate.session.transcoding-info-lifecycle",
+    "playstate.session.transcoding-info-segment-restart",
     "playstate.session.transcoding-info-stopped",
     "playstate.start.ignored-fields-accepted",
     "wire.date.other-members",
@@ -4158,9 +4188,11 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "playstate.session.transcoding-info-container",
     "playstate.session.transcoding-info-copy-and-mp4",
     "playstate.session.transcoding-info-device",
     "playstate.session.transcoding-info-lifecycle",
+    "playstate.session.transcoding-info-segment-restart",
     "playstate.session.transcoding-info-stopped"
    ]
   },
@@ -4210,6 +4242,7 @@
     "playstate.session.transcoding-info-copy-and-mp4",
     "playstate.session.transcoding-info-device",
     "playstate.session.transcoding-info-lifecycle",
+    "playstate.session.transcoding-info-segment-restart",
     "playstate.session.transcoding-info-stopped",
     "playstate.start.activity-log",
     "playstate.start.basic",
@@ -4280,7 +4313,8 @@
     "playstate.session.progress-replaces-state",
     "playstate.session.queue-stored-only-by-stopped",
     "playstate.session.transcode-without-job-is-direct-play",
-    "playstate.session.transcoding-info-lifecycle"
+    "playstate.session.transcoding-info-lifecycle",
+    "playstate.session.transcoding-info-segment-restart"
    ]
   },
   {
@@ -4301,9 +4335,11 @@
     "playstate.resume.long-runtime-listed",
     "playstate.session.queue-stored-only-by-stopped",
     "playstate.session.stopped-clears-now-playing",
+    "playstate.session.transcoding-info-container",
     "playstate.session.transcoding-info-copy-and-mp4",
     "playstate.session.transcoding-info-device",
     "playstate.session.transcoding-info-lifecycle",
+    "playstate.session.transcoding-info-segment-restart",
     "playstate.session.transcoding-info-stopped",
     "playstate.stopped.above-maximum",
     "playstate.stopped.activity-log",
@@ -6027,24 +6063,26 @@
    "tag": "UserData",
    "group": "sessions-realtime",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": true,
-   "notes": "Star ratings are not implemented (likes are, through UserData).",
-   "priority": "low"
+   "scenarios": [
+    "playstate.push.rating"
+   ]
   },
   {
    "id": "POST /UserItems/{itemId}/Rating",
    "tag": "UserData",
    "group": "sessions-realtime",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": true,
-   "notes": "Star ratings are not implemented (likes are, through UserData).",
-   "priority": "low"
+   "scenarios": [
+    "playstate.push.rating"
+   ]
   },
   {
    "id": "GET /UserItems/{itemId}/UserData",
@@ -6141,9 +6179,11 @@
     "playstate.mark-unplayed.never-played",
     "playstate.mark-unplayed.resets-everything",
     "playstate.mark-unplayed.resets-position",
+    "playstate.push.library-root-parent",
     "playstate.push.mark-played-and-unplayed",
     "playstate.push.only-the-users-sockets",
     "playstate.push.playback-reports",
+    "playstate.push.rating",
     "playstate.push.resume-position",
     "playstate.user.admin-on-behalf-unmark",
     "playstate.user.admin-unknown-user",
@@ -6196,6 +6236,7 @@
     "playstate.mark-unplayed.keeps-favorite",
     "playstate.mark-unplayed.resets-everything",
     "playstate.percent.folder",
+    "playstate.push.library-root-parent",
     "playstate.push.mark-played-and-unplayed",
     "playstate.push.only-the-users-sockets",
     "playstate.push.resume-position",
@@ -6284,7 +6325,8 @@
    "web": false,
    "scenarios": [
     "extras.parts.stacked",
-    "extras.routes.errors"
+    "extras.routes.errors",
+    "images.frame.extras-parts"
    ]
   },
   {
@@ -8794,6 +8836,7 @@
  ],
  "registered_not_in_openapi": [
   "DELETE /Users/{userId}/FavoriteItems/{itemId}",
+  "DELETE /Users/{userId}/Items/{itemId}/Rating",
   "DELETE /Users/{userId}/PlayedItems/{itemId}",
   "DELETE /Videos/ActiveEncodings",
   "GET /Artists/InstantMix",
@@ -8803,6 +8846,7 @@
   "GET /MusicGenres",
   "GET /System/Configuration/branding",
   "GET /System/Configuration/encoding",
+  "GET /System/Configuration/network",
   "GET /Users/{userId}/Items",
   "GET /Users/{userId}/Items/{itemId}",
   "GET /Users/{userId}/Items/{itemId}/Intros",
@@ -8819,6 +8863,7 @@
   "POST /Users/{userId}",
   "POST /Users/{userId}/Configuration",
   "POST /Users/{userId}/FavoriteItems/{itemId}",
+  "POST /Users/{userId}/Items/{itemId}/Rating",
   "POST /Users/{userId}/Items/{itemId}/UserData",
   "POST /Users/{userId}/Password",
   "POST /Users/{userId}/PlayedItems/{itemId}"

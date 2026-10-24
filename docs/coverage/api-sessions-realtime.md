@@ -21,14 +21,14 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| 🟡 partial | `GET /Sessions` | DefaultAuthorization | yes | 16/16 | In-process registry fed by authentication and playback reports; admin only. |
+| 🟡 partial | `GET /Sessions` | DefaultAuthorization | yes | 16/18 | In-process registry fed by authentication and playback reports; admin only. |
 | 🗓️ planned | `POST /Sessions/Capabilities` | DefaultAuthorization |  |  | The Full variant is served; the plain one is the older form of the same report. (priority: low) |
-| ✅ supported | `POST /Sessions/Capabilities/Full` | DefaultAuthorization | yes | 4/4 |  |
+| ✅ supported | `POST /Sessions/Capabilities/Full` | DefaultAuthorization | yes | 4/6 |  |
 | ✅ supported | `POST /Sessions/Logout` | DefaultAuthorization | yes | 1/1 |  |
-| ✅ supported | `POST /Sessions/Playing` | DefaultAuthorization | yes | 45/45 |  |
+| ✅ supported | `POST /Sessions/Playing` | DefaultAuthorization | yes | 45/46 |  |
 | ✅ supported | `POST /Sessions/Playing/Ping` | DefaultAuthorization |  | 5/5 |  |
-| ✅ supported | `POST /Sessions/Playing/Progress` | DefaultAuthorization | yes | 20/20 |  |
-| ✅ supported | `POST /Sessions/Playing/Stopped` | DefaultAuthorization | yes | 28/28 |  |
+| ✅ supported | `POST /Sessions/Playing/Progress` | DefaultAuthorization | yes | 20/21 |  |
+| ✅ supported | `POST /Sessions/Playing/Stopped` | DefaultAuthorization | yes | 28/30 |  |
 | 🗓️ planned | `POST /Sessions/Viewing` | DefaultAuthorization |  |  | Remote control of other sessions is not implemented (the /socket transport exists). (priority: low) |
 | 🗓️ planned | `POST /Sessions/{sessionId}/Command` | DefaultAuthorization | yes |  | Remote control of other sessions is not implemented (the /socket transport exists). (priority: low) |
 | 🗓️ planned | `POST /Sessions/{sessionId}/Command/{command}` | DefaultAuthorization |  |  | Remote control of other sessions is not implemented (the /socket transport exists). (priority: low) |

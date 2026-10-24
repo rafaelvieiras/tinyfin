@@ -50,13 +50,13 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `GET /Items/{itemId}/Download` | Download |  | 7/7 |  |
 | 🗓️ planned | `GET /Items/{itemId}/File` | DefaultAuthorization |  |  | Raw file delivery is not implemented. (priority: low) |
 | ✅ supported | `GET /Items/{itemId}/Intros` | DefaultAuthorization | yes | 1/1 |  |
-| ✅ supported | `GET /Items/{itemId}/LocalTrailers` | DefaultAuthorization | yes | 7/7 |  |
+| ✅ supported | `GET /Items/{itemId}/LocalTrailers` | DefaultAuthorization | yes | 7/9 |  |
 | ✅ supported | `POST /Items/{itemId}/Refresh` | RequiresElevation | yes | 9/12 |  |
 | ✅ supported | `GET /Items/{itemId}/Similar` | DefaultAuthorization | yes | 5/5 |  |
-| ✅ supported | `GET /Items/{itemId}/SpecialFeatures` | DefaultAuthorization | yes | 5/5 |  |
+| ✅ supported | `GET /Items/{itemId}/SpecialFeatures` | DefaultAuthorization | yes | 5/7 |  |
 | ✅ supported | `GET /Items/{itemId}/ThemeMedia` | DefaultAuthorization | yes | 2/2 |  |
-| ✅ supported | `GET /Items/{itemId}/ThemeSongs` | DefaultAuthorization |  | 5/5 |  |
-| ✅ supported | `GET /Items/{itemId}/ThemeVideos` | DefaultAuthorization |  | 3/3 |  |
+| ✅ supported | `GET /Items/{itemId}/ThemeSongs` | DefaultAuthorization |  | 5/6 |  |
+| ✅ supported | `GET /Items/{itemId}/ThemeVideos` | DefaultAuthorization |  | 3/4 |  |
 | ✅ supported *(no scenario)* | `GET /Libraries/AvailableOptions` | FirstTimeSetupOrDefault | yes |  |  |
 | 🗓️ planned | `POST /Library/Media/Updated` | DefaultAuthorization |  |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | ✅ supported | `GET /Library/MediaFolders` | RequiresElevation |  | 1/2 |  |

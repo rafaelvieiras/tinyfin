@@ -75,7 +75,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
 | ⛔ not-planned | `POST /Videos/MergeVersions` | RequiresElevation |  |  | Version merging/splitting is not offered; versions are grouped by file naming at scan time. (priority: low) |
-| ✅ supported | `GET /Videos/{itemId}/AdditionalParts` | DefaultAuthorization |  | 2/2 |  |
+| ✅ supported | `GET /Videos/{itemId}/AdditionalParts` | DefaultAuthorization |  | 2/3 |  |
 | ⛔ not-planned | `DELETE /Videos/{itemId}/AlternateSources` | RequiresElevation |  |  | Version merging/splitting is not offered; versions are grouped by file naming at scan time. (priority: low) |
 | ✅ supported | `GET /Videos/{itemId}/stream` | Anonymous |  | 7/7 | Served by `GET /Videos/{itemId}/{file}`. Served by the wildcard file route. |
 | ✅ supported | `HEAD /Videos/{itemId}/stream` | Anonymous |  | 7/7 | Served by `GET /Videos/{itemId}/{file}`. Served by the wildcard file route. |
