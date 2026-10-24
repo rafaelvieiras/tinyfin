@@ -45,8 +45,11 @@ Admin credentials default to the conformance ones; override with `UI_ADMIN_USER`
 
 If `UI_CREDENTIALS_FILE` points to an env file it is sourced; a non-empty `TINYFIN_TMDB_API_KEY` is passed to Tinyfin only. Nothing is
 printed. The reference stays offline (`REF_DOCKER_ARGS` default `--dns 127.0.0.1`; set it
-explicitly to change that). Specs are meant to pass with and without the key; so far only the
-without-key configuration has been exercised.
+explicitly to change that). The without-key configuration is the reliable one. With a key the
+metadata comes from the live TMDB service and can change over time: for example `Test Show` S01E01
+was re-titled "Episode 1", so the `search` specs (which expect three episodes matching "test")
+fail while everything else still passes. Burn-in specs also need the jellyfin-ffmpeg wrappers
+(`TINYFIN_FFMPEG_PATH` / `TINYFIN_FFPROBE_PATH`) because a stock host ffmpeg has no `subtitles` filter.
 
 ## Layout
 
