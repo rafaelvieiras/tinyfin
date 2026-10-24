@@ -469,6 +469,13 @@ func (s *Server) handleSessionsList(w http.ResponseWriter, r *http.Request) {
 		}
 		list = kept
 	}
+	// A custom device name (admin.devices.R7) replaces the reported one.
+	for i := range list {
+		if _, name, found, err := s.store.GetDeviceOptions(r.Context(), storage.DeviceID(list[i].DeviceID)); err == nil && found && name != nil && *name != "" {
+			list[i].DeviceName = *name
+			list[i].HasCustomDeviceName = true
+		}
+	}
 	writeJSON(w, http.StatusOK, list)
 }
 
@@ -482,4 +489,13 @@ func remoteEndPoint(r *http.Request) string {
 		return ip.String()
 	}
 	return r.RemoteAddr
+}
+
+// dropDevice forgets the session and the transcode bookkeeping of a device
+// that was deleted (DELETE /Devices).
+func (r *sessionRegistry) dropDevice(deviceID string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.byDevice, deviceID)
+	delete(r.transcodes, deviceID)
 }

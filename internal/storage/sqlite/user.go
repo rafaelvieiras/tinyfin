@@ -158,6 +158,9 @@ func (s *Store) DeleteUser(ctx context.Context, id storage.UserID) error {
 		if _, err := ex.ExecContext(ctx, `DELETE FROM playlist_shares WHERE user_id = ?`, string(id)); err != nil {
 			return fmt.Errorf("sqlite: deleting playlist shares of user %q: %w", id, err)
 		}
+		if _, err := ex.ExecContext(ctx, `DELETE FROM devices WHERE last_user_id = ?`, string(id)); err != nil {
+			return fmt.Errorf("sqlite: deleting devices of user %q: %w", id, err)
+		}
 		if _, err := ex.ExecContext(ctx, `DELETE FROM users WHERE id = ?`, string(id)); err != nil {
 			return fmt.Errorf("sqlite: deleting user %q: %w", id, err)
 		}

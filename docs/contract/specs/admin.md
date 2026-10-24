@@ -48,9 +48,9 @@ The administration pages call these on load; none carries state.
 
 ## <a id="devices"></a>Devices
 
-- **admin.devices.R1** `GET /Devices` (administrator) is `{Items, TotalRecordCount, StartIndex}` with one entry per registered device: `{Name, Id, LastUserName, AppName, AppVersion, LastUserId, DateLastActivity, Capabilities}`, most recently active first. `Id` is the `DeviceId` the client sent, `Name` its `Device`, `AppName` its `Client`; a sign-in registers or refreshes the device.
+- **admin.devices.R1** `GET /Devices` (administrator) is `{Items, TotalRecordCount, StartIndex}` with one entry per registered device and user (`devices.R1`): `{Name, Id, LastUserName, AppName, AppVersion, LastUserId, DateLastActivity, Capabilities}`, most recently active first. `Id` is the `DeviceId` the client sent, `Name` its `Device`, `AppName` its `Client`; a sign-in registers or refreshes the device.
 - **admin.devices.R2** `Capabilities` is the same block for every device: `{PlayableMediaTypes:[], SupportedCommands:[], SupportsMediaControl:false, SupportsPersistentIdentifier:true}`, whatever the client registered for its session.
-- **admin.devices.R3** `userId` keeps the devices that user used; one that is not a GUID is a `400` validation problem. `GET /Devices/Info?id=` is one entry (`404` for an unknown id). Both are administrator-only (`403`, anonymous `401`).
+- **admin.devices.R3** `userId` is validated (one that is not a GUID is a `400` validation problem) but does not narrow the list (`devices.R2`). `GET /Devices/Info?id=` is one entry (`404` for an unknown id). Both are administrator-only (`403`, anonymous `401`).
 
 ## <a id="config"></a>Configuration sections
 
@@ -77,7 +77,7 @@ The administration pages call these on load; none carries state.
 * **Plugins (divergent by design).** No plugin system: `GET /Plugins`, `/Packages` and `/Repositories` are empty lists (the reference lists its bundled providers and one repository). Installing, enabling, configuring and uninstalling plugins (`/Packages/Installed/*`, `/Plugins/{id}/*`, `POST /Repositories`) are not implemented.
 * **Logs.** `cmd/tinyfin` tees its log output into `<data dir>/log/log_YYYYMMDD.log`; the format is the Go standard logger's, not the reference's. There is no log retention (the reference has a cleanup task).
 * **Configuration sections.** Tinyfin stores and serves back every member but acts only on `EnableRemoteAccess` and `LocalNetworkSubnets` (network), `EnableUPnP` stays `false`, and the encoding section is not applied to the transcoder. A `BaseUrl`, port, HTTPS or address-family change does not move the listener (the reference re-roots its routes under a new `BaseUrl`); an unknown `HardwareAccelerationType` is stored (the reference answers `500`); `EncoderAppPathDisplay` is always the server's configured encoder path (the reference drops it after a save). The network `GET` is open to any signed-in user like the reference's; `GET /System/Configuration` stays administrator-only.
-* **Devices.** One entry per `DeviceId` (the most recent user); the reference keeps one per device and user. `userId` selects by the last user; the reference selects by any token of that user. `Devices/Options`, device renaming and `DELETE /Devices` are not implemented.
+* **Devices.** See [`devices.md`](devices.md): per-user entries, options, renaming and deletion match the reference. Open: the session list (`GET /Sessions`) tracks one session per `DeviceId`, so the second user of a device is not listed there.
 * **Media folders.** `Path`, `Etag`, `ImageTags` and the rest of the folder item's detail are not reported; the entries are the same as `GET /UserViews` gives.
 * **Provider ids.** The authentication and password-reset provider `Id` values are Tinyfin's own (opaque to clients); scenarios assert only that they exist and round-trip.
 

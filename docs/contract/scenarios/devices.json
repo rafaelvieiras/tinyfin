@@ -1,0 +1,1299 @@
+[
+ {
+  "id": "devices.per-user.two-accounts",
+  "endpoint": "GET /Devices",
+  "spec": "devices.md",
+  "scope": "modern",
+  "tags": [
+   "admin",
+   "devices"
+  ],
+  "covers": [
+   "devices.R1",
+   "devices.R2",
+   "devices.R3"
+  ],
+  "requires": [],
+  "steps": [
+   {
+    "name": "create tmp-dev-a1",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-dev-a1",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u1": "$.Id"
+    }
+   },
+   {
+    "name": "create tmp-dev-a2",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-dev-a2",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u2": "$.Id"
+    }
+   },
+   {
+    "name": "login tmp-dev-a1 on sc-devs-peruser",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-dev-a1",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"ConfDev\", Device=\"Conf Device\", DeviceId=\"sc-devs-peruser{{run.suffix}}\", Version=\"1.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "t1": "$.AccessToken"
+    }
+   },
+   {
+    "name": "login tmp-dev-a2 on sc-devs-peruser",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-dev-a2",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"ConfDev\", Device=\"Conf Device\", DeviceId=\"sc-devs-peruser{{run.suffix}}\", Version=\"1.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "t2": "$.AccessToken"
+    }
+   },
+   {
+    "name": "both tokens work",
+    "as": "token:{{capture.t1}}",
+    "request": {
+     "method": "GET",
+     "path": "/Users/Me"
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "second token works",
+    "as": "token:{{capture.t2}}",
+    "request": {
+     "method": "GET",
+     "path": "/Users/Me"
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "full list has both",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "contains",
+       "value": "sc-devs-peruser{{run.suffix}}"
+      },
+      {
+       "path": "$.Items[*].LastUserId",
+       "op": "contains",
+       "value": "{{capture.u1}}"
+      },
+      {
+       "path": "$.Items[*].LastUserId",
+       "op": "contains",
+       "value": "{{capture.u2}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "most recent first",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].LastUserId",
+       "op": "eq",
+       "value": "{{capture.u2}}"
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "sc-devs-peruser{{run.suffix}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "info is the most recent entry",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Info?id=sc-devs-peruser{{run.suffix}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.LastUserName",
+       "op": "eq",
+       "value": "tmp-dev-a2"
+      }
+     ]
+    }
+   },
+   {
+    "name": "login tmp-dev-a1 on sc-devs-peruser",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-dev-a1",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"ConfDev\", Device=\"Conf Device\", DeviceId=\"sc-devs-peruser{{run.suffix}}\", Version=\"1.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "t3": "$.AccessToken"
+    }
+   },
+   {
+    "name": "old token of a re-login is revoked",
+    "as": "token:{{capture.t1}}",
+    "request": {
+     "method": "GET",
+     "path": "/Users/Me"
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "other account's token untouched",
+    "as": "token:{{capture.t2}}",
+    "request": {
+     "method": "GET",
+     "path": "/Users/Me"
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "re-login refreshes order",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[0].LastUserId",
+       "op": "eq",
+       "value": "{{capture.u1}}"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete device",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Devices",
+     "query": {
+      "id": "sc-devs-peruser{{run.suffix}}"
+     }
+    },
+    "expect": {}
+   },
+   {
+    "name": "remove tmp-dev-a1",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u1}}"
+    },
+    "expect": {}
+   },
+   {
+    "name": "remove tmp-dev-a2",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u2}}"
+    },
+    "expect": {}
+   }
+  ]
+ },
+ {
+  "id": "devices.options.crud",
+  "endpoint": "POST /Devices/Options",
+  "spec": "devices.md",
+  "scope": "modern",
+  "tags": [
+   "admin",
+   "devices"
+  ],
+  "covers": [
+   "devices.R4",
+   "devices.R6",
+   "devices.R7"
+  ],
+  "requires": [],
+  "steps": [
+   {
+    "name": "register device",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "{{user.alice.name}}",
+      "Pw": "{{user.alice.password}}"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"ConfOpts\", Device=\"Opts Device\", DeviceId=\"sc-devs-opts{{run.suffix}}\", Version=\"1.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "no options yet",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Options?id=sc-devs-opts{{run.suffix}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "set a name",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Devices/Options?id=sc-devs-opts{{run.suffix}}",
+     "body": {
+      "CustomName": "Living Room"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "read it back",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Options?id=sc-devs-opts{{run.suffix}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.DeviceId",
+       "op": "eq",
+       "value": "sc-devs-opts{{run.suffix}}"
+      },
+      {
+       "path": "$.CustomName",
+       "op": "eq",
+       "value": "Living Room"
+      },
+      {
+       "path": "$.Id",
+       "op": "type",
+       "value": "number"
+      }
+     ]
+    }
+   },
+   {
+    "name": "device entry",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Info?id=sc-devs-opts{{run.suffix}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Opts Device"
+      },
+      {
+       "path": "$.CustomName",
+       "op": "eq",
+       "value": "Living Room"
+      }
+     ]
+    }
+   },
+   {
+    "name": "list entry",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[?Id=sc-devs-opts{{run.suffix}}].CustomName",
+       "op": "eq",
+       "value": "Living Room"
+      },
+      {
+       "path": "$.Items[?Id=sc-devs-opts{{run.suffix}}].Name",
+       "op": "eq",
+       "value": "Opts Device"
+      }
+     ]
+    }
+   },
+   {
+    "name": "replace with an empty name",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Devices/Options?id=sc-devs-opts{{run.suffix}}",
+     "body": {
+      "CustomName": ""
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "empty name stored",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Options?id=sc-devs-opts{{run.suffix}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.CustomName",
+       "op": "eq",
+       "value": ""
+      }
+     ]
+    }
+   },
+   {
+    "name": "body without name clears it",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Devices/Options?id=sc-devs-opts{{run.suffix}}",
+     "body": {}
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "cleared",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Options?id=sc-devs-opts{{run.suffix}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.DeviceId",
+       "op": "eq",
+       "value": "sc-devs-opts{{run.suffix}}"
+      },
+      {
+       "path": "$.CustomName",
+       "op": "absent"
+      }
+     ]
+    }
+   },
+   {
+    "name": "unknown device id is accepted",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Devices/Options?id=sc-devs-opts-none{{run.suffix}}",
+     "body": {
+      "CustomName": "Ghost"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "and readable",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Options?id=sc-devs-opts-none{{run.suffix}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.CustomName",
+       "op": "eq",
+       "value": "Ghost"
+      }
+     ]
+    }
+   },
+   {
+    "name": "but not a device",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Info?id=sc-devs-opts-none{{run.suffix}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "missing id",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Options"
+    },
+    "expect": {
+     "status": 400,
+     "json": [
+      {
+       "path": "$.errors.id",
+       "op": "len",
+       "value": 1
+      }
+     ]
+    }
+   },
+   {
+    "name": "missing id on write",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Devices/Options",
+     "body": {
+      "CustomName": "x"
+     }
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "non-admin read",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Options?id=sc-devs-opts{{run.suffix}}"
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "non-admin write",
+    "as": "alice",
+    "request": {
+     "method": "POST",
+     "path": "/Devices/Options?id=sc-devs-opts{{run.suffix}}",
+     "body": {
+      "CustomName": "x"
+     }
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "anonymous read",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Options?id=sc-devs-opts{{run.suffix}}",
+     "noAuth": true
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "anonymous write",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Devices/Options?id=sc-devs-opts{{run.suffix}}",
+     "body": {
+      "CustomName": "x"
+     },
+     "noAuth": true
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete device",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Devices",
+     "query": {
+      "id": "sc-devs-opts{{run.suffix}}"
+     }
+    },
+    "expect": {}
+   }
+  ]
+ },
+ {
+  "id": "devices.delete.revokes-tokens",
+  "endpoint": "DELETE /Devices",
+  "spec": "devices.md",
+  "scope": "modern",
+  "tags": [
+   "admin",
+   "devices"
+  ],
+  "covers": [
+   "devices.R4",
+   "devices.R8",
+   "devices.R9"
+  ],
+  "requires": [],
+  "steps": [
+   {
+    "name": "create tmp-dev-a1",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-dev-a1",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u1": "$.Id"
+    }
+   },
+   {
+    "name": "create tmp-dev-a2",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-dev-a2",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u2": "$.Id"
+    }
+   },
+   {
+    "name": "login tmp-dev-a1 on sc-devs-del",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-dev-a1",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"ConfDev\", Device=\"Conf Device\", DeviceId=\"sc-devs-del{{run.suffix}}\", Version=\"1.0\""
+     },
+     "noAuth": true
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "t1": "$.AccessToken"
+    }
+   },
+   {
+    "name": "login tmp-dev-a2 on sc-devs-del",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-dev-a2",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"ConfDev\", Device=\"Conf Device\", DeviceId=\"sc-devs-del{{run.suffix}}\", Version=\"1.0\""
+     },
+     "noAuth": true
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "t2": "$.AccessToken"
+    }
+   },
+   {
+    "name": "login tmp-dev-a2 on sc-devs-del-keep",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-dev-a2",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"ConfDev\", Device=\"Conf Device\", DeviceId=\"sc-devs-del-keep{{run.suffix}}\", Version=\"1.0\""
+     },
+     "noAuth": true
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "t3": "$.AccessToken"
+    }
+   },
+   {
+    "name": "name it",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Devices/Options?id=sc-devs-del{{run.suffix}}",
+     "body": {
+      "CustomName": "Doomed"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "delete the device",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Devices?id=sc-devs-del{{run.suffix}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "first token revoked",
+    "as": "token:{{capture.t1}}",
+    "request": {
+     "method": "GET",
+     "path": "/Users/Me"
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "second token revoked",
+    "as": "token:{{capture.t2}}",
+    "request": {
+     "method": "GET",
+     "path": "/Users/Me"
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "other device's token kept",
+    "as": "token:{{capture.t3}}",
+    "request": {
+     "method": "GET",
+     "path": "/Users/Me"
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "no longer listed",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Info?id=sc-devs-del{{run.suffix}}"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "list has no entry",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "sc-devs-del{{run.suffix}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "other device still listed",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Info?id=sc-devs-del-keep{{run.suffix}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.LastUserName",
+       "op": "eq",
+       "value": "tmp-dev-a2"
+      }
+     ]
+    }
+   },
+   {
+    "name": "options outlive the device",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Options?id=sc-devs-del{{run.suffix}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.CustomName",
+       "op": "eq",
+       "value": "Doomed"
+      }
+     ]
+    }
+   },
+   {
+    "name": "unknown id",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Devices?id=sc-devs-del-nope{{run.suffix}}"
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   },
+   {
+    "name": "no id is a no-op",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Devices"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "non-admin",
+    "as": "alice",
+    "request": {
+     "method": "DELETE",
+     "path": "/Devices?id=sc-devs-del-keep{{run.suffix}}"
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "anonymous",
+    "as": "anonymous",
+    "request": {
+     "method": "DELETE",
+     "path": "/Devices?id=sc-devs-del-keep{{run.suffix}}",
+     "noAuth": true
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "other device untouched by refusals",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Info?id=sc-devs-del-keep{{run.suffix}}"
+    },
+    "expect": {
+     "status": 200
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete device",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Devices",
+     "query": {
+      "id": "sc-devs-del-keep{{run.suffix}}"
+     }
+    },
+    "expect": {}
+   },
+   {
+    "name": "remove tmp-dev-a1",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u1}}"
+    },
+    "expect": {}
+   },
+   {
+    "name": "remove tmp-dev-a2",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u2}}"
+    },
+    "expect": {}
+   }
+  ]
+ },
+ {
+  "id": "devices.refresh.request-headers",
+  "endpoint": "GET /Devices/Info",
+  "spec": "devices.md",
+  "scope": "modern",
+  "tags": [
+   "admin",
+   "devices"
+  ],
+  "covers": [
+   "devices.R5"
+  ],
+  "requires": [],
+  "steps": [
+   {
+    "name": "create tmp-dev-a1",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-dev-a1",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u1": "$.Id"
+    }
+   },
+   {
+    "name": "login tmp-dev-a1 on sc-devs-refresh",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-dev-a1",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"RefApp\", Device=\"Ref Device\", DeviceId=\"sc-devs-refresh{{run.suffix}}\", Version=\"1.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "t1": "$.AccessToken"
+    }
+   },
+   {
+    "name": "registered",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Info?id=sc-devs-refresh{{run.suffix}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Ref Device"
+      },
+      {
+       "path": "$.AppName",
+       "op": "eq",
+       "value": "RefApp"
+      },
+      {
+       "path": "$.AppVersion",
+       "op": "eq",
+       "value": "1.0"
+      }
+     ]
+    }
+   },
+   {
+    "name": "token only changes nothing",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Users/Me",
+     "noAuth": true,
+     "headers": {
+      "Authorization": "MediaBrowser Token=\"{{capture.t1}}\""
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "unchanged",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Info?id=sc-devs-refresh{{run.suffix}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Ref Device"
+      },
+      {
+       "path": "$.AppVersion",
+       "op": "eq",
+       "value": "1.0"
+      }
+     ]
+    }
+   },
+   {
+    "name": "request with new name and version",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Users/Me",
+     "noAuth": true,
+     "headers": {
+      "Authorization": "MediaBrowser Token=\"{{capture.t1}}\", Client=\"Other\", Device=\"Renamed Device\", DeviceId=\"sc-devs-refresh{{run.suffix}}\", Version=\"2.5\""
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "name and version follow, app name stays",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices/Info?id=sc-devs-refresh{{run.suffix}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Name",
+       "op": "eq",
+       "value": "Renamed Device"
+      },
+      {
+       "path": "$.AppVersion",
+       "op": "eq",
+       "value": "2.5"
+      },
+      {
+       "path": "$.AppName",
+       "op": "eq",
+       "value": "RefApp"
+      },
+      {
+       "path": "$.LastUserName",
+       "op": "eq",
+       "value": "tmp-dev-a1"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete device",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Devices",
+     "query": {
+      "id": "sc-devs-refresh{{run.suffix}}"
+     }
+    },
+    "expect": {}
+   },
+   {
+    "name": "remove tmp-dev-a1",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u1}}"
+    },
+    "expect": {}
+   }
+  ]
+ },
+ {
+  "id": "devices.user-delete.removes-entries",
+  "endpoint": "DELETE /Users/{userId}",
+  "spec": "devices.md",
+  "scope": "modern",
+  "tags": [
+   "admin",
+   "devices"
+  ],
+  "covers": [
+   "devices.R10"
+  ],
+  "requires": [],
+  "steps": [
+   {
+    "name": "create tmp-dev-a1",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-dev-a1",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u1": "$.Id"
+    }
+   },
+   {
+    "name": "create tmp-dev-a2",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-dev-a2",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u2": "$.Id"
+    }
+   },
+   {
+    "name": "login tmp-dev-a1 on sc-devs-userdel",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-dev-a1",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"ConfDev\", Device=\"Conf Device\", DeviceId=\"sc-devs-userdel{{run.suffix}}\", Version=\"1.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "t1": "$.AccessToken"
+    }
+   },
+   {
+    "name": "login tmp-dev-a2 on sc-devs-userdel",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-dev-a2",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"ConfDev\", Device=\"Conf Device\", DeviceId=\"sc-devs-userdel{{run.suffix}}\", Version=\"1.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "t2": "$.AccessToken"
+    }
+   },
+   {
+    "name": "delete the first user",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u1}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "its entry is gone",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].LastUserId",
+       "op": "notcontains",
+       "value": "{{capture.u1}}"
+      },
+      {
+       "path": "$.Items[*].LastUserId",
+       "op": "contains",
+       "value": "{{capture.u2}}"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete device",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Devices",
+     "query": {
+      "id": "sc-devs-userdel{{run.suffix}}"
+     }
+    },
+    "expect": {}
+   },
+   {
+    "name": "remove tmp-dev-a2",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u2}}"
+    },
+    "expect": {}
+   }
+  ]
+ }
+]
