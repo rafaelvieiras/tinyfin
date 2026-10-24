@@ -1,0 +1,10 @@
+{
+  "note": "Scenario IDs to add as pass when baseline.json is next refreshed (validated on the 12.2 reference and on Tinyfin).",
+  "scenarios": {
+    "devices.delete.revokes-tokens": "pass",
+    "devices.options.crud": "pass",
+    "devices.per-user.two-accounts": "pass",
+    "devices.refresh.request-headers": "pass",
+    "devices.user-delete.removes-entries": "pass"
+  }
+}

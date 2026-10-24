@@ -8,13 +8,13 @@
    "supported": 64
   },
   "operations": 364,
-  "registered": 198,
+  "registered": 201,
   "routes_by_status": {
    "divergent-by-design": 16,
    "not-planned": 91,
    "partial": 12,
-   "planned": 75,
-   "supported": 170
+   "planned": 72,
+   "supported": 173
   },
   "verified": 162
  },
@@ -339,6 +339,11 @@
     "admin.devices.list",
     "collections.visibility.partial-members",
     "collections.visibility.restricted-user",
+    "devices.delete.revokes-tokens",
+    "devices.options.crud",
+    "devices.per-user.two-accounts",
+    "devices.refresh.request-headers",
+    "devices.user-delete.removes-entries",
     "playstate.auth.token-only-header",
     "playstate.stopped.hidden-item-writes-user-data",
     "policy.delete.admin-without-flag",
@@ -774,12 +779,13 @@
    "tag": "Device",
    "group": "users-auth",
    "policy": "RequiresElevation",
-   "status": "planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": true,
-   "notes": "Devices are stored (internal/storage/device.go) and appear in sessions, but there are no device-management routes, so the dashboard's Devices page 404s.",
-   "priority": "medium"
+   "scenarios": [
+    "devices.delete.revokes-tokens"
+   ]
   },
   {
    "id": "GET /Devices",
@@ -791,7 +797,11 @@
    "verified": true,
    "web": true,
    "scenarios": [
-    "admin.devices.list"
+    "admin.devices.list",
+    "devices.delete.revokes-tokens",
+    "devices.options.crud",
+    "devices.per-user.two-accounts",
+    "devices.user-delete.removes-entries"
    ]
   },
   {
@@ -804,7 +814,11 @@
    "verified": true,
    "web": true,
    "scenarios": [
-    "admin.devices.list"
+    "admin.devices.list",
+    "devices.delete.revokes-tokens",
+    "devices.options.crud",
+    "devices.per-user.two-accounts",
+    "devices.refresh.request-headers"
    ]
   },
   {
@@ -812,24 +826,28 @@
    "tag": "Device",
    "group": "users-auth",
    "policy": "RequiresElevation",
-   "status": "planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": true,
-   "notes": "Devices are stored (internal/storage/device.go) and appear in sessions, but there are no device-management routes, so the dashboard's Devices page 404s.",
-   "priority": "medium"
+   "scenarios": [
+    "devices.delete.revokes-tokens",
+    "devices.options.crud"
+   ]
   },
   {
    "id": "POST /Devices/Options",
    "tag": "Device",
    "group": "users-auth",
    "policy": "RequiresElevation",
-   "status": "planned",
-   "registered": false,
+   "status": "supported",
+   "registered": true,
    "verified": false,
    "web": true,
-   "notes": "Devices are stored (internal/storage/device.go) and appear in sessions, but there are no device-management routes, so the dashboard's Devices page 404s.",
-   "priority": "medium"
+   "scenarios": [
+    "devices.delete.revokes-tokens",
+    "devices.options.crud"
+   ]
   },
   {
    "id": "GET /DisplayPreferences/{displayPreferencesId}",
@@ -5444,6 +5462,9 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "devices.delete.revokes-tokens",
+    "devices.per-user.two-accounts",
+    "devices.refresh.request-headers",
     "startup.wizard.user-and-complete",
     "users.auth.device-restriction-revokes-existing",
     "users.auth.different-devices-coexist",
@@ -5494,6 +5515,10 @@
    "scenarios": [
     "collections.visibility.partial-members",
     "collections.visibility.restricted-user",
+    "devices.delete.revokes-tokens",
+    "devices.per-user.two-accounts",
+    "devices.refresh.request-headers",
+    "devices.user-delete.removes-entries",
     "playstate.stopped.hidden-item-writes-user-data",
     "policy.delete.admin-without-flag",
     "policy.delete.folders-not-matching",
@@ -5742,6 +5767,7 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "devices.user-delete.removes-entries",
     "users.delete.activity-entries",
     "users.delete.admin-can-delete-other-admin",
     "users.delete.admin-deletes-self-with-other-admin",

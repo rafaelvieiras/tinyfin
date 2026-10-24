@@ -206,12 +206,27 @@ type UserStore interface {
 // every authenticated request, 04) — durable device records, not the live
 // session tied to one.
 type DeviceStore interface {
+	// GetDevice returns the most recently active entry of the DeviceId
+	// (there is one per user that signed in on it).
 	GetDevice(ctx context.Context, id DeviceID) (Device, error)
 	// QueryDevices lists the devices whose last user is userID, most recently
 	// active first; an empty userID lists every device.
 	QueryDevices(ctx context.Context, userID UserID) ([]Device, error)
+	// UpsertDevice registers or refreshes the entry of (ID, LastUserID).
 	UpsertDevice(ctx context.Context, device Device) error
+	// TouchDeviceClient updates the name and version of a user's entry
+	// (an empty argument leaves that field alone), without touching the
+	// activity date.
+	TouchDeviceClient(ctx context.Context, id DeviceID, userID UserID, name, version string) error
+	// DeleteDevice removes every entry of the DeviceId and revokes every
+	// token issued to it, whatever the user; the options are kept.
 	DeleteDevice(ctx context.Context, id DeviceID) error
+	// GetDeviceOptions returns the custom name (nil when unset) and whether
+	// an options record exists for the DeviceId.
+	GetDeviceOptions(ctx context.Context, id DeviceID) (optionsID int64, customName *string, found bool, err error)
+	// SetDeviceOptions creates or replaces the options record of the
+	// DeviceId; the id need not belong to a registered device.
+	SetDeviceOptions(ctx context.Context, id DeviceID, customName *string) error
 }
 
 // PlaystateStore covers durable resume position and watched status —

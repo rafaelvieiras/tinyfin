@@ -32,6 +32,7 @@ var routePaths = []string{
 	"/Branding/Css.css",
 	"/Devices",
 	"/Devices/Info",
+	"/Devices/Options",
 	"/Library/MediaFolders",
 	"/Auth/Providers",
 	"/Auth/PasswordResetProviders",

@@ -19,21 +19,21 @@ How to read and edit this: [`docs/coverage/README.md`](coverage/README.md). Mach
 | Measure | Value |
 |---|---|
 | Reference operations (OpenAPI 12.2.0) | 364 |
-| Registered by Tinyfin | **198** (54%) |
+| Registered by Tinyfin | **201** (55%) |
 | Registered **and** a passing contract scenario | **162** (45%) |
-| Called by the official web client (docs/11) and registered | 129 of 164 (79%) |
-| Routes Tinyfin serves that the OpenAPI document lacks | 29 (legacy aliases the web client needs, `/socket`, HLS) |
+| Called by the official web client (docs/11) and registered | 132 of 164 (80%) |
+| Routes Tinyfin serves that the OpenAPI document lacks | 28 (legacy aliases the web client needs, `/socket`, HLS) |
 | Non-route features tracked | 112 (✅ 64 · 🟡 19 · 🗓️ 13 · ⛔ 16) |
 
 ### Routes by status
 
-✅✅✅✅✅✅✅✅✅🟡🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔↔️ ✅ 170 · 🟡 12 · 🗓️ 75 · ⛔ 91 · ↔️ 16
+✅✅✅✅✅✅✅✅✅🟡🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔↔️ ✅ 173 · 🟡 12 · 🗓️ 72 · ⛔ 91 · ↔️ 16
 
 ```mermaid
 pie showData title Reference operations by status
-    "supported" : 170
+    "supported" : 173
     "partial" : 12
-    "planned" : 75
+    "planned" : 72
     "not-planned" : 91
     "divergent-by-design" : 16
 ```
@@ -64,7 +64,7 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | [Playback, streaming and subtitles](coverage/api-playback.md) | 38 | 24 (63%) | 19 (50%) | ✅✅✅✅✅✅✅✅✅✅🟡🟡⛔⛔⛔⛔⛔⛔⛔↔️ | ✅ 19 · 🟡 3 · ⛔ 14 · ↔️ 2 |
 | [Sessions, play state and realtime](coverage/api-sessions-realtime.md) | 50 | 16 (32%) | 14 (28%) | ✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 15 · 🟡 1 · 🗓️ 13 · ⛔ 21 |
 | [System, branding, localization and plugins](coverage/api-system.md) | 47 | 30 (64%) | 24 (51%) | ✅✅✅✅✅✅✅✅✅🟡🟡🟡🗓️🗓️⛔⛔⛔⛔⛔↔️ | ✅ 21 · 🟡 6 · 🗓️ 4 · ⛔ 13 · ↔️ 3 |
-| [Users, authentication and first-run setup](coverage/api-users-auth.md) | 35 | 32 (91%) | 25 (71%) | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️↔️↔️↔️↔️ | ✅ 25 · 🗓️ 3 · ↔️ 7 |
+| [Users, authentication and first-run setup](coverage/api-users-auth.md) | 35 | 35 (100%) | 25 (71%) | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅↔️↔️↔️↔️ | ✅ 28 · ↔️ 7 |
 
 ### By OpenAPI tag (controller)
 
@@ -77,7 +77,7 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | Branding | 3 | 3 | 2 | ✅ 3 |
 | Channel | 5 | 1 | 1 | ✅ 1 · ⛔ 4 |
 | Collection | 3 | 3 | 3 | ✅ 2 · ↔️ 1 |
-| Device | 5 | 2 | 2 | ✅ 2 · 🗓️ 3 |
+| Device | 5 | 5 | 2 | ✅ 5 |
 | DisplayPreference | 2 | 2 | 0 | ✅ 2 |
 | Environment | 5 | 5 | 0 | ✅ 5 |
 | Filter | 2 | 2 | 2 | ✅ 1 · 🟡 1 |
@@ -139,11 +139,12 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 
 | Spec | Rules | Rules with a scenario | Scenarios | Passing |
 |---|---|---|---|---|
-| [admin](contract/specs/admin.md) | 38 | 37 | 11 | 11 |
+| [admin](contract/specs/admin.md) | 34 | 33 | 11 | 11 |
 | [bitmap](contract/specs/bitmap.md) | 42 | 20 | 11 | 11 |
 | [browse](contract/specs/browse.md) | 29 | 29 | 15 | 15 |
 | [chapters](contract/specs/chapters.md) | 26 | 26 | 5 | 5 |
 | [collections](contract/specs/collections.md) | 51 | 51 | 30 | 30 |
+| [devices](contract/specs/devices.md) | 10 | 10 | 5 | 0 |
 | [extras](contract/specs/extras.md) | 21 | 21 | 15 | 15 |
 | [images](contract/specs/images.md) | 17 | 16 | 13 | 13 |
 | [items](contract/specs/items.md) | 171 | 171 | 156 | 156 |
@@ -162,7 +163,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [trickplay](contract/specs/trickplay.md) | 11 | 11 | 10 | 10 |
 | [users](contract/specs/users.md) | 189 | 189 | 195 | 195 |
 | [wire](contract/specs/wire.md) | 15 | 14 | 14 | 14 |
-| **total** | 1083 | 1052 | 740 | 737 |
+| **total** | 1089 | 1058 | 745 | 737 |
 
 ## Biggest gaps (planned or not planned, web-client facing)
 
@@ -170,9 +171,6 @@ Operations the official web client mentions (docs/11) that Tinyfin does not regi
 
 | Route | Status | Group | Notes |
 |---|---|---|---|
-| `DELETE /Devices` | 🗓️ planned | Users, authentication and first-run setup | Devices are stored (internal/storage/device.go) and appear in sessions, but there are no device-management routes, so the dashboard's Devices page 404s. |
-| `GET /Devices/Options` | 🗓️ planned | Users, authentication and first-run setup | Devices are stored (internal/storage/device.go) and appear in sessions, but there are no device-management routes, so the dashboard's Devices page 404s. |
-| `POST /Devices/Options` | 🗓️ planned | Users, authentication and first-run setup | Devices are stored (internal/storage/device.go) and appear in sessions, but there are no device-management routes, so the dashboard's Devices page 404s. |
 | `DELETE /Branding/Splashscreen` | 🗓️ planned | Images | Not implemented. |
 | `GET /Branding/Splashscreen` | 🗓️ planned | Images | Not implemented. |
 | `POST /Branding/Splashscreen` | 🗓️ planned | Images | Not implemented. |

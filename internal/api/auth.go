@@ -59,6 +59,11 @@ func (s *Server) withAuthContext(next http.Handler) http.Handler {
 					ac.Authenticated = true
 					ac.AuthToken = at
 					ac.User = u
+					// Name and version sent with a request refresh the
+					// user's device entry (admin.devices.R5).
+					if ac.Device != "" || ac.Version != "" {
+						_ = s.store.TouchDeviceClient(r.Context(), at.DeviceID, u.ID, ac.Device, ac.Version)
+					}
 					s.inheritDeviceFields(r.Context(), ac)
 				}
 			} else if k, err := s.store.LookupAPIKey(r.Context(), ac.Token); err == nil {

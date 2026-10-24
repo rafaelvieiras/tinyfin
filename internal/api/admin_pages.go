@@ -3,6 +3,7 @@ package api
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"net/http"
 	"sort"
 	"strings"
@@ -28,6 +29,7 @@ type deviceCapabilitiesDto struct {
 
 type deviceInfoDto struct {
 	Name             string                `json:"Name"`
+	CustomName       *string               `json:"CustomName,omitempty"`
 	Id               string                `json:"Id"`
 	LastUserName     string                `json:"LastUserName,omitempty"`
 	AppName          string                `json:"AppName,omitempty"`
@@ -38,12 +40,9 @@ type deviceInfoDto struct {
 }
 
 func deviceDto(d storage.Device) deviceInfoDto {
-	name := d.Name
-	if d.CustomName != "" {
-		name = d.CustomName
-	}
 	return deviceInfoDto{
-		Name:             name,
+		Name:             d.Name,
+		CustomName:       d.CustomName,
 		Id:               string(d.ID),
 		LastUserName:     d.LastUserName,
 		AppName:          d.AppName,
@@ -59,18 +58,16 @@ func deviceDto(d storage.Device) deviceInfoDto {
 }
 
 // handleDevices is GET /Devices (administrator): the registered devices,
-// most recently active first; userId keeps the devices a user used last.
+// most recently active first. userId is validated but, as on the
+// reference, does not narrow the list (devices.R2).
 func (s *Server) handleDevices(w http.ResponseWriter, r *http.Request) {
-	var userID storage.UserID
 	if raw := r.URL.Query().Get("userId"); raw != "" {
-		n, ok := guid.Normalize(raw)
-		if !ok {
+		if _, ok := guid.Normalize(raw); !ok {
 			writeInvalidID(w, "userId", raw)
 			return
 		}
-		userID = storage.UserID(n)
 	}
-	devs, err := s.store.QueryDevices(r.Context(), userID)
+	devs, err := s.store.QueryDevices(r.Context(), "")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -91,6 +88,76 @@ func (s *Server) handleDeviceInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, deviceDto(d))
+}
+
+// deviceOptionsDto is the options record of a DeviceId (admin.devices.R7).
+type deviceOptionsDto struct {
+	ID         int64   `json:"Id"`
+	DeviceID   string  `json:"DeviceId"`
+	CustomName *string `json:"CustomName,omitempty"`
+}
+
+// handleDeviceOptionsGet is GET /Devices/Options?id= (administrator).
+func (s *Server) handleDeviceOptionsGet(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		writeValidationProblem(w, "id", "The id field is required.")
+		return
+	}
+	optID, name, found, err := s.store.GetDeviceOptions(r.Context(), storage.DeviceID(id))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !found {
+		writeProblemDoc(w, http.StatusNotFound, problemTypeNotFound, "Not Found", nil)
+		return
+	}
+	writeJSON(w, http.StatusOK, deviceOptionsDto{ID: optID, DeviceID: id, CustomName: name})
+}
+
+// handleDeviceOptionsPost is POST /Devices/Options?id= (administrator): it
+// replaces the options record of the DeviceId, creating it when needed; the
+// id need not be a registered device.
+func (s *Server) handleDeviceOptionsPost(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		writeValidationProblem(w, "id", "The id field is required.")
+		return
+	}
+	var body struct {
+		CustomName *string `json:"CustomName"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeBadRequest(w)
+		return
+	}
+	if err := s.store.SetDeviceOptions(r.Context(), storage.DeviceID(id), body.CustomName); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// handleDeviceDelete is DELETE /Devices?id= (administrator): the device
+// goes away together with the tokens issued to it, whichever the user. No
+// id is a no-op; an unknown id is a 400.
+func (s *Server) handleDeviceDelete(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	if _, err := s.store.GetDevice(r.Context(), storage.DeviceID(id)); err != nil {
+		writeBadRequest(w)
+		return
+	}
+	if err := s.store.DeleteDevice(r.Context(), storage.DeviceID(id)); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	s.sessions.dropDevice(id)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // handleMediaFolders is GET /Library/MediaFolders (administrator): every

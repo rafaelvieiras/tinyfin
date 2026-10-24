@@ -11,9 +11,11 @@ import "time"
 // multiple concurrent tokens), so that relationship lives in AuthToken
 // (DeviceID field), not duplicated here.
 type Device struct {
-	ID         DeviceID
-	Name       string
-	CustomName string
+	ID   DeviceID
+	Name string
+	// CustomName is the per-DeviceId name set through the device options;
+	// it is read from there, never written by UpsertDevice.
+	CustomName *string
 	AppName    string
 	AppVersion string
 
