@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/url"
 	"testing"
 
@@ -8,8 +9,8 @@ import (
 )
 
 func TestSessionRegistryTranscodeLifecycle(t *testing.T) {
-	r := newSessionRegistry()
-	r.upsertCapabilities("dev", "u", "user", "c", "d", "1", "", sessionCapabilitiesDto{})
+	r := newSessionRegistry(nil)
+	r.upsertCapabilities(context.Background(), "dev", "u", "user", "c", "d", "1", "", sessionCapabilitiesDto{})
 	if got := r.list("srv", 0, false); len(got) != 1 || got[0].TranscodingInfo != nil {
 		t.Fatalf("before a job: %+v", got)
 	}

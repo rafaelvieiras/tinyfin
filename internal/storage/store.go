@@ -22,6 +22,7 @@ type Store interface {
 	PlaylistStore
 	UserStore
 	DeviceStore
+	SessionStore
 	PlaystateStore
 	ImageStore
 	TrickplayStore
@@ -227,6 +228,23 @@ type DeviceStore interface {
 	// SetDeviceOptions creates or replaces the options record of the
 	// DeviceId; the id need not belong to a registered device.
 	SetDeviceOptions(ctx context.Context, id DeviceID, customName *string) error
+}
+
+// SessionStore covers the durable half of the live session registry
+// (internal/api/sessions.go, 06): the identity and capabilities of each
+// device's session, written on every registry update and read back at
+// startup. Live playback state is deliberately absent from it (Session's own
+// doc comment says why).
+type SessionStore interface {
+	// QuerySessions lists every stored session, most recently active first.
+	QuerySessions(ctx context.Context) ([]Session, error)
+	// SaveSession creates or replaces the session of its DeviceID.
+	SaveSession(ctx context.Context, session Session) error
+	// DeleteSession removes the session of a device, if any.
+	DeleteSession(ctx context.Context, deviceID DeviceID) error
+	// DeleteUserSessions removes every session of the user (account
+	// deletion).
+	DeleteUserSessions(ctx context.Context, userID UserID) error
 }
 
 // PlaystateStore covers durable resume position and watched status —

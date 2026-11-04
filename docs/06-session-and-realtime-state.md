@@ -29,7 +29,13 @@ different nodes across its session lifetime, unless it's made shareable on purpo
 
 - **In-process mode** (default): an in-memory structure inside the single API/metadata process.
   Zero additional cost, zero additional process — appropriate for the single-node deployment that
-  is the primary target in `01`.
+  is the primary target in `01`. The session registry (who is connected, what each session is,
+  and its capabilities) is additionally written through to the store on every update and reloaded
+  at startup, because a restart otherwise erases every session at once: the clients that fill it
+  only report again when they next talk to the server, so the dashboard emptied and a reconnecting
+  client was given a new session id. Live playback state and transcode bookkeeping are *not*
+  persisted — a restored session reports no now-playing item, and the job dies with the
+  process.
 - **Scale mode**: externalized to Redis/Valkey, using pub/sub for fan-out (a SyncPlay event or a
   progress update needs to reach every node with a relevant connected client, not just the node
   that produced the event) and simple key storage for session/group membership lookups.
@@ -56,4 +62,5 @@ Durable playstate (resume position, watched status) is **not** session/realtime 
 user pauses or finishes something, that fact needs to survive a restart and belongs in the
 storage layer (`05`), not here. The distinction is lifetime: if it needs to outlive the
 connection that produced it, it's storage; if it only matters while the connection is live, it's
-session state.
+session state. A session's *identity* (device, user, client, capabilities) outlives a process
+restart, which is why the registry persists that part; what the session is *doing* does not.

@@ -156,7 +156,7 @@ func (s *Server) handleDeviceDelete(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	s.sessions.dropDevice(id)
+	s.sessions.dropDevice(r.Context(), id)
 	w.WriteHeader(http.StatusNoContent)
 }
 

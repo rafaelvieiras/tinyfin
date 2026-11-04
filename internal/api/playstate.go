@@ -522,7 +522,7 @@ func (s *Server) updatePlaybackSession(r *http.Request, ac *AuthContext, item *s
 			_, transcoding = s.transcode.Get(string(item.ID))
 		}
 	}
-	s.sessions.reportPlayback(ac.DeviceID, string(ac.User.ID), ac.User.Name, ac.Client, ac.Device, ac.Version, remoteEndPoint(r), func(ts *trackedSession) {
+	s.sessions.reportPlayback(r.Context(), ac.DeviceID, string(ac.User.ID), ac.User.Name, ac.Client, ac.Device, ac.Version, remoteEndPoint(r), func(ts *trackedSession) {
 		if kind == reportStopped {
 			ts.playing = nil
 			if rep.NowPlayingQueue != nil {

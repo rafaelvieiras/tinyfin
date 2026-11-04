@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -129,8 +130,8 @@ func TestSessionsActiveWithinSecondsExcludesStale(t *testing.T) {
 	_, st := newTestServer(t)
 	srv := NewServer(st, Config{ServerName: "TestServer"})
 
-	srv.sessions.upsertCapabilities("dev-fresh", "user-1", "Fresh", "Jellyfin Web", "Chrome", "10.11.11", "10.0.0.5", sessionCapabilitiesDto{SupportsMediaControl: true})
-	srv.sessions.upsertCapabilities("dev-stale", "user-2", "Stale", "Jellyfin Web", "Chrome", "10.11.11", "10.0.0.6", sessionCapabilitiesDto{SupportsMediaControl: true})
+	srv.sessions.upsertCapabilities(context.Background(), "dev-fresh", "user-1", "Fresh", "Jellyfin Web", "Chrome", "10.11.11", "10.0.0.5", sessionCapabilitiesDto{SupportsMediaControl: true})
+	srv.sessions.upsertCapabilities(context.Background(), "dev-stale", "user-2", "Stale", "Jellyfin Web", "Chrome", "10.11.11", "10.0.0.6", sessionCapabilitiesDto{SupportsMediaControl: true})
 
 	// Directly age the second entry's LastActivityDate well past the filter
 	// window — same-package access to sessionRegistry's unexported fields,

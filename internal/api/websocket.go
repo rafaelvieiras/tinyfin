@@ -199,7 +199,7 @@ func (s *Server) handleSocket(w http.ResponseWriter, r *http.Request) {
 	defer s.hub.remove(c)
 	defer conn.CloseNow()
 
-	s.sessions.touch(ac.DeviceID)
+	s.sessions.touch(r.Context(), ac.DeviceID)
 
 	ctx := r.Context()
 	// Sent immediately on connect, before anything else — docs/12's

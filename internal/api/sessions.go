@@ -19,6 +19,8 @@
 package api
 
 import (
+	"context"
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
@@ -197,20 +199,103 @@ type playingState struct {
 }
 
 // sessionRegistry is the in-process (docs/06 default mode) session
-// registry: a mutex-guarded map, held on *Server, with no persistence and
-// no cross-node sharing — exactly the "zero additional cost, zero
-// additional process" in-process mode docs/06 describes, not the scale-mode
-// Redis/Valkey alternative it also documents.
+// registry: a mutex-guarded map, held on *Server, with no cross-node sharing
+// — exactly the "zero additional cost, zero additional process" in-process
+// mode docs/06 describes, not the scale-mode Redis/Valkey alternative it also
+// documents.
+//
+// The map is written through to the store on every update (SessionStore) and
+// read back at startup (restore), so a restart no longer empties
+// GET /Sessions: before that, a redeploy erased every session at once and the
+// clients that fill this map only report again when they next happen to talk
+// to the server. Live playback state and transcode bookkeeping are not
+// persisted — restoring them would claim an item is playing when nothing is,
+// and the transcode job dies with the process.
 type sessionRegistry struct {
 	mu       sync.Mutex
 	byDevice map[string]*trackedSession
 	// transcodes is keyed by DeviceId and kept apart from byDevice: a
 	// device's stream can start before its session reports anything.
 	transcodes map[string]*deviceTranscode
+	// store is the durable side (nil in tests that only exercise the map:
+	// every write-through is skipped then).
+	store storage.SessionStore
 }
 
-func newSessionRegistry() *sessionRegistry {
-	return &sessionRegistry{byDevice: make(map[string]*trackedSession), transcodes: make(map[string]*deviceTranscode)}
+func newSessionRegistry(store storage.SessionStore) *sessionRegistry {
+	return &sessionRegistry{byDevice: make(map[string]*trackedSession), transcodes: make(map[string]*deviceTranscode), store: store}
+}
+
+// snapshot renders ts as the storage record written through to the store.
+// The caller holds the lock.
+func (ts *trackedSession) snapshot() storage.Session {
+	caps, err := json.Marshal(ts.capabilities)
+	if err != nil {
+		caps = []byte("{}")
+	}
+	return storage.Session{
+		DeviceID:         storage.DeviceID(ts.deviceID),
+		UserID:           storage.UserID(ts.userID),
+		SessionID:        ts.id,
+		UserName:         ts.userName,
+		Client:           ts.client,
+		DeviceName:       ts.deviceName,
+		AppVersion:       ts.appVersion,
+		RemoteEndPoint:   ts.remoteEndPoint,
+		Capabilities:     string(caps),
+		LastActivityDate: ts.lastActivityDate,
+	}
+}
+
+// persist writes a session through to the store. Called after the registry's
+// own lock is released: a store write never happens under the registry's
+// mutex. A store error is dropped on purpose — the live map is the
+// authoritative one for the running process, and a failed write only costs
+// the session's survival across a restart, not the request being served.
+func (r *sessionRegistry) persist(ctx context.Context, session storage.Session) {
+	if r.store == nil {
+		return
+	}
+	_ = r.store.SaveSession(ctx, session)
+}
+
+// restore loads the persisted sessions into the map at startup, so the
+// sessions of a previous run are listed again before any client reports. A
+// store error leaves the registry empty rather than failing the start: the
+// registry is populated on demand anyway.
+func (r *sessionRegistry) restore(ctx context.Context) {
+	if r.store == nil {
+		return
+	}
+	saved, err := r.store.QuerySessions(ctx)
+	if err != nil {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, sv := range saved {
+		if sv.DeviceID == "" {
+			continue
+		}
+		ts := &trackedSession{
+			id:               sv.SessionID,
+			userID:           string(sv.UserID),
+			userName:         sv.UserName,
+			client:           sv.Client,
+			deviceName:       sv.DeviceName,
+			deviceID:         string(sv.DeviceID),
+			appVersion:       sv.AppVersion,
+			remoteEndPoint:   sv.RemoteEndPoint,
+			lastActivityDate: sv.LastActivityDate,
+		}
+		if ts.id == "" {
+			ts.id = randomID()
+		}
+		if sv.Capabilities != "" {
+			_ = json.Unmarshal([]byte(sv.Capabilities), &ts.capabilities)
+		}
+		r.byDevice[string(sv.DeviceID)] = ts
+	}
 }
 
 // setTranscode records the transcode job deviceID is now served from.
@@ -270,12 +355,11 @@ func (r *sessionRegistry) dropTranscode(deviceID string, item storage.ItemID) {
 // being stable across repeated capability registrations from the same
 // device. A blank deviceID is a no-op: without one there is nothing to key
 // this entry by, and every other field is meaningless without it too.
-func (r *sessionRegistry) upsertCapabilities(deviceID, userID, userName, client, deviceName, appVersion, remoteEndPoint string, caps sessionCapabilitiesDto) {
+func (r *sessionRegistry) upsertCapabilities(ctx context.Context, deviceID, userID, userName, client, deviceName, appVersion, remoteEndPoint string, caps sessionCapabilitiesDto) {
 	if deviceID == "" {
 		return
 	}
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	ts, ok := r.byDevice[deviceID]
 	if !ok {
 		ts = &trackedSession{id: randomID()}
@@ -290,6 +374,9 @@ func (r *sessionRegistry) upsertCapabilities(deviceID, userID, userName, client,
 	ts.remoteEndPoint = remoteEndPoint
 	ts.capabilities = caps
 	ts.lastActivityDate = time.Now().UTC()
+	snap := ts.snapshot()
+	r.mu.Unlock()
+	r.persist(ctx, snap)
 }
 
 // loginSession renders the session a login creates (users.auth.R12)
@@ -319,15 +406,20 @@ func (r *sessionRegistry) loginSession(serverID, deviceID, userID, userName, cli
 // for that device — this file's package doc comment's deliberately narrow
 // scope: sessions_playback.go's playback-report routes touch liveness for
 // an existing session, they don't create one on their own.
-func (r *sessionRegistry) touch(deviceID string) {
+func (r *sessionRegistry) touch(ctx context.Context, deviceID string) {
 	if deviceID == "" {
 		return
 	}
 	r.mu.Lock()
-	defer r.mu.Unlock()
-	if ts, ok := r.byDevice[deviceID]; ok {
-		ts.lastActivityDate = time.Now().UTC()
+	ts, ok := r.byDevice[deviceID]
+	if !ok {
+		r.mu.Unlock()
+		return
 	}
+	ts.lastActivityDate = time.Now().UTC()
+	snap := ts.snapshot()
+	r.mu.Unlock()
+	r.persist(ctx, snap)
 }
 
 // reportPlayback creates or refreshes the session of deviceID from a
@@ -336,12 +428,11 @@ func (r *sessionRegistry) touch(deviceID string) {
 // touch, it registers a session that never sent capabilities: a client that
 // reports playback has a session, and progress reported without a start
 // creates it on the fly (playstate.progress.R8).
-func (r *sessionRegistry) reportPlayback(deviceID, userID, userName, client, deviceName, appVersion, remoteEndPoint string, update func(ts *trackedSession)) {
+func (r *sessionRegistry) reportPlayback(ctx context.Context, deviceID, userID, userName, client, deviceName, appVersion, remoteEndPoint string, update func(ts *trackedSession)) {
 	if deviceID == "" {
 		return
 	}
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	ts, ok := r.byDevice[deviceID]
 	if !ok {
 		ts = &trackedSession{id: randomID(), deviceID: deviceID}
@@ -351,6 +442,9 @@ func (r *sessionRegistry) reportPlayback(deviceID, userID, userName, client, dev
 	ts.deviceName, ts.appVersion, ts.remoteEndPoint = deviceName, appVersion, remoteEndPoint
 	ts.lastActivityDate = time.Now().UTC()
 	update(ts)
+	snap := ts.snapshot()
+	r.mu.Unlock()
+	r.persist(ctx, snap)
 }
 
 // nowPlayingFor lists the item ids the user is playing in any session.
@@ -500,10 +594,28 @@ func remoteEndPoint(r *http.Request) string {
 }
 
 // dropDevice forgets the session and the transcode bookkeeping of a device
-// that was deleted (DELETE /Devices).
-func (r *sessionRegistry) dropDevice(deviceID string) {
+// that was deleted (DELETE /Devices), and removes its persisted session.
+func (r *sessionRegistry) dropDevice(ctx context.Context, deviceID string) {
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	delete(r.byDevice, deviceID)
 	delete(r.transcodes, deviceID)
+	r.mu.Unlock()
+	if r.store != nil && deviceID != "" {
+		_ = r.store.DeleteSession(ctx, storage.DeviceID(deviceID))
+	}
+}
+
+// dropUser forgets and unpins every session of a deleted account.
+func (r *sessionRegistry) dropUser(ctx context.Context, userID string) {
+	r.mu.Lock()
+	for id, ts := range r.byDevice {
+		if ts.userID == userID {
+			delete(r.byDevice, id)
+			delete(r.transcodes, id)
+		}
+	}
+	r.mu.Unlock()
+	if r.store != nil && userID != "" {
+		_ = r.store.DeleteUserSessions(ctx, storage.UserID(userID))
+	}
 }

@@ -334,6 +334,7 @@ set `IsPaused=true`.
 - **playstate.session.R19** A segment served from what a job already produced (no job starts) describes the stream again when the device has none on record, which a stopped report for the item leaves it with (R10); with the description merely hidden (R11) it stays hidden, and when another job is on record that one stays.
 - **playstate.session.R15** A second job for the same device (another container, a restart) replaces the description.
 - **playstate.session.R16** A request carrying another `DeviceId` value describes the stream of that device only.
+- **playstate.session.R20** [untestable: a process restart is not expressible as a scenario] The session registry is durable: every update a session gets (a capability report, a playback report, a socket connection) is written to the store, and `GET /Sessions` lists the sessions of the previous run right after a restart — same `Id` (a session id is stable across restarts), `Client`, `DeviceName`, `ApplicationVersion`, `RemoteEndPoint`, `Capabilities` and `LastActivityDate`. Live playback state is deliberately not durable (a restored session reports no now-playing item) and neither is `TranscodingInfo` (the job dies with the process). `DELETE /Devices` and account deletion remove the stored session with the entry. The reference keeps sessions in memory only, so its list starts empty after a restart. Verified in-process (a restart is not expressible as a scenario): `TestSessionsSurviveRestart`.
 
 ## Legacy web routes
 
@@ -484,6 +485,7 @@ Settled by probing the 12.2 reference:
 | `playstate.session.R15` | `session.transcoding-info-copy-and-mp4` |
 | `playstate.session.R16` | `session.transcoding-info-device` |
 | `playstate.session.R19` | `session.transcoding-info-segment-restart` |
+| `playstate.session.R20` | none (in-process: `TestSessionsSurviveRestart`) |
 | `playstate.session.R18` | `session.transcoding-info-segment-restart` |
 | `playstate.session.R17` | `session.transcoding-info-container` |
 | `playstate.legacy.R1` | `legacy.mark-played-path-user`, `legacy.unknown-item-and-anonymous` |

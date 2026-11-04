@@ -592,6 +592,8 @@ func (s *Server) handleUsersDelete(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	// The account's sessions go with it, live map and store alike.
+	s.sessions.dropUser(ctx, string(target.ID))
 	s.writeActivity(ctx, storage.ActivityEntry{
 		Name:     fmt.Sprintf("User %s has been deleted", target.Name),
 		Type:     storage.ActivityTypeUserDeleted,

@@ -232,11 +232,14 @@ func NewServer(store storage.Store, cfg Config) *Server {
 		}),
 		scanLibSem: make(chan struct{}, scanLibParallelism(cfg.ScanLibraryParallelism)),
 		scanState:  &scanTracker{},
-		sessions:   newSessionRegistry(),
+		sessions:   newSessionRegistry(store),
 		hub:        newWSHub(),
 		quick:      newQuickConnectState(),
 		pinLimit:   newPinThrottle(),
 	}
+	// Sessions persisted by a previous run are listed again before any client
+	// reports (sessions.go's restore): a restart must not empty GET /Sessions.
+	s.sessions.restore(context.Background())
 	s.trickplay = trickplay.New(store, cfg.TranscodeFFmpegPath, cfg.DataDir, cfg.TrickplayConcurrency)
 	s.chapterimg = chapterimg.New(store, cfg.TranscodeFFmpegPath, cfg.DataDir)
 	s.loadRuntimeSettings()
