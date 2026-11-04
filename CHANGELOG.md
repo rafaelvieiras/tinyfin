@@ -331,6 +331,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Contract: `specs/scan.md`, 23 scenarios; the runner can change the media tree
   (`fs` steps, `-media-local-root`) and wait for a background change (`retryMs`).
 
+### Fixed
+
+- Device routes match their query parameter names without regard to case, as every other route does (`devices.md` R13):
+  `DELETE /Devices?Id=…`, the spelling a case-insensitive binding accepts, answered `204` here and deleted nothing
+  because the handler read `id` only, so an admin tool silently failed to remove a device.
+
 ### Changed
 
 - `GET /Items?SearchTerm` matches without regard to accents and punctuation,

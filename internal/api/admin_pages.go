@@ -61,7 +61,7 @@ func deviceDto(d storage.Device) deviceInfoDto {
 // most recently active first. userId is validated but, as on the
 // reference, does not narrow the list (devices.R2).
 func (s *Server) handleDevices(w http.ResponseWriter, r *http.Request) {
-	if raw := r.URL.Query().Get("userId"); raw != "" {
+	if raw := caseInsensitiveQuery(r).Get("userid"); raw != "" {
 		if _, ok := guid.Normalize(raw); !ok {
 			writeInvalidID(w, "userId", raw)
 			return
@@ -81,7 +81,7 @@ func (s *Server) handleDevices(w http.ResponseWriter, r *http.Request) {
 
 // handleDeviceInfo is GET /Devices/Info?id= (administrator).
 func (s *Server) handleDeviceInfo(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
+	id := caseInsensitiveQuery(r).Get("id")
 	d, err := s.store.GetDevice(r.Context(), storage.DeviceID(id))
 	if id == "" || err != nil {
 		writeProblemDoc(w, http.StatusNotFound, problemTypeNotFound, "Not Found", nil)
@@ -99,7 +99,7 @@ type deviceOptionsDto struct {
 
 // handleDeviceOptionsGet is GET /Devices/Options?id= (administrator).
 func (s *Server) handleDeviceOptionsGet(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
+	id := caseInsensitiveQuery(r).Get("id")
 	if id == "" {
 		writeValidationProblem(w, "id", "The id field is required.")
 		return
@@ -120,7 +120,7 @@ func (s *Server) handleDeviceOptionsGet(w http.ResponseWriter, r *http.Request) 
 // replaces the options record of the DeviceId, creating it when needed; the
 // id need not be a registered device.
 func (s *Server) handleDeviceOptionsPost(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
+	id := caseInsensitiveQuery(r).Get("id")
 	if id == "" {
 		writeValidationProblem(w, "id", "The id field is required.")
 		return
@@ -143,7 +143,7 @@ func (s *Server) handleDeviceOptionsPost(w http.ResponseWriter, r *http.Request)
 // goes away together with the tokens issued to it, whichever the user. No
 // id is a no-op; an unknown id is a 400.
 func (s *Server) handleDeviceDelete(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
+	id := caseInsensitiveQuery(r).Get("id")
 	if id == "" {
 		w.WriteHeader(http.StatusNoContent)
 		return
@@ -186,7 +186,7 @@ func (s *Server) handleMediaFolders(w http.ResponseWriter, r *http.Request) {
 	pl.Type = "ManualPlaylistsFolder"
 	pl.Path = "/data/playlists"
 	pl.Etag = mediaFolderEtag(pl.ID, pl.Name)
-	switch strings.ToLower(r.URL.Query().Get("isHidden")) {
+	switch strings.ToLower(caseInsensitiveQuery(r).Get("ishidden")) {
 	case "true":
 		items = []baseItemDto{pl}
 	case "false":

@@ -633,7 +633,8 @@
   "covers": [
    "devices.R4",
    "devices.R8",
-   "devices.R9"
+   "devices.R9",
+   "devices.R13"
   ],
   "requires": [],
   "steps": [
@@ -917,6 +918,31 @@
     },
     "expect": {
      "status": 200
+    }
+   },
+   {
+    "name": "delete the other device with the parameter spelled Id",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Devices",
+     "query": {
+      "Id": "sc-devs-del-keep{{run.suffix}}"
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "capitalised Id really deleted it",
+    "as": "token:{{capture.t3}}",
+    "request": {
+     "method": "GET",
+     "path": "/Users/Me"
+    },
+    "expect": {
+     "status": 401
     }
    }
   ],
