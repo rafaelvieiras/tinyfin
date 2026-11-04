@@ -144,7 +144,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [browse](contract/specs/browse.md) | 29 | 29 | 15 | 15 |
 | [chapters](contract/specs/chapters.md) | 26 | 26 | 5 | 5 |
 | [collections](contract/specs/collections.md) | 51 | 51 | 30 | 30 |
-| [devices](contract/specs/devices.md) | 10 | 10 | 5 | 5 |
+| [devices](contract/specs/devices.md) | 12 | 12 | 6 | 6 |
 | [extras](contract/specs/extras.md) | 21 | 21 | 15 | 15 |
 | [images](contract/specs/images.md) | 18 | 17 | 13 | 13 |
 | [items](contract/specs/items.md) | 171 | 171 | 156 | 156 |
@@ -153,7 +153,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [musicvideos](contract/specs/musicvideos.md) | 26 | 26 | 17 | 17 |
 | [playback](contract/specs/playback.md) | 60 | 59 | 7 | 7 |
 | [playlists](contract/specs/playlists.md) | 33 | 33 | 23 | 23 |
-| [playstate](contract/specs/playstate.md) | 107 | 105 | 107 | 107 |
+| [playstate](contract/specs/playstate.md) | 108 | 105 | 107 | 107 |
 | [policy](contract/specs/policy.md) | 19 | 18 | 8 | 8 |
 | [quickconnect](contract/specs/quickconnect.md) | 26 | 26 | 23 | 23 |
 | [scan](contract/specs/scan.md) | 36 | 36 | 23 | 23 |
@@ -163,7 +163,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [trickplay](contract/specs/trickplay.md) | 11 | 11 | 10 | 10 |
 | [users](contract/specs/users.md) | 189 | 189 | 195 | 195 |
 | [wire](contract/specs/wire.md) | 15 | 14 | 14 | 14 |
-| **total** | 1107 | 1076 | 745 | 742 |
+| **total** | 1110 | 1078 | 746 | 743 |
 
 ## Biggest gaps (planned or not planned, web-client facing)
 

@@ -340,6 +340,7 @@
     "collections.visibility.partial-members",
     "collections.visibility.restricted-user",
     "devices.delete.revokes-tokens",
+    "devices.id-suffix.collapses",
     "devices.options.crud",
     "devices.per-user.two-accounts",
     "devices.refresh.request-headers",
@@ -799,6 +800,7 @@
    "scenarios": [
     "admin.devices.list",
     "devices.delete.revokes-tokens",
+    "devices.id-suffix.collapses",
     "devices.options.crud",
     "devices.per-user.two-accounts",
     "devices.user-delete.removes-entries"
@@ -4145,6 +4147,7 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "devices.id-suffix.collapses",
     "playstate.ping.no-session-effect",
     "playstate.session.defaults",
     "playstate.session.direct-stream-kept",
@@ -4188,6 +4191,7 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "devices.id-suffix.collapses",
     "playstate.session.transcoding-info-container",
     "playstate.session.transcoding-info-copy-and-mp4",
     "playstate.session.transcoding-info-device",
@@ -5499,6 +5503,7 @@
    "web": true,
    "scenarios": [
     "devices.delete.revokes-tokens",
+    "devices.id-suffix.collapses",
     "devices.per-user.two-accounts",
     "devices.refresh.request-headers",
     "startup.wizard.user-and-complete",
@@ -5552,6 +5557,7 @@
     "collections.visibility.partial-members",
     "collections.visibility.restricted-user",
     "devices.delete.revokes-tokens",
+    "devices.id-suffix.collapses",
     "devices.per-user.two-accounts",
     "devices.refresh.request-headers",
     "devices.user-delete.removes-entries",

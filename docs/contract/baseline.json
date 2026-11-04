@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 920
+    "pass": 921
   },
   "scenarios": {
     "admin.auth.providers": "pass",
@@ -120,6 +120,7 @@
     "collections.visibility.partial-members": "pass",
     "collections.visibility.restricted-user": "pass",
     "devices.delete.revokes-tokens": "pass",
+    "devices.id-suffix.collapses": "pass",
     "devices.options.crud": "pass",
     "devices.per-user.two-accounts": "pass",
     "devices.refresh.request-headers": "pass",

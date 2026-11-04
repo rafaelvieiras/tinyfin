@@ -59,12 +59,22 @@ func (s *Server) withAuthContext(next http.Handler) http.Handler {
 					ac.Authenticated = true
 					ac.AuthToken = at
 					ac.User = u
+					// A legacy per-user DeviceId suffix is dropped before
+					// anything keys off it, so the same install cannot arrive
+					// as two devices (deviceid.go, devices.R11).
+					ac.DeviceID = canonicalDeviceID(ac.DeviceID, string(u.ID))
 					// Name and version sent with a request refresh the
-					// user's device entry (admin.devices.R5).
+					// user's device entry (admin.devices.R5) — the token's
+					// device when the header carries no DeviceId of its own.
 					if ac.Device != "" || ac.Version != "" {
-						_ = s.store.TouchDeviceClient(r.Context(), at.DeviceID, u.ID, ac.Device, ac.Version)
+						touchID := ac.DeviceID
+						if touchID == "" {
+							touchID = canonicalDeviceID(string(at.DeviceID), string(u.ID))
+						}
+						_ = s.store.TouchDeviceClient(r.Context(), storage.DeviceID(touchID), u.ID, ac.Device, ac.Version)
 					}
 					s.inheritDeviceFields(r.Context(), ac)
+					ac.DeviceID = canonicalDeviceID(ac.DeviceID, string(u.ID))
 				}
 			} else if k, err := s.store.LookupAPIKey(r.Context(), ac.Token); err == nil {
 				// An API key authenticates as an administrator-level

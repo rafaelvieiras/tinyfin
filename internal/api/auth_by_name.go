@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -110,6 +111,11 @@ func (s *Server) handleAuthenticateByName(w http.ResponseWriter, r *http.Request
 // (users.auth.R25).
 func (s *Server) issueLogin(w http.ResponseWriter, r *http.Request, user storage.User, policy userPolicyDto, now time.Time, client, device, deviceID, version string, withAddress bool) {
 	ctx := r.Context()
+	// The account is known here (unlike the auth middleware, which sees the
+	// DeviceId before any token resolves), so this is where a legacy
+	// per-user suffix is dropped: the token, the entry and the session all
+	// belong to the bare device (deviceid.go, devices.R11).
+	deviceID = canonicalDeviceID(deviceID, string(user.ID))
 	// users.auth.R21: no remote access from outside the local network.
 	if !policy.EnableRemoteAccess && !s.fromLocalNetwork(r) {
 		w.WriteHeader(http.StatusForbidden)
@@ -187,6 +193,11 @@ func (s *Server) issueLogin(w http.ResponseWriter, r *http.Request, user storage
 	if replaced != nil {
 		s.writeActivity(ctx, sessionEndedEntry(user.ID, user.Name, replacedName, replaced.RemoteAddress))
 	}
+	// A previous sign-in from this install may have left entries under the
+	// legacy DeviceId that appends the account id (deviceid.go): signing in
+	// again is the moment to collapse them into the one device, instead of
+	// leaving a phantom entry per past sign-in (devices.R12).
+	s.sweepLegacyDeviceEntries(ctx, user.ID, deviceID)
 
 	// users.auth.R15, R22: a success resets the failure counter and
 	// records the login time.
@@ -216,6 +227,35 @@ func (s *Server) issueLogin(w http.ResponseWriter, r *http.Request, user storage
 		AccessToken: token.Token,
 		ServerID:    s.cfg.ServerID,
 	})
+}
+
+// sweepLegacyDeviceEntries removes the user's own entries whose DeviceId is
+// this device's id with the user id appended — the spelling an official
+// client keeps after a sign-in (deviceid.go, devices.R11) — together with
+// their tokens and sessions, so a re-login cannot leave the device listed
+// twice (devices.R12). Entries of other users are left alone: the sweep is
+// scoped to the account that just signed in.
+func (s *Server) sweepLegacyDeviceEntries(ctx context.Context, userID storage.UserID, deviceID string) {
+	if deviceID == "" {
+		return
+	}
+	devices, err := s.store.QueryDevices(ctx, userID)
+	if err != nil {
+		return
+	}
+	for _, d := range devices {
+		id := string(d.ID)
+		if id == "" || id == deviceID {
+			continue
+		}
+		if canonicalDeviceID(id, string(userID)) != deviceID {
+			continue
+		}
+		if err := s.store.DeleteDevice(ctx, storage.DeviceID(id)); err != nil {
+			continue
+		}
+		s.sessions.dropDevice(ctx, id)
+	}
 }
 
 // recordLoginFailure counts one failed password attempt on a permitted

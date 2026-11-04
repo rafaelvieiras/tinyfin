@@ -1295,5 +1295,189 @@
     "expect": {}
    }
   ]
+ },
+ {
+  "id": "devices.id-suffix.collapses",
+  "endpoint": "GET /Devices",
+  "spec": "devices.md",
+  "scope": "modern",
+  "tags": [
+   "admin",
+   "devices"
+  ],
+  "covers": [
+   "devices.R11",
+   "devices.R12"
+  ],
+  "requires": [],
+  "divergence": {
+   "reason": "the reference stores a DeviceId that carries the account id as a second device; Tinyfin strips the caller's own account id, so one install keeps one entry (devices.R11)"
+  },
+  "steps": [
+   {
+    "name": "create tmp-dev-s1",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-dev-s1",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u1": "$.Id"
+    }
+   },
+   {
+    "name": "sign in with the bare DeviceId",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-dev-s1",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"ConfDev\", Device=\"Conf Device\", DeviceId=\"sc-devs-suffix{{run.suffix}}\", Version=\"1.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "t1": "$.AccessToken"
+    }
+   },
+   {
+    "name": "sign in again with the account id appended to the DeviceId",
+    "as": "anonymous",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-dev-s1",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"ConfDev\", Device=\"Conf Device\", DeviceId=\"sc-devs-suffix{{run.suffix}}{{capture.u1}}\", Version=\"1.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "t2": "$.AccessToken"
+    }
+   },
+   {
+    "name": "the second token works",
+    "as": "token:{{capture.t2}}",
+    "request": {
+     "method": "GET",
+     "path": "/Users/Me"
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "the first token was the same device's and is gone",
+    "as": "token:{{capture.t1}}",
+    "request": {
+     "method": "GET",
+     "path": "/Users/Me"
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "capabilities registered under the suffixed id",
+    "as": "token:{{capture.t2}}",
+    "request": {
+     "method": "POST",
+     "path": "/Sessions/Capabilities/Full",
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"ConfDev\", Device=\"Conf Device\", DeviceId=\"sc-devs-suffix{{run.suffix}}{{capture.u1}}\", Version=\"1.0\", Token=\"{{capture.t2}}\"",
+      "Content-Type": "application/json"
+     },
+     "body": {
+      "PlayableMediaTypes": [
+       "Video"
+      ],
+      "SupportedCommands": [],
+      "SupportsPersistentIdentifier": true,
+      "SupportsMediaControl": true
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "the account's entry is the bare id",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Devices"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[?LastUserId={{capture.u1}}].Id",
+       "op": "eq",
+       "value": "sc-devs-suffix{{run.suffix}}"
+      },
+      {
+       "path": "$.Items[*].Id",
+       "op": "notcontains",
+       "value": "sc-devs-suffix{{run.suffix}}{{capture.u1}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "one session for the device",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Sessions"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].DeviceId",
+       "op": "contains",
+       "value": "sc-devs-suffix{{run.suffix}}"
+      },
+      {
+       "path": "$[*].DeviceId",
+       "op": "notcontains",
+       "value": "sc-devs-suffix{{run.suffix}}{{capture.u1}}"
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "delete tmp-dev-s1",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u1}}"
+    },
+    "expect": {
+     "status": 204
+    }
+   }
+  ]
  }
 ]

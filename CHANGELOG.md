@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A `DeviceId` that carries the caller's own account id is the same device without it (`devices.md` R11-R12,
+  `devices.json`, 1 scenario): clients that append the account id to their device id after a sign-in (the Android app
+  sends both spellings) no longer land in the store twice, and the next login collapses the entries, tokens and
+  sessions a previous sign-in left under the suffixed id. **[intentional deviation]** the reference keeps the two
+  spellings as two devices.
+- A device is a per-device-and-user record (`devices.md` R1-R10, `devices.json`, 5 scenarios): `GET /Devices` has one
+  entry per `DeviceId` and account (`admin.devices.R1`-`R3`), a login revokes only that account's earlier token on the
+  device, and `userId` is validated but does not narrow the list. `GET`/`POST /Devices/Options` keep one custom name per
+  `DeviceId` that shows on every user's entry and outlives `DELETE /Devices`; an authenticated request carrying `Device`
+  and/or `Version` refreshes the name and version of its owner's entry; `DELETE /Devices?id=` removes every entry of
+  the device and revokes every token issued to it (an unknown id is a `400`, a missing one a `204` no-op); deleting an
+  account removes its entries and leaves other accounts' entries on the same device.
+- The administration pages report what the reference reports (`admin.md` R5, `config.R6`-`R8`, `admin5.json`, 4
+  scenarios): every entry of `GET /Library/MediaFolders` carries `Path` and `Etag`, `GET /System/Configuration` is
+  readable by any signed-in user like the network section, and `HardwareAccelerationType` accepts the reference's names
+  ignoring case and surrounding whitespace and reports the lower-case one. **[intentional deviation]** any other
+  `HardwareAccelerationType` is a `400` that leaves the section unchanged, where the reference answers `500`.
+- Library changes reach the open sockets (`scan.md#realtime-push` R1-R8, `scan_push.json`, `playstate.push.R5`-`R6`,
+  `playstate_push.json`, 5 scenarios): a scan or refresh that catalogs, updates or forgets items, a library add or
+  remove and an item refresh push a batched `LibraryChanged` (the first change starts a 30 s timer, later changes join
+  the same message) carrying `ItemsAdded`, `ItemsRemoved`, `ItemsUpdated`, `FoldersAddedTo`, `FoldersRemovedFrom` and
+  `CollectionFolders`; each user is told only what their libraries let them see, `ItemsRemoved` aside. The rating
+  routes (`POST`/`DELETE /UserItems/{itemId}/Rating` and their legacy form) push a `UserDataChanged` with `Rating` and
+  `Likes` like any other user-data write, and an item that sits directly in a library folder now lists that library
+  folder as its parent entry, with the `UnplayedItemCount` and `PlayedPercentage` of the leaves it holds.
 - Sessions survive a restart (`playstate.md#session` R20): the registry behind `GET /Sessions` writes each session
   through to the store on every update (a capability report, a playback report, a socket connection) and reloads it at
   startup, so a restart no longer empties the dashboard and a client keeps its session id. Live playback state and
