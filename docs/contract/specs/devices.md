@@ -22,7 +22,7 @@ Scenarios: [`../scenarios/devices.json`](../scenarios/devices.json). The scenari
 - **devices.R8** `DELETE /Devices?id=` answers `204`, removes every entry of the `DeviceId` and revokes every token issued to it, whatever the account (also the caller's own). Tokens of other devices are untouched; `/Devices/Info` answers `404` afterwards.
 - **devices.R9** An unknown `id` is a `400` problem document (`title` "Bad Request"); no `id` is a `204` no-op.
 - **devices.R10** Deleting an account removes its device entries (other accounts' entries on the same `DeviceId` stay).
-- **devices.R13** Parameter names on the device routes are matched without regard to case, as on every other route (`items.list.R3`): `DELETE /Devices?Id=`, `?ID=` and `?id=` are one request, likewise `userId` on `GET /Devices` and `id` on `GET /Devices/Info` and `GET`/`POST /Devices/Options`. Unknown parameters are ignored. The routes are still documented with the lower-case spelling the reference's OpenAPI declares.
+- **devices.R13** Parameter names on the device routes are matched without regard to case, as on every other route (`items.list.R3`): `DELETE /Devices?Id=`, `?ID=` and `?id=` are one request, likewise `userId` on `GET /Devices` and `id` on `GET /Devices/Info` and `GET`/`POST /Devices/Options`. Unknown parameters are ignored. Observed on the 12.2 reference for the two `GET` routes (`/Devices/Info?Id=`, `?id=`, `?ID=` all answer `200`; `/Devices?userId=nope`, `?UserId=nope`, `?userid=nope` all answer `400`), which is why the delete scenario exercises the `?Id=` spelling there too. The routes stay documented with the lower-case spelling the reference's OpenAPI declares.
 
 ## <a id="legacy-id"></a>Legacy per-user DeviceId
 
