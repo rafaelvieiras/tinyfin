@@ -15,7 +15,7 @@ func (e *plEnv) hints(tok, q string) (names []string, total int, code int) {
 		return nil, 0, code
 	}
 	var out struct {
-		SearchHints []struct{ Name, Type string }
+		SearchHints      []struct{ Name, Type string }
 		TotalRecordCount int
 	}
 	if err := json.Unmarshal(b, &out); err != nil {
