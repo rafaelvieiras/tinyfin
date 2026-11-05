@@ -84,6 +84,10 @@ func main() {
 		"re-run ffprobe on every file even when size and mtime are unchanged. Overridable via TINYFIN_SCAN_FORCE_PROBE.")
 	trickplayConc := flag.Int("trickplay-concurrency", envInt("TINYFIN_TRICKPLAY_CONCURRENCY", 0),
 		"max simultaneous ffmpeg processes generating trickplay sheets (default 1, each single-threaded). Overridable via TINYFIN_TRICKPLAY_CONCURRENCY.")
+	imageCacheMB := flag.Int("image-cache-size", envInt("TINYFIN_IMAGE_CACHE_MB", 2048),
+		"size budget in megabytes for the served-image cache kept next to the database; 0 disables it. "+
+			"The cache exists so a client scrolling a library does not re-read the same poster off a remote media "+
+			"mount on every request. Overridable via TINYFIN_IMAGE_CACHE_MB.")
 	flag.Parse()
 
 	// Tee the log into <data dir>/log/log_YYYYMMDD.log so the admin log
@@ -138,6 +142,8 @@ func main() {
 		TranscodeFontsDir:      *fontsDir,
 		ScanFFprobePath:        resolvedFFprobePath,
 		ScanImageDir:           scanImageDir,
+		ImageCacheDir:          filepath.Join(scanImageDir, "cache"),
+		ImageCacheBytes:        int64(*imageCacheMB) << 20,
 		ScanConcurrency:        *scanConc,
 		ScanProbeConcurrency:   *scanProbeConc,
 		ScanLibraryParallelism: *scanLibPar,

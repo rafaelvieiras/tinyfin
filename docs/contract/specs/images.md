@@ -48,6 +48,10 @@ Scenarios: [`../scenarios/images.json`](../scenarios/images.json). Fixture state
 - **images.frame.R3** The same holds for the video extras of an item: local trailers, special features (featurettes, behind the scenes, deleted scenes, interviews, scenes, shorts, samples, clips, unnamed extras), theme videos and the additional parts of a stacked movie, whether they hang off a movie, a series or a season. Each gets a `Primary` picture taken from its video (`ImageTags.Primary`, `ImageBlurHashes.Primary`, `PrimaryImageAspectRatio`, `GET /Items/{id}/Images/Primary` a JPEG at the video's own size, and the entry of `/Images`). Theme songs (audio) get none.
 - **images.frame.R2** [untestable: the frame position is approximate and the fixture videos are too uniform to tell frames apart] The frame is taken a little into the video (about a tenth of the way in plus a fraction of a second, never past the end); the exact frame is not part of the contract. A picture file beside the media, or one a provider supplies, takes the place of the frame.
 
+## <a id="cache"></a>Serving a picture more than once
+
+- **images.cache.R1** [untestable: the copy is invisible on the wire — same bytes, same `ETag`, same `Last-Modified` — and the behavior it changes (a source that stops being readable) cannot be expressed as a scenario step] A picture that has been served once is answered from a copy kept next to the database, so a client that scrolls a library does not pull the same picture off the media path again. The copy is keyed by what identifies the picture (item, kind, index, tag) and by the file's size and modification time, so a replaced picture is never served from an older copy; the response still carries the file's own `Last-Modified`. The copies are bounded by a size budget (2 GiB unless configured otherwise, `0` disables) and the least recently used ones are dropped past it. Nothing about the bytes, the status codes or the headers changes: a picture that is not in the library is still `404` (images.api.R2).
+
 ## Known differences
 
 Observed on the reference and deliberately not reproduced (not asserted by a scenario that runs against both):
@@ -75,5 +79,6 @@ Observed on the reference and deliberately not reproduced (not asserted by a sce
 | `images.episode.R1` | `images.episode.names` |
 | `images.api.R1` | `images.local.kinds`, `images.local.backdrops` |
 | `images.api.R2`, `R3` | `images.api.index-lookup` |
+| `images.cache.R1` | — (untestable, see the rule) |
 | `images.frame.R1` | `images.frame.movie`, `images.frame.episode` |
 | `images.frame.R3` | `images.frame.extras-movie`, `images.frame.extras-parts`, `images.frame.extras-series` |

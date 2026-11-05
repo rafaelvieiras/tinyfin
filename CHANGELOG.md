@@ -339,6 +339,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- A picture served once is answered from a copy kept beside the database instead of being read off the media path
+  again (`images.md#cache` R1, untestable as a scenario): a client that scrolls a library asks for dozens of pictures
+  per screen and asks again on every scroll back, so on a remote library — an rclone, WebDAV or NFS mount — the same
+  kilobytes crossed the mount over and over. The copy is keyed by what identifies the picture (item, kind, index, tag)
+  and by the source's size and modification time, so a replaced picture is never served stale, and the response keeps
+  the file's own `ETag` and `Last-Modified`. Copies are capped at 2 GiB (`-image-cache-size`, `0` disables) with the
+  least recently used dropped past it; a `404` still means the library has no such picture.
 - `GET /Items?SearchTerm` matches without regard to accents and punctuation,
   ranks (starts with, ends a word, seasons and episodes, rest) and, with no
   type list, also finds genre, studio and person names; an episode is no

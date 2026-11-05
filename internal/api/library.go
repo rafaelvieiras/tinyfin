@@ -23,9 +23,11 @@ package api
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -770,7 +772,8 @@ func (s *Server) handleItemImage(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	if _, err := os.Stat(ref.Path); err != nil {
+	sourceInfo, err := os.Stat(ref.Path)
+	if err != nil {
 		// The ref exists in storage but the file behind it isn't on disk
 		// (e.g. removed out-of-band) — same "expected gap, not a crash"
 		// handling as the no-ref case above.
@@ -791,7 +794,37 @@ func (s *Server) handleItemImage(w http.ResponseWriter, r *http.Request) {
 	// not blobs) — the same trust boundary handleVideoStream documents in
 	// playback.go. No request-supplied path fragment is ever joined into
 	// a filesystem path here.
-	http.ServeFile(w, r, ref.Path)
+	//
+	// The bytes are served through imagecache.go when it is enabled: on a
+	// remote library every request would otherwise re-read the same poster
+	// across the mount. The source's ModTime still drives Last-Modified, so
+	// a cached copy is indistinguishable from the file it copies.
+	f := s.openItemImage(ref, itemID, kind, index, sourceInfo)
+	if f == nil {
+		http.ServeFile(w, r, ref.Path)
+		return
+	}
+	defer f.Close()
+	http.ServeContent(w, r, filepath.Base(ref.Path), sourceInfo.ModTime(), f)
+}
+
+// openItemImage returns the image bytes to serve for ref: the cached copy when
+// the cache is enabled, filling it from ref.Path on a miss. nil means "serve
+// ref.Path directly" — the cache is an optimization and never a requirement,
+// so every failure here degrades to the uncached path instead of erroring.
+func (s *Server) openItemImage(ref storage.ImageRef, itemID storage.ItemID, kind storage.ImageKind, index int, sourceInfo os.FileInfo) io.ReadSeekCloser {
+	if s.imageCache == nil {
+		return nil
+	}
+	key := imageCacheKey(itemID, kind, index, ref, sourceInfo)
+	ext := strings.ToLower(filepath.Ext(ref.Path))
+	if f, _, ok := s.imageCache.open(key, ext); ok {
+		return f
+	}
+	if f, _, ok := s.imageCache.fill(key, ext, ref.Path); ok {
+		return f
+	}
+	return nil
 }
 
 // itemReadableByCaller is itemReadable for the authenticated caller.

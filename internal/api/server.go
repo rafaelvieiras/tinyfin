@@ -146,6 +146,18 @@ type Config struct {
 	// QuickConnectDisabled turns the QuickConnect sign-in flow off: the
 	// zero value leaves it enabled, as the official clients expect.
 	QuickConnectDisabled bool
+
+	// ImageCacheDir is where served item images are copied so a client that
+	// scrolls a library does not pull the same poster off a remote media
+	// mount on every request (imagecache.go). Empty, or ImageCacheBytes
+	// zero/negative, disables the cache: the image routes keep working
+	// straight from the library, only slower.
+	ImageCacheDir string
+
+	// ImageCacheBytes is the cache's size budget in bytes; past it the least
+	// recently used copies are deleted. cmd/tinyfin/main.go passes the
+	// -image-cache-size flag (megabytes) scaled here.
+	ImageCacheBytes int64
 }
 
 // Server is the API/metadata role's HTTP surface (docs/03). The zero value
@@ -165,9 +177,12 @@ type Server struct {
 	hlsSessions map[string]string
 	// encMu guards encodings: the play session of each running encode
 	// (active_encodings.go).
-	encMu      sync.Mutex
-	encodings  activeEncodings
-	scanner    *scan.Scanner
+	encMu     sync.Mutex
+	encodings activeEncodings
+	scanner   *scan.Scanner
+	// imageCache holds copies of the images already served (imagecache.go);
+	// nil when the cache is disabled.
+	imageCache *imageCache
 	trickplay  *trickplay.Generator
 	chapterimg *chapterimg.Generator
 	scanState  *scanTracker
@@ -240,6 +255,7 @@ func NewServer(store storage.Store, cfg Config) *Server {
 	// Sessions persisted by a previous run are listed again before any client
 	// reports (sessions.go's restore): a restart must not empty GET /Sessions.
 	s.sessions.restore(context.Background())
+	s.imageCache = newImageCache(cfg.ImageCacheDir, cfg.ImageCacheBytes)
 	s.trickplay = trickplay.New(store, cfg.TranscodeFFmpegPath, cfg.DataDir, cfg.TrickplayConcurrency)
 	s.chapterimg = chapterimg.New(store, cfg.TranscodeFFmpegPath, cfg.DataDir)
 	s.loadRuntimeSettings()
