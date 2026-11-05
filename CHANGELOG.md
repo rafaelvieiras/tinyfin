@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Known issues
+
+- A copied HLS job that starts in the middle of a file does not carry the seek in its segment timestamps on a current
+  ffmpeg (`playback.md` R9). The shift is the segment muxer's `-output_ts_offset`, an option that muxer honors up to
+  ffmpeg 4 and drops from 7 on. Measured on one file, for a job that starts at 7.023 s: ffmpeg 4.4.2 writes
+  17.023/23.023/31.023 s, jellyfin-ffmpeg 7.1.4 (the build the image bundles) writes 10.023/23.023/31.023 s, and
+  jellyfin-ffmpeg 8.1.3 (the reference's) writes 17/31 s — the shift arrives, the 13 s cut is skipped. The HLS muxer
+  honors the option on both builds, but it cuts by its own grid and, on a seek that lands exactly on a key frame,
+  writes the file from the start on 7.1.4; the two muxers are not interchangeable without design work against the
+  reference. `TestKeyFramesAndSeekedCopy` reports the measurement and skips where the build differs.
+
 ### Added
 
 - A `DeviceId` that carries the caller's own account id is the same device without it (`devices.md` R11-R12,
