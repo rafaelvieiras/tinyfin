@@ -48,10 +48,13 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
-      - name: Install ffmpeg
+      - name: Install ffmpeg and mkvtoolnix
+        # mkvtoolnix provides mkvmerge/mkvextract, which the synthetic media
+        # tree (statistics tags, Matrix2 remuxes) and the subtitle fixtures
+        # need; without it the tree generation stops at the first extraction.
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ffmpeg
+          sudo apt-get install -y --no-install-recommends ffmpeg mkvtoolnix
       - name: Generate the synthetic media tree
         run: scripts/conformance-media.sh "$RUNNER_TEMP/media"
       - name: Start a throwaway Tinyfin
