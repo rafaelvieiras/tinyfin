@@ -1190,9 +1190,13 @@ mx() { # <out> <video args...> (audio: one AAC track)
 }
 mx "$MX/Mx Mkv (2500)/Mx Mkv (2500).mkv" -c:v libx264 -preset ultrafast -pix_fmt yuv420p
 # remuxed with mkvmerge, which (unlike ffmpeg) writes BPS / NUMBER_OF_BYTES / NUMBER_OF_FRAMES statistics tags
-if [ ! -f "$MX/Mx Mkv Stats (2501)/Mx Mkv Stats (2501).mkv" ]; then
-  mkdir -p "$MX/Mx Mkv Stats (2501)"
-  mkvmerge -q -o "$MX/Mx Mkv Stats (2501)/Mx Mkv Stats (2501).mkv" "$MX/Mx Mkv (2500)/Mx Mkv (2500).mkv" >/dev/null
+if command -v mkvmerge >/dev/null 2>&1; then
+  if [ ! -f "$MX/Mx Mkv Stats (2501)/Mx Mkv Stats (2501).mkv" ]; then
+    mkdir -p "$MX/Mx Mkv Stats (2501)"
+    mkvmerge -q -o "$MX/Mx Mkv Stats (2501)/Mx Mkv Stats (2501).mkv" "$MX/Mx Mkv (2500)/Mx Mkv (2500).mkv" >/dev/null
+  fi
+else
+  echo "Matrix: skipped Mx Mkv Stats (2501) (no mkvmerge)"
 fi
 mx "$MX/Mx Hdr (2502)/Mx Hdr (2502).mkv" -c:v libx265 -preset ultrafast -pix_fmt yuv420p10le -x265-params "log-level=error:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc:hdr10=1:repeat-headers=1"
 mx "$MX/Mx Ten Bit (2503)/Mx Ten Bit (2503).mkv" -c:v libx264 -preset ultrafast -pix_fmt yuv420p10le
