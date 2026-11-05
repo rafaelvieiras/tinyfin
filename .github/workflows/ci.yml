@@ -26,6 +26,13 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
+      - name: Install ffmpeg
+        # The suite runs the real ffprobe (external subtitle cataloging, the
+        # scan fixtures, the transcode timestamps); a runner without it fails
+        # or silently skips those tests, so the job installs what a dev box has.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
       - name: Format
         run: test -z "$(gofmt -l .)"
       - name: Build
