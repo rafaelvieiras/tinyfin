@@ -26,13 +26,19 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
-      - name: Install ffmpeg
-        # The suite runs the real ffprobe (external subtitle cataloging, the
-        # scan fixtures, the transcode timestamps); a runner without it fails
-        # or silently skips those tests, so the job installs what a dev box has.
+      - name: Install jellyfin-ffmpeg
+        # The image bundles the portable jellyfin-ffmpeg release (see the
+        # JELLYFIN_FFMPEG_VERSION build arg), so the suite runs against the
+        # build that ships: transcoding fixtures, key frames, segments and the
+        # burn-in all read the ffmpeg of $PATH.
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ffmpeg
+          curl -fsSL -o /tmp/jellyfin-ffmpeg.tar.xz \
+            "https://github.com/jellyfin/jellyfin-ffmpeg/releases/download/v7.1.4-3/jellyfin-ffmpeg_7.1.4-3_portable_linux64-gpl.tar.xz"
+          sudo mkdir -p /usr/local/lib/jellyfin-ffmpeg
+          sudo tar -xJf /tmp/jellyfin-ffmpeg.tar.xz -C /usr/local/lib/jellyfin-ffmpeg
+          sudo chmod +x /usr/local/lib/jellyfin-ffmpeg/ffmpeg /usr/local/lib/jellyfin-ffmpeg/ffprobe
+          echo /usr/local/lib/jellyfin-ffmpeg >> "$GITHUB_PATH"
+          /usr/local/lib/jellyfin-ffmpeg/ffmpeg -version | head -1
       - name: Format
         run: test -z "$(gofmt -l .)"
       - name: Build
@@ -55,30 +61,61 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
-      - name: Install ffmpeg and mkvtoolnix
-        # mkvtoolnix provides mkvmerge/mkvextract, which the synthetic media
-        # tree (statistics tags, Matrix2 remuxes) and the subtitle fixtures
-        # need; without it the tree generation stops at the first extraction.
+      - name: Install the tools the media tree and the server need
+        # jellyfin-ffmpeg is the build the reference itself runs, and the
+        # fixtures, the expected timestamps and the expected bit rates are
+        # calibrated on it: the tree is byte-identical, the burn fixtures need
+        # its noise bsf, and only it reports HDR10+ side data. It installs to
+        # /usr/lib/jellyfin-ffmpeg, which is also the server's default path.
+        # mkvtoolnix makes the Matroska statistics and Dolby Vision remuxes;
+        # xorriso makes the DVD image fixture.
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ffmpeg mkvtoolnix
+          sudo apt-get install -y --no-install-recommends curl gnupg mkvtoolnix xorriso
+          sudo install -d -m 0755 /etc/apt/keyrings
+          curl -fsSL https://repo.jellyfin.org/jellyfin_team.gpg.key \
+            | gpg --dearmor | sudo tee /etc/apt/keyrings/jellyfin.gpg >/dev/null
+          echo "deb [signed-by=/etc/apt/keyrings/jellyfin.gpg] https://repo.jellyfin.org/ubuntu noble main" \
+            | sudo tee /etc/apt/sources.list.d/jellyfin.list >/dev/null
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends jellyfin-ffmpeg8
+          echo /usr/lib/jellyfin-ffmpeg >> "$GITHUB_PATH"
+          # The server and the runner both read this: the server falls back to
+          # the ffmpeg of $PATH otherwise, and the runner reports the burn
+          # fixtures BLOCKED when it cannot ask the ffmpeg for its noise bsf.
+          echo TINYFIN_FFMPEG_PATH=/usr/lib/jellyfin-ffmpeg/ffmpeg >> "$GITHUB_ENV"
+          echo TINYFIN_FFPROBE_PATH=/usr/lib/jellyfin-ffmpeg/ffprobe >> "$GITHUB_ENV"
+          /usr/lib/jellyfin-ffmpeg/ffmpeg -version | head -1
+      - name: Note the runner address
+        id: net
+        # The server listens on the runner's own address (not loopback) so it
+        # sees a non-loopback peer, which users.auth.R21 needs.
+        run: echo "ip=$(hostname -I | awk '{print $1}')" >> "$GITHUB_OUTPUT"
       - name: Generate the synthetic media tree
+        # The .strm fixtures point at the address the next step serves on; the
+        # default is the Docker bridge gateway, which suits a server in a
+        # container, and here the server is on the host beside the runner.
+        env:
+          STRM_HTTP: http://127.0.0.1:18999
         run: scripts/conformance-media.sh "$RUNNER_TEMP/media"
+      - name: Serve the media the .strm fixtures point at
+        # playback.offer.strm-http, playback.offer.strm-mkv,
+        # playback.offer.mp4-container-names and
+        # policy.remote.force-source-transcoding read the container of the
+        # file behind the address; without a listener they see the .strm file
+        # itself and answer "strm".
+        run: scripts/conformance-strm-serve.sh "$RUNNER_TEMP/media" 18999
       - name: Start a throwaway Tinyfin
         id: tf
-        # Listens on the runner's own address (not loopback) so the server can
-        # see the runner as a non-loopback peer; the data dir is where it
-        # writes the password-reset PIN files.
+        # The data dir is where the server writes the password-reset PIN files.
         run: |
-          ip="$(hostname -I | awk '{print $1}')"
-          BIND="$ip" scripts/conformance-tinyfin-up.sh 18098 | tee "$RUNNER_TEMP/up.log"
-          echo "ip=$ip" >> "$GITHUB_OUTPUT"
+          BIND="${{ steps.net.outputs.ip }}" scripts/conformance-tinyfin-up.sh 18098 | tee "$RUNNER_TEMP/up.log"
           echo "dir=$(sed -n 's/.*data-dir=\([^ ]*\).*/\1/p' "$RUNNER_TEMP/up.log")" >> "$GITHUB_OUTPUT"
       - name: Compare against the committed baseline
         # Fails only when a scenario that passes in docs/contract/baseline.json
         # no longer passes. The throwaway admin credential is the script default.
         run: |
-          go run ./cmd/conformance run -base "http://${{ steps.tf.outputs.ip }}:18098" \
+          go run ./cmd/conformance run -base "http://${{ steps.net.outputs.ip }}:18098" \
             -admin-user admin -admin-pass 'Conformance-Admin-1' \
             -media-root "$RUNNER_TEMP/media" -media-local-root "$RUNNER_TEMP/media" \
             -server-data-dir "${{ steps.tf.outputs.dir }}" \
@@ -86,14 +123,14 @@ jobs:
       - name: Start a second throwaway Tinyfin for the risky scenarios
         id: tf2
         run: |
-          BIND="${{ steps.tf.outputs.ip }}" scripts/conformance-tinyfin-up.sh 18099 | tee "$RUNNER_TEMP/up2.log"
+          BIND="${{ steps.net.outputs.ip }}" scripts/conformance-tinyfin-up.sh 18099 | tee "$RUNNER_TEMP/up2.log"
           echo "dir=$(sed -n 's/.*data-dir=\([^ ]*\).*/\1/p' "$RUNNER_TEMP/up2.log")" >> "$GITHUB_OUTPUT"
       - name: Risky scenarios (last administrator, PIN throttle)
         # They may delete/demote the only administrator or leave the runner's
         # address throttled, so they get a server of their own and run alone.
         # -strict: a BLOCKED scenario fails this step too.
         run: |
-          go run ./cmd/conformance run -base "http://${{ steps.tf.outputs.ip }}:18099" \
+          go run ./cmd/conformance run -base "http://${{ steps.net.outputs.ip }}:18099" \
             -admin-user admin -admin-pass 'Conformance-Admin-1' \
             -media-root "$RUNNER_TEMP/media" \
             -server-data-dir "${{ steps.tf2.outputs.dir }}" \
