@@ -108,6 +108,16 @@ jobs:
         # file behind the address; without a listener they see the .strm file
         # itself and answer "strm".
         run: scripts/conformance-strm-serve.sh "$RUNNER_TEMP/media" 18999
+      - name: Note what the bit rate fixture holds
+        # TEMPORARY diagnostic: the recorded rates of playback9 follow these
+        # bytes and this measurement.
+        run: |
+          f="$RUNNER_TEMP/media/Probe3/P3 Ts Aac (3801)/P3 Ts Aac (3801).ts"
+          ls -l "$f"
+          /usr/lib/jellyfin-ffmpeg/ffprobe -v error -threads 0 -probesize 1000000000 \
+            -analyzeduration 200000000 -print_format json -show_format -show_streams \
+            -show_frames -only_first_vframe "$f" \
+            | grep -oE '"(bit_rate|size|duration)": *"[0-9.]*"' | head -8
       - name: Start a throwaway Tinyfin
         id: tf
         # The data dir is where the server writes the password-reset PIN files.
