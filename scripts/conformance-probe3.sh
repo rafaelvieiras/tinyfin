@@ -26,7 +26,11 @@ ff() { "$FFMPEG" -v error -y "$@"; }
 # The bytes still depend on the libx264 / aac encoder build: generate them with
 # the reference's own jellyfin-ffmpeg (FFMPEG=...), as scripts/conformance-media.sh
 # does, to get the same files on every machine.
-BX=(-threads 1 -fflags +bitexact -flags +bitexact -map_metadata -1)
+# -cpuflags 0: the encoders' SIMD paths give slightly different bytes from one
+# CPU to the next (an AAC track came out 582 bps heavier on the CI runner than
+# on a desktop), and playback9's rates follow the bytes; the pure C paths are
+# the same everywhere.
+BX=(-threads 1 -cpuflags 0 -fflags +bitexact -flags +bitexact -map_metadata -1)
 # The bytes depend on the encoder build, so a build that is not jellyfin-ffmpeg is
 # replaced by the one inside a Jellyfin container image (docker; JF_IMAGE, default
 # jellyfin/jellyfin:12.2) when docker is available; otherwise only a warning.
