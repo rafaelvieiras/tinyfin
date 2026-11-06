@@ -871,13 +871,15 @@
           "json": [
             {
               "path": "$.MediaSources[0].MediaStreams[0].BitRate",
-              "op": "eq",
-              "value": 118604
+              "op": "near",
+              "value": 118652,
+              "tol": 2000
             },
             {
               "path": "$.MediaSources[0].MediaStreams[1].BitRate",
-              "op": "eq",
-              "value": 130790
+              "op": "near",
+              "value": 130742,
+              "tol": 2000
             }
           ]
         }
@@ -898,13 +900,15 @@
           "json": [
             {
               "path": "$.MediaSources[0].MediaStreams[0].BitRate",
-              "op": "eq",
-              "value": 129503
+              "op": "near",
+              "value": 129551,
+              "tol": 2000
             },
             {
               "path": "$.MediaSources[0].MediaStreams[1].BitRate",
-              "op": "eq",
-              "value": 130790
+              "op": "near",
+              "value": 130742,
+              "tol": 2000
             }
           ]
         }

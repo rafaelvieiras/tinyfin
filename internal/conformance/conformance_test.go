@@ -187,3 +187,36 @@ func TestRulesAndScenariosAgree(t *testing.T) {
 		}
 	}
 }
+
+func TestNearTakesAWanderingEstimate(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/rate", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"a":130217}`))
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	step := func(a Assert) Scenario {
+		return Scenario{ID: "near", Steps: []Step{{Request: Request{Method: "GET", Path: "/rate"},
+			Expect: Expect{Status: Ints{200}, JSON: []Assert{a}}}}}
+	}
+	cases := []struct {
+		name string
+		a    Assert
+		want string
+	}{
+		{"inside", Assert{Path: "$.a", Op: "near", Value: 130790, Tol: 2000}, StatusPass},
+		{"outside", Assert{Path: "$.a", Op: "near", Value: 130790, Tol: 100}, StatusFail},
+		{"no tolerance", Assert{Path: "$.a", Op: "near", Value: 130217}, StatusFail},
+		{"not found", Assert{Path: "$.b", Op: "near", Value: 1, Tol: 1}, StatusFail},
+	}
+	for _, tc := range cases {
+		sc := step(tc.a)
+		sc.ID = tc.name
+		got := NewClient(srv.URL).Run(context.Background(), []Scenario{sc}, true)
+		if len(got) != 1 || got[0].Status != tc.want {
+			t.Errorf("%s: %+v, want %s", tc.name, got, tc.want)
+		}
+	}
+}

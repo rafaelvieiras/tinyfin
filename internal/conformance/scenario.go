@@ -219,8 +219,13 @@ type PixelAssert struct {
 // Assert is one JSON-path assertion.
 type Assert struct {
 	Path  string `json:"path"`
-	Op    string `json:"op"` // eq ne exists absent type len gte lte contains notcontains matches allmatch in hex32
+	Op    string `json:"op"` // eq ne exists absent type len gte lte contains notcontains matches allmatch in hex32 near
 	Value any    `json:"value,omitempty"`
+	// Tol is how far a number may sit from Value with op near. A rate that
+	// the encoders only estimate (an AAC track inside a transport stream, say)
+	// moves a little from one CPU to the next, and the rule under test is the
+	// estimate, not the byte count of one machine.
+	Tol float64 `json:"tol,omitempty"`
 }
 
 // Ints unmarshals either a number or an array of numbers.

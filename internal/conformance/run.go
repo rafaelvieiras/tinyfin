@@ -926,6 +926,21 @@ func (c *Client) checkAssert(r *Response, a Assert, scratch map[string]string) e
 		if (a.Op == "gte" && g < w) || (a.Op == "lte" && g > w) {
 			return fmt.Errorf("got %v, want %s %v", g, a.Op, w)
 		}
+	case "near":
+		if !found {
+			return fmt.Errorf("not found")
+		}
+		g, ok := toFloat(got)
+		w, ok2 := toFloat(want)
+		if !ok || !ok2 {
+			return fmt.Errorf("not numeric: %s vs %v", show(got), want)
+		}
+		if a.Tol <= 0 {
+			return fmt.Errorf("near needs a positive tol")
+		}
+		if d := g - w; d > a.Tol || -d > a.Tol {
+			return fmt.Errorf("got %v, want %v within %v", g, w, a.Tol)
+		}
 	case "contains", "notcontains":
 		has := contains(got, want)
 		if a.Op == "contains" && !has {
