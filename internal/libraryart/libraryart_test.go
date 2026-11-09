@@ -169,3 +169,46 @@ func TestComposeWithoutNameDrawsNoText(t *testing.T) {
 		t.Errorf("centre pixel = %v, want the untouched source colour %v", got, want)
 	}
 }
+
+// TestComposeNameMatchesReferenceMetrics pins the typography to what the
+// reference server's own library images measure: the name "Anime" comes out
+// 391px wide and 87px tall with the middle of its ink at y=260 of 540. Those
+// three numbers are the whole reason this package embeds DejaVu Sans Bold
+// instead of a Go font (a fifth narrower at the same cap height) and places the
+// name by its ink box instead of the face's ascent and descent. See
+// fonts/LICENSE-DejaVu.txt and docs/11's library-card row.
+func TestComposeNameMatchesReferenceMetrics(t *testing.T) {
+	img := compose(t, "Anime", []image.Image{solid(400, 600, color.RGBA{R: 0x10, G: 0x20, B: 0x30, A: 0xFF})})
+
+	minX, minY, maxX, maxY := Width, Height, -1, -1
+	for y := 0; y < Height; y++ {
+		for x := 0; x < Width; x++ {
+			c := color.RGBAModel.Convert(img.At(x, y)).(color.RGBA)
+			if c.R > 0xEB && c.G > 0xEB && c.B > 0xEB {
+				minX, maxX = min(minX, x), max(maxX, x)
+				minY, maxY = min(minY, y), max(maxY, y)
+			}
+		}
+	}
+	if maxX < 0 {
+		t.Fatal("no white text pixels at all")
+	}
+	width, height := maxX-minX+1, maxY-minY+1
+	centerX, centerY := (minX+maxX)/2, (minY+maxY)/2
+	t.Logf("name metrics: %dx%d at (%d,%d), reference 391x87 at (480,260)", width, height, centerX, centerY)
+	// Tolerances leave room for hinting and antialiasing, not for a different
+	// face or a different anchor: the Go bold face is 20% narrower and the
+	// ascent/descent anchor puts the name 8px lower.
+	if width < 380 || width > 402 {
+		t.Errorf("name width = %d, want within 380..402 (reference: 391)", width)
+	}
+	if height < 82 || height > 92 {
+		t.Errorf("name height = %d, want within 82..92 (reference: 87)", height)
+	}
+	if centerX < 470 || centerX > 490 {
+		t.Errorf("name centre x = %d, want within 470..490", centerX)
+	}
+	if centerY < 254 || centerY > 266 {
+		t.Errorf("name centre y = %d, want within 254..266 (reference: 260)", centerY)
+	}
+}

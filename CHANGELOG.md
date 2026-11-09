@@ -28,8 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the collection-type icon. The library item itself carries `ImageTags.Primary` (and `ImageBlurHashes`,
   `PrimaryImageAspectRatio`) the way the reference's `CollectionFolder` does: serving the bytes is not enough, since the
   client builds the image URL only from an item whose tag is set. The server composes one when a library has none: a 16:9 PNG of up to four of the library's
-  own posters as slanted bands with the library name in white, written once after the scan that cataloged those posters,
-  so it stays stable across later scans. A library with no artwork gets none. **[intentional deviation]** the reference
+  own pictures as slanted bands with the library name in white, written once after the scan that cataloged those posters,
+  so it stays stable across later scans. A band takes the item's backdrop when it has one and its poster otherwise, so a
+  band shows a whole frame instead of a crop. The name is set in DejaVu Sans Bold (embedded, Bitstream Vera license beside
+  it) at the size and position the reference's own images measure — 391x87 ink centred at y=260 of 540 — instead of the
+  Go font, which came out a fifth narrower. A library with no artwork gets none. **[intentional deviation]** the reference
   server generates a single-still image of the same size; the mosaic is this project's look, the contract around it is
   the reference's. Keys are `(library_id, kind)` in their own table, because a library is not a catalog item here.
 

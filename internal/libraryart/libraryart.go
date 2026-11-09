@@ -14,7 +14,11 @@
 // reference draws a single still, this draws up to four pictures side by side
 // with a slanted edge between them (docs/00-decision-log.md, D36). What is
 // matched is the contract around it — canvas size, PNG, the name rendered in
-// white, and a stable file once generated.
+// white, and a stable file once generated — and the typography of that name,
+// which was measured against the reference's own images rather than guessed:
+// the same face (DejaVu Sans Bold, which reproduces "Anime" 391px wide and 87px
+// tall against the reference's 391 and 87), the same ink-box centre (y=260 of
+// 540), and the same shrink-to-fit width (88% of the canvas).
 package libraryart
 
 import (
@@ -29,12 +33,23 @@ import (
 	"math"
 	"strings"
 
+	_ "embed"
+
 	xdraw "golang.org/x/image/draw"
 	"golang.org/x/image/font"
-	"golang.org/x/image/font/gofont/gobold"
 	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/math/fixed"
 )
+
+// nameFont is the face the library name is set in. DejaVu Sans Bold, not one
+// of the Go fonts: measured against the reference server's own library images,
+// this face reproduces their letter width at the same cap height ("Anime"
+// 391px wide, 87px tall, against the reference's 391 and 87), where the Go
+// bold face comes out about a fifth narrower. The file is unmodified; its
+// license sits next to it in fonts/LICENSE-DejaVu.txt.
+//
+//go:embed fonts/DejaVuSans-Bold.ttf
+var nameFont []byte
 
 const (
 	// Width and Height are the canvas a dashboard card expects: 16:9, the
@@ -53,10 +68,20 @@ const (
 	slant = 0.22
 
 	// nameMaxWidthFraction keeps the library name inside the card with a
-	// margin, whatever its length.
-	nameMaxWidthFraction = 0.82
-	nameStartPointSize   = 108
-	nameMinPointSize     = 18
+	// margin, whatever its length: the reference's longest library name
+	// ("Filmes Infantis") spans 847px of the 960, and shrinks below the usual
+	// size to do it — 0.88 reproduces that, so a long name scales down instead
+	// of running off the card.
+	nameMaxWidthFraction = 0.88
+	// nameStartPointSize is the size at which the cap height comes out 87px,
+	// what the reference's images measure.
+	nameStartPointSize = 112
+	nameMinPointSize   = 18
+
+	// nameCenterY is where the middle of the name's ink box sits: 260 of 540,
+	// which is what the reference's images measure (the geometric centre would
+	// be 270; the name rides a little high there, deliberately).
+	nameCenterY = 260
 )
 
 // ErrNoSources is returned by Compose when there is nothing to draw: a library
@@ -208,7 +233,7 @@ func drawName(canvas *image.RGBA, name string) error {
 		return nil
 	}
 
-	parsed, err := opentype.Parse(gobold.TTF)
+	parsed, err := opentype.Parse(nameFont)
 	if err != nil {
 		return fmt.Errorf("libraryart: parsing embedded font: %w", err)
 	}
@@ -231,10 +256,18 @@ func drawName(canvas *image.RGBA, name string) error {
 	}
 	defer face.Close()
 
-	textWidth := font.MeasureString(face, name).Round()
-	metrics := face.Metrics()
+	// The name is placed by the box its glyphs actually ink, not by the face's
+	// ascent and descent: a name with an accent ("Séries") reaches higher than
+	// one without, and a name with no descender would otherwise sit low. The
+	// reference's images put that ink box's middle at nameCenterY.
+	bounds, _ := font.BoundString(face, name)
+	textWidth := (bounds.Max.X - bounds.Min.X).Round()
 	x := (Width - textWidth) / 2
-	y := (Height-metrics.Ascent.Round()-metrics.Descent.Round())/2 + metrics.Ascent.Round()
+	// Dot is the baseline; bounds are y-down from it, so the ink box's top is
+	// Min.Y above the baseline (a negative number) and its bottom is Max.Y.
+	inkTop := float64(bounds.Min.Y.Floor())
+	inkBottom := float64(bounds.Max.Y.Ceil())
+	y := int(math.Round(nameCenterY - (inkTop+inkBottom)/2))
 
 	// A dark outline at a few offsets first, so white text stays readable over
 	// a bright poster, then the text itself.

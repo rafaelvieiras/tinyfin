@@ -149,9 +149,12 @@ func (s *Server) ensureLibraryImage(ctx context.Context, lib storage.Library) {
 }
 
 // libraryArtSources decodes up to libraryart's band count of the library's own
-// pictures, most recently added first, preferring a primary image (a poster)
-// and falling back to a backdrop when that is all an item has. Items whose
-// file cannot be decoded are skipped rather than failing the composition.
+// pictures, most recently added first, preferring a backdrop and falling back
+// to a primary image (a poster) when that is all an item has. A backdrop is
+// 16:9 like the card, so a band shows the whole frame; a poster is 2:3 and a
+// band keeps only its middle. The reference's own library images are backdrops
+// for the same reason. Items whose file cannot be decoded are skipped rather
+// than failing the composition.
 func (s *Server) libraryArtSources(ctx context.Context, lib storage.Library) []image.Image {
 	const candidatePool = 24 // read this many items to find up to MaxSources pictures
 
@@ -170,7 +173,7 @@ func (s *Server) libraryArtSources(ctx context.Context, lib storage.Library) []i
 		if len(out) >= libraryart.MaxSources {
 			break
 		}
-		for _, kind := range []storage.ImageKind{libraryPrimaryImageKind, storage.ImageKind("Backdrop")} {
+		for _, kind := range []storage.ImageKind{storage.ImageKind("Backdrop"), libraryPrimaryImageKind} {
 			refs, err := s.store.GetImageRefs(ctx, item.ID, kind)
 			if err != nil || len(refs) == 0 || refs[0].Path == "" {
 				continue
