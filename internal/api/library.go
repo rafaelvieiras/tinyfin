@@ -736,9 +736,19 @@ func (s *Server) handleItemImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(refs) == 0 {
-		// No scanner exists yet to have populated an image ref (docs/08 is
-		// future work) — an expected gap right now, not a bug to mask.
-		// 404 cleanly instead of panicking on an empty slice.
+		// A media library's own card image is not an image_refs row (a
+		// library is not a catalog item — storage.LibraryImageStore's doc
+		// comment), and this route is exactly how a dashboard asks for it:
+		// /Items/{libraryItemId}/Images/Primary. An id that is no library
+		// either falls through to the 404 below.
+		if img, ok, err := s.store.GetLibraryImage(r.Context(), storage.LibraryID(itemID), kind); err == nil && ok {
+			refs = []storage.ImageRef{libraryPrimaryImageRef(img)}
+		}
+	}
+	if len(refs) == 0 {
+		// Nothing cataloged an image of this kind for this item — an expected
+		// gap, not a bug to mask. 404 cleanly instead of panicking on an
+		// empty slice.
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}

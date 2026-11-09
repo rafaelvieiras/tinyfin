@@ -121,8 +121,8 @@ func TestScheduledTasksScanRunning(t *testing.T) {
 	token := loginToken(t, ts.URL, admin.Name, "adminpass")
 	get := authedClient(t, ts.URL, token)
 
-	srv.scanState.begin()
-	defer srv.scanState.end(nil)
+	runID1 := srv.scanState.begin("library-1", func() {})
+	defer srv.scanState.end(runID1, nil)
 
 	tasks := decodeScheduledTasks(t, get(http.MethodGet, "/ScheduledTasks"))
 	if len(tasks) != 1 {
@@ -142,8 +142,8 @@ func TestScheduledTasksScanFinishedSuccess(t *testing.T) {
 	token := loginToken(t, ts.URL, admin.Name, "adminpass")
 	get := authedClient(t, ts.URL, token)
 
-	srv.scanState.begin()
-	srv.scanState.end(nil)
+	runID2 := srv.scanState.begin("library-2", func() {})
+	srv.scanState.end(runID2, nil)
 
 	tasks := decodeScheduledTasks(t, get(http.MethodGet, "/ScheduledTasks"))
 	if len(tasks) != 1 {
@@ -176,8 +176,8 @@ func TestScheduledTasksScanFinishedFailure(t *testing.T) {
 	token := loginToken(t, ts.URL, admin.Name, "adminpass")
 	get := authedClient(t, ts.URL, token)
 
-	srv.scanState.begin()
-	srv.scanState.end(errors.New("boom"))
+	runID3 := srv.scanState.begin("library-3", func() {})
+	srv.scanState.end(runID3, errors.New("boom"))
 
 	tasks := decodeScheduledTasks(t, get(http.MethodGet, "/ScheduledTasks"))
 	if len(tasks) != 1 {

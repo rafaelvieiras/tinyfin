@@ -28,21 +28,42 @@ import (
 )
 
 // virtualFolderInfo mirrors the reference server's VirtualFolderInfo, kept
-// to the fields this project actually populates with real data
-// (PrimaryImageItemId/RefreshProgress/RefreshStatus are left off rather
-// than guessed — see the package doc comment). LibraryOptions is the raw
-// blob POST /Library/VirtualFolders/LibraryOptions last saved, echoed back
-// as-is (Tinyfin doesn't interpret it — see storage.Library.LibraryOptions).
+// to the fields this project actually populates with real data (RefreshProgress
+// and RefreshStatus now included — see their own comments — while
+// PrimaryImageItemId is set only for a library that actually has a card
+// image). LibraryOptions is the raw blob POST
+// /Library/VirtualFolders/LibraryOptions last saved, echoed back as-is
+// (Tinyfin doesn't interpret it — see storage.Library.LibraryOptions).
 type virtualFolderInfo struct {
 	Name           string          `json:"Name"`
 	Locations      []string        `json:"Locations"`
 	CollectionType string          `json:"CollectionType"`
 	ItemId         string          `json:"ItemId"`
 	LibraryOptions json.RawMessage `json:"LibraryOptions,omitempty"`
+	// PrimaryImageItemId is the id of the item holding this library's primary
+	// image — the library's own ItemId, exactly as the reference server
+	// reports it. Load-bearing, not decorative: jellyfin-web's libraries page
+	// builds the card's image URL from ItemId only when this field is present
+	// (libraries.js chunk), so a library with an image but no
+	// PrimaryImageItemId renders as a bare icon.
+	PrimaryImageItemId string `json:"PrimaryImageItemId,omitempty"`
+	// RefreshStatus/RefreshProgress report a scan of this library that is in
+	// flight right now (scanTracker.libProgress): "Active" with a percentage,
+	// or "Idle" with no percentage at all. The reference server reports a
+	// single-library refresh here — observed live: POST
+	// /Items/{libraryId}/Refresh showed Active 0 -> 18.64 -> 75.41 on that one
+	// library while the RefreshLibrary task stayed Idle.
+	RefreshStatus   string   `json:"RefreshStatus"`
+	RefreshProgress *float64 `json:"RefreshProgress,omitempty"`
 }
 
 func (s *Server) handleGetVirtualFolders(w http.ResponseWriter, r *http.Request) {
 	libs, err := s.store.QueryLibraries(r.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	images, err := s.store.QueryLibraryImages(r.Context())
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -52,11 +73,20 @@ func (s *Server) handleGetVirtualFolders(w http.ResponseWriter, r *http.Request)
 		if lib.CollectionType == storage.CollectionTypePlaylists {
 			continue // playlists are not a media folder
 		}
-		out = append(out, virtualFolderInfo{
+		info := virtualFolderInfo{
 			Name: lib.Name, Locations: lib.Paths,
 			CollectionType: string(lib.CollectionType), ItemId: string(lib.ID),
 			LibraryOptions: json.RawMessage(lib.LibraryOptions),
-		})
+		}
+		if _, ok := images[lib.ID]; ok {
+			info.PrimaryImageItemId = string(lib.ID)
+		}
+		status, pct := s.scanState.libProgress(lib.ID)
+		info.RefreshStatus = status
+		if status != "Idle" {
+			info.RefreshProgress = &pct
+		}
+		out = append(out, info)
 	}
 	writeJSON(w, http.StatusOK, out)
 }

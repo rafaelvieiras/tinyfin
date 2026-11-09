@@ -29,6 +29,7 @@ type Store interface {
 	SubtitleStore
 	LyricStore
 	LibraryStore
+	LibraryImageStore
 	ActivityLogStore
 	APIKeyStore
 	SettingStore
@@ -330,6 +331,27 @@ type LibraryStore interface {
 	// deleted meanwhile is not recreated.
 	SetLibraryScanned(ctx context.Context, id LibraryID, at time.Time) error
 	DeleteLibrary(ctx context.Context, id LibraryID) error
+}
+
+// LibraryImageStore covers the one picture a media library itself can have:
+// the image a dashboard draws on the library's card. It is separate from
+// ImageStore because image_refs.item_id is a foreign key into items(id) and a
+// library is not a catalog item here (the CollectionFolder the API reports for
+// it is synthesized from the libraries row — api/dto.go), and because the
+// picture outlives any single item: it is composed from several of them.
+//
+// One row per (library, kind), same shape ImageStore uses, with Path still a
+// ref-not-blob pointer to a file on disk (docs/05).
+type LibraryImageStore interface {
+	// GetLibraryImage reports the library's image of that kind and whether it
+	// exists at all, so a caller can tell "no image" from an empty one.
+	GetLibraryImage(ctx context.Context, libraryID LibraryID, kind ImageKind) (LibraryImage, bool, error)
+	// QueryLibraryImages returns every library image there is, keyed by
+	// library id — one query for GET /Library/VirtualFolders, which asks
+	// about all libraries at once.
+	QueryLibraryImages(ctx context.Context) (map[LibraryID]LibraryImage, error)
+	UpsertLibraryImage(ctx context.Context, img LibraryImage) error
+	DeleteLibraryImage(ctx context.Context, libraryID LibraryID, kind ImageKind) error
 }
 
 // ActivityLogStore covers the durable activity log GET

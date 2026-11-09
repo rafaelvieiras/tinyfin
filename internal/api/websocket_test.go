@@ -262,7 +262,8 @@ func TestSocketScheduledTasksInfoPushOnScanStateChange(t *testing.T) {
 		return c.tasks.subscribed
 	})
 
-	srv.scanState.begin()
+	runID := srv.scanState.begin("library-1", func() {})
+	defer srv.scanState.end(runID, nil)
 	srv.notifyScheduledTasks(context.Background(), true)
 
 	msg := readSocketMessage(t, conn)
@@ -299,8 +300,8 @@ func TestSocketScheduledTasksInfoAfterCancelledScan(t *testing.T) {
 		return c.tasks.subscribed
 	})
 
-	srv.scanState.begin()
-	srv.scanState.end(context.Canceled)
+	runID := srv.scanState.begin("library-2", func() {})
+	srv.scanState.end(runID, context.Canceled)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	srv.notifyScanEnded(ctx)

@@ -72,6 +72,23 @@ func (s *Server) handleListItemImages(w http.ResponseWriter, r *http.Request) {
 	itemID := storage.ItemID(r.PathValue("itemId"))
 
 	out := []imageInfo{}
+	// A media library's own card image lives in its own table, not in
+	// image_refs (library_image.go), and this route is how the dashboard's
+	// "Edit images" dialog on a library card finds it.
+	if img, ok, err := s.store.GetLibraryImage(r.Context(), storage.LibraryID(itemID), libraryPrimaryImageKind); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	} else if ok {
+		out = append(out, imageInfo{
+			ImageType: string(img.Kind),
+			ImageTag:  img.Tag,
+			Path:      img.Path,
+			BlurHash:  img.BlurHash,
+			Height:    img.Height,
+			Width:     img.Width,
+			Size:      img.Size,
+		})
+	}
 	for _, kind := range allImageKinds {
 		refs, err := s.store.GetImageRefs(r.Context(), itemID, kind)
 		if err != nil {
@@ -139,6 +156,11 @@ func (s *Server) handleUploadItemImage(w http.ResponseWriter, r *http.Request) {
 		// request has no silent-skip option: the client expects either the
 		// image to exist afterward or an error, never a false 204.
 		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if lib, ok := s.libraryForItemID(r.Context(), itemID); ok {
+		s.uploadLibraryImage(w, r, lib, kind, data)
 		return
 	}
 
@@ -210,6 +232,11 @@ func (s *Server) handleDeleteItemImage(w http.ResponseWriter, r *http.Request) {
 		if n, err := strconv.Atoi(v); err == nil {
 			index = n
 		}
+	}
+
+	if lib, ok := s.libraryForItemID(r.Context(), itemID); ok {
+		s.deleteLibraryImage(w, r, lib, kind, index)
+		return
 	}
 
 	refs, err := s.store.GetImageRefs(r.Context(), itemID, kind)

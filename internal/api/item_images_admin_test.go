@@ -52,6 +52,10 @@ func newTestServerWithImageDir(t *testing.T) (*httptest.Server, *sqlite.Store, s
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /Items/{itemId}/Images", requireAdmin(srv.handleListItemImages))
+	// The byte-serving route an image URL actually hits (unlike the admin
+	// list/upload/delete above, it takes no token: it backs a bare <img src>).
+	mux.HandleFunc("GET /Items/{itemId}/Images/{imageType}", srv.handleItemImage)
+	mux.HandleFunc("GET /Items/{itemId}/Images/{imageType}/{imageIndex}", srv.handleItemImage)
 	mux.HandleFunc("POST /Items/{itemId}/Images/{imageType}", requireAdmin(srv.handleUploadItemImage))
 	mux.HandleFunc("POST /Items/{itemId}/Images/{imageType}/{imageIndex}", requireAdmin(srv.handleUploadItemImage))
 	mux.HandleFunc("DELETE /Items/{itemId}/Images/{imageType}", requireAdmin(srv.handleDeleteItemImage))

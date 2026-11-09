@@ -19,6 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reference. `TestKeyFramesAndSeekedCopy` reports the measurement and skips where the build differs.
 
 ### Added
+- A media library has a picture of its own (`admin.md` `admin.libraries`, `GET /Library/VirtualFolders`,
+  `internal/libraryart`): the folder reports `PrimaryImageItemId` whenever it has one, and
+  `/Items/{libraryItemId}/Images/Primary` serves it — the same routes, list/upload/delete included, an item's artwork
+  already uses. jellyfin-web only draws a library card image when that field is present, so a library without one showed
+  the collection-type icon. The server composes one when a library has none: a 16:9 PNG of up to four of the library's
+  own posters as slanted bands with the library name in white, written once after the scan that cataloged those posters,
+  so it stays stable across later scans. A library with no artwork gets none. **[intentional deviation]** the reference
+  server generates a single-still image of the same size; the mosaic is this project's look, the contract around it is
+  the reference's. Keys are `(library_id, kind)` in their own table, because a library is not a catalog item here.
+
 
 - A `DeviceId` that carries the caller's own account id is the same device without it (`devices.md` R11-R12,
   `devices.json`, 1 scenario): clients that append the account id to their device id after a sign-in (the Android app
@@ -343,6 +353,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`fs` steps, `-media-local-root`) and wait for a background change (`retryMs`).
 
 ### Fixed
+- A library scan reports its own progress, and a single-library scan no longer sits at `0%` from start to finish:
+  `CurrentProgressPercentage` was "libraries finished in this run", so `POST /Items/{libraryItemId}/Refresh` — the
+  dashboard's "Scan library" — reported nothing at all until it was over. The pass now reports the share of the work it
+  has queued that it has finished (monotonic, capped at `99` while running), the task list publishes the mean across
+  in-flight scans, `GET /Library/VirtualFolders` reports `RefreshStatus`/`RefreshProgress` for the library being scanned
+  (a field pair it did not model), and `ScheduledTasksInfo` follows with one push per whole percentage point crossed.
+  **[intentional deviation]** the reference server leaves the `RefreshLibrary` task `Idle` for a single-library refresh and
+  reports only the library; here both are reported, so a dashboard watching only the task list still sees the scan.
 
 - Device routes match their query parameter names without regard to case, as every other route does (`devices.md` R13):
   `DELETE /Devices?Id=…`, the spelling a case-insensitive binding accepts, answered `204` here and deleted nothing

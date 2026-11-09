@@ -268,48 +268,100 @@ func NewServer(store storage.Store, cfg Config) *Server {
 	return s
 }
 
-// scanTracker records the in-process state of the one background operation
-// this project has today — a library scan (runScan) — so GET
-// /ScheduledTasks (scheduled_tasks.go) can honestly report whether one is
-// currently running and when one last finished, without a real
-// task-scheduling engine behind it. runScan always executes on its own
-// goroutine (library_admin.go, item_refresh.go), and more than one can run
-// concurrently (POST /Library/Refresh fires one per library) — running
-// counts concurrent scans rather than being a bool, so the "is anything
-// running" answer stays correct until every one of them has finished.
-// lastStart/lastEnd/lastErr describe only the single most recently
-// started/finished scan, not a per-run history — a known simplification
-// that matches this type's existing scope, not a new one.
-type scanTracker struct {
-	mu        sync.Mutex
-	running   int
-	lastStart time.Time
-	lastEnd   time.Time
-	lastErr   error
-	// batchTotal/batchDone count the scans started/finished since the
-	// tracker was last idle, the basis of the task's progress percentage.
-	batchTotal, batchDone int
-	cancelSeq             int
-	cancels               map[int]context.CancelFunc
-	lastCancelled         bool
+// scanRun is one in-flight library scan: which library it reads, the
+// percentage the scanner last reported for it, and the last whole percentage
+// that was pushed to the sockets (so a scan that reports hundreds of small
+// steps still sends at most one task-list update per percentage point).
+type scanRun struct {
+	libID    storage.LibraryID
+	progress float64
+	pushed   float64
 }
 
-// register stores cancel so cancelAll can stop the scan; the returned func
-// unregisters it.
-func (t *scanTracker) register(cancel context.CancelFunc) func() {
+// scanTracker records the in-process state of the one background operation
+// this project has today — a library scan (runScan) — so GET /ScheduledTasks
+// (scheduled_tasks.go) can honestly report whether one is currently running,
+// how far along it is, and when one last finished, without a real
+// task-scheduling engine behind it. runScan always executes on its own
+// goroutine (library_admin.go, item_refresh.go), and more than one can run
+// concurrently (POST /Library/Refresh fires one per library) — runs counts
+// concurrent scans rather than being a bool, so the "is anything running"
+// answer stays correct until every one of them has finished, and the task's
+// percentage is the mean of their own reported percentages.
+//
+// The same runs also answer GET /Library/VirtualFolders's per-library
+// RefreshStatus/RefreshProgress (libProgress): the reference server reports a
+// single-library refresh there — observed live, POST
+// /Items/{libraryId}/Refresh made that one library report Active 0 -> 18.64 ->
+// 75.41 while the RefreshLibrary task stayed Idle. Tinyfin deliberately keeps
+// the batch task reporting that scan too (docs/00-decision-log.md's D- entry),
+// because a dashboard watching only the task would otherwise show nothing at
+// all for a single-library scan; the per-library fields are reported as well,
+// so both readers see the truth.
+//
+// lastStart/lastEnd/lastErr describe only the single most recently
+// started/finished scan, not a per-run history — a known simplification that
+// matches this type's existing scope, not a new one.
+type scanTracker struct {
+	mu            sync.Mutex
+	runs          map[int]*scanRun
+	cancels       map[int]context.CancelFunc
+	seq           int
+	lastStart     time.Time
+	lastEnd       time.Time
+	lastErr       error
+	lastCancelled bool
+}
+
+// begin registers a scan of lib and stores cancel so cancelAll can stop it.
+// The returned id addresses the run for progress updates and end.
+func (t *scanTracker) begin(libID storage.LibraryID, cancel context.CancelFunc) int {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	if t.cancels == nil {
+	if t.runs == nil {
+		t.runs = map[int]*scanRun{}
 		t.cancels = map[int]context.CancelFunc{}
 	}
-	t.cancelSeq++
-	id := t.cancelSeq
-	t.cancels[id] = cancel
-	return func() {
-		t.mu.Lock()
-		delete(t.cancels, id)
-		t.mu.Unlock()
+	if len(t.runs) == 0 {
+		t.lastCancelled = false
 	}
+	t.seq++
+	id := t.seq
+	t.runs[id] = &scanRun{libID: libID}
+	t.cancels[id] = cancel
+	t.lastStart = time.Now().UTC()
+	return id
+}
+
+// setProgress records the percentage the scanner reported for one run and
+// reports whether a whole percentage point has been crossed since the last
+// push — the caller publishes the task list to the sockets on those steps,
+// which is what makes a dashboard's progress bar move during a long scan.
+func (t *scanTracker) setProgress(id int, pct float64) bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	run, ok := t.runs[id]
+	if !ok {
+		return false
+	}
+	if pct > run.progress {
+		run.progress = pct
+	}
+	if run.progress-run.pushed < 1 {
+		return false
+	}
+	run.pushed = run.progress
+	return true
+}
+
+// end unregisters a finished run and records its outcome.
+func (t *scanTracker) end(id int, err error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	delete(t.runs, id)
+	delete(t.cancels, id)
+	t.lastEnd = time.Now().UTC()
+	t.lastErr = err
 }
 
 // cancelAll cancels every in-flight scan and reports whether there was one.
@@ -325,35 +377,39 @@ func (t *scanTracker) cancelAll() bool {
 	return len(t.cancels) > 0
 }
 
-// progress returns the completed share of the current batch, in percent.
+// progress returns the task's CurrentProgressPercentage: the mean of the
+// in-flight scans' own percentages. A batch of libraries therefore creeps up
+// as each one advances instead of jumping only when a whole library finishes,
+// and a scan of exactly one library reports that library's own progress —
+// the case that used to sit frozen at 0% for the whole run.
 func (t *scanTracker) progress() float64 {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	if t.batchTotal == 0 {
+	if len(t.runs) == 0 {
 		return 0
 	}
-	return float64(t.batchDone) / float64(t.batchTotal) * 100
-}
-
-func (t *scanTracker) begin() {
-	t.mu.Lock()
-	if t.running == 0 {
-		t.batchTotal, t.batchDone = 0, 0
-		t.lastCancelled = false
+	var sum float64
+	for _, run := range t.runs {
+		sum += run.progress
 	}
-	t.batchTotal++
-	t.running++
-	t.lastStart = time.Now().UTC()
-	t.mu.Unlock()
+	return sum / float64(len(t.runs))
 }
 
-func (t *scanTracker) end(err error) {
+// libProgress reports one library's own RefreshStatus and RefreshProgress:
+// Active plus the percentage of the scan reading it, or Idle. The newest run
+// wins when the same library is somehow scanning twice.
+func (t *scanTracker) libProgress(libID storage.LibraryID) (status string, pct float64) {
 	t.mu.Lock()
-	t.running--
-	t.batchDone++
-	t.lastEnd = time.Now().UTC()
-	t.lastErr = err
-	t.mu.Unlock()
+	defer t.mu.Unlock()
+	status = "Idle"
+	newest := 0
+	for id, run := range t.runs {
+		if run.libID != libID || id < newest {
+			continue
+		}
+		status, pct, newest = "Active", run.progress, id
+	}
+	return status, pct
 }
 
 // snapshot reports whether a scan is currently in flight and the start/
@@ -362,7 +418,7 @@ func (t *scanTracker) end(err error) {
 func (t *scanTracker) snapshot() (running bool, lastStart, lastEnd time.Time, lastErr error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	return t.running > 0, t.lastStart, t.lastEnd, t.lastErr
+	return len(t.runs) > 0, t.lastStart, t.lastEnd, t.lastErr
 }
 
 func scanLibParallelism(n int) int {
@@ -387,9 +443,8 @@ func (s *Server) runScan(lib storage.Library) {
 // runScanCtx is runScan with a caller-prepared context (scan.WithoutCollections).
 func (s *Server) runScanCtx(ctx context.Context, lib storage.Library) {
 	ctx, cancel := context.WithCancel(ctx)
-	defer s.scanState.register(cancel)()
 	defer cancel()
-	s.scanState.begin()
+	runID := s.scanState.begin(lib.ID, cancel)
 	s.notifyScheduledTasks(ctx, true)
 	// Bound how many libraries scan at once; the scan counts as running
 	// while it waits for a slot.
@@ -397,9 +452,23 @@ func (s *Server) runScanCtx(ctx context.Context, lib storage.Library) {
 	defer func() { <-s.scanLibSem }()
 	var stats scan.Stats
 	var err error
-	s.trackLibraryChanges(ctx, lib.ID, func() { stats, err = s.scanner.ScanLibrary(ctx, lib) })
-	s.scanState.end(err)
+	s.trackLibraryChanges(ctx, lib.ID, func() {
+		stats, err = s.scanner.ScanLibraryWithProgress(ctx, lib, func(pct float64) {
+			// One task-list push per percentage point crossed: a scan that
+			// reports many small steps must not flood the socket.
+			if s.scanState.setProgress(runID, pct) {
+				s.notifyScheduledTasks(ctx, false)
+			}
+		})
+	})
+	s.scanState.end(runID, err)
 	s.notifyScanEnded(ctx)
+	if err == nil {
+		// The library's card image is composed from its own artwork, so it can
+		// only be built once the pass has cataloged what the library holds
+		// (library_image.go).
+		s.ensureLibraryImage(context.WithoutCancel(ctx), lib)
+	}
 	if err != nil {
 		log.Printf("api: scanning library %q: %v", lib.Name, err)
 		return

@@ -46,3 +46,19 @@ type TrickplayInfo struct {
 	Interval       int
 	Bandwidth      int
 }
+
+// LibraryImage is the picture a media library shows on a dashboard card
+// (LibraryImageStore's doc comment in store.go). Same fields ImageRef carries,
+// minus the per-item identity: the library id and the kind are the key, and
+// there is only ever one image per kind.
+type LibraryImage struct {
+	LibraryID LibraryID
+	Kind      ImageKind
+
+	Path     string
+	Tag      string
+	BlurHash string
+	Width    int
+	Height   int
+	Size     int64
+}

@@ -170,7 +170,22 @@ type jobPool struct {
 	stats Stats
 	// failed counts the jobs that returned an error (as opposed to a warning).
 	failed int
+	// enqueued counts every job handed to the pool, done the ones that have
+	// returned; their ratio is the scan percentage report publishes. The walk
+	// blocks on sem once every worker is busy (this type's doc comment), so
+	// enqueued never runs far ahead of the work actually in hand — the ratio
+	// tracks progress through the library rather than the walk's own speed.
+	enqueued int
+	done     int
+	lastPct  float64
+	report   func(float64)
 }
+
+// scanProgressCap is the highest percentage a scan publishes while it is
+// still running: 100 means finished, which the task list says with State
+// Idle instead. The reference server's own scan parks below 100 the same way
+// (observed live: 94.6, 96, 96, then Idle).
+const scanProgressCap = 99
 
 func newJobPool(concurrency int) *jobPool {
 	return &jobPool{sem: make(chan struct{}, concurrency)}
@@ -179,20 +194,51 @@ func newJobPool(concurrency int) *jobPool {
 func (p *jobPool) enqueue(fn func() error) {
 	p.wg.Add(1)
 	p.sem <- struct{}{}
+	p.mu.Lock()
+	p.enqueued++
+	pct, moved := p.bumpLocked()
+	p.mu.Unlock()
+	p.publish(pct, moved)
 	go func() {
 		defer p.wg.Done()
 		defer func() { <-p.sem }()
-		if err := fn(); err != nil {
-			p.mu.Lock()
+		err := fn()
+		p.mu.Lock()
+		if err != nil {
 			p.stats.Errors = append(p.stats.Errors, err.Error())
 			p.failed++
-			p.mu.Unlock()
-			return
+		} else {
+			p.stats.ItemsScanned++
 		}
-		p.mu.Lock()
-		p.stats.ItemsScanned++
+		p.done++
+		pct, moved := p.bumpLocked()
 		p.mu.Unlock()
+		p.publish(pct, moved)
 	}()
+}
+
+// bumpLocked recomputes the completion share. Progress is published
+// monotonically: a walk that finds more work must not make the bar jump
+// backwards.
+func (p *jobPool) bumpLocked() (float64, bool) {
+	if p.enqueued == 0 {
+		return p.lastPct, false
+	}
+	pct := float64(p.done) / float64(p.enqueued) * 100
+	if pct > scanProgressCap {
+		pct = scanProgressCap
+	}
+	if pct <= p.lastPct {
+		return p.lastPct, false
+	}
+	p.lastPct = pct
+	return pct, true
+}
+
+func (p *jobPool) publish(pct float64, moved bool) {
+	if moved && p.report != nil {
+		p.report(pct)
+	}
 }
 
 func (p *jobPool) countProbed() {
@@ -236,9 +282,20 @@ func (p *jobPool) wait() Stats {
 // library path's root, or the final LastScannedAt persist, is returned as
 // err.
 func (s *Scanner) ScanLibrary(ctx context.Context, lib storage.Library) (Stats, error) {
+	return s.ScanLibraryWithProgress(ctx, lib, nil)
+}
+
+// ScanLibraryWithProgress is ScanLibrary plus a completion callback: report
+// receives the pass's own percentage, monotonically non-decreasing and
+// capped at scanProgressCap while the pass runs. A nil report is exactly
+// ScanLibrary. The callback runs on whichever goroutine finished a job, so it
+// must be cheap and safe for concurrent use — the API layer's own tracker is
+// both (api/server.go's scanTracker.setProgress).
+func (s *Scanner) ScanLibraryWithProgress(ctx context.Context, lib storage.Library, report func(float64)) (Stats, error) {
 	started := time.Now()
 	ctx = withLibOptions(withPassState(withDirCache(ctx)), lib)
 	pool := newJobPool(s.concurrency)
+	pool.report = report
 
 	// A root that cannot be read, or that has no entry at all (a mount that is
 	// not there, an emptied share), is skipped: what the library holds under
