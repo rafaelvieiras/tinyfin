@@ -170,6 +170,31 @@ func TestComposeWithoutNameDrawsNoText(t *testing.T) {
 	}
 }
 
+// The overlay behind the name covers the whole card, corners included: four
+// pictures are busier than the reference's single still and a bright patch can
+// land anywhere, so a strip behind the text is not enough. Every pixel keeps the
+// same fraction of its brightness, which is what makes it an overlay and not a
+// band.
+func TestComposeDarkensTheWholeCard(t *testing.T) {
+	src := color.RGBA{R: 0x40, G: 0x80, B: 0xC0, A: 0xFF}
+	img := compose(t, "Anime", []image.Image{solid(400, 600, src)})
+	keep := 1 - scrimAlpha
+	want := color.RGBA{
+		R: uint8(float64(src.R) * keep),
+		G: uint8(float64(src.G) * keep),
+		B: uint8(float64(src.B) * keep),
+		A: 0xFF,
+	}
+	for _, p := range []image.Point{
+		{0, 0}, {Width - 1, 0}, {0, Height - 1}, {Width - 1, Height - 1},
+		{Width / 2, 1}, {Width / 2, Height - 2}, {5, Height / 2}, {Width - 6, Height / 2},
+	} {
+		if got := color.RGBAModel.Convert(img.At(p.X, p.Y)).(color.RGBA); got != want {
+			t.Errorf("pixel (%d,%d) = %v, want the source dimmed to %v", p.X, p.Y, got, want)
+		}
+	}
+}
+
 // TestComposeNameMatchesReferenceMetrics pins the typography to what the
 // reference server's own library images measure: the name "Anime" comes out
 // 391px wide and 87px tall with the middle of its ink at y=260 of 540. Those

@@ -83,14 +83,12 @@ const (
 	// be 270; the name rides a little high there, deliberately).
 	nameCenterY = 260
 
-	// scrimPeakAlpha is the opacity of the dark band behind the name, at its
-	// centre. A mosaic of four pictures is far busier than the reference's
-	// single still, and white text over a bright poster is what suffers: the
-	// band darkens the strip the name sits on so the name reads on any of the
-	// four bands without covering the pictures. scrimReach is how far above
-	// and below nameCenterY the band fades out to nothing, in pixels.
-	scrimPeakAlpha = 0.55
-	scrimReach     = 150
+	// scrimAlpha is how much of the mosaic's brightness the overlay behind the
+	// name takes away, over the whole card: white text over four unrelated
+	// pictures needs the whole surface quieter, not a strip of it, because the
+	// eye reads the name against whatever happens to sit beside and below it.
+	// It stays light enough that the pictures still read as themselves.
+	scrimAlpha = 0.38
 )
 
 // ErrNoSources is returned by Compose when there is nothing to draw: a library
@@ -233,39 +231,24 @@ func scaleCover(src image.Image, w, h int) *image.RGBA {
 	return dst
 }
 
-// drawScrim darkens a horizontal band of canvas centred on the name, fading to
-// nothing at scrimReach: an overlay, not a bar. It is what gives the white name
-// contrast over four unrelated pictures — the same job the reference's outline
-// does over one still, which the outline here alone cannot cover once the
-// artwork behind it changes every few hundred pixels.
+// drawScrim lays a uniform dark overlay over the whole card, so the white name
+// has contrast wherever the mosaic puts a bright picture. The reference's
+// outline does that job over one still; over four bands the bright patch can
+// land anywhere, including right beside the last letter, so the overlay covers
+// the surface instead of following the text.
 //
-// The fade is a smoothstep of the pixel's distance from the band's centre, so
-// there is no visible edge where the band starts or ends: at the centre the
-// pictures keep 45% of their brightness, at the edges all of it.
+// Nothing is left out, the corners included: a band with a fade was tried and
+// the corners stayed brighter than the middle, which read as a vignette the
+// card does not want.
 func drawScrim(canvas *image.RGBA) {
-	top := nameCenterY - scrimReach
-	bottom := nameCenterY + scrimReach
-	if top < 0 {
-		top = 0
-	}
-	if bottom > Height {
-		bottom = Height - 1
-	}
-	for y := top; y <= bottom; y++ {
-		t := math.Abs(float64(y)-float64(nameCenterY)) / float64(scrimReach)
-		if t >= 1 {
-			continue
-		}
-		// 1 at the centre, 0 at the edge, with a smooth derivative at both
-		// ends (a linear fade reads as a visible seam over a flat sky).
-		fade := 1 - t*t*(3-2*t)
-		alpha := scrimPeakAlpha * fade
+	keep := 1 - scrimAlpha
+	for y := 0; y < Height; y++ {
 		row := canvas.Pix[y*canvas.Stride:]
 		for x := 0; x < Width; x++ {
 			i := x * 4
-			row[i] = uint8(float64(row[i]) * (1 - alpha))
-			row[i+1] = uint8(float64(row[i+1]) * (1 - alpha))
-			row[i+2] = uint8(float64(row[i+2]) * (1 - alpha))
+			row[i] = uint8(float64(row[i]) * keep)
+			row[i+1] = uint8(float64(row[i+1]) * keep)
+			row[i+2] = uint8(float64(row[i+2]) * keep)
 		}
 	}
 }
