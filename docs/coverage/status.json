@@ -1136,6 +1136,7 @@
    "scenarios": [
     "chapters.images.generate",
     "images.api.index-lookup",
+    "images.api.size",
     "images.frame.episode",
     "images.frame.extras-movie",
     "images.frame.extras-parts",
@@ -1158,6 +1159,7 @@
    "scenarios": [
     "chapters.images.generate",
     "images.api.index-lookup",
+    "images.api.size",
     "images.frame.episode",
     "images.frame.extras-movie",
     "images.frame.extras-parts",

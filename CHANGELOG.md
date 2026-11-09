@@ -21,6 +21,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reference. `TestKeyFramesAndSeekedCopy` reports the measurement and skips where the build differs.
 
 ### Added
+- `GET /Items/{itemId}/Images/{imageType}` answers at the size the request asks for (`images.api.R4`): `width`/`height`,
+  `maxWidth`/`maxHeight` (capped in that order), `fillWidth`/`fillHeight` and `quality`, all measured against the reference
+  one member at a time. A stored picture is never enlarged, and a request that asks for nothing — or for more than the file
+  already is — is still answered with the file's own bytes. The answer keeps the stored format (a PNG library card is still
+  a PNG at 300x169), a JPEG made again without a quality gets the reference's default of 100, and a member that is not an
+  integer is a 400. `format` and `Accept: image/webp` are not implemented on item pictures — `DIV-29` in
+  `docs/13-divergences.md`. The size arithmetic lives in `internal/picture`, shared with chapter pictures, and the resized
+  bytes are cached beside the originals so a library screen does not re-encode the same poster on every scroll.
+
 - A media library has a picture of its own (`admin.md` `admin.libraries`, `GET /Library/VirtualFolders`,
   `internal/libraryart`): the folder reports `PrimaryImageItemId` whenever it has one, and
   `/Items/{libraryItemId}/Images/Primary` serves it — the same routes, list/upload/delete included, an item's artwork
@@ -30,7 +39,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   client builds the image URL only from an item whose tag is set. The server composes one when a library has none: a 16:9 PNG of up to four of the library's
   own pictures as slanted bands with the library name in white, written once after the scan that cataloged those posters,
   so it stays stable across later scans. A band takes the item's backdrop when it has one and its poster otherwise, so a
-  band shows a whole frame instead of a crop. The name is set in DejaVu Sans Bold (embedded, Bitstream Vera license beside
+  band shows a whole frame instead of a crop. The name sits on a dark band that fades out above and below it (55% opacity at
+  its centre): an overlay, not a bar, because four unrelated pictures are busier than the reference's single still and the
+  white name needs the contrast. The name is set in DejaVu Sans Bold (embedded, Bitstream Vera license beside
   it) at the size and position the reference's own images measure — 391x87 ink centred at y=260 of 540 — instead of the
   Go font, which came out a fifth narrower. A library with no artwork gets none. **[intentional deviation]** the reference
   server generates a single-still image of the same size; the mosaic is this project's look, the contract around it is

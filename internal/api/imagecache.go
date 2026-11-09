@@ -8,8 +8,13 @@
 // (`<data>.images/cache`), keyed by everything that identifies the bytes:
 // item, kind, index, the ref's tag, and the source's size and mtime.
 //
-// What it is not: a resizer. Tinyfin serves the library's own file bytes
-// (images.api.R1); this only decides *where* those bytes are read from.
+// As of the sizing work the cache holds two kinds of entry: the library's own
+// bytes (the original read that saves a second pull from the mount) and the
+// bytes of a picture the route made again at the size the request asked for
+// (picture.PlanFor). Both are keyed the way the entry is identified, so a
+// replaced picture or a different requested size is a different key and never
+// a stale hit; a derived entry's key also carries the size and the encoder
+// settings, which is what tells a 300px thumbnail from the full poster.
 //
 // Freshness is decided by the key, never by the cached file's own mtime — a
 // poster replaced on disk changes size and/or mtime, which produces a
@@ -80,26 +85,49 @@ func newImageCache(dir string, maxSize int64) *imageCache {
 // on disk (size, mtime). Any change to either produces a different key, so a
 // replaced or re-tagged image is never served from a stale entry.
 func imageCacheKey(itemID storage.ItemID, kind storage.ImageKind, index int, ref storage.ImageRef, info os.FileInfo) string {
-	var mtime int64
+	return hashImageKey(sourceImageFields(itemID, kind, index, ref, info))
+}
+
+// derivedImageCacheKey is imageCacheKey for a picture the route made again:
+// the same identity fields plus what the answer was made with, so the 300px
+// thumbnail and the full poster never share an entry.
+func derivedImageCacheKey(itemID storage.ItemID, kind storage.ImageKind, index int, ref storage.ImageRef, info os.FileInfo, w, h, quality int, format string) string {
+	fields := sourceImageFields(itemID, kind, index, ref, info)
+	fields = append(fields,
+		"derived",
+		strconv.Itoa(w),
+		strconv.Itoa(h),
+		strconv.Itoa(quality),
+		format,
+	)
+	return hashImageKey(fields)
+}
+
+// sourceImageFields is what identifies a served picture before anything is
+// done to it: item, kind, index, the ref's tag, and the file's size and mtime
+// on disk.
+func sourceImageFields(itemID storage.ItemID, kind storage.ImageKind, index int, ref storage.ImageRef, info os.FileInfo) []string {
+	var mtime, size int64
 	if info != nil {
 		mtime = info.ModTime().UnixNano()
-	}
-	var size int64
-	if info != nil {
 		size = info.Size()
 	}
-	h := sha256.New()
-	// Length-prefixed fields keep the concatenation unambiguous: without
-	// them an item id ending in "1" and a kind starting with "2" could
-	// collide with a different pair.
-	for _, field := range []string{
+	return []string{
 		string(itemID),
 		string(kind),
 		strconv.Itoa(index),
 		ref.Tag,
 		strconv.FormatInt(size, 10),
 		strconv.FormatInt(mtime, 10),
-	} {
+	}
+}
+
+// hashImageKey folds fields into a key. Fields are length-prefixed so the
+// concatenation stays unambiguous: without that an item id ending in "1" and
+// a kind starting with "2" could collide with a different pair.
+func hashImageKey(fields []string) string {
+	h := sha256.New()
+	for _, field := range fields {
 		fmt.Fprintf(h, "%d:%s", len(field), field)
 	}
 	return hex.EncodeToString(h.Sum(nil))
@@ -153,7 +181,18 @@ func (c *imageCache) fill(key, ext, source string) (*os.File, os.FileInfo, bool)
 		return nil, nil, false
 	}
 	defer in.Close()
+	return c.store(key, ext, func(w io.Writer) error {
+		_, err := io.Copy(w, in)
+		return err
+	})
+}
 
+// store writes whatever write produces into the cache under key and returns
+// the open cached copy. It is the fill path for bytes that have to be made
+// rather than copied (a resized picture). A failure returns nil and the caller
+// answers without the cache: the cache is an optimization, never a
+// requirement.
+func (c *imageCache) store(key, ext string, write func(io.Writer) error) (*os.File, os.FileInfo, bool) {
 	path := c.pathOf(key, ext)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return nil, nil, false
@@ -167,9 +206,13 @@ func (c *imageCache) fill(key, ext, source string) (*os.File, os.FileInfo, bool)
 		return nil, nil, false
 	}
 	tmpName := tmp.Name()
-	written, err := io.Copy(tmp, in)
+	err = write(tmp)
+	written, seekErr := tmp.Seek(0, io.SeekCurrent)
 	closeErr := tmp.Close()
-	if err != nil || closeErr != nil {
+	if err == nil {
+		err = seekErr
+	}
+	if err != nil || closeErr != nil || written == 0 {
 		os.Remove(tmpName)
 		return nil, nil, false
 	}

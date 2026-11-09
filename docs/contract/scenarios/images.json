@@ -1000,5 +1000,65 @@
    }
   ],
   "cleanup": []
+ },
+ {
+  "id": "images.api.size",
+  "endpoint": "GET /Items/{itemId}/Images/{imageType}",
+  "spec": "images.md#api",
+  "scope": "modern",
+  "tags": [
+   "images"
+  ],
+  "covers": [
+   "images.api.R4"
+  ],
+  "requires": [
+   "item:art-kinds",
+   "library:art"
+  ],
+  "steps": [
+   {
+    "name": "a maxWidth below the picture answers that width, the height following the ratio",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-kinds.id}}/Images/Banner?maxWidth=100"
+    },
+    "expect": {
+     "status": 200,
+     "image": {
+      "width": 100,
+      "height": 150
+     }
+    }
+   },
+   {
+    "name": "a request above the picture's own size is answered with the picture's size",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-kinds.id}}/Images/Banner?maxWidth=5000"
+    },
+    "expect": {
+     "status": 200,
+     "image": {
+      "width": 200,
+      "height": 300
+     }
+    }
+   },
+   {
+    "name": "a member that is not an integer is a 400",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.art-kinds.id}}/Images/Banner?maxWidth=abc"
+    },
+    "expect": {
+     "status": 400
+    }
+   }
+  ],
+  "cleanup": []
  }
 ]

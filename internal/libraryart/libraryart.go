@@ -82,6 +82,15 @@ const (
 	// which is what the reference's images measure (the geometric centre would
 	// be 270; the name rides a little high there, deliberately).
 	nameCenterY = 260
+
+	// scrimPeakAlpha is the opacity of the dark band behind the name, at its
+	// centre. A mosaic of four pictures is far busier than the reference's
+	// single still, and white text over a bright poster is what suffers: the
+	// band darkens the strip the name sits on so the name reads on any of the
+	// four bands without covering the pictures. scrimReach is how far above
+	// and below nameCenterY the band fades out to nothing, in pixels.
+	scrimPeakAlpha = 0.55
+	scrimReach     = 150
 )
 
 // ErrNoSources is returned by Compose when there is nothing to draw: a library
@@ -224,6 +233,43 @@ func scaleCover(src image.Image, w, h int) *image.RGBA {
 	return dst
 }
 
+// drawScrim darkens a horizontal band of canvas centred on the name, fading to
+// nothing at scrimReach: an overlay, not a bar. It is what gives the white name
+// contrast over four unrelated pictures — the same job the reference's outline
+// does over one still, which the outline here alone cannot cover once the
+// artwork behind it changes every few hundred pixels.
+//
+// The fade is a smoothstep of the pixel's distance from the band's centre, so
+// there is no visible edge where the band starts or ends: at the centre the
+// pictures keep 45% of their brightness, at the edges all of it.
+func drawScrim(canvas *image.RGBA) {
+	top := nameCenterY - scrimReach
+	bottom := nameCenterY + scrimReach
+	if top < 0 {
+		top = 0
+	}
+	if bottom > Height {
+		bottom = Height - 1
+	}
+	for y := top; y <= bottom; y++ {
+		t := math.Abs(float64(y)-float64(nameCenterY)) / float64(scrimReach)
+		if t >= 1 {
+			continue
+		}
+		// 1 at the centre, 0 at the edge, with a smooth derivative at both
+		// ends (a linear fade reads as a visible seam over a flat sky).
+		fade := 1 - t*t*(3-2*t)
+		alpha := scrimPeakAlpha * fade
+		row := canvas.Pix[y*canvas.Stride:]
+		for x := 0; x < Width; x++ {
+			i := x * 4
+			row[i] = uint8(float64(row[i]) * (1 - alpha))
+			row[i+1] = uint8(float64(row[i+1]) * (1 - alpha))
+			row[i+2] = uint8(float64(row[i+2]) * (1 - alpha))
+		}
+	}
+}
+
 // drawName sets the library's name in white over the mosaic, shrinking it
 // until it fits, with a soft dark shadow so it stays readable over a bright
 // picture.
@@ -232,6 +278,10 @@ func drawName(canvas *image.RGBA, name string) error {
 	if name == "" {
 		return nil
 	}
+
+	// The band is there for the name, so a blank name gets none: a library
+	// card without text keeps its pictures untouched.
+	drawScrim(canvas)
 
 	parsed, err := opentype.Parse(nameFont)
 	if err != nil {

@@ -799,6 +799,19 @@ func (s *Server) handleItemImage(w http.ResponseWriter, r *http.Request) {
 		// changes when the picture does.
 		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	}
+	// A request that asks for a size (maxWidth, maxHeight, width, height,
+	// fillWidth, fillHeight, quality) gets the picture made again at that
+	// size, the way the reference answers it (item_image_resize.go). The
+	// stored bytes are the answer when it asks for nothing.
+	if sizing, errs := parseItemImageSizing(r); len(errs) > 0 {
+		writeValidationErrors(w, errs)
+		return
+	} else if plan, quality, format, ok := s.itemImagePlan(sizing, ref); ok {
+		if s.serveResizedItemImage(w, r, ref, itemID, kind, index, sourceInfo, plan, quality, format) {
+			return
+		}
+	}
+
 	// ref.Path is a trusted, already-resolved filesystem path from
 	// storage (see ImageStore's doc comment: refs point at files on disk,
 	// not blobs) — the same trust boundary handleVideoStream documents in
