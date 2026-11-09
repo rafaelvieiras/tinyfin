@@ -100,6 +100,7 @@ stays the detailed description — a row here says what differs, not why the cod
 | **DIV-22** | Subtitles | The reference caches converted documents without all parameters in the key, so a request can be answered with another request's document; Tinyfin has no cache. | [subtitles.md](contract/specs/subtitles.md) |
 | **DIV-23** | Subtitles | A `mediaSourceId` written with dashes answers 500 on the reference (it compares the text); Tinyfin folds every id to one spelling before routing (wire.id.R2) and serves it. | [subtitles.md](contract/specs/subtitles.md) |
 | **DIV-24** | Subtitles | Which charset a burned-in external subtitle is read in: rules over the bytes here, a statistical detector there, disagreeing on short or ambiguous samples. | [subtitles.md](contract/specs/subtitles.md) |
+| **DIV-29** | Images | `GET /Items/{itemId}/Images/{imageType}` answers the stored file's own bytes at its own size: `maxWidth`, `maxHeight`, `fillWidth`, `fillHeight` and `quality` are read by nothing. The reference resizes and re-encodes, so a phone asks for a 300px card and gets one. Chapter images are the exception here — they are rendered and do honour those parameters (`chapters.md`). | The route is a plain file serve plus an on-disk copy; resizing every request is a CPU cost this deployment does not need for a LAN client, and nothing in the client breaks over a bigger picture. Recorded so the difference is a decision, not an oversight. [images.md](contract/specs/images.md) |
 
 ## C. Things the reference has no equivalent for
 

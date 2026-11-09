@@ -61,6 +61,7 @@ Observed on the reference and deliberately not reproduced (not asserted by a sce
 * **Several episode pictures.** For `<episode>-thumb` and `<episode>` of one episode the reference's choice follows the folder's entry order; Tinyfin takes `-thumb` first, then the plain name, then the same two in `metadata/`.
 * **Person pictures.** The reference reads none from `.actors/` or `metadata/people/` (an actor has no picture); Tinyfin reads none either, and does not catalog `<actor>` entries of an `.nfo` as people.
 * **Extracted frames.** The reference also extracts a `Primary` picture for extras, and so does Tinyfin (`images.frame.R3`). The frame chosen differs slightly from the reference's.
+* **Resizing on request.** `maxWidth`, `maxHeight`, `fillWidth`, `fillHeight` and `quality` do not change the answer: the route serves the stored file at its own pixel size, where the reference resizes and re-encodes. Chapter images are rendered to the requested size (`chapters.md`), and this is recorded as `DIV-29` in [`../../13-divergences.md`](../../13-divergences.md).
 * **Picture decoding.** Tinyfin reads the size of `jpeg`, `png`, `gif` and `webp` content (`tbn` is read as whichever of them it holds) and the BlurHash of the first three; a `webp` picture has `Width`/`Height` but no BlurHash.
 
 ## Rule → scenarios
