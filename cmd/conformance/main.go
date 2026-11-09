@@ -67,20 +67,29 @@ func usage() {
 func lint(args []string) int {
 	fs := flag.NewFlagSet("lint", flag.ExitOnError)
 	dir := fs.String("dir", "docs/contract", "directory to lint")
+	scenarios := fs.String("scenarios", "docs/contract/scenarios", "scenarios directory (checked against the divergence registry)")
+	registry := fs.String("divergences", "docs/13-divergences.md", "the divergence registry every scenario's divergence record must appear in")
 	_ = fs.Parse(args)
 	v, err := conformance.LintDir(*dir)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 2
 	}
+	missing, err := conformance.CheckDivergenceRegistry(*scenarios, *registry)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 2
+	}
+	v = append(v, missing...)
 	for _, x := range v {
 		fmt.Println(x)
 	}
 	if len(v) > 0 {
-		fmt.Printf("%d clean-room violation(s)\n", len(v))
+		fmt.Printf("%d clean-room/divergence violation(s)\n", len(v))
 		return 1
 	}
 	fmt.Println("clean-room lint: ok")
+	fmt.Println("divergence registry: ok")
 	return 0
 }
 

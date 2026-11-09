@@ -93,6 +93,38 @@ All six are in the [README](README.md) and [CONTRIBUTING.md](CONTRIBUTING.md):
    [`docs/08-library-scanning-and-metadata.md`](docs/08-library-scanning-and-metadata.md) for the
    boundary.
 
+## Divergences are recorded, always
+
+Wire compatibility is the product (principle 4), which makes every deliberate
+difference from the reference server a decision that has to be written down —
+otherwise nobody can tell a decision from a bug, and the next contributor
+"fixes" it back.
+
+[`docs/13-divergences.md`](docs/13-divergences.md) is the one index of them. A
+change that **introduces, changes or removes** a divergence updates that file in
+the **same commit**, and the code comment, spec or CHANGELOG entry describing it
+names its ID there:
+
+- a difference where the reference server is **defective** and Tinyfin does the
+  correct thing (a path leak, a 500 on a bad request, a token that never
+  expires) belongs in section A of that file, and the scenario that asserts the
+  correct behavior carries a `divergence` record — `go run ./cmd/conformance
+  lint` (also `go test ./internal/conformance`) fails when a scenario's
+  `divergence` record is not listed, so this half is machine-enforced;
+- a difference **no scenario asserts** (a heuristic that cannot be compared,
+  an order the reference derives from something the files do not show) belongs
+  in section B with a `DIV-<n>` ID — nothing fails if it drifts, so it needs the
+  entry and a human reading it;
+- something the reference has **no equivalent for** at all (a generated library
+  picture, an extra field on a push) belongs in section C, with the decision-log
+  entry or spec note it came from.
+
+Choosing the reference's own defective behavior "for compatibility" is not an
+option either: assert the correct behavior, record the divergence, and move on.
+Not implemented is a different thing from divergent — gaps live in
+[`docs/11`](docs/11-jellyfin-web-route-coverage.md)'s route table and the
+contract specs' "Known differences" sections, not here.
+
 ## Clean-room requirement
 
 Tinyfin implements the Jellyfin *wire protocol* (HTTP routes, headers, JSON shapes). What's
@@ -180,4 +212,5 @@ ships (a Tinyfin deployment's own `/web`) — treat it as generating a hypothesi
 | Scanner scope and the metadata provider boundary | [`docs/08-library-scanning-and-metadata.md`](docs/08-library-scanning-and-metadata.md) |
 | Concrete memory/performance targets and why | [`docs/09-memory-and-performance-goals.md`](docs/09-memory-and-performance-goals.md) |
 | Delivery order | [`docs/10-roadmap.md`](docs/10-roadmap.md) |
+| Where does Tinyfin deliberately differ from the reference, and why? | [`docs/13-divergences.md`](docs/13-divergences.md) |
 | What's actually done so far | [`ROADMAP.md`](ROADMAP.md) |

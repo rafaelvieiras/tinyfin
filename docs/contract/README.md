@@ -40,7 +40,10 @@ reference source open in the same session.
 5. **Security-driven divergence.** Where the reference behaves in a way that is
    a defect (anonymous restart, ignoring download permission, ...), the
    scenario asserts the *correct* behavior and carries a `divergence` record.
-   Divergent scenarios are skipped when validating against the reference.
+   Divergent scenarios are skipped when validating against the reference. Every
+   such record is also listed in [`../13-divergences.md`](../13-divergences.md),
+   the project's index of deliberate differences — `go run ./cmd/conformance
+   lint` fails when one is missing from it.
 6. **Legacy authentication is not specified.** Only `Authorization:
    MediaBrowser ...` and the `ApiKey` query parameter (WebSocket) are honored.
    `X-Emby-*` headers and `api_key` are covered by `scope-negative` scenarios
@@ -163,7 +166,8 @@ reference source open in the same session.
   disconnects (sockets also close when the scenario ends).
 * `requires` lists fixture keys; a missing fixture makes the scenario
   **BLOCKED**, not failed (the server cannot even set the state up yet).
-* `divergence.reason` marks an intentional difference from the reference.
+* `divergence.reason` marks an intentional difference from the reference; the scenario id must also be listed in
+  [`../13-divergences.md`](../13-divergences.md) (`conformance lint` checks it).
 * `pending` parks a scenario that is specified but not yet verified.
 * Mutating scenarios must restore state in `cleanup` (it always runs).
 * Scenarios tagged `risky` can leave the server unusable for the runner (they

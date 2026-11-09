@@ -69,3 +69,37 @@ func LintDir(dir string) ([]string, error) {
 	})
 	return all, err
 }
+
+// CheckDivergenceRegistry verifies that every scenario carrying a `divergence`
+// record — a behavior where the reference server is defective and the scenario
+// asserts the correct one instead — is listed in docs/13-divergences.md.
+//
+// That file is the project's one index of deliberate differences (AGENTS.md:
+// "a change that introduces, changes or removes a divergence updates it in the
+// same commit"). The scenarios are where the difference is actually enforced,
+// so checking one against the other is what stops a new divergence from
+// landing with only its `divergence` record and no entry in the index: the
+// record is invisible unless someone already knows the scenario exists.
+func CheckDivergenceRegistry(scenarioDir, registryPath string) ([]string, error) {
+	registry, err := os.ReadFile(registryPath)
+	if err != nil {
+		return nil, err
+	}
+	listed := string(registry)
+
+	scenarios, err := LoadDir(scenarioDir)
+	if err != nil {
+		return nil, err
+	}
+
+	var missing []string
+	for _, sc := range scenarios {
+		if sc.Divergence == nil {
+			continue
+		}
+		if !strings.Contains(listed, "`"+sc.ID+"`") {
+			missing = append(missing, fmt.Sprintf("scenario %q carries a divergence record but %s does not list it", sc.ID, registryPath))
+		}
+	}
+	return missing, nil
+}

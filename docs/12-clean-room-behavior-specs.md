@@ -1288,6 +1288,10 @@ implementation is a separate task the way every other section in this document t
 
 ### Known chronic issues in the reference implementation — deliberately not reproduced
 
+> These are architecture differences, not wire behavior; they are not listed in
+> [`13-divergences.md`](13-divergences.md), which covers what a client can observe.
+
+
 Same treatment as the "Candidate-series ranking must not be biased by episode count" note in this
 document's `Items/Latest` section above: a real architectural flaw found while extracting this
 spec, worth designing around from the start rather than discovering by hitting it later. This one
