@@ -361,6 +361,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   has queued that it has finished (monotonic, capped at `99` while running), the task list publishes the mean across
   in-flight scans, `GET /Library/VirtualFolders` reports `RefreshStatus`/`RefreshProgress` for the library being scanned
   (a field pair it did not model), and `ScheduledTasksInfo` follows with one push per whole percentage point crossed.
+  A batch of libraries reports the mean of its scans with a finished one counting as `100`, so the percentage only rises.
   **[intentional deviation]** the reference server leaves the `RefreshLibrary` task `Idle` for a single-library refresh and
   reports only the library; here both are reported, so a dashboard watching only the task list still sees the scan.
 

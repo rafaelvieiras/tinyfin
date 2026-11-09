@@ -268,14 +268,20 @@ func NewServer(store storage.Store, cfg Config) *Server {
 	return s
 }
 
-// scanRun is one in-flight library scan: which library it reads, the
-// percentage the scanner last reported for it, and the last whole percentage
-// that was pushed to the sockets (so a scan that reports hundreds of small
-// steps still sends at most one task-list update per percentage point).
+// scanRun is one library scan in the current batch: which library it reads,
+// the percentage the scanner last reported for it, and the last whole
+// percentage that was pushed to the sockets (so a scan that reports hundreds
+// of small steps still sends at most one task-list update per percentage
+// point). A finished run stays in the batch — at 100% — until the batch goes
+// idle, which is what keeps the task's percentage from falling when a fast
+// library finishes ahead of the slow ones: dropping it from the average would
+// move the bar backwards, and a dashboard showing a scan going from 47% to 38%
+// looks broken.
 type scanRun struct {
 	libID    storage.LibraryID
 	progress float64
 	pushed   float64
+	finished bool
 }
 
 // scanTracker records the in-process state of the one background operation
@@ -322,7 +328,10 @@ func (t *scanTracker) begin(libID storage.LibraryID, cancel context.CancelFunc) 
 		t.runs = map[int]*scanRun{}
 		t.cancels = map[int]context.CancelFunc{}
 	}
-	if len(t.runs) == 0 {
+	if !t.anyRunningLocked() {
+		// A new batch starts once every scan of the previous one has
+		// finished; the finished runs are kept until then (see scanRun).
+		t.runs = map[int]*scanRun{}
 		t.lastCancelled = false
 	}
 	t.seq++
@@ -341,7 +350,7 @@ func (t *scanTracker) setProgress(id int, pct float64) bool {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	run, ok := t.runs[id]
-	if !ok {
+	if !ok || run.finished {
 		return false
 	}
 	if pct > run.progress {
@@ -354,14 +363,29 @@ func (t *scanTracker) setProgress(id int, pct float64) bool {
 	return true
 }
 
-// end unregisters a finished run and records its outcome.
+// end marks a run finished and records its outcome. The run itself stays in
+// the batch until the batch goes idle (scanRun's doc comment).
 func (t *scanTracker) end(id int, err error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	delete(t.runs, id)
+	if run, ok := t.runs[id]; ok {
+		run.finished = true
+		run.progress = 100
+	}
 	delete(t.cancels, id)
 	t.lastEnd = time.Now().UTC()
 	t.lastErr = err
+}
+
+// anyRunningLocked reports whether any run of the current batch is still in
+// flight. Callers hold t.mu.
+func (t *scanTracker) anyRunningLocked() bool {
+	for _, run := range t.runs {
+		if !run.finished {
+			return true
+		}
+	}
+	return false
 }
 
 // cancelAll cancels every in-flight scan and reports whether there was one.
@@ -378,10 +402,11 @@ func (t *scanTracker) cancelAll() bool {
 }
 
 // progress returns the task's CurrentProgressPercentage: the mean of the
-// in-flight scans' own percentages. A batch of libraries therefore creeps up
-// as each one advances instead of jumping only when a whole library finishes,
-// and a scan of exactly one library reports that library's own progress —
-// the case that used to sit frozen at 0% for the whole run.
+// batch's scans, a finished one counting as 100. A batch of libraries therefore
+// creeps up as each one advances instead of jumping only when a whole library
+// finishes, it never goes backwards, and a scan of exactly one library reports
+// that library's own progress — the case that used to sit frozen at 0% for the
+// whole run.
 func (t *scanTracker) progress() float64 {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -396,15 +421,16 @@ func (t *scanTracker) progress() float64 {
 }
 
 // libProgress reports one library's own RefreshStatus and RefreshProgress:
-// Active plus the percentage of the scan reading it, or Idle. The newest run
-// wins when the same library is somehow scanning twice.
+// Active plus the percentage of the scan reading it, or Idle. A finished run
+// no longer counts as scanning its library, and the newest unfinished run wins
+// when the same library is somehow scanning twice.
 func (t *scanTracker) libProgress(libID storage.LibraryID) (status string, pct float64) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	status = "Idle"
 	newest := 0
 	for id, run := range t.runs {
-		if run.libID != libID || id < newest {
+		if run.finished || run.libID != libID || id < newest {
 			continue
 		}
 		status, pct, newest = "Active", run.progress, id
@@ -418,7 +444,7 @@ func (t *scanTracker) libProgress(libID storage.LibraryID) (status string, pct f
 func (t *scanTracker) snapshot() (running bool, lastStart, lastEnd time.Time, lastErr error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	return len(t.runs) > 0, t.lastStart, t.lastEnd, t.lastErr
+	return t.anyRunningLocked(), t.lastStart, t.lastEnd, t.lastErr
 }
 
 func scanLibParallelism(n int) int {

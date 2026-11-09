@@ -38,13 +38,52 @@ func TestScanTrackerProgressIsTheMeanOfRunningScans(t *testing.T) {
 		t.Fatalf("progress after a lower report = %v, want %v", got, want)
 	}
 
+	// A finished run counts as 100, so a fast library finishing ahead of a
+	// slow one never drags the bar backwards.
 	tr.end(a, nil)
-	if got, want := tr.progress(), 80.0; got != want {
+	if got, want := tr.progress(), 90.0; got != want {
 		t.Fatalf("progress after one run finished = %v, want %v", got, want)
 	}
+	if running, _, _, _ := tr.snapshot(); !running {
+		t.Fatal("the batch reports idle while a run is still in flight")
+	}
 	tr.end(b, nil)
+	if running, _, _, _ := tr.snapshot(); running {
+		t.Fatal("the batch reports running after every run finished")
+	}
+	// The finished runs stay in the batch until a new one starts, which is
+	// when the counters reset.
+	next := tr.begin("lib-c", func() {})
 	if got := tr.progress(); got != 0 {
-		t.Fatalf("progress with no run left = %v, want 0", got)
+		t.Fatalf("progress at the start of a new batch = %v, want 0", got)
+	}
+	tr.end(next, nil)
+}
+
+// TestScanTrackerProgressNeverGoesBackwards covers the shape a dashboard
+// draws: a batch of libraries whose scans finish at different moments must
+// report a percentage that only rises.
+func TestScanTrackerProgressNeverGoesBackwards(t *testing.T) {
+	var tr scanTracker
+	fast := tr.begin("lib-fast", func() {})
+	slow := tr.begin("lib-slow", func() {})
+
+	seen := []float64{tr.progress()}
+	for _, pct := range []float64{10, 40, 90} {
+		tr.setProgress(fast, pct)
+		seen = append(seen, tr.progress())
+	}
+	tr.setProgress(slow, 10)
+	seen = append(seen, tr.progress())
+	tr.end(fast, nil) // the fast library finishes first
+	seen = append(seen, tr.progress())
+	tr.setProgress(slow, 50)
+	seen = append(seen, tr.progress())
+
+	for i := 1; i < len(seen); i++ {
+		if seen[i] < seen[i-1] {
+			t.Fatalf("progress went backwards at step %d: %v -> %v (series %v)", i, seen[i-1], seen[i], seen)
+		}
 	}
 }
 
