@@ -1189,8 +1189,8 @@ func (s *Server) libraryBaseItemDto(ctx context.Context, lib storage.Library) ba
 			ratio := float64(img.Width) / float64(img.Height)
 			dto.PrimaryImageAspectRatio = &ratio
 		}
-		if img.BlurHash != "" {
-			dto.ImageBlurHashes = map[string]map[string]string{string(img.Kind): {tag: img.BlurHash}}
+		if hash := s.libraryImageBlurHash(ctx, img); hash != "" {
+			dto.ImageBlurHashes = map[string]map[string]string{string(img.Kind): {tag: hash}}
 		}
 	}
 	if ac, ok := AuthFromContext(ctx); ok && ac != nil {
