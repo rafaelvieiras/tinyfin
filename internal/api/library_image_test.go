@@ -278,6 +278,77 @@ func TestLibraryPrimaryImageServedFromItsOwnTable(t *testing.T) {
 	}
 }
 
+// TestLibraryImageTagPublishedOnTheLibraryItem covers the half of a library
+// card image that makes jellyfin-web draw it: GET /UserViews and
+// GET /Items/{libraryId} must carry ImageTags.Primary (plus the aspect ratio
+// and blurhash the client paints while loading), exactly as the reference
+// server's CollectionFolder does. Serving the bytes is not enough — a library
+// whose DTO has no tag renders the collection-type icon and never asks for the
+// picture, which is what a fresh deployment looked like before this.
+func TestLibraryImageTagPublishedOnTheLibraryItem(t *testing.T) {
+	ts, st := newTestServer(t)
+	admin := createTestAdminUser(t, st, "libtag-admin", "adminpass")
+	token := loginToken(t, ts.URL, admin.Name, "adminpass")
+
+	libID := createTestLibrary(t, st, "TaggedCard", storage.CollectionTypeMovies)
+
+	// No image yet: the library reports no tag at all, so the client keeps
+	// drawing its fallback icon.
+	var views struct {
+		Items []baseItemDto `json:"Items"`
+	}
+	resp := authedRequest(t, ts.URL, token, http.MethodGet, "/UserViews", "", nil)
+	if err := json.NewDecoder(resp.Body).Decode(&views); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	resp.Body.Close()
+	if len(views.Items) != 1 {
+		t.Fatalf("UserViews has %d items, want 1", len(views.Items))
+	}
+	if tag := views.Items[0].ImageTags["Primary"]; tag != "" {
+		t.Errorf("ImageTags.Primary with no image = %q, want none", tag)
+	}
+
+	if err := st.UpsertLibraryImage(context.Background(), storage.LibraryImage{
+		LibraryID: libID, Kind: "Primary", Path: "/nowhere/tagged.png", Tag: "tag-tagged",
+		Width: 960, Height: 540, BlurHash: "L6PZfSi_.AyE", Size: 5,
+	}); err != nil {
+		t.Fatalf("UpsertLibraryImage: %v", err)
+	}
+
+	views.Items = nil
+	resp = authedRequest(t, ts.URL, token, http.MethodGet, "/UserViews", "", nil)
+	if err := json.NewDecoder(resp.Body).Decode(&views); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	resp.Body.Close()
+	if len(views.Items) != 1 {
+		t.Fatalf("UserViews has %d items, want 1", len(views.Items))
+	}
+	got := views.Items[0]
+	if tag := got.ImageTags["Primary"]; tag != "tag-tagged" {
+		t.Fatalf("UserViews ImageTags.Primary = %q, want tag-tagged", tag)
+	}
+	if got.PrimaryImageAspectRatio == nil || *got.PrimaryImageAspectRatio < 1.77 || *got.PrimaryImageAspectRatio > 1.78 {
+		t.Errorf("PrimaryImageAspectRatio = %v, want 960/540", got.PrimaryImageAspectRatio)
+	}
+	if hash := got.ImageBlurHashes["Primary"]["tag-tagged"]; hash != "L6PZfSi_.AyE" {
+		t.Errorf("ImageBlurHashes = %#v, want the stored hash under its tag", got.ImageBlurHashes)
+	}
+
+	// The same library fetched as an item carries the same fields: the
+	// dashboard's library page uses this route, not /UserViews.
+	resp = authedRequest(t, ts.URL, token, http.MethodGet, "/Items/"+string(libID), "", nil)
+	var item baseItemDto
+	if err := json.NewDecoder(resp.Body).Decode(&item); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	resp.Body.Close()
+	if tag := item.ImageTags["Primary"]; tag != "tag-tagged" {
+		t.Errorf("GET /Items/{libraryId} ImageTags.Primary = %q, want tag-tagged", tag)
+	}
+}
+
 // TestUploadAndDeleteLibraryImage covers an admin replacing the generated
 // picture with their own and then removing it.
 func TestUploadAndDeleteLibraryImage(t *testing.T) {

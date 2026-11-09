@@ -25,7 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `internal/libraryart`): the folder reports `PrimaryImageItemId` whenever it has one, and
   `/Items/{libraryItemId}/Images/Primary` serves it — the same routes, list/upload/delete included, an item's artwork
   already uses. jellyfin-web only draws a library card image when that field is present, so a library without one showed
-  the collection-type icon. The server composes one when a library has none: a 16:9 PNG of up to four of the library's
+  the collection-type icon. The library item itself carries `ImageTags.Primary` (and `ImageBlurHashes`,
+  `PrimaryImageAspectRatio`) the way the reference's `CollectionFolder` does: serving the bytes is not enough, since the
+  client builds the image URL only from an item whose tag is set. The server composes one when a library has none: a 16:9 PNG of up to four of the library's
   own posters as slanted bands with the library name in white, written once after the scan that cataloged those posters,
   so it stays stable across later scans. A library with no artwork gets none. **[intentional deviation]** the reference
   server generates a single-still image of the same size; the mosaic is this project's look, the contract around it is

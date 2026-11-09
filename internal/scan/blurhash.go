@@ -196,6 +196,14 @@ func shrinkTo(img image.Image, max int) image.Image {
 // imageFileBlurHash decodes the picture at path and returns its BlurHash
 // ("" when it cannot be decoded: webp and tbn files in an unsupported
 // encoding simply carry no hash).
+// ImageFileBlurHash is imageFileBlurHash for a caller outside this package that
+// makes an image of its own and stores it as a file — api's generated library
+// card image is the only one today (internal/api/library_image.go). Same
+// "empty string when the file cannot be read or the hash cannot be built"
+// contract as the unexported form: a blurhash is a nicety, never a reason to
+// fail the picture it describes.
+func ImageFileBlurHash(path string) string { return imageFileBlurHash(path) }
+
 func imageFileBlurHash(path string) string {
 	f, err := os.Open(path)
 	if err != nil {

@@ -1159,6 +1159,14 @@ func displayPreferencesIDFor(itemType storage.ItemType) string {
 // an authenticated caller (every registered call site requires auth, see
 // server.go) for this to populate; callers with no reliable caller in
 // context would need to pass one in some other way, but none of today's do.
+// Images are the reason this function is more than a struct literal: a library
+// root's card image lives in library_images, not image_refs (library_image.go),
+// so imageTagsFor — which takes an items.id — cannot see it. Without
+// ImageTags.Primary here, jellyfin-web never asks for the picture at all: the
+// home screen's "My Media" row is built from GET /UserViews, draws the card
+// image only when the item carries that tag, and silently falls back to the
+// collection-type icon otherwise. Serving /Items/{id}/Images/Primary is not
+// enough on its own — the tag is what makes the client request it.
 func (s *Server) libraryBaseItemDto(ctx context.Context, lib storage.Library) baseItemDto {
 	dto := baseItemDto{
 		Name:           lib.Name,
@@ -1167,6 +1175,23 @@ func (s *Server) libraryBaseItemDto(ctx context.Context, lib storage.Library) ba
 		IsFolder:       true,
 		Type:           string(storage.ItemTypeCollectionFolder),
 		CollectionType: string(lib.CollectionType),
+	}
+	if img, ok, err := s.store.GetLibraryImage(ctx, lib.ID, libraryPrimaryImageKind); err == nil && ok {
+		// Same conventions as imageTagsFor: a stored tag is the cache
+		// buster, "1" stands in when the store has none, and the aspect
+		// ratio stays nil until width and height are both known.
+		tag := img.Tag
+		if tag == "" {
+			tag = "1"
+		}
+		dto.ImageTags = map[string]string{string(img.Kind): tag}
+		if img.Width > 0 && img.Height > 0 {
+			ratio := float64(img.Width) / float64(img.Height)
+			dto.PrimaryImageAspectRatio = &ratio
+		}
+		if img.BlurHash != "" {
+			dto.ImageBlurHashes = map[string]map[string]string{string(img.Kind): {tag: img.BlurHash}}
+		}
 	}
 	if ac, ok := AuthFromContext(ctx); ok && ac != nil {
 		dto.UserData = s.userDataFor(ctx, ac.User.ID, storage.Item{ID: storage.ItemID(lib.ID), Type: storage.ItemTypeCollectionFolder})

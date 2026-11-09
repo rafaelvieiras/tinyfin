@@ -29,6 +29,7 @@ import (
 	"path/filepath"
 
 	"github.com/rafaelvieiras/tinyfin/internal/libraryart"
+	"github.com/rafaelvieiras/tinyfin/internal/scan"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
 
@@ -110,10 +111,15 @@ func (s *Server) ensureLibraryImage(ctx context.Context, lib storage.Library) {
 		Path:      path,
 		// A fresh tag per generated file, same cache-busting rule
 		// handleUploadItemImage documents.
-		Tag:    randomID(),
-		Width:  libraryart.Width,
-		Height: libraryart.Height,
-		Size:   fi.Size(),
+		Tag: randomID(),
+		// The reference publishes a blurhash for a library's card image like
+		// any other item image (GET /UserViews carries ImageBlurHashes), and
+		// jellyfin-web paints it while the real picture loads. Same encoder
+		// the scanner uses for item artwork.
+		BlurHash: scan.ImageFileBlurHash(path),
+		Width:    libraryart.Width,
+		Height:   libraryart.Height,
+		Size:     fi.Size(),
 	}
 	if err := s.store.UpsertLibraryImage(ctx, img); err != nil {
 		log.Printf("api: storing image of library %q: %v", lib.Name, err)
@@ -206,10 +212,11 @@ func (s *Server) uploadLibraryImage(w http.ResponseWriter, r *http.Request, lib 
 		Path:      path,
 		// Fresh tag per upload, same cache-busting rule as an item upload
 		// (handleUploadItemImage).
-		Tag:    randomID(),
-		Width:  width,
-		Height: height,
-		Size:   int64(len(data)),
+		Tag:      randomID(),
+		BlurHash: scan.ImageFileBlurHash(path),
+		Width:    width,
+		Height:   height,
+		Size:     int64(len(data)),
 	}
 	if err := s.store.UpsertLibraryImage(r.Context(), img); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
