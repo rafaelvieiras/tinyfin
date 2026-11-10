@@ -387,6 +387,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `docs/11-jellyfin-web-route-coverage.md` no longer calls implemented routes missing: the branding CSS
+  (`GET /Branding/Css`), the server configuration and its `network`/`encoding`/`branding` sections, devices, device
+  options and API keys are all served today and were measured on a live deployment. The reference's own OpenAPI
+  document, read in the same pass, names `/web/ConfigurationPage` and the three splashscreen routes, which this
+  server does not answer yet. New `docs/14-client-branding-and-admin-pages.md` records where a compatible server can
+  and cannot change what an official client shows (logo, login backdrop, a dashboard page of our own, hiding a
+  dashboard entry) — each answer measured, with the cost and the risk of building it. The same pass pinned why
+  `#/dashboard/libraries/display` and `#/dashboard/libraries/nfo` show a load error: the named configuration sections
+  `GET /System/Configuration/metadata` and `.../xbmcmetadata` answer 404.
+
 - A picture served once is answered from a copy kept beside the database instead of being read off the media path
   again (`images.md#cache` R1, untestable as a scenario): a client that scrolls a library asks for dozens of pictures
   per screen and asks again on every scroll back, so on a remote library — an rclone, WebDAV or NFS mount — the same
