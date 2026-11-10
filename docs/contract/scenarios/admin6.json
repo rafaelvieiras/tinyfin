@@ -36,39 +36,7 @@
         }
       },
       {
-        "name": "a cleared section still reports the one member",
-        "as": "admin",
-        "request": {
-          "method": "GET",
-          "path": "/System/Configuration/metadata"
-        },
-        "expect": {
-          "status": 200,
-          "json": [
-            {
-              "path": "$.UseFileCreationTimeForDateAdded",
-              "op": "type",
-              "value": "boolean"
-            }
-          ]
-        }
-      },
-      {
-        "name": "accepts true",
-        "as": "admin",
-        "request": {
-          "method": "POST",
-          "path": "/System/Configuration/metadata",
-          "body": {
-            "UseFileCreationTimeForDateAdded": true
-          }
-        },
-        "expect": {
-          "status": 204
-        }
-      },
-      {
-        "name": "true is stored",
+        "name": "a cleared section reports the file-time option",
         "as": "admin",
         "request": {
           "method": "GET",
@@ -86,7 +54,7 @@
         }
       },
       {
-        "name": "accepts false",
+        "name": "accepts the scan-time option",
         "as": "admin",
         "request": {
           "method": "POST",
@@ -113,6 +81,38 @@
               "path": "$.UseFileCreationTimeForDateAdded",
               "op": "eq",
               "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "accepts the file-time option back",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/System/Configuration/metadata",
+          "body": {
+            "UseFileCreationTimeForDateAdded": true
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "true is stored",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration/metadata"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.UseFileCreationTimeForDateAdded",
+              "op": "eq",
+              "value": true
             }
           ]
         }
@@ -147,8 +147,8 @@
             },
             {
               "path": "$.UseFileCreationTimeForDateAdded",
-              "op": "type",
-              "value": "boolean"
+              "op": "eq",
+              "value": true
             }
           ]
         }
@@ -180,8 +180,8 @@
           "json": [
             {
               "path": "$.UseFileCreationTimeForDateAdded",
-              "op": "type",
-              "value": "boolean"
+              "op": "eq",
+              "value": true
             }
           ]
         }

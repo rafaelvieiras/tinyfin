@@ -39,18 +39,18 @@ func TestMetadataSectionDefaultsAndRoundTrip(t *testing.T) {
 	admin := policyLogin(t, ts.URL, "admin", "adminpass")
 
 	got := readSection(t, ts.URL, admin, "metadata")
-	if v := string(got["UseFileCreationTimeForDateAdded"]); v != "false" {
-		t.Fatalf("default UseFileCreationTimeForDateAdded = %s, want false (internal/scan uses the file's modification time)", v)
+	if v := string(got["UseFileCreationTimeForDateAdded"]); v != "true" {
+		t.Fatalf("default UseFileCreationTimeForDateAdded = %s, want true (internal/scan dates an item by the file's own timestamp)", v)
 	}
 	if len(got) != 1 {
 		t.Errorf("section has %d members, want 1: %v", len(got), got)
 	}
 
-	if code := writeSection(t, ts.URL, admin, "metadata", `{"UseFileCreationTimeForDateAdded":true}`); code != http.StatusNoContent {
+	if code := writeSection(t, ts.URL, admin, "metadata", `{"UseFileCreationTimeForDateAdded":false}`); code != http.StatusNoContent {
 		t.Fatalf("set: status %d, want 204", code)
 	}
-	if v := string(readSection(t, ts.URL, admin, "metadata")["UseFileCreationTimeForDateAdded"]); v != "true" {
-		t.Fatalf("after set = %s, want true", v)
+	if v := string(readSection(t, ts.URL, admin, "metadata")["UseFileCreationTimeForDateAdded"]); v != "false" {
+		t.Fatalf("after set = %s, want false", v)
 	}
 
 	// A replace puts the default back and drops a member it is not given.
@@ -58,8 +58,8 @@ func TestMetadataSectionDefaultsAndRoundTrip(t *testing.T) {
 		t.Fatalf("replace: status %d, want 204", code)
 	}
 	got = readSection(t, ts.URL, admin, "metadata")
-	if v := string(got["UseFileCreationTimeForDateAdded"]); v != "false" {
-		t.Errorf("after replace = %s, want the default false", v)
+	if v := string(got["UseFileCreationTimeForDateAdded"]); v != "true" {
+		t.Errorf("after replace = %s, want the default true", v)
 	}
 	if _, present := got["NotAMember"]; present {
 		t.Errorf("an unknown member was served back: %v", got)
@@ -68,14 +68,14 @@ func TestMetadataSectionDefaultsAndRoundTrip(t *testing.T) {
 	// A member of the wrong type is refused and the section is left alone
 	// (admin.config.R11; the reference answers 500 here, the divergent scenario
 	// admin.config.section-invalid).
-	if code := writeSection(t, ts.URL, admin, "metadata", `{"UseFileCreationTimeForDateAdded":true}`); code != http.StatusNoContent {
+	if code := writeSection(t, ts.URL, admin, "metadata", `{"UseFileCreationTimeForDateAdded":false}`); code != http.StatusNoContent {
 		t.Fatalf("set: status %d", code)
 	}
 	if code := writeSection(t, ts.URL, admin, "metadata", `{"UseFileCreationTimeForDateAdded":"yes"}`); code != http.StatusBadRequest {
 		t.Fatalf("wrong type: status %d, want 400", code)
 	}
-	if v := string(readSection(t, ts.URL, admin, "metadata")["UseFileCreationTimeForDateAdded"]); v != "true" {
-		t.Errorf("after the refused POST = %s, want the stored true", v)
+	if v := string(readSection(t, ts.URL, admin, "metadata")["UseFileCreationTimeForDateAdded"]); v != "false" {
+		t.Errorf("after the refused POST = %s, want the stored false", v)
 	}
 }
 

@@ -436,9 +436,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   needed a client change, only these two routes. Every member is stored and served back with the
   reference's defaults and none is honored — this server writes no `.nfo` sidecar, so `UserId`,
   `ReleaseDateFormat`, `SaveImagePathsInNfo`, `EnablePathSubstitution` and
-  `EnableExtraThumbsDuplication` describe nothing it does, and `metadata`'s
-  `UseFileCreationTimeForDateAdded` reports `false` where the reference reports `true`, because
-  `DateAdded` always comes from the file's modification time (`DIV-30`, `DIV-31`). A member of the
+  `EnableExtraThumbsDuplication` describe nothing it does; `metadata`'s
+  `UseFileCreationTimeForDateAdded` reports `true` (the file's own timestamp, which is the only source
+  of `DateAdded` here) so the scan-time option is stored without being honored (`DIV-30`,
+  `DIV-31`). A member of the
   wrong type is `400` and leaves the section unchanged, where the reference answers `500`
   (`admin.config.section-invalid`, divergent). Validated against a reference server first: both
   shared scenarios pass there unchanged.

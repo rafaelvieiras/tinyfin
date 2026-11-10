@@ -203,16 +203,18 @@ func (s *Server) handleBrandingCss(w http.ResponseWriter, r *http.Request) {
 }
 
 // metadataConfigurationDto is the metadata section (Libraries - Display).
-// The one member picks which timestamp becomes an item's DateAdded; this
-// server has one source of it, the file's modification time, so the default
-// reported here is false — the reference reports true and honors it
+// The one member picks which timestamp becomes an item's DateAdded: the file's
+// own one (true) or the moment the library scanned it in (false). This server
+// has only the first source (internal/scan's fileDateAdded), so true is both
+// the default and the only setting it acts on — the reference's default as
+// well; choosing false is stored and served back and changes nothing
 // (admin.config.R9, DIV-30 in docs/13-divergences.md).
 type metadataConfigurationDto struct {
 	UseFileCreationTimeForDateAdded bool `json:"UseFileCreationTimeForDateAdded"`
 }
 
 func defaultMetadataConfiguration() metadataConfigurationDto {
-	return metadataConfigurationDto{UseFileCreationTimeForDateAdded: false}
+	return metadataConfigurationDto{UseFileCreationTimeForDateAdded: true}
 }
 
 func (s *Server) metadataConfiguration(ctx context.Context) metadataConfigurationDto {
