@@ -3981,7 +3981,7 @@
    "status": "not-planned",
    "registered": false,
    "verified": false,
-   "web": false,
+   "web": true,
    "notes": "No plugin system (decisions D8, D11).",
    "priority": "low"
   },
@@ -5177,7 +5177,7 @@
    "status": "supported",
    "registered": true,
    "verified": true,
-   "web": true,
+   "web": false,
    "scenarios": [
     "admin.config.branding",
     "admin.config.root-any-user"
@@ -5209,8 +5209,11 @@
     "admin.config.encoding",
     "admin.config.hwaccel-invalid",
     "admin.config.hwaccel-valid",
+    "admin.config.metadata",
     "admin.config.network-fields",
     "admin.config.root-any-user",
+    "admin.config.section-invalid",
+    "admin.config.xbmcmetadata",
     "startup.wizard.user-and-complete"
    ],
    "notes": "Only the network key is served (GET /System/Configuration/network)."
@@ -5228,8 +5231,11 @@
     "admin.config.encoding",
     "admin.config.hwaccel-invalid",
     "admin.config.hwaccel-valid",
+    "admin.config.metadata",
     "admin.config.network-fields",
-    "admin.config.root-any-user"
+    "admin.config.root-any-user",
+    "admin.config.section-invalid",
+    "admin.config.xbmcmetadata"
    ],
    "notes": "Only the network key is served (POST /System/Configuration/network)."
   },
@@ -8854,7 +8860,9 @@
   "GET /MusicGenres",
   "GET /System/Configuration/branding",
   "GET /System/Configuration/encoding",
+  "GET /System/Configuration/metadata",
   "GET /System/Configuration/network",
+  "GET /System/Configuration/xbmcmetadata",
   "GET /Users/{userId}/Items",
   "GET /Users/{userId}/Items/{itemId}",
   "GET /Users/{userId}/Items/{itemId}/Intros",
@@ -8867,7 +8875,9 @@
   "GET /socket",
   "POST /ScheduledTasks/{first}/{second}",
   "POST /System/Configuration/encoding",
+  "POST /System/Configuration/metadata",
   "POST /System/Configuration/network",
+  "POST /System/Configuration/xbmcmetadata",
   "POST /Users/{userId}",
   "POST /Users/{userId}/Configuration",
   "POST /Users/{userId}/FavoriteItems/{itemId}",

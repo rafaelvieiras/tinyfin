@@ -1,0 +1,655 @@
+[
+  {
+    "id": "admin.config.metadata",
+    "endpoint": "GET /System/Configuration/metadata",
+    "spec": "admin.md#config",
+    "scope": "modern",
+    "tags": [
+      "admin"
+    ],
+    "covers": [
+      "admin.config.R1",
+      "admin.config.R6",
+      "admin.config.R9"
+    ],
+    "requires": [
+      "user:alice"
+    ],
+    "steps": [
+      {
+        "name": "remember the section",
+        "config": {
+          "section": "metadata",
+          "set": {}
+        }
+      },
+      {
+        "name": "reset",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/System/Configuration/metadata",
+          "body": {}
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "a cleared section still reports the one member",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration/metadata"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.UseFileCreationTimeForDateAdded",
+              "op": "type",
+              "value": "boolean"
+            }
+          ]
+        }
+      },
+      {
+        "name": "accepts true",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/System/Configuration/metadata",
+          "body": {
+            "UseFileCreationTimeForDateAdded": true
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "true is stored",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration/metadata"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.UseFileCreationTimeForDateAdded",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "accepts false",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/System/Configuration/metadata",
+          "body": {
+            "UseFileCreationTimeForDateAdded": false
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "false is stored",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration/metadata"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.UseFileCreationTimeForDateAdded",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "an unknown member is accepted and ignored",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/System/Configuration/metadata",
+          "body": {
+            "NotAMember": 1
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "the unknown member is not served back",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration/metadata"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.NotAMember",
+              "op": "absent"
+            },
+            {
+              "path": "$.UseFileCreationTimeForDateAdded",
+              "op": "type",
+              "value": "boolean"
+            }
+          ]
+        }
+      },
+      {
+        "name": "a malformed body is refused",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/System/Configuration/metadata",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "bodyRaw": "{bad"
+        },
+        "expect": {
+          "status": 400
+        }
+      },
+      {
+        "name": "non-admin reads",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration/metadata"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.UseFileCreationTimeForDateAdded",
+              "op": "type",
+              "value": "boolean"
+            }
+          ]
+        }
+      },
+      {
+        "name": "anonymous read",
+        "as": "anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration/metadata",
+          "noAuth": true
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "non-admin write",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/System/Configuration/metadata",
+          "body": {}
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "anonymous write",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/System/Configuration/metadata",
+          "body": {},
+          "noAuth": true
+        },
+        "expect": {
+          "status": 401
+        }
+      }
+    ]
+  },
+  {
+    "id": "admin.config.xbmcmetadata",
+    "endpoint": "GET /System/Configuration/xbmcmetadata",
+    "spec": "admin.md#config",
+    "scope": "modern",
+    "tags": [
+      "admin"
+    ],
+    "covers": [
+      "admin.config.R1",
+      "admin.config.R6",
+      "admin.config.R10"
+    ],
+    "requires": [
+      "user:alice"
+    ],
+    "steps": [
+      {
+        "name": "remember the section",
+        "config": {
+          "section": "xbmcmetadata",
+          "set": {}
+        }
+      },
+      {
+        "name": "reset",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/System/Configuration/xbmcmetadata",
+          "body": {}
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "the cleared section reports the reference's defaults",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration/xbmcmetadata"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.ReleaseDateFormat",
+              "op": "eq",
+              "value": "yyyy-MM-dd"
+            },
+            {
+              "path": "$.SaveImagePathsInNfo",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.EnablePathSubstitution",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.EnableExtraThumbsDuplication",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$.UserId",
+              "op": "absent"
+            }
+          ]
+        }
+      },
+      {
+        "name": "set every member",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/System/Configuration/xbmcmetadata",
+          "body": {
+            "UserId": "{{user.alice.id}}",
+            "ReleaseDateFormat": "yyyy-MM-dd",
+            "SaveImagePathsInNfo": false,
+            "EnablePathSubstitution": false,
+            "EnableExtraThumbsDuplication": true
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "the set values are stored",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration/xbmcmetadata"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.UserId",
+              "op": "eq",
+              "value": "{{user.alice.id}}"
+            },
+            {
+              "path": "$.ReleaseDateFormat",
+              "op": "eq",
+              "value": "yyyy-MM-dd"
+            },
+            {
+              "path": "$.SaveImagePathsInNfo",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$.EnablePathSubstitution",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "$.EnableExtraThumbsDuplication",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "a replace drops the member it leaves out",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/System/Configuration/xbmcmetadata",
+          "body": {}
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "the user is gone and the defaults are back",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration/xbmcmetadata"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.UserId",
+              "op": "absent"
+            },
+            {
+              "path": "$.SaveImagePathsInNfo",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.EnableExtraThumbsDuplication",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "an empty user is stored as an empty string, not dropped",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/System/Configuration/xbmcmetadata",
+          "body": {
+            "UserId": ""
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "the empty user is served back",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration/xbmcmetadata"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.UserId",
+              "op": "eq",
+              "value": ""
+            }
+          ]
+        }
+      },
+      {
+        "name": "an unknown member is accepted and ignored",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/System/Configuration/xbmcmetadata",
+          "body": {
+            "ReleaseDateFormat": "yyyy-MM-dd",
+            "NotAMember": "x"
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "the unknown member is not served back",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration/xbmcmetadata"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.NotAMember",
+              "op": "absent"
+            },
+            {
+              "path": "$.ReleaseDateFormat",
+              "op": "eq",
+              "value": "yyyy-MM-dd"
+            }
+          ]
+        }
+      },
+      {
+        "name": "non-admin reads",
+        "as": "alice",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration/xbmcmetadata"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.ReleaseDateFormat",
+              "op": "type",
+              "value": "string"
+            }
+          ]
+        }
+      },
+      {
+        "name": "anonymous read",
+        "as": "anonymous",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration/xbmcmetadata",
+          "noAuth": true
+        },
+        "expect": {
+          "status": 401
+        }
+      },
+      {
+        "name": "non-admin write",
+        "as": "alice",
+        "request": {
+          "method": "POST",
+          "path": "/System/Configuration/xbmcmetadata",
+          "body": {}
+        },
+        "expect": {
+          "status": 403
+        }
+      },
+      {
+        "name": "anonymous write",
+        "as": "anonymous",
+        "request": {
+          "method": "POST",
+          "path": "/System/Configuration/xbmcmetadata",
+          "body": {},
+          "noAuth": true
+        },
+        "expect": {
+          "status": 401
+        }
+      }
+    ]
+  },
+  {
+    "id": "admin.config.section-invalid",
+    "endpoint": "POST /System/Configuration/{key}",
+    "spec": "admin.md#config",
+    "scope": "modern",
+    "tags": [
+      "admin"
+    ],
+    "divergence": {
+      "reason": "The reference answers 500 with a plain-text body for a member of the wrong type in the metadata and xbmcmetadata sections (a boolean sent as a string, a string sent as a number). Tinyfin answers 400 and leaves the section unchanged; a server error for a bad request is not reproduced."
+    },
+    "covers": [
+      "admin.config.R11"
+    ],
+    "requires": [],
+    "steps": [
+      {
+        "name": "remember the metadata section",
+        "config": {
+          "section": "metadata",
+          "set": {}
+        }
+      },
+      {
+        "name": "a known metadata value",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/System/Configuration/metadata",
+          "body": {
+            "UseFileCreationTimeForDateAdded": false
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "a boolean sent as a string is refused",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/System/Configuration/metadata",
+          "body": {
+            "UseFileCreationTimeForDateAdded": "yes"
+          }
+        },
+        "expect": {
+          "status": 400,
+          "problem": 400
+        }
+      },
+      {
+        "name": "the section is left as it was",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration/metadata"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.UseFileCreationTimeForDateAdded",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "remember the xbmc metadata section",
+        "config": {
+          "section": "xbmcmetadata",
+          "set": {}
+        }
+      },
+      {
+        "name": "a known xbmc metadata value",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/System/Configuration/xbmcmetadata",
+          "body": {
+            "ReleaseDateFormat": "yyyy-MM-dd",
+            "SaveImagePathsInNfo": true
+          }
+        },
+        "expect": {
+          "status": 204
+        }
+      },
+      {
+        "name": "a boolean sent as a number is refused",
+        "as": "admin",
+        "request": {
+          "method": "POST",
+          "path": "/System/Configuration/xbmcmetadata",
+          "body": {
+            "ReleaseDateFormat": "yyyy-MM-dd",
+            "SaveImagePathsInNfo": 7
+          }
+        },
+        "expect": {
+          "status": 400,
+          "problem": 400
+        }
+      },
+      {
+        "name": "the section is left as it was",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/System/Configuration/xbmcmetadata"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.SaveImagePathsInNfo",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "$.ReleaseDateFormat",
+              "op": "eq",
+              "value": "yyyy-MM-dd"
+            }
+          ]
+        }
+      }
+    ]
+  }
+]

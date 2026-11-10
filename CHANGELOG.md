@@ -429,6 +429,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `GET`/`POST /System/Configuration/metadata` and `/System/Configuration/xbmcmetadata`: the two named
+  configuration sections the dashboard's library settings pages load (`admin.config.R9`, `R10`, `R11`).
+  Both answered `404`, so `#/dashboard/libraries/display` (the "Exibir" tab) and
+  `#/dashboard/libraries/nfo` stopped at their load-error alert instead of their form; neither page
+  needed a client change, only these two routes. Every member is stored and served back with the
+  reference's defaults and none is honored — this server writes no `.nfo` sidecar, so `UserId`,
+  `ReleaseDateFormat`, `SaveImagePathsInNfo`, `EnablePathSubstitution` and
+  `EnableExtraThumbsDuplication` describe nothing it does, and `metadata`'s
+  `UseFileCreationTimeForDateAdded` reports `false` where the reference reports `true`, because
+  `DateAdded` always comes from the file's modification time (`DIV-30`, `DIV-31`). A member of the
+  wrong type is `400` and leaves the section unchanged, where the reference answers `500`
+  (`admin.config.section-invalid`, divergent). Validated against a reference server first: both
+  shared scenarios pass there unchanged.
+
 - Subtitles. External subtitle files beside a video (`.srt .ass .ssa .vtt .smi
   .sami .sup`, named `<video>.<lang>[.forced][.default][.sdh].<ext>` or with a
   free title, any case) are listed as `MediaStreams` ahead of the video's own

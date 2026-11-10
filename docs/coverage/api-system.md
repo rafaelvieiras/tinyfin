@@ -55,7 +55,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ⛔ not-planned | `GET /Plugins/{pluginId}/{version}/Image` | RequiresElevation |  |  | No plugin system (decisions D8, D11). (priority: low) |
 | ↔️ divergent-by-design | `GET /Repositories` | RequiresElevation |  | 1/1 | No plugin system (D8, D11): always an empty list, where the reference lists its bundled providers and a default repository. |
 | ⛔ not-planned | `POST /Repositories` | RequiresElevation |  |  | No plugin system (decisions D8, D11). (priority: low) |
-| ⛔ not-planned | `GET /web/ConfigurationPage` | Anonymous |  |  | No plugin system (decisions D8, D11). (priority: low) |
+| ⛔ not-planned | `GET /web/ConfigurationPage` | Anonymous | yes |  | No plugin system (decisions D8, D11). (priority: low) |
 | 🟡 partial | `GET /web/ConfigurationPages` | RequiresElevation | yes |  | Always []: there is no plugin system. |
 
 ## System
@@ -67,10 +67,10 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `GET /System/ActivityLog/Entries` | RequiresElevation | yes | 18/18 |  |
 | ✅ supported | `GET /System/Configuration` | DefaultAuthorization | yes | 1/3 |  |
 | ✅ supported | `POST /System/Configuration` | RequiresElevation | yes | 1/1 |  |
-| ✅ supported | `POST /System/Configuration/Branding` | RequiresElevation | yes | 2/2 |  |
+| ✅ supported | `POST /System/Configuration/Branding` | RequiresElevation |  | 2/2 |  |
 | 🗓️ planned | `GET /System/Configuration/MetadataOptions/Default` | RequiresElevation |  |  | Not implemented. (priority: low) |
-| 🟡 partial | `GET /System/Configuration/{key}` | DefaultAuthorization | yes | 6/7 | Only the network key is served (GET /System/Configuration/network). |
-| 🟡 partial | `POST /System/Configuration/{key}` | RequiresElevation | yes | 5/5 | Only the network key is served (POST /System/Configuration/network). |
+| 🟡 partial | `GET /System/Configuration/{key}` | DefaultAuthorization | yes | 6/10 | Only the network key is served (GET /System/Configuration/network). |
+| 🟡 partial | `POST /System/Configuration/{key}` | RequiresElevation | yes | 5/8 | Only the network key is served (POST /System/Configuration/network). |
 | ✅ supported *(no scenario)* | `GET /System/Endpoint` | DefaultAuthorization | yes |  |  |
 | ✅ supported | `GET /System/Info` | FirstTimeSetupOrIgnoreParentalControl | yes | 2/4 |  |
 | ✅ supported | `GET /System/Info/Public` | Anonymous | yes | 4/6 |  |

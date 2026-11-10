@@ -21,8 +21,8 @@ How to read and edit this: [`docs/coverage/README.md`](coverage/README.md). Mach
 | Reference operations (OpenAPI 12.2.0) | 364 |
 | Registered by Tinyfin | **203** (56%) |
 | Registered **and** a passing contract scenario | **171** (47%) |
-| Called by the official web client (docs/11) and registered | 134 of 164 (82%) |
-| Routes Tinyfin serves that the OpenAPI document lacks | 32 (legacy aliases the web client needs, `/socket`, HLS) |
+| Called by the official web client (docs/11) and registered | 133 of 164 (81%) |
+| Routes Tinyfin serves that the OpenAPI document lacks | 36 (legacy aliases the web client needs, `/socket`, HLS) |
 | Non-route features tracked | 112 (✅ 64 · 🟡 19 · 🗓️ 13 · ⛔ 16) |
 
 ### Routes by status
@@ -139,7 +139,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 
 | Spec | Rules | Rules with a scenario | Scenarios | Passing |
 |---|---|---|---|---|
-| [admin](contract/specs/admin.md) | 38 | 37 | 11 | 11 |
+| [admin](contract/specs/admin.md) | 41 | 40 | 11 | 11 |
 | [bitmap](contract/specs/bitmap.md) | 42 | 20 | 11 | 11 |
 | [browse](contract/specs/browse.md) | 29 | 29 | 15 | 15 |
 | [chapters](contract/specs/chapters.md) | 26 | 26 | 5 | 5 |
@@ -163,7 +163,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [trickplay](contract/specs/trickplay.md) | 11 | 11 | 10 | 10 |
 | [users](contract/specs/users.md) | 189 | 189 | 195 | 195 |
 | [wire](contract/specs/wire.md) | 15 | 14 | 14 | 14 |
-| **total** | 1113 | 1080 | 747 | 743 |
+| **total** | 1116 | 1083 | 747 | 743 |
 
 ## Biggest gaps (planned or not planned, web-client facing)
 
@@ -190,6 +190,7 @@ Operations the official web client mentions (docs/11) that Tinyfin does not regi
 | `POST /LiveStreams/Open` | ⛔ not-planned | Playback, streaming and subtitles | Out of scope for v1 (docs/01, decision D8). Live streams belong to tuners. |
 | `GET /Packages/{name}` | ⛔ not-planned | System, branding, localization and plugins | No plugin system (decisions D8, D11). |
 | `DELETE /Plugins/{pluginId}` | ⛔ not-planned | System, branding, localization and plugins | No plugin system (decisions D8, D11). |
+| `GET /web/ConfigurationPage` | ⛔ not-planned | System, branding, localization and plugins | No plugin system (decisions D8, D11). |
 | `GET /Items/{itemId}/RemoteImages` | 🗓️ planned | Images | Not implemented; the dashboard's image editor 404s on /RemoteImages/Providers (docs/11). |
 | `POST /ScheduledTasks/Running/{taskId}` | 🗓️ planned | Library administration | Only the library-scan task and its start route exist. |
 | `POST /Sessions/{sessionId}/Command` | 🗓️ planned | Sessions, play state and realtime | Remote control of other sessions is not implemented (the /socket transport exists). |

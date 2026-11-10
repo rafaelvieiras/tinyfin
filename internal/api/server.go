@@ -965,6 +965,14 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /System/Configuration/encoding", requireAdmin(s.handleEncodingConfigurationPost))
 	s.mux.HandleFunc("GET /System/Configuration/branding", requireAuth(s.handleBrandingConfigurationGet))
 	s.mux.HandleFunc("POST /System/Configuration/branding", requireAdmin(s.handleBrandingConfigurationPost))
+	// The two sections the library settings pages load: the Display tab
+	// (metadata) and the NFO tab (xbmcmetadata). Before these existed both
+	// pages stopped at their load-error alert, because the wildcard below
+	// answered 404 for them.
+	s.mux.HandleFunc("GET /System/Configuration/metadata", requireAuth(s.handleMetadataConfigurationGet))
+	s.mux.HandleFunc("POST /System/Configuration/metadata", requireAdmin(s.handleMetadataConfigurationPost))
+	s.mux.HandleFunc("GET /System/Configuration/xbmcmetadata", requireAuth(s.handleXbmcMetadataOptionsGet))
+	s.mux.HandleFunc("POST /System/Configuration/xbmcmetadata", requireAdmin(s.handleXbmcMetadataOptionsPost))
 	// An unknown section: refused for non-administrators like the named ones
 	// (403), 404 for administrators (the reference answers 500; admin.config.R6).
 	unknownSection := func(w http.ResponseWriter, r *http.Request) {

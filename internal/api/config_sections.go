@@ -9,15 +9,19 @@ import (
 )
 
 // Named configuration sections (GET|POST /System/Configuration/{key}): the
-// encoding (Transcoding page) and branding sections are stored as one JSON
-// document each. A POST replaces the whole section: members left out fall
-// back to their defaults, unknown members are ignored (admin.config.R3).
-// Tinyfin keeps the values and serves them back; the encoding ones are not
-// all honored by the transcoder (admin.config.R5).
+// encoding (Transcoding page), branding, metadata (Libraries - Display) and
+// xbmc metadata (Libraries - NFO) sections are stored as one JSON document
+// each. A POST replaces the whole section: members left out fall back to
+// their defaults, unknown members are ignored (admin.config.R3). Tinyfin keeps
+// the values and serves them back; the encoding ones are not all honored by
+// the transcoder (admin.config.R5), and the metadata and xbmc metadata members
+// describe behavior this server does not have at all (admin.config.R9/.R10).
 
 const (
 	settingEncodingConfig = "EncodingConfiguration"
 	settingBrandingConfig = "BrandingConfiguration"
+	settingMetadataConfig = "MetadataConfiguration"
+	settingXbmcMetadata   = "XbmcMetadataOptions"
 )
 
 // encodingConfigurationDto is the encoding section with the reference's
@@ -196,4 +200,91 @@ func (s *Server) handleBrandingCss(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/css; charset=utf-8")
 	_, _ = w.Write([]byte(css))
+}
+
+// metadataConfigurationDto is the metadata section (Libraries - Display).
+// The one member picks which timestamp becomes an item's DateAdded; this
+// server has one source of it, the file's modification time, so the default
+// reported here is false — the reference reports true and honors it
+// (admin.config.R9, DIV-30 in docs/13-divergences.md).
+type metadataConfigurationDto struct {
+	UseFileCreationTimeForDateAdded bool `json:"UseFileCreationTimeForDateAdded"`
+}
+
+func defaultMetadataConfiguration() metadataConfigurationDto {
+	return metadataConfigurationDto{UseFileCreationTimeForDateAdded: false}
+}
+
+func (s *Server) metadataConfiguration(ctx context.Context) metadataConfigurationDto {
+	cfg := defaultMetadataConfiguration()
+	s.loadSection(ctx, settingMetadataConfig, &cfg)
+	return cfg
+}
+
+// handleMetadataConfigurationGet is GET /System/Configuration/metadata (any
+// signed-in user, like the other sections).
+func (s *Server) handleMetadataConfigurationGet(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, s.metadataConfiguration(r.Context()))
+}
+
+func (s *Server) handleMetadataConfigurationPost(w http.ResponseWriter, r *http.Request) {
+	cfg := defaultMetadataConfiguration()
+	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+		writeInvalidBody(w)
+		return
+	}
+	raw, _ := json.Marshal(cfg)
+	if err := s.store.SetSetting(r.Context(), settingMetadataConfig, string(raw)); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// xbmcMetadataOptionsDto is the xbmc metadata section (Libraries - NFO): what
+// a Kodi-style sidecar would carry. This server writes no sidecar file at all,
+// so every member is stored and served back and none is honored
+// (admin.config.R10, DIV-31 in docs/13-divergences.md). UserId is absent until
+// a value is sent; an empty string is a value and is served back as one.
+type xbmcMetadataOptionsDto struct {
+	UserID                       *string `json:"UserId,omitempty"`
+	ReleaseDateFormat            string  `json:"ReleaseDateFormat"`
+	SaveImagePathsInNfo          bool    `json:"SaveImagePathsInNfo"`
+	EnablePathSubstitution       bool    `json:"EnablePathSubstitution"`
+	EnableExtraThumbsDuplication bool    `json:"EnableExtraThumbsDuplication"`
+}
+
+func defaultXbmcMetadataOptions() xbmcMetadataOptionsDto {
+	return xbmcMetadataOptionsDto{
+		ReleaseDateFormat:            "yyyy-MM-dd",
+		SaveImagePathsInNfo:          true,
+		EnablePathSubstitution:       true,
+		EnableExtraThumbsDuplication: false,
+	}
+}
+
+func (s *Server) xbmcMetadataOptions(ctx context.Context) xbmcMetadataOptionsDto {
+	cfg := defaultXbmcMetadataOptions()
+	s.loadSection(ctx, settingXbmcMetadata, &cfg)
+	return cfg
+}
+
+// handleXbmcMetadataOptionsGet is GET /System/Configuration/xbmcmetadata (any
+// signed-in user).
+func (s *Server) handleXbmcMetadataOptionsGet(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, s.xbmcMetadataOptions(r.Context()))
+}
+
+func (s *Server) handleXbmcMetadataOptionsPost(w http.ResponseWriter, r *http.Request) {
+	cfg := defaultXbmcMetadataOptions()
+	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+		writeInvalidBody(w)
+		return
+	}
+	raw, _ := json.Marshal(cfg)
+	if err := s.store.SetSetting(r.Context(), settingXbmcMetadata, string(raw)); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

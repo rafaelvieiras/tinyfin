@@ -212,7 +212,7 @@ crossed.
 | `GET /System/Info/Storage` | ✅ | Implemented (`internal/api/system_info_storage.go`, admin-only), found via the `/dashboard` overview pass — not previously catalogued under any name. Real `statfs(2)`-backed free/used space per library folder (one stat per `storage.Library.Paths` entry, since a library can span multiple mounts) and per Tinyfin's own real directories: `ProgramDataFolder`/`CacheFolder`/`LogFolder`/`InternalMetadataFolder`/`ImageCacheFolder` all report the same real directory (`Config.DataDir` — Tinyfin has no config/cache/log/metadata split, unlike the reference server, so this is the honest single answer, not five fabricated paths), `TranscodingTempFolder` is `os.TempDir()` (the real transcode working directory), `WebFolder` is present only when a web bundle is actually configured. `StorageType` is always `"Fixed"` — a documented simplification, no dependency-free way to detect network mounts. Confirmed live against a test deployment, including the Dashboard "Locations" widget rendering real GiB figures. See "Dashboard — Overview" below. |
 | `GET /System/Configuration`, `POST /System/Configuration` | ✅ | Implemented (`internal/api/system.go`'s main server configuration), measured live. This is what every settings page of the dashboard loads and saves through, and what `#/dashboard/libraries/metadata` uses alone. |
 | `GET`/`POST /System/Configuration/{network,encoding,branding}` | ✅ | Implemented (`internal/api/config_sections.go`), each stored as one JSON document and served back with the reference's defaults for members left out (`admin.config.R3`). Measured live on all three. The branding one is also what a client reads as `BrandingOptions`. |
-| `GET`/`POST /System/Configuration/metadata`, `/System/Configuration/xbmcmetadata` | ❌ | **The two named sections the library settings pages need, and the reason two of them show a load error.** Measured live on 10 Nov 2026: `GET /System/Configuration/metadata` and `.../xbmcmetadata` answer 404, so `#/dashboard/libraries/display` (`MetadataConfiguration`, the "Exibir" tab) and `#/dashboard/libraries/nfo` (`XbmcMetadataOptions`) both stop at their load-error alert — everything else either page calls is answered (`GET /System/Configuration`, `GET /Users`). The reference serves `{"UseFileCreationTimeForDateAdded":true}` for `metadata` and `{ReleaseDateFormat,SaveImagePathsInNfo,EnablePathSubstitution,EnableExtraThumbsDuplication}` for `xbmcmetadata`; a `POST` of either answers 204 and persists. See "Dashboard — Libraries" below. |
+| `GET`/`POST /System/Configuration/metadata`, `/System/Configuration/xbmcmetadata` | ✅ | The two named sections the library settings pages load: `#/dashboard/libraries/display` (`metadata`) and `#/dashboard/libraries/nfo` (`xbmcmetadata`). Both used to answer 404, which is why both pages stopped at their load-error alert; the contract now pins them (`admin.config.R9`/`R10`/`R11`, scenarios `admin.config.metadata`, `admin.config.xbmcmetadata`, `admin.config.section-invalid`). Every member is stored and served back with the reference's defaults and none is honored — no `.nfo` sidecar is written, and `DateAdded` always comes from the file's modification time, which is why `metadata` reports `false` where the reference reports `true` (`DIV-30`, `DIV-31`). A member of the wrong type is `400` and leaves the section unchanged (the reference answers 500). |
 | `GET`/`POST /System/Configuration/{key}` for any other key | ❌ | Deliberate: an unknown section answers 404 for an administrator (the reference answers 500; `admin.config.R6`), 403 for anybody else. |
 | `GET /System/ActivityLog/Entries` | ✅ | Implemented (`internal/api/activity_log.go`, admin-only), found via the `/dashboard` overview pass. Deliberately narrow, real (not stubbed) activity log: only a few login/playback event types are generated — `SessionStarted` + `AuthenticationSucceeded` (successful login, two entries, `users.auth.R23`) and `AuthenticationFailed` (wrong password for an existing enabled account; unknown usernames and disabled accounts write nothing, `users.auth.R26`/`R27`) — durably persisted (`internal/storage/activity.go`, sqlite migration `0005_activity_log.sql`), not scan-progress/item-added/user-management events, which the reference server's own activity log also carries but this project has no hook points for yet. `hasUserId=true`/`false` genuinely filters on a nullable `user_id` column (a failed login has none), `minDate`/`startIndex`/`limit` all real. See "Dashboard — Overview" below for the full capture and scope writeup. |
 | `GET /System/Logs`, `/System/Logs/Log` | ❌ | Catalog only. |
@@ -296,38 +296,34 @@ The per-library "⋮" menu's other three actions:
 | "Rename" | ✅ | Implemented (`internal/api/library_admin.go`'s `handleRenameVirtualFolder`, admin-only), `POST /Library/VirtualFolders/Name?name=<current>&newName=<new>&refreshLibrary=<bool>` — route shape confirmed by static analysis of Tinyfin's own embedded `@jellyfin/sdk` bundle (not live-tested against the reference server: its own confirmation dialog warns renaming discards all metadata, too destructive to trigger against the persistent fixture). Looks up the library by current `name`, renames it (ID/Paths/LibraryOptions preserved), queues a scan if `refreshLibrary=true`; 404 if `name` doesn't match a library, 400 if `newName` is empty. Confirmed live against a test deployment: rename-then-list shows the new name, folders intact. |
 | "Remove" | ✅ | Uses the already-implemented `DELETE /Library/VirtualFolders?name=<name>`; not re-confirmed live in this pass (would delete a real library) but the route and its by-`Name` addressing were already confirmed in the page-load capture above. |
 
-### The two library settings pages that load nothing (found 10 Nov 2026)
+### The two library settings pages that loaded nothing (fixed 10 Nov 2026)
 
-Both of these are reachable from the dashboard drawer, under Server, and both stop at a load-error
-alert instead of their form: `#/dashboard/libraries/display` ("Exibir") and
+Both of these are reachable from the dashboard drawer, under Server, and both used to stop at a
+load-error alert instead of their form: `#/dashboard/libraries/display` ("Exibir") and
 `#/dashboard/libraries/nfo` ("NFO"). Root cause, measured live against the Sala deployment, not
 inferred from the client's code:
 
-| Page | What it loads | Answer today |
-|---|---|---|
-| `#/dashboard/libraries/display` | `GET /System/Configuration` + `GET /System/Configuration/metadata` | 200 + **404** |
-| `#/dashboard/libraries/nfo` | `GET /System/Configuration/xbmcmetadata` + `GET /Users` | **404** + 200 |
+| Page | What it loads | Then | Now |
+|---|---|---|---|
+| `#/dashboard/libraries/display` | `GET /System/Configuration` + `GET /System/Configuration/metadata` | 200 + **404** | 200 + 200 |
+| `#/dashboard/libraries/nfo` | `GET /System/Configuration/xbmcmetadata` + `GET /Users` | **404** + 200 | 200 + 200 |
 
-The two missing routes are named configuration sections (`GET`/`POST /System/Configuration/{key}`),
-the same mechanism `encoding`, `network` and `branding` already use here — so this is two DTOs and
-two handlers away from working, not a client-side incompatibility. Each page's save action posts
-its section back (`updateNamedConfiguration`, plus the whole server configuration on the display
-page), so a `POST` handler is needed as well as a `GET`.
-
-What the reference serves, measured there the same day:
+The two missing routes were named configuration sections (`GET`/`POST /System/Configuration/{key}`),
+the same mechanism `encoding`, `network` and `branding` already used, so both pages now render and
+save. What the reference serves, measured there the same day, which is what these sections serve
+back:
 
 - `metadata` → `{"UseFileCreationTimeForDateAdded":true}` (one member: which timestamp becomes
-  `DateAdded`).
+  `DateAdded`). Tinyfin reports `false`, because `internal/scan`'s `fileDateAdded` is always the
+  file's modification time (`DIV-30`).
 - `xbmcmetadata` → `{"ReleaseDateFormat":"yyyy-MM-dd","SaveImagePathsInNfo":true,"EnablePathSubstitution":true,"EnableExtraThumbsDuplication":false}`,
-  plus `UserId` once an administrator picked one. A `POST` of either section answers 204 and the
-  next `GET` returns what was sent.
+  plus `UserId` once a value was sent. A `POST` of either section answers 204 and the next `GET`
+  returns what was sent. Every member is stored and served back and none is honored: this server
+  writes no `.nfo` sidecar (`DIV-31`).
 
-Every member of `xbmcmetadata` describes behavior Tinyfin does not have (it writes no NFO sidecar,
-no image paths into one, and no extra thumbs), and `UseFileCreationTimeForDateAdded` describes a
-choice it never makes: `internal/scan`'s `fileDateAdded` is always the file's modification time, so
-the honest value there is `false`, not the reference's `true`. A save-and-echo store — the scope
-decision `LibraryOptions` already carries — plus one divergence entry per member is therefore the
-shape to build, rather than a silent accept.
+Both are save-and-echo, the same scope decision `LibraryOptions` already carries, and both agree
+with the reference member by member except the `metadata` default, which is recorded rather than
+copied because `false` is the truthful value for this server.
 
 Also present in the bundle but not surfaced by any modal this pass exercised (no per-path
 add/remove UI exists in this jellyfin-web build's library-card menu — only whole-library add/
