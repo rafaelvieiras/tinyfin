@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.1.0] - 2026-11-10
+
+First release. Everything below landed before it: the project was developed in the open from the start and
+the entries are kept as they were written, one per change. The scope is a Jellyfin 12 compatible server for
+one household's libraries, not a drop-in replacement for the reference (see `docs/13-divergences.md`).
+
 ### Known issues
 
 - A copied HLS job that starts in the middle of a file does not carry the seek in its segment timestamps on a current
