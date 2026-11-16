@@ -96,7 +96,7 @@ jobs:
           echo "Web tags: ${web_tags}"
 
       - name: Build and push the API image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64,linux/arm64
@@ -112,7 +112,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=tinyfin
 
       - name: Build and push the image with the web UI
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64,linux/arm64
