@@ -8,3 +8,12 @@ updates:
     directory: /
     schedule:
       interval: weekly
+  # Release tooling only (semantic-release). The server still builds with Go.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: monthly

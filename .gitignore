@@ -27,3 +27,9 @@
 
 # Playwright MCP session artifacts (screenshots/console logs from manual E2E checks)
 /.playwright-mcp/
+
+# Local agent settings (per-machine, never shared)
+/.claude/
+
+# Release tooling (semantic-release lives in package.json; only the lockfile is committed)
+/node_modules/

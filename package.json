@@ -1,0 +1,22 @@
+{
+  "name": "tinyfin-release",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Release tooling for Tinyfin. The server itself is built with Go.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rafaelvieiras/tinyfin.git"
+  },
+  "license": "MIT",
+  "scripts": {
+    "release": "semantic-release"
+  },
+  "devDependencies": {
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/exec": "^7.0.3",
+    "@semantic-release/github": "^11.0.1",
+    "@semantic-release/release-notes-generator": "^14.0.3",
+    "conventional-changelog-conventionalcommits": "^8.0.0",
+    "semantic-release": "^24.2.0"
+  }
+}

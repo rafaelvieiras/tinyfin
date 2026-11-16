@@ -1,0 +1,118 @@
+name: Release
+
+# Two things happen here.
+#   version: semantic-release reads the Conventional Commits, cuts a tag and writes the GitHub
+#            Release notes. It never touches CHANGELOG.md: that file is curated by hand, with the
+#            "[intentional deviation]" markers this project depends on.
+#   docker:  publishes both images to GHCR for linux/amd64 and linux/arm64.
+#              ghcr.io/<owner>/tinyfin       WITH_WEB=false, MIT only, API only
+#              ghcr.io/<owner>/tinyfin-web   WITH_WEB=true, bundles the GPL-2.0 jellyfin-web build
+#            Every push to main publishes edge + sha-<commit>. A release also publishes the
+#            version tags and latest.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      publish_version:
+        description: >-
+          Optional. Tag the images of this run as a released version, for example 0.1.0.
+          Needed only to publish images for a release that was cut before this workflow existed.
+        required: false
+        type: string
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  version:
+    name: Tag and release notes
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: semantic-release
+        id: release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
+
+  docker:
+    name: Publish images
+    runs-on: ubuntu-latest
+    needs: version
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Work out the tags
+        id: tags
+        env:
+          RELEASED: ${{ needs.version.outputs.version }}
+          REQUESTED: ${{ inputs.publish_version }}
+        run: |
+          set -euo pipefail
+          version="${RELEASED:-${REQUESTED:-}}"
+          tags="edge,sha-${GITHUB_SHA::7}"
+          if [ -n "$version" ]; then
+            minor="${version%.*}"
+            tags="latest,${minor},${version},${tags}"
+          fi
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "Publishing with tags: $tags"
+
+      - name: Build and push the API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            WITH_WEB=false
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/tinyfin:${{ steps.tags.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.description=Tinyfin, a Jellyfin-compatible media server. API only, MIT.
+            org.opencontainers.image.licenses=MIT
+          cache-from: type=gha,scope=tinyfin
+          cache-to: type=gha,mode=max,scope=tinyfin
+
+      - name: Build and push the image with the web UI
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            WITH_WEB=true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/tinyfin-web:${{ steps.tags.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.description=Tinyfin, a Jellyfin-compatible media server, with the jellyfin-web UI bundled.
+            org.opencontainers.image.licenses=MIT AND GPL-2.0-only
+          cache-from: type=gha,scope=tinyfin-web
+          cache-to: type=gha,mode=max,scope=tinyfin-web
