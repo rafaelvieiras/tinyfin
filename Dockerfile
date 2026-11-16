@@ -33,7 +33,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /out/tinyfin ./cmd/tinyfin
 
-FROM alpine:3.20 AS web-false
+FROM alpine:3.24 AS web-false
 RUN mkdir -p /web
 
 # The jellyfin-web build output is platform-independent static files, so it is built once on
