@@ -130,12 +130,12 @@ is in [`docs/`](docs/).
 ## Status
 
 > [!NOTE]
-> Release `0.1.x`. Phases 0 to 3 of the roadmap are done and were tested against real clients:
+> Release `0.x`. Phases 0 to 3 of the roadmap are done and were tested against real clients:
 > `jellyfin-web` and the official Android app. Phase 4, the multi-node scale mode, has not
 > started.
 
 Coverage is honest, not complete. Check [`docs/COVERAGE.md`](docs/COVERAGE.md) before you rely on
-a feature. Out of scope for 0.1.x, by decision **D8**: Live TV and DVR, DLNA, offline mobile sync
+a feature. Out of scope for 0.x, by decision **D8**: Live TV and DVR, DLNA, offline mobile sync
 and a generic plugin loader. Multi-node scale mode is the unstarted phase 4. Metadata enrichment
 needs a TMDB key; without one the scanner only catalogues files. Every deliberate difference from
 the reference is listed in [`docs/13-divergences.md`](docs/13-divergences.md), and known issues are
