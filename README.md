@@ -1,55 +1,83 @@
-# Tinyfin
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="assets/logo.svg">
+    <img alt="Tinyfin" src="assets/logo.svg" width="320">
+  </picture>
+</p>
 
-> A drop-in, wire-compatible reimplementation of the Jellyfin server API, written in Go,
-> designed for near-zero idle memory footprint — with an explicit, opt-in path to
-> multi-node scale that the reference implementation does not offer.
+<p align="center">
+  A Jellyfin-compatible media server in one Go binary.<br>
+  Same API. Same clients. A fraction of the idle memory.
+</p>
 
-**Status:** Phases 0–3 are implemented and verified end to end against real Jellyfin clients
-(`jellyfin-web` and the official Android app): single-node storage, user/library/browsing API,
-Direct Play/Remux/Direct Stream/Transcode via `jellyfin-ffmpeg`, and TMDB-backed metadata
-enrichment with a working library scanner. Phase 4 (scale mode — multi-node storage and
-session/realtime state) hasn't started. See [`ROADMAP.md`](ROADMAP.md) for the detailed,
-phase-by-phase checklist and [`AGENTS.md`](AGENTS.md) for the principles and process governing
-further work.
-**License:** [MIT](LICENSE). Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md).
+<p align="center">
+  <a href="https://github.com/rafaelvieiras/tinyfin/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/rafaelvieiras/tinyfin/ci.yml?branch=main&label=CI"></a>
+  <a href="https://github.com/rafaelvieiras/tinyfin/releases"><img alt="Release" src="https://img.shields.io/github/v/release/rafaelvieiras/tinyfin"></a>
+  <a href="https://github.com/rafaelvieiras/tinyfin/pkgs/container/tinyfin"><img alt="Image" src="https://img.shields.io/badge/ghcr.io-tinyfin-blue?logo=docker&logoColor=white"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/rafaelvieiras/tinyfin"></a>
+  <img alt="Go" src="https://img.shields.io/github/go-mod/go-version/rafaelvieiras/tinyfin">
+</p>
 
 ---
 
-## What this is, in one sentence
+Tinyfin speaks the Jellyfin HTTP API. Point an unchanged Jellyfin client at it and the client
+keeps working: the web UI, the mobile and TV apps, the Kodi add-on, Findroid, Infuse. The state
+lives in one SQLite file. Reads are database queries, not an in-memory catalog, so idle memory
+does not grow with library size. Multi-node scale is a mode you turn on later, not a rewrite.
 
-A media server backend that speaks the same HTTP API as Jellyfin closely enough that existing
-Jellyfin clients (official web/mobile/TV apps, the Kodi add-on, Findroid, Infuse, and others)
-can point at a Tinyfin instance instead and keep working — while using a fraction of the idle
-memory a reference Jellyfin/Emby installation needs, and without hard-coding itself into the
-single-node ceiling that the reference implementation, and comparable single-binary/embedded-SQLite
-projects such as PocketBase, deliberately accept.
+This is a clean-room implementation. No Jellyfin source code is copied. Tinyfin implements the
+publicly observable wire protocol, the same way Samba implements SMB.
 
-## Running it
+## What you get
 
-### Docker (recommended)
+| | |
+|---|---|
+| **Wire compatible** | 203 of 364 Jellyfin 12.2 API operations are registered, 171 of them verified by an executable contract. See [the coverage panel](docs/COVERAGE.md). |
+| **Low idle memory** | No full-catalog cache. Every read is an indexed SQLite query. |
+| **One binary** | Embedded SQLite. No separate database, cache or message broker to run. |
+| **Real transcoding** | Shells out to [`jellyfin-ffmpeg`](https://github.com/jellyfin/jellyfin-ffmpeg), the same fork the reference server uses. Bundled in the image. |
+| **Loads Jellyfin data** | Reads Jellyfin naming, NFO files, artwork and `<set>` collections. Item IDs that clients already store keep working. |
+
+## What it does not do
+
+- **No copy of Jellyfin code.** Compatibility comes from observing the wire protocol, not from
+  porting source. See [`docs/04-api-compatibility.md`](docs/04-api-compatibility.md).
+- **No transcoder of its own.** `jellyfin-ffmpeg` does the codec work. Tinyfin decides whether to
+  remux, direct stream or transcode, and builds the command.
+- **No media organizer.** Cataloging, artwork curation and multi-source metadata belong to an
+  external tool used as an optional provider.
+- **No Live TV, DVR, DLNA, plugin loader or offline sync.** Out of scope for now.
+
+## Quick start
+
+Two images are published from this repository. Pick the one you need.
+
+| Image | Web UI | License of what you download |
+|---|---|---|
+| `ghcr.io/rafaelvieiras/tinyfin:latest` | no | MIT only |
+| `ghcr.io/rafaelvieiras/tinyfin-web:latest` | yes, at `/web/` | MIT plus the GPL-2.0 `jellyfin-web` build |
+
+Both are multi-arch (`linux/amd64`, `linux/arm64`) and both bundle `jellyfin-ffmpeg`.
 
 ```sh
-docker build -t tinyfin --build-arg WITH_WEB=true .
-docker run -p 8096:8096 \
+docker run -d --name tinyfin -p 8096:8096 \
   -v ./data:/data \
-  -v /path/to/your/media:/media:ro \
-  tinyfin
+  -v /path/to/media:/media:ro \
+  ghcr.io/rafaelvieiras/tinyfin-web:latest
 ```
 
-(the image's default entrypoint already points `-data` at `/data/tinyfin.db`, matching the volume
-above — no extra flags needed for a first run.)
+Open `http://<host>:8096/web/` and finish the first-run wizard. Create the admin user, then add
+your libraries. A Jellyfin client that points at `http://<host>:8096` finds a normal server.
 
-`WITH_WEB=true` bundles a real, unmodified [`jellyfin-web`](https://github.com/jellyfin/jellyfin-web)
-build into the image, served at `/web/` — off by default so the base image stays MIT-only with no
-GPL code linked in (see [`docs/00-decision-log.md`](docs/00-decision-log.md)'s **D9**). `jellyfin-ffmpeg`
-is always bundled regardless (Remux/Direct Stream/Transcode need it unconditionally). To compare
-against a reference Jellyfin 12.x server side by side, see
-[`scripts/conformance-ref-up.sh`](scripts/conformance-ref-up.sh) and
-[`docs/contract/README.md`](docs/contract/README.md).
+The container runs as uid `65532`. Give the data directory to that user first:
 
-Once it's up, point any Jellyfin client (the bundled web UI at `/web/`, the official mobile/TV
-apps, Kodi's add-on, Findroid, Infuse, ...) at `http://<host>:8096` like it's a normal Jellyfin
-server — that's the whole premise.
+```sh
+mkdir -p data && sudo chown 65532:65532 data
+```
+
+Prefer Compose? Copy [`.env.example`](.env.example) to `.env`, edit it, then run
+`docker compose up -d`.
 
 ### From source
 
@@ -58,70 +86,60 @@ go build -o tinyfin ./cmd/tinyfin
 ./tinyfin -data tinyfin.db -addr :8096
 ```
 
-Flags (all optional, see `-h` for the authoritative list):
+### Custom image
 
-| Flag | Env var | Default | What it does |
+The two published images differ by one build argument:
+
+```sh
+docker build -t tinyfin --build-arg WITH_WEB=true .
+```
+
+`WITH_WEB=false` is the default. It keeps the image MIT-only and adds no runtime dependency. The
+Go module never imports `jellyfin-web` either way. The boundary is recorded as decision **D9** in
+[`docs/00-decision-log.md`](docs/00-decision-log.md).
+
+## Configuration
+
+Every flag has a default. `-h` prints the authoritative list.
+
+| Flag | Env var | Default | Purpose |
 |---|---|---|---|
-| `-data` | — | `tinyfin.db` | Path to the SQLite database file |
-| `-addr` | — | `:8096` | Address to listen on |
-| `-web-dir` | `TINYFIN_WEB_DIR` | `/web` | A built `jellyfin-web` `dist/` to serve at `/web/`; skipped if the directory doesn't exist |
-| `-ffmpeg-path` | `TINYFIN_FFMPEG_PATH` | `/usr/lib/jellyfin-ffmpeg/ffmpeg` | `jellyfin-ffmpeg` binary, for Remux/Direct Stream/Transcode (`docs/07`) |
-| `-ffprobe-path` | `TINYFIN_FFPROBE_PATH` | `/usr/lib/jellyfin-ffmpeg/ffprobe` | `ffprobe` binary, for the library scanner's media-info extraction (`docs/08`) |
-| `-scan-concurrency` | `TINYFIN_SCAN_CONCURRENCY` | `8` | Scan workers per library (I/O bound; raise for remote filesystems) |
-| `-scan-probe-concurrency` | `TINYFIN_SCAN_PROBE_CONCURRENCY` | scan concurrency | Max simultaneous `ffprobe` processes across all scans |
-| `-scan-library-parallelism` | `TINYFIN_SCAN_LIBRARY_PARALLELISM` | `3` | Libraries scanned at once during a refresh |
-| `-scan-force-probe` | `TINYFIN_SCAN_FORCE_PROBE` | off | Re-probe every file even when size and mtime are unchanged |
-| `-tmdb-api-key` | `TINYFIN_TMDB_API_KEY` | *(empty)* | Enables TMDB metadata enrichment when set; catalog-only scanning otherwise (`internal/metadata`) |
+| `-data` | — | `tinyfin.db` | SQLite database file |
+| `-addr` | — | `:8096` | Listen address |
+| `-web-dir` | `TINYFIN_WEB_DIR` | `/web` | Built `jellyfin-web` `dist/` to serve at `/web/`. Skipped when the directory is absent |
+| `-ffmpeg-path` | `TINYFIN_FFMPEG_PATH` | `/usr/lib/jellyfin-ffmpeg/ffmpeg` | Binary used for remux, direct stream and transcode |
+| `-ffprobe-path` | `TINYFIN_FFPROBE_PATH` | `/usr/lib/jellyfin-ffmpeg/ffprobe` | Binary used to read media info during a scan |
+| `-scan-concurrency` | `TINYFIN_SCAN_CONCURRENCY` | `8` | Scan workers per library. Raise it for a remote filesystem |
+| `-scan-probe-concurrency` | `TINYFIN_SCAN_PROBE_CONCURRENCY` | scan concurrency | Maximum `ffprobe` processes at once |
+| `-scan-library-parallelism` | `TINYFIN_SCAN_LIBRARY_PARALLELISM` | `3` | Libraries scanned at once |
+| `-scan-force-probe` | `TINYFIN_SCAN_FORCE_PROBE` | off | Probe every file again, even when size and mtime did not change |
+| `-tmdb-api-key` | `TINYFIN_TMDB_API_KEY` | empty | Turns on TMDB enrichment. Without it the scan is catalog-only |
 
-A library still has to be added and scanned before there's anything to browse — either through a
-real client's admin dashboard (`POST /Library/VirtualFolders`, `internal/api/library_admin.go`) or
-directly against the API.
+## How it works
 
-## Why this exists
+1. **Scan.** The scanner walks each library, reads NFO and artwork, and asks `ffprobe` for media
+   info. It skips a file when size and mtime match the last scan.
+2. **Store.** Items, users, sessions and playback state go into one SQLite file. Storage sits
+   behind an interface, so a networked driver can replace the embedded one.
+3. **Serve.** The API answers the requests a Jellyfin client sends. Playback negotiation picks
+   direct play, remux, direct stream or transcode, then hands the job to `jellyfin-ffmpeg`.
 
-Two independent, well-documented problems with the reference implementation motivate this
-project — neither is a rumor, both are acknowledged by the upstream projects themselves:
+Design and rules of the road are in [`AGENTS.md`](AGENTS.md). The reasoning behind each decision
+is in [`docs/`](docs/).
 
-1. **Idle memory grows with library size, and it's a design choice, not a leak.** Jellyfin's own
-   maintainers describe a server going from ~400MB at startup to several GB over normal browsing,
-   because the library manager caches aggressively in memory instead of querying the database on
-   each request (see `jellyfin/jellyfin` discussion #10444). A design that queries a well-indexed
-   store per request instead avoids this class of growth entirely.
-2. **A single SQLite file is the whole state store, and SQLite is single-writer.** This is the
-   reason Jellyfin cannot run two server processes against the same library and state today, and
-   why the same limitation is a deliberate, stated design choice in PocketBase — not a bug to be
-   fixed, but a boundary the maintainers chose not to cross. Tinyfin treats this as a decision to
-   make explicit and pluggable rather than implicit and permanent.
+## Status
 
-Neither problem is solved by "just use a bigger machine" once the goal includes leaving a path
-open to running more than one node. Tinyfin's premise is that both problems are addressable by
-decisions made at the very start of the project — retrofitting them later, after client code and
-operators depend on a particular deployment shape, is exactly the position the reference
-implementations are in today.
+> [!NOTE]
+> Release `0.1.x`. Phases 0 to 3 of the roadmap are done and were tested against real clients:
+> `jellyfin-web` and the official Android app. Phase 4, the multi-node scale mode, has not
+> started.
 
-## What this is not
-
-- **Not a fork of Jellyfin.** No Jellyfin source is copied. The server is a clean-room
-  implementation of the *publicly observable wire protocol* (HTTP endpoints, headers, JSON
-  shapes) — the same relationship Samba has to SMB, or Wine has to the Win32 API. See
-  [`docs/04-api-compatibility.md`](docs/04-api-compatibility.md) for how compatibility is defined
-  and verified.
-- **Not a transcoder.** Tinyfin shells out to [`jellyfin-ffmpeg`](https://github.com/jellyfin/jellyfin-ffmpeg),
-  an existing, independently maintained FFmpeg fork with hardware-acceleration and HDR
-  tone-mapping patches, as an external subprocess dependency — the same way the reference server
-  does. Tinyfin's own code is the decision layer above it (direct play vs. remux vs. transcode,
-  command construction, session lifecycle), not a codec implementation. See
-  [`docs/07-transcoding-pipeline.md`](docs/07-transcoding-pipeline.md).
-- **Not a media organizer.** Cataloging, metadata editing, artwork curation, and multi-source
-  metadata resolution are a separate concern, deliberately left to an external cataloging tool
-  consumed as an optional metadata provider. Tinyfin's own library scanner stays minimal: enough
-  to serve a browsable catalog and hand off enrichment to a provider plugin, never a competing
-  cataloging system. See [`docs/08-library-scanning-and-metadata.md`](docs/08-library-scanning-and-metadata.md).
-- **Not aiming for 100% feature parity.** Live TV/DVR, a generic third-party plugin-loading
-  system, DLNA, and offline mobile sync are explicitly out of scope for the initial target — see
-  [`docs/01-vision-and-scope.md`](docs/01-vision-and-scope.md) for the reasoning.
-
-## What Tinyfin does and doesn't do
+Coverage is honest, not complete. Check [`docs/COVERAGE.md`](docs/COVERAGE.md) before you rely on
+a feature. Out of scope for 0.1.x, by decision **D8**: Live TV and DVR, DLNA, offline mobile sync
+and a generic plugin loader. Multi-node scale mode is the unstarted phase 4. Metadata enrichment
+needs a TMDB key; without one the scanner only catalogues files. Every deliberate difference from
+the reference is listed in [`docs/13-divergences.md`](docs/13-divergences.md), and known issues are
+in [`CHANGELOG.md`](CHANGELOG.md).
 
 <!-- coverage:start -->
 ![API routes](docs/coverage/badge-routes.svg) ![contract-verified](docs/coverage/badge-verified.svg)
@@ -139,52 +157,42 @@ Measured against the Jellyfin 12.2.0 OpenAPI document (364 operations): **203 re
 Per controller and per subsystem, with what the reference does and what Tinyfin does: **[docs/COVERAGE.md](docs/COVERAGE.md)**.
 <!-- coverage:end -->
 
-## Principles
+## Documentation
 
-1. **Idle memory is a budget, not an afterthought.** No full-catalog in-memory cache, ever. Every
-   read is a query against a properly indexed store. See
-   [`docs/09-memory-and-performance-goals.md`](docs/09-memory-and-performance-goals.md).
-2. **Single binary, zero required dependencies, by default.** The default deployment is one Go
-   binary with an embedded SQLite database — no separate database process, no cache process, no
-   message broker. Anything beyond that is opt-in.
-3. **Scale is a mode the operator turns on, not a rewrite.** The storage layer and the session/
-   realtime-state layer are each defined behind an interface with two implementations: an
-   embedded default and a networked one. Turning on scale mode is a configuration decision, not
-   an architecture change. See [`docs/05-storage-drivers.md`](docs/05-storage-drivers.md) and
-   [`docs/06-session-and-realtime-state.md`](docs/06-session-and-realtime-state.md).
-4. **Wire compatibility is the product.** The value of this project is that unmodified existing
-   clients work against it. Any change that breaks that compatibility for convenience is treated
-   as a defect, not a trade-off.
-5. **Transcoding is delegated, not reinvented.** FFmpeg (via `jellyfin-ffmpeg`) does the codec
-   work. Tinyfin owns the decision of *whether* to invoke it and *how*, never the decoding/
-   encoding itself.
-6. **Decisions are recorded before code is written.** This repository follows a docs-first
-   process: open questions live in [`docs/00-decision-log.md`](docs/00-decision-log.md) until
-   resolved, then get promoted into the relevant spec document.
-
-## Documentation map
-
-| Doc | Covers |
+| Document | Content |
 |---|---|
-| [`AGENTS.md`](AGENTS.md) | Entry point for contributors (human or LLM): the principles that don't bend, the clean-room requirement, where everything else lives |
+| [`AGENTS.md`](AGENTS.md) | Principles, clean-room rule, where each thing lives |
+| [`ROADMAP.md`](ROADMAP.md) | What is done, phase by phase |
 | [`docs/00-decision-log.md`](docs/00-decision-log.md) | Open questions, tracked until resolved |
-| [`docs/01-vision-and-scope.md`](docs/01-vision-and-scope.md) | Target use case, explicit non-goals |
-| [`docs/02-glossary.md`](docs/02-glossary.md) | Terms used consistently across the other docs |
-| [`docs/03-architecture.md`](docs/03-architecture.md) | Process/role layout, how the pieces fit together |
-| [`docs/04-api-compatibility.md`](docs/04-api-compatibility.md) | What "compatible with Jellyfin clients" means and how it's verified |
-| [`docs/05-storage-drivers.md`](docs/05-storage-drivers.md) | SQLite mode vs. scale mode, and why |
-| [`docs/06-session-and-realtime-state.md`](docs/06-session-and-realtime-state.md) | Why storage and session state are two separate pluggable concerns |
-| [`docs/07-transcoding-pipeline.md`](docs/07-transcoding-pipeline.md) | Direct Play/Remux/Direct Stream/Transcode, device profiles, worker separation |
-| [`docs/08-library-scanning-and-metadata.md`](docs/08-library-scanning-and-metadata.md) | Scanner scope, metadata provider interface |
-| [`docs/09-memory-and-performance-goals.md`](docs/09-memory-and-performance-goals.md) | Concrete targets and the reference-implementation failure modes they respond to |
-| [`docs/10-roadmap.md`](docs/10-roadmap.md) | Phased delivery plan |
-| [`ROADMAP.md`](ROADMAP.md) | Checklist of what's actually done, phase by phase |
+| [`docs/01-vision-and-scope.md`](docs/01-vision-and-scope.md) | Target use case and non-goals |
+| [`docs/02-glossary.md`](docs/02-glossary.md) | Terms used across the other documents |
+| [`docs/03-architecture.md`](docs/03-architecture.md) | Processes, roles and how the parts fit |
+| [`docs/04-api-compatibility.md`](docs/04-api-compatibility.md) | What compatibility means and how it is verified |
+| [`docs/05-storage-drivers.md`](docs/05-storage-drivers.md) | SQLite mode and scale mode |
+| [`docs/06-session-and-realtime-state.md`](docs/06-session-and-realtime-state.md) | Why storage and session state are separate |
+| [`docs/07-transcoding-pipeline.md`](docs/07-transcoding-pipeline.md) | Playback modes, device profiles, worker split |
+| [`docs/08-library-scanning-and-metadata.md`](docs/08-library-scanning-and-metadata.md) | Scanner scope and provider interface |
+| [`docs/09-memory-and-performance-goals.md`](docs/09-memory-and-performance-goals.md) | Targets and the failure modes they answer |
+| [`docs/12-clean-room-behavior-specs.md`](docs/12-clean-room-behavior-specs.md) | Behavioral rules the contract enforces |
+| [`docs/13-divergences.md`](docs/13-divergences.md) | Every deliberate difference from the reference |
+| [`docs/COVERAGE.md`](docs/COVERAGE.md) | Route by route, feature by feature |
+| [`docs/contract/README.md`](docs/contract/README.md) | Executable contract: specs, scenarios and runner |
+
+## Contributing
+
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) first. The clean-room rule is not negotiable: describe
+behavior by what a client can observe, never by copying Jellyfin source.
+
+Bug reports and feature requests go to [issues](https://github.com/rafaelvieiras/tinyfin/issues).
+Security reports follow [`SECURITY.md`](SECURITY.md).
 
 ## Acknowledgements
 
-This project's design is informed by public findings from the Jellyfin project (GitHub
-discussions and issues cited throughout `docs/`), the PocketBase project's own stated scaling
-philosophy, and the various community projects that distribute Plex transcoding across worker
-nodes (`kube-plex`, `ClusterPlex`, `Plex-Remote-Transcoder`, `UnicornTranscoder`) — all of which
-independently arrived at "separate the stateless transcode step from the stateful server" as the
-only part of this problem that's actually easy.
+The design leans on public findings from the Jellyfin project, the PocketBase scaling philosophy,
+and the community projects that spread Plex transcoding over worker nodes: `kube-plex`,
+`ClusterPlex`, `Plex-Remote-Transcoder` and `UnicornTranscoder`. All of them reached the same
+conclusion: separate the stateless transcode step from the stateful server.
+
+## License
+
+[MIT](LICENSE). The `jellyfin-web` build that `tinyfin-web` bundles keeps its own GPL-2.0 license.
