@@ -20,17 +20,25 @@ ARG WITH_WEB=false
 # apt-managed userland the distroless-family final image below intentionally doesn't have).
 ARG JELLYFIN_FFMPEG_VERSION=7.1.4-3
 
-FROM golang:1.26 AS build
+# Every stage that runs a compiler or a download runs on the build platform and targets
+# $TARGETOS/$TARGETARCH explicitly. Nothing is emulated: a multi-arch build compiles the Go
+# binary for the target (CGO is off, so cross-compiling is free) and fetches the matching
+# jellyfin-ffmpeg tarball, instead of running the whole toolchain under QEMU.
+FROM --platform=$BUILDPLATFORM golang:1.26 AS build
+ARG TARGETOS=linux
+ARG TARGETARCH
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -o /out/tinyfin ./cmd/tinyfin
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /out/tinyfin ./cmd/tinyfin
 
 FROM alpine:3.20 AS web-false
 RUN mkdir -p /web
 
-FROM node:24-bookworm AS web-true
+# The jellyfin-web build output is platform-independent static files, so it is built once on
+# the build platform and copied into each target image.
+FROM --platform=$BUILDPLATFORM node:24-bookworm AS web-true
 RUN apt-get update && apt-get install -y --no-install-recommends git \
 	&& rm -rf /var/lib/apt/lists/*
 RUN git clone --depth 1 https://github.com/jellyfin/jellyfin-web.git /src-web
@@ -44,7 +52,7 @@ FROM web-${WITH_WEB} AS webassets
 # Downloads the jellyfin-ffmpeg portable Linux tarball (ffmpeg + ffprobe, every codec library
 # statically linked in) for whichever architecture buildkit is targeting. TARGETARCH is a
 # buildkit-provided build arg (amd64/arm64) — no manual --platform plumbing needed.
-FROM debian:bookworm-slim AS ffmpeg
+FROM --platform=$BUILDPLATFORM debian:bookworm-slim AS ffmpeg
 ARG TARGETARCH
 ARG JELLYFIN_FFMPEG_VERSION
 RUN apt-get update && apt-get install -y --no-install-recommends curl xz-utils ca-certificates fonts-dejavu-core fonts-wqy-zenhei \
