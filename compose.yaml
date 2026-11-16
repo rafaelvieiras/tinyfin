@@ -1,0 +1,38 @@
+# Minimal deployment. Copy .env.example to .env, edit it, then run: docker compose up -d
+#
+# Two images are published from this repository:
+#   ghcr.io/rafaelvieiras/tinyfin-web  includes the jellyfin-web UI at /web/ (GPL-2.0 assets)
+#   ghcr.io/rafaelvieiras/tinyfin      API only, MIT only, no bundled UI
+# Pick one in TINYFIN_IMAGE. Both are multi-arch (linux/amd64, linux/arm64).
+
+services:
+  tinyfin:
+    image: ${TINYFIN_IMAGE:-ghcr.io/rafaelvieiras/tinyfin-web:latest}
+    container_name: tinyfin
+    restart: unless-stopped
+    ports:
+      - "${TINYFIN_PORT:-8096}:8096"
+    volumes:
+      # Holds tinyfin.db. The container runs as uid 65532, so this directory must be
+      # writable by that user: mkdir -p data && sudo chown 65532:65532 data
+      - ./data:/data
+      # Your media. Read-only on purpose: Tinyfin never writes to your files.
+      - ${TINYFIN_MEDIA_PATH:-./media}:/media:ro
+    environment:
+      # Empty means catalog-only scanning, with no online metadata.
+      TINYFIN_TMDB_API_KEY: ${TINYFIN_TMDB_API_KEY:-}
+      TINYFIN_SCAN_CONCURRENCY: ${TINYFIN_SCAN_CONCURRENCY:-8}
+      TINYFIN_SCAN_LIBRARY_PARALLELISM: ${TINYFIN_SCAN_LIBRARY_PARALLELISM:-3}
+    # The image is distroless: it has no shell, no curl and no wget, so it cannot carry a
+    # Docker healthcheck. Query GET /System/Info/Public from outside instead.
+
+  # Optional: keep the image current. Tinyfin follows semantic versioning, so a new minor
+  # release can change behavior. Pin the tag in TINYFIN_IMAGE if you prefer to upgrade by hand.
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: tinyfin-watchtower
+    restart: unless-stopped
+    profiles: ["auto-update"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 86400 --cleanup tinyfin

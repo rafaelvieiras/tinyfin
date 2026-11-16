@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+- Container images published on every release, for `linux/amd64` and `linux/arm64`:
+  `ghcr.io/rafaelvieiras/tinyfin` (API only, MIT only) and `ghcr.io/rafaelvieiras/tinyfin-web` (bundles the
+  GPL-2.0 `jellyfin-web` build). Every push to `main` also publishes `edge` and `sha-<commit>`.
+- `compose.yaml` and `.env.example`, so a first run needs no build step.
+- `semantic-release` cuts the tag and writes the GitHub Release notes from the Conventional Commits. It does not
+  touch this file: the entries below are written by hand, with the `[intentional deviation]` markers the project uses.
 
 ## [0.1.0] - 2026-11-10
 
