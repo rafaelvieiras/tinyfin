@@ -21,7 +21,7 @@ Legend: `[x]` done · `[ ]` not started · `[~]` in progress
 - [x] Library scanning and metadata provider boundary written (`docs/08`)
 - [x] Memory and performance goals written (`docs/09`)
 - [x] Foundational decisions D1–D8 closed (`docs/00-decision-log.md`)
-- [x] Repository created and pushed (private, `github.com/rafaelvieiras/tinyfin`)
+- [x] Repository created and pushed (`github.com/rafaelvieiras/tinyfin`)
 - [x] **O2** — initial device profile list written down (`docs/07`)
 - [x] **O3** — storage driver Go interface signature written down (`docs/05`)
 
