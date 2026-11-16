@@ -73,15 +73,27 @@ jobs:
           REQUESTED: ${{ inputs.publish_version }}
         run: |
           set -euo pipefail
+          # buildx takes a comma-separated list of full references. A bare tag such as "sha-abc1234"
+          # would be read as a Docker Hub repository, so every entry carries the registry too.
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
           version="${RELEASED:-${REQUESTED:-}}"
-          tags="edge,sha-${GITHUB_SHA::7}"
+          tokens="edge sha-${GITHUB_SHA::7}"
           if [ -n "$version" ]; then
-            minor="${version%.*}"
-            tags="latest,${minor},${version},${tags}"
+            tokens="latest ${version%.*} ${version} ${tokens}"
           fi
-          echo "tags=$tags" >> "$GITHUB_OUTPUT"
-          echo "version=${version}" >> "$GITHUB_OUTPUT"
-          echo "Publishing with tags: $tags"
+          api_tags=""
+          web_tags=""
+          for token in $tokens; do
+            api_tags="${api_tags:+${api_tags},}ghcr.io/${owner}/tinyfin:${token}"
+            web_tags="${web_tags:+${web_tags},}ghcr.io/${owner}/tinyfin-web:${token}"
+          done
+          {
+            echo "api_tags=${api_tags}"
+            echo "web_tags=${web_tags}"
+            echo "version=${version}"
+          } >> "$GITHUB_OUTPUT"
+          echo "API tags: ${api_tags}"
+          echo "Web tags: ${web_tags}"
 
       - name: Build and push the API image
         uses: docker/build-push-action@v6
@@ -91,8 +103,7 @@ jobs:
           push: true
           build-args: |
             WITH_WEB=false
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/tinyfin:${{ steps.tags.outputs.tags }}
+          tags: ${{ steps.tags.outputs.api_tags }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.description=Tinyfin, a Jellyfin-compatible media server. API only, MIT.
@@ -108,8 +119,7 @@ jobs:
           push: true
           build-args: |
             WITH_WEB=true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/tinyfin-web:${{ steps.tags.outputs.tags }}
+          tags: ${{ steps.tags.outputs.web_tags }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.description=Tinyfin, a Jellyfin-compatible media server, with the jellyfin-web UI bundled.
