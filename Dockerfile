@@ -38,7 +38,7 @@ RUN mkdir -p /web
 
 # The jellyfin-web build output is platform-independent static files, so it is built once on
 # the build platform and copied into each target image.
-FROM --platform=$BUILDPLATFORM node:24-bookworm AS web-true
+FROM --platform=$BUILDPLATFORM node:26-bookworm AS web-true
 RUN apt-get update && apt-get install -y --no-install-recommends git \
 	&& rm -rf /var/lib/apt/lists/*
 RUN git clone --depth 1 https://github.com/jellyfin/jellyfin-web.git /src-web
