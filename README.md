@@ -76,6 +76,9 @@ The container runs as uid `65532`. Give the data directory to that user first:
 mkdir -p data && sudo chown 65532:65532 data
 ```
 
+The same applies to the `./data` bind in `compose.yaml`. Without it the container stops at start
+with `unable to open database file`.
+
 Prefer Compose? Copy [`.env.example`](.env.example) to `.env`, edit it, then run
 `docker compose up -d`.
 
