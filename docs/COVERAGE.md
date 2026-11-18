@@ -19,21 +19,21 @@ How to read and edit this: [`docs/coverage/README.md`](coverage/README.md). Mach
 | Measure | Value |
 |---|---|
 | Reference operations (OpenAPI 12.2.0) | 364 |
-| Registered by Tinyfin | **203** (56%) |
-| Registered **and** a passing contract scenario | **171** (47%) |
-| Called by the official web client (docs/11) and registered | 133 of 164 (81%) |
-| Routes Tinyfin serves that the OpenAPI document lacks | 36 (legacy aliases the web client needs, `/socket`, HLS) |
+| Registered by Tinyfin | **205** (56%) |
+| Registered **and** a passing contract scenario | **173** (48%) |
+| Called by the official web client (docs/11) and registered | 135 of 165 (82%) |
+| Routes Tinyfin serves that the OpenAPI document lacks | 35 (legacy aliases the web client needs, `/socket`, HLS) |
 | Non-route features tracked | 112 (✅ 64 · 🟡 19 · 🗓️ 13 · ⛔ 16) |
 
 ### Routes by status
 
-✅✅✅✅✅✅✅✅✅🟡🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔↔️ ✅ 175 · 🟡 12 · 🗓️ 70 · ⛔ 91 · ↔️ 16
+✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔↔️ ✅ 177 · 🟡 12 · 🗓️ 68 · ⛔ 91 · ↔️ 16
 
 ```mermaid
 pie showData title Reference operations by status
-    "supported" : 175
+    "supported" : 177
     "partial" : 12
-    "planned" : 70
+    "planned" : 68
     "not-planned" : 91
     "divergent-by-design" : 16
 ```
@@ -58,7 +58,7 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 |---|---|---|---|---|---|
 | [Collections, playlists and mixes](coverage/api-collections-playlists.md) | 21 | 21 (100%) | 21 (100%) | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅↔️ | ✅ 20 · ↔️ 1 |
 | [Images](coverage/api-images.md) | 40 | 11 (28%) | 7 (18%) | ✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️ | ✅ 11 · 🗓️ 29 |
-| [Library administration](coverage/api-library-admin.md) | 32 | 13 (41%) | 8 (25%) | ✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔↔️ | ✅ 11 · 🗓️ 16 · ⛔ 3 · ↔️ 2 |
+| [Library administration](coverage/api-library-admin.md) | 32 | 15 (47%) | 10 (31%) | ✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔↔️ | ✅ 13 · 🗓️ 14 · ⛔ 3 · ↔️ 2 |
 | [Library browsing and metadata queries](coverage/api-library-browse.md) | 58 | 47 (81%) | 43 (74%) | ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️ | ✅ 45 · 🟡 1 · 🗓️ 10 · ⛔ 1 · ↔️ 1 |
 | [Live TV and channels](coverage/api-live-tv.md) | 43 | 4 (9%) | 3 (7%) | ✅🟡⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔ | ✅ 3 · 🟡 1 · ⛔ 39 |
 | [Playback, streaming and subtitles](coverage/api-playback.md) | 38 | 24 (63%) | 19 (50%) | ✅✅✅✅✅✅✅✅✅✅🟡🟡⛔⛔⛔⛔⛔⛔⛔↔️ | ✅ 19 · 🟡 3 · ⛔ 14 · ↔️ 2 |
@@ -99,7 +99,7 @@ Registered = Tinyfin serves the route. Verified = registered with a passing cont
 | Playlist | 11 | 11 | 11 | ✅ 11 |
 | Plugin | 17 | 4 | 3 | 🟡 1 · ⛔ 13 · ↔️ 3 |
 | RemoteImage | 3 | 0 | 0 | 🗓️ 3 |
-| ScheduledTask | 5 | 3 | 3 | ✅ 1 · 🗓️ 2 · ↔️ 2 |
+| ScheduledTask | 5 | 5 | 5 | ✅ 3 · ↔️ 2 |
 | Search | 1 | 1 | 1 | ✅ 1 |
 | Session | 18 | 7 | 7 | ✅ 6 · 🟡 1 · 🗓️ 11 |
 | Show | 4 | 3 | 2 | ✅ 3 · 🗓️ 1 |
@@ -192,7 +192,6 @@ Operations the official web client mentions (docs/11) that Tinyfin does not regi
 | `DELETE /Plugins/{pluginId}` | ⛔ not-planned | System, branding, localization and plugins | No plugin system (decisions D8, D11). |
 | `GET /web/ConfigurationPage` | ⛔ not-planned | System, branding, localization and plugins | No plugin system (decisions D8, D11). |
 | `GET /Items/{itemId}/RemoteImages` | 🗓️ planned | Images | Not implemented; the dashboard's image editor 404s on /RemoteImages/Providers (docs/11). |
-| `POST /ScheduledTasks/Running/{taskId}` | 🗓️ planned | Library administration | Only the library-scan task and its start route exist. |
 | `POST /Sessions/{sessionId}/Command` | 🗓️ planned | Sessions, play state and realtime | Remote control of other sessions is not implemented (the /socket transport exists). |
 | `GET /Shows/Upcoming` | 🗓️ planned | Library browsing and metadata queries | Not implemented. |
 | `POST /ClientLog/Document` | 🗓️ planned | System, branding, localization and plugins | Not implemented. |

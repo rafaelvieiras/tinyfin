@@ -8,15 +8,15 @@
    "supported": 64
   },
   "operations": 364,
-  "registered": 203,
+  "registered": 205,
   "routes_by_status": {
    "divergent-by-design": 16,
    "not-planned": 91,
    "partial": 12,
-   "planned": 70,
-   "supported": 175
+   "planned": 68,
+   "supported": 177
   },
-  "verified": 171
+  "verified": 173
  },
  "routes": [
   {
@@ -4047,7 +4047,7 @@
     "admin.tasks.default-triggers",
     "admin.tasks.list"
    ],
-   "notes": "Lists only the tasks Tinyfin really runs (RefreshLibrary, RefreshTrickplayImages, CleanActivityLog) with the reference's Ids and Keys; the reference's ~20 tasks (plugin updates, subtitle/lyric downloads, ...) belong to subsystems that do not exist. See specs/admin.md."
+   "notes": "Lists the reference's twenty tasks with its own Ids, Keys, names, categories and IsHidden flags, so the dashboard groups them exactly as the reference does. Five of them do real work (RefreshLibrary, RefreshChapterImages, RefreshTrickplayImages, CleanActivityLog, CleanLogFiles and the cache/transcode sweeps); the rest belong to subsystems that do not exist here and complete at once without touching anything. See specs/admin.md and the tasks feature file."
   },
   {
    "id": "DELETE /ScheduledTasks/Running/{taskId}",
@@ -4062,16 +4062,16 @@
     "admin.tasks.run",
     "admin.tasks.stop-idle"
    ],
-   "notes": "Cancels a running library scan or trickplay batch; stopping a task that is not running is a 204 no-op (the reference answers 500)."
+   "notes": "Cancels a running library scan, chapter-image or trickplay batch; stopping a task that is not running is a 204 no-op (the reference answers 500)."
   },
   {
    "id": "POST /ScheduledTasks/Running/{taskId}",
    "tag": "ScheduledTask",
    "group": "library-admin",
    "policy": "RequiresElevation",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
    "scenarios": [
     "admin.tasks.auth",
@@ -4080,8 +4080,7 @@
     "chapters.images.off",
     "chapters.images.task"
    ],
-   "notes": "Only the library-scan task and its start route exist.",
-   "priority": "low"
+   "notes": "Served by the same pattern as the trigger route: the two literal patterns would overlap on /ScheduledTasks/Running/Triggers and net/http panics on that ambiguity. Queues the task and answers 204 at once."
   },
   {
    "id": "GET /ScheduledTasks/{taskId}",
@@ -4104,15 +4103,14 @@
    "tag": "ScheduledTask",
    "group": "library-admin",
    "policy": "RequiresElevation",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
-   "web": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
+   "web": true,
    "scenarios": [
     "admin.tasks.triggers"
    ],
-   "notes": "Only the library-scan task and its start route exist.",
-   "priority": "low"
+   "notes": "Replaces the whole trigger list and persists it (settings store); a 30 s scheduler honors Startup, Interval, Daily and Weekly triggers. MaxRuntimeTicks is stored and echoed but not enforced."
   },
   {
    "id": "GET /Search/Hints",
@@ -8873,7 +8871,6 @@
   "GET /Videos/{itemId}/main.m3u8",
   "GET /Videos/{itemId}/master.m3u8",
   "GET /socket",
-  "POST /ScheduledTasks/{first}/{second}",
   "POST /System/Configuration/encoding",
   "POST /System/Configuration/metadata",
   "POST /System/Configuration/network",

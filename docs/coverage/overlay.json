@@ -397,11 +397,19 @@
   },
   "GET /ScheduledTasks": {
    "status": "divergent-by-design",
-   "notes": "Lists only the tasks Tinyfin really runs (RefreshLibrary, RefreshTrickplayImages, CleanActivityLog) with the reference's Ids and Keys; the reference's ~20 tasks (plugin updates, subtitle/lyric downloads, ...) belong to subsystems that do not exist. See specs/admin.md."
+   "notes": "Lists the reference's twenty tasks with its own Ids, Keys, names, categories and IsHidden flags, so the dashboard groups them exactly as the reference does. Five of them do real work (RefreshLibrary, RefreshChapterImages, RefreshTrickplayImages, CleanActivityLog, CleanLogFiles and the cache/transcode sweeps); the rest belong to subsystems that do not exist here and complete at once without touching anything. See specs/admin.md and the tasks feature file."
+  },
+  "POST /ScheduledTasks/Running/{taskId}": {
+   "via": "POST /ScheduledTasks/{first}/{second}",
+   "notes": "Served by the same pattern as the trigger route: the two literal patterns would overlap on /ScheduledTasks/Running/Triggers and net/http panics on that ambiguity. Queues the task and answers 204 at once."
+  },
+  "POST /ScheduledTasks/{taskId}/Triggers": {
+   "via": "POST /ScheduledTasks/{first}/{second}",
+   "notes": "Replaces the whole trigger list and persists it (settings store); a 30 s scheduler honors Startup, Interval, Daily and Weekly triggers. MaxRuntimeTicks is stored and echoed but not enforced."
   },
   "DELETE /ScheduledTasks/Running/{taskId}": {
    "status": "divergent-by-design",
-   "notes": "Cancels a running library scan or trickplay batch; stopping a task that is not running is a 204 no-op (the reference answers 500)."
+   "notes": "Cancels a running library scan, chapter-image or trickplay batch; stopping a task that is not running is a 204 no-op (the reference answers 500)."
   },
   "POST /Backup/Create": {
    "status": "partial",
