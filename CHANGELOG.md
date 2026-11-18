@@ -17,6 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `semantic-release` cuts the tag and writes the GitHub Release notes from the Conventional Commits. It does not
   touch this file: the entries below are written by hand, with the `[intentional deviation]` markers the project uses.
 
+### Fixed
+- The scheduled-task rows in `docs/11` and the coverage overlay described a server that no longer exists: they
+  said `GET /ScheduledTasks` reports one task, that `Triggers` is always empty, that no scheduling engine exists
+  and that the per-task routes are catalog-only. The server has reported the reference's twenty tasks, persisted
+  and honored triggers through a 30 s scheduler, cancelled running batches and served those routes. `docs/COVERAGE.md`
+  also listed `POST /ScheduledTasks/Running/{taskId}` and `POST /ScheduledTasks/{taskId}/Triggers` as planned,
+  because they share one route pattern and the registry matches routes by literal path; the overlay now names that
+  pattern with `via`. Totals move to 205 registered and 173 verified.
+
 ## [0.1.0] - 2026-11-10
 
 First release. Everything below landed before it: the project was developed in the open from the start and

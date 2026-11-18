@@ -4,9 +4,9 @@
 
 Virtual folders, remote metadata search/apply, metadata editing, the file-system browser and scheduled tasks.
 
-[Overview](../COVERAGE.md) · 32 operations · 13 registered (41%) · 8 verified · ✅ 11 · 🗓️ 16 · ⛔ 3 · ↔️ 2
+[Overview](../COVERAGE.md) · 32 operations · 15 registered (47%) · 10 verified · ✅ 13 · 🗓️ 14 · ⛔ 3 · ↔️ 2
 
-✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔↔️
+✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️🗓️⛔⛔↔️
 
 Columns: **Auth** is the reference's authorization policy; **Web** = mentioned in docs/11 (called by the official web client); **Tests** = scenarios that exercise the route (passing / total).
 
@@ -61,11 +61,11 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ↔️ divergent-by-design | `GET /ScheduledTasks` | RequiresElevation | yes | 4/4 | Lists only the tasks Tinyfin really runs (RefreshLibrary, RefreshTrickplayImages, CleanActivityLog) with the reference's Ids and Keys; the reference's ~20 tasks (plugin updates, subtitle/lyric downloads, ...) belong to subsystems that do not exist. See specs/admin.md. |
-| ↔️ divergent-by-design | `DELETE /ScheduledTasks/Running/{taskId}` | RequiresElevation | yes | 2/2 | Cancels a running library scan or trickplay batch; stopping a task that is not running is a 204 no-op (the reference answers 500). |
-| 🗓️ planned | `POST /ScheduledTasks/Running/{taskId}` | RequiresElevation | yes | 5/5 | Only the library-scan task and its start route exist. (priority: low) |
+| ↔️ divergent-by-design | `GET /ScheduledTasks` | RequiresElevation | yes | 4/4 | Lists the reference's twenty tasks with its own Ids, Keys, names, categories and IsHidden flags, so the dashboard groups them exactly as the reference does. Five of them do real work (RefreshLibrary, RefreshChapterImages, RefreshTrickplayImages, CleanActivityLog, CleanLogFiles and the cache/transcode sweeps); the rest belong to subsystems that do not exist here and complete at once without touching anything. See specs/admin.md and the tasks feature file. |
+| ↔️ divergent-by-design | `DELETE /ScheduledTasks/Running/{taskId}` | RequiresElevation | yes | 2/2 | Cancels a running library scan, chapter-image or trickplay batch; stopping a task that is not running is a 204 no-op (the reference answers 500). |
+| ✅ supported | `POST /ScheduledTasks/Running/{taskId}` | RequiresElevation | yes | 5/5 | Served by `POST /ScheduledTasks/{first}/{second}`. Served by the same pattern as the trigger route: the two literal patterns would overlap on /ScheduledTasks/Running/Triggers and net/http panics on that ambiguity. Queues the task and answers 204 at once. |
 | ✅ supported | `GET /ScheduledTasks/{taskId}` | RequiresElevation | yes | 4/4 |  |
-| 🗓️ planned | `POST /ScheduledTasks/{taskId}/Triggers` | RequiresElevation |  | 1/1 | Only the library-scan task and its start route exist. (priority: low) |
+| ✅ supported | `POST /ScheduledTasks/{taskId}/Triggers` | RequiresElevation | yes | 1/1 | Served by `POST /ScheduledTasks/{first}/{second}`. Replaces the whole trigger list and persists it (settings store); a 30 s scheduler honors Startup, Interval, Daily and Weekly triggers. MaxRuntimeTicks is stored and echoed but not enforced. |
 
 ## Related features
 
