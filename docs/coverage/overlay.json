@@ -405,7 +405,7 @@
   },
   "POST /ScheduledTasks/{taskId}/Triggers": {
    "via": "POST /ScheduledTasks/{first}/{second}",
-   "notes": "Replaces the whole trigger list and persists it (settings store); a 30 s scheduler honors Startup, Interval, Daily and Weekly triggers. MaxRuntimeTicks is stored and echoed but not enforced."
+   "notes": "Replaces the whole trigger list and persists it (settings store); a 30 s scheduler honors Startup, Interval, Daily and Weekly triggers. MaxRuntimeTicks bounds the runs that trigger starts: a run past its limit is cancelled (admin.tasks.R13)."
   },
   "DELETE /ScheduledTasks/Running/{taskId}": {
    "status": "divergent-by-design",

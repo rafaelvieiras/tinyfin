@@ -174,7 +174,7 @@ func (s *Server) handleScheduledTaskStart(w http.ResponseWriter, r *http.Request
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	if err := s.startTask(r.Context(), def); err != nil {
+	if err := s.startTask(r.Context(), def, nil); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

@@ -178,11 +178,14 @@ type taskRuntime struct {
 	running  map[string]bool
 	last     map[string]*taskLastRun
 	lastFire map[string]time.Time
+	// runToken counts the runs started per task, so a runtime-limit timer
+	// armed for one run cannot cancel the one that replaced it.
+	runToken map[string]int
 }
 
 func (s *Server) taskRT() *taskRuntime {
 	s.taskRTOnce.Do(func() {
-		s.taskRTv = &taskRuntime{running: map[string]bool{}, last: map[string]*taskLastRun{}, lastFire: map[string]time.Time{}}
+		s.taskRTv = &taskRuntime{running: map[string]bool{}, last: map[string]*taskLastRun{}, lastFire: map[string]time.Time{}, runToken: map[string]int{}}
 	})
 	return s.taskRTv
 }
@@ -236,7 +239,8 @@ func (s *Server) taskStatus(def taskDef) (state string, pct float64, last *taskL
 		return "Idle", 0, &taskLastRun{start: start, end: end, status: status}
 	case "RefreshChapterImages":
 		if s.chapterimg.TaskRunning() {
-			return "Running", 0, nil
+			pct, _ := s.chapterimg.TaskProgress()
+			return "Running", pct, nil
 		}
 		r := s.chapterimg.TaskLast()
 		if r.Start.IsZero() {
@@ -249,7 +253,8 @@ func (s *Server) taskStatus(def taskDef) (state string, pct float64, last *taskL
 		return "Idle", 0, &taskLastRun{start: r.Start, end: r.End, status: status}
 	case "RefreshTrickplayImages":
 		if s.trickplay.TaskRunning() {
-			return "Running", 0, nil
+			pct, _ := s.trickplay.TaskProgress()
+			return "Running", pct, nil
 		}
 		r := s.trickplay.TaskLast()
 		if r.Start.IsZero() {
@@ -271,42 +276,70 @@ func (s *Server) taskStatus(def taskDef) (state string, pct float64, last *taskL
 }
 
 // startTask queues the task; a task that is already running is left alone.
-func (s *Server) startTask(ctx context.Context, def taskDef) error {
+// limit is the MaxRuntimeTicks of the trigger that fired it, nil when a client
+// started the run by hand: a run that outlives its limit is cancelled
+// (admin.tasks.R13).
+func (s *Server) startTask(ctx context.Context, def taskDef, limit *int64) error {
+	started, err := s.startTaskOnce(ctx, def)
+	if err != nil || !started {
+		return err
+	}
+	s.armRuntimeLimit(def, limit)
+	return nil
+}
+
+// armRuntimeLimit cancels a run that outlives the limit its trigger set. The
+// token is bumped for every run started, limited or not, so a timer armed for
+// an older run finds a different token and leaves the current one alone.
+func (s *Server) armRuntimeLimit(def taskDef, limit *int64) {
+	rt := s.taskRT()
+	rt.mu.Lock()
+	rt.runToken[def.key]++
+	token := rt.runToken[def.key]
+	rt.mu.Unlock()
+	if limit == nil || *limit <= 0 {
+		return
+	}
+	d := time.Duration(*limit) * 100 * time.Nanosecond
+	time.AfterFunc(d, func() {
+		rt.mu.Lock()
+		current := rt.runToken[def.key]
+		rt.mu.Unlock()
+		if current != token {
+			return // that run is over and a newer one owns the token
+		}
+		log.Printf("api: scheduled task %s passed its runtime limit of %s; stopping it", def.key, d)
+		s.stopTask(def)
+	})
+}
+
+// startTaskOnce does the work of startTask and reports whether a run was
+// actually started; a task that was already running is not.
+func (s *Server) startTaskOnce(ctx context.Context, def taskDef) (bool, error) {
 	switch def.key {
 	case "RefreshLibrary":
 		if running, _, _, _ := s.scanState.snapshot(); running {
-			return nil
+			return false, nil
 		}
-		return s.refreshAllLibraries(ctx)
+		return true, s.refreshAllLibraries(ctx)
 	case "RefreshChapterImages":
 		libs, err := s.store.QueryLibraries(ctx)
 		if err != nil {
-			return err
+			return false, err
 		}
 		s.chapterimg.RunTask(libs)
 		s.notifyScheduledTasks(context.Background(), true)
-		go func() {
-			for s.chapterimg.TaskRunning() {
-				time.Sleep(200 * time.Millisecond)
-			}
-			s.notifyScheduledTasks(context.Background(), true)
-		}()
-		return nil
+		s.watchBatch(def)
+		return true, nil
 	case "RefreshTrickplayImages":
 		libs, err := s.store.QueryLibraries(ctx)
 		if err != nil {
-			return err
+			return false, err
 		}
 		s.trickplay.RunTask(libs)
 		s.notifyScheduledTasks(context.Background(), true)
-		go func() {
-			// push the final state once the batch is done
-			for s.trickplay.TaskRunning() {
-				time.Sleep(200 * time.Millisecond)
-			}
-			s.notifyScheduledTasks(context.Background(), true)
-		}()
-		return nil
+		s.watchBatch(def)
+		return true, nil
 	default:
 		// CleanActivityLog and CleanLogFiles do real work; every other entry
 		// belongs to a subsystem Tinyfin does not have (plugins, live TV,
@@ -315,8 +348,7 @@ func (s *Server) startTask(ctx context.Context, def taskDef) error {
 		rt := s.taskRT()
 		rt.mu.Lock()
 		if rt.running[def.key] {
-			rt.mu.Unlock()
-			return nil
+			return false, nil
 		}
 		rt.running[def.key] = true
 		rt.mu.Unlock()
@@ -334,8 +366,38 @@ func (s *Server) startTask(ctx context.Context, def taskDef) error {
 			rt.mu.Unlock()
 			s.notifyScheduledTasks(context.Background(), true)
 		}()
+		return true, nil
 	}
-	return nil
+}
+
+// watchBatch pushes the task list once per percentage point while a chapter or
+// trickplay batch runs, then the final state, so a dashboard sees the bar move
+// instead of a readout frozen at zero (the scan does the same through
+// scanTracker.setProgress).
+func (s *Server) watchBatch(def taskDef) {
+	go func() {
+		last := -1
+		for {
+			pct, running := float64(0), false
+			switch def.key {
+			case "RefreshChapterImages":
+				running = s.chapterimg.TaskRunning()
+				pct, _ = s.chapterimg.TaskProgress()
+			case "RefreshTrickplayImages":
+				running = s.trickplay.TaskRunning()
+				pct, _ = s.trickplay.TaskProgress()
+			}
+			if !running {
+				break
+			}
+			if whole := int(pct); whole != last {
+				last = whole
+				s.notifyScheduledTasks(context.Background(), false)
+			}
+			time.Sleep(200 * time.Millisecond)
+		}
+		s.notifyScheduledTasks(context.Background(), true)
+	}()
 }
 
 // runMaintenanceTask is the work of the tasks that run on the shared
@@ -389,13 +451,15 @@ func (s *Server) runTaskScheduler(ctx context.Context) {
 	for {
 		now := time.Now()
 		for _, def := range taskRegistry {
-			if s.triggerDue(def, boot, prev, now, first) {
-				s.taskRT().mu.Lock()
-				s.taskRT().lastFire[def.key] = now
-				s.taskRT().mu.Unlock()
-				if err := s.startTask(ctx, def); err != nil {
-					log.Printf("api: scheduled task %s: %v", def.key, err)
-				}
+			tr := s.dueTrigger(def, boot, prev, now, first)
+			if tr == nil {
+				continue
+			}
+			s.taskRT().mu.Lock()
+			s.taskRT().lastFire[def.key] = now
+			s.taskRT().mu.Unlock()
+			if err := s.startTask(ctx, def, tr.MaxRuntimeTicks); err != nil {
+				log.Printf("api: scheduled task %s: %v", def.key, err)
 			}
 		}
 		prev, first = now, false
@@ -407,12 +471,15 @@ func (s *Server) runTaskScheduler(ctx context.Context) {
 	}
 }
 
-func (s *Server) triggerDue(def taskDef, boot, prev, now time.Time, first bool) bool {
+// dueTrigger reports the trigger of def that is due now, or nil; the
+// scheduler needs the trigger itself, not just the fact that it fired: its
+// MaxRuntimeTicks bounds the run.
+func (s *Server) dueTrigger(def taskDef, boot, prev, now time.Time, first bool) *taskTriggerInfo {
 	for _, tr := range s.taskTriggers(def) {
 		switch tr.Type {
 		case "StartupTrigger":
 			if first {
-				return true
+				return &tr
 			}
 		case "IntervalTrigger":
 			if tr.IntervalTicks == nil || *tr.IntervalTicks <= 0 {
@@ -426,7 +493,7 @@ func (s *Server) triggerDue(def taskDef, boot, prev, now time.Time, first bool) 
 				ref = boot
 			}
 			if now.Sub(ref) >= time.Duration(*tr.IntervalTicks)*100*time.Nanosecond {
-				return true
+				return &tr
 			}
 		case "DailyTrigger", "WeeklyTrigger":
 			if tr.TimeOfDayTicks == nil {
@@ -438,9 +505,9 @@ func (s *Server) triggerDue(def taskDef, boot, prev, now time.Time, first bool) 
 				continue
 			}
 			if at.After(prev) && !at.After(now) && !first {
-				return true
+				return &tr
 			}
 		}
 	}
-	return false
+	return nil
 }

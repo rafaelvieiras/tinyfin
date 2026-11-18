@@ -18,6 +18,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   touch this file: the entries below are written by hand, with the `[intentional deviation]` markers the project uses.
 
 ### Fixed
+- `MaxRuntimeTicks` was decoration: a trigger's runtime limit was accepted, stored and echoed back, and never
+  looked at, so a batch that outlived it ran to the end. Measured on a small library, extracting chapter pictures
+  costs about 4.6 s per picture (258 pictures, 19 min 44 s for 18 films), which puts a full pass over the series
+  libraries around 17 hours — four times the four hour limit the reference's default trigger carries. A run fired by
+  a trigger now stops when it passes that trigger's limit and reports `Cancelled`, the same end a manual stop gives
+  it; a run a client starts itself carries no limit (`admin.tasks.R13`).
+- `CurrentProgressPercentage` was `0` for the whole of a chapter or trickplay batch, so the dashboard showed a
+  determinate bar frozen at zero for the twenty minutes the measured batch took. Both generators now report the
+  share of the items their batch has examined, and the server pushes a `ScheduledTasksInfo` update per whole
+  percentage point, the way the library scan already did (`admin.tasks.R1`).
 - The scheduled-task rows in `docs/11` and the coverage overlay described a server that no longer exists: they
   said `GET /ScheduledTasks` reports one task, that `Triggers` is always empty, that no scheduling engine exists
   and that the per-task routes are catalog-only. The server has reported the reference's twenty tasks, persisted
