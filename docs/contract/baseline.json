@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 921
+    "pass": 927
   },
   "scenarios": {
     "admin.auth.providers": "pass",
@@ -11,9 +11,13 @@
     "admin.config.encoding": "pass",
     "admin.config.hwaccel-invalid": "pass",
     "admin.config.hwaccel-valid": "pass",
+    "admin.config.metadata": "pass",
     "admin.config.network-fields": "pass",
     "admin.config.root-any-user": "pass",
+    "admin.config.section-invalid": "pass",
+    "admin.config.xbmcmetadata": "pass",
     "admin.devices.list": "pass",
+    "admin.libraries.order": "pass",
     "admin.libraries.rename-during-scan": "pass",
     "admin.libraries.rename-rules": "pass",
     "admin.livetv.info": "pass",
@@ -141,6 +145,7 @@
     "extras.theme.songs-and-videos": "pass",
     "extras.versions.movie": "pass",
     "images.api.index-lookup": "pass",
+    "images.api.size": "pass",
     "images.episode.names": "pass",
     "images.frame.episode": "pass",
     "images.frame.extras-movie": "pass",
@@ -315,6 +320,7 @@
     "items.userdata.post-partial-merge": "pass",
     "items.userdata.post-played": "pass",
     "items.userdata.reflected-in-listing": "pass",
+    "items.views.alias": "pass",
     "misc.home.recommended-programs": "pass",
     "misc.home.syncplay-list": "pass",
     "misc.localization": "pass",

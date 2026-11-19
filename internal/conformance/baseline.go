@@ -3,6 +3,7 @@ package conformance
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 )
@@ -70,6 +71,72 @@ func ParseBaseline(data []byte) (Baseline, error) {
 		return b, fmt.Errorf("not a version 1 baseline")
 	}
 	return b, nil
+}
+
+// BaselineCoverage is the bookkeeping a committed baseline owes the suite.
+//
+// Compare is deliberately lenient with a scenario it has never seen: a
+// scenario missing from the baseline is reported as NEW, never as a
+// regression, so it can fail on every run and leave the ratchet green. Being
+// in the baseline is what makes a scenario gate at all, and this check is what
+// makes that true instead of assumed. The reverse direction matters as well:
+// an entry the suite no longer carries would keep the counts high, so a
+// renamed or deleted scenario would still look like a passing one.
+//
+// Scenarios tagged fresh-server are exempt: they run only in -fresh-server
+// mode, against a server that has never completed setup, and each run consumes
+// it. No baselined run selects them, so they cannot have an entry and their
+// absence is not a blind spot (docs/contract/README.md, "Fresh-server
+// scenarios").
+type BaselineCoverage struct {
+	// Missing are scenarios the suite carries and the baseline does not.
+	Missing []string
+	// Stale are baseline entries the suite no longer carries.
+	Stale []string
+}
+
+// Empty reports whether the baseline matches the suite.
+func (c BaselineCoverage) Empty() bool { return len(c.Missing) == 0 && len(c.Stale) == 0 }
+
+// freshServerTag marks the scenarios that need a server which has never
+// completed setup. They are selected only by -fresh-server, which no baselined
+// run uses, so they are outside the ratchet by design.
+const freshServerTag = "fresh-server"
+
+// CheckBaselineCoversTheSuite compares the scenarios on disk with the entries
+// of a baseline file, in both directions.
+func CheckBaselineCoversTheSuite(scenarioDir, baselinePath string) (BaselineCoverage, error) {
+	list, err := LoadDir(scenarioDir)
+	if err != nil {
+		return BaselineCoverage{}, err
+	}
+	data, err := os.ReadFile(baselinePath)
+	if err != nil {
+		return BaselineCoverage{}, err
+	}
+	b, err := ParseBaseline(data)
+	if err != nil {
+		return BaselineCoverage{}, fmt.Errorf("%s: %w", baselinePath, err)
+	}
+	var cov BaselineCoverage
+	inSuite := make(map[string]bool, len(list))
+	for _, s := range list {
+		inSuite[s.ID] = true
+		if hasTag(s.Tags, freshServerTag) {
+			continue
+		}
+		if _, ok := b.Scenarios[s.ID]; !ok {
+			cov.Missing = append(cov.Missing, s.ID)
+		}
+	}
+	for id := range b.Scenarios {
+		if !inSuite[id] {
+			cov.Stale = append(cov.Stale, id)
+		}
+	}
+	sort.Strings(cov.Missing)
+	sort.Strings(cov.Stale)
+	return cov, nil
 }
 
 // Compare checks a run against the baseline.
