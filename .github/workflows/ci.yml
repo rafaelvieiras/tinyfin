@@ -162,13 +162,23 @@ jobs:
         # playback.offer.mp4-container-names and
         # policy.remote.force-source-transcoding read the container of the
         # file behind the address; without a listener they see the .strm file
-        # itself and answer "strm".
+        # itself and answer "strm". This is also where the cast photo that
+        # browse.persons.image downloads is served from.
         run: scripts/conformance-strm-serve.sh "$RUNNER_TEMP/media" 18999
       - name: Start a throwaway Tinyfin
         id: tf
         # Every job gets its own server and its own data dir: the suite is dealt
         # by file, so no scenario of one job depends on another's state. The
         # data dir is also where the server writes the password-reset PIN files.
+        #
+        # TINYFIN_IMAGE_HOSTS: the media tree is generated with loopback URLs
+        # (the server runs on the host beside the runner), and the download
+        # guard refuses a non-public address unless the operator names it. That
+        # is the whole point of the guard -- a credit's <thumb> is untrusted
+        # input -- so the run states the exception instead of the default being
+        # loosened.
+        env:
+          TINYFIN_IMAGE_HOSTS: 127.0.0.1
         run: |
           BIND="${{ steps.net.outputs.ip }}" scripts/conformance-tinyfin-up.sh 18098 | tee "$RUNNER_TEMP/up.log"
           echo "dir=$(sed -n 's/.*data-dir=\([^ ]*\).*/\1/p' "$RUNNER_TEMP/up.log")" >> "$GITHUB_OUTPUT"

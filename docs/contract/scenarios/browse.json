@@ -1877,6 +1877,104 @@
   ]
  },
  {
+  "id": "browse.persons.image",
+  "endpoint": "GET /Items/{itemId}, GET /Items/{itemId}/Images/{imageType}",
+  "spec": "browse.md#persons",
+  "scope": "modern",
+  "tags": [
+   "browse",
+   "images",
+   "scan"
+  ],
+  "covers": [
+   "browse.persons.R5"
+  ],
+  "requires": [
+   "item:swriters",
+   "library:search",
+   "user:alice"
+  ],
+  "steps": [
+   {
+    "name": "a credit with a <thumb> publishes its tag",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.swriters.id}}",
+     "query": {
+      "Fields": "People"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.People[?Name=Ann Actor].PrimaryImageTag",
+       "op": "exists"
+      }
+     ]
+    },
+    "capture": {
+     "person": "$.People[?Name=Ann Actor].Id"
+    }
+   },
+   {
+    "name": "the picture the tag names is served",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{capture.person}}/Images/Primary"
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "image/png"
+     }
+    }
+   },
+   {
+    "name": "the placeholder is published with the picture",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.swriters.id}}",
+     "query": {
+      "Fields": "People"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.People[?Name=Ann Actor].ImageBlurHashes.Primary",
+       "op": "exists"
+      }
+     ]
+    }
+   },
+   {
+    "name": "a credit with no <thumb> publishes nothing",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Items/{{item.swriters.id}}",
+     "query": {
+      "Fields": "People"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.People[?Name=Zed Last].PrimaryImageTag",
+       "op": "absent"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
   "id": "browse.years",
   "endpoint": "GET /Years",
   "spec": "browse.md#years",

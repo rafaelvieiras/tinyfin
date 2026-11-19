@@ -251,6 +251,16 @@ go run ./cmd/conformance run -base http://127.0.0.1:18096 ... -reference \
 go run ./cmd/conformance run ... -tags risky -risky -strict    # -strict: BLOCKED fails too
 ```
 
+Two fixtures are served over HTTP by the runner rather than stored in the tree:
+the `.strm` media (`scripts/conformance-strm-serve.sh <media-root> 18999`, from
+`<media-root>/.strm-http/`) and the cast photo `browse.persons.image` downloads,
+which lives in the same directory. A run without that listener sees the `.strm`
+items as "strm" and no person picture. The photo's URL is a loopback address
+when the tree is generated for a server on the host beside the runner (what CI
+does) and the Docker bridge gateway otherwise, so a Tinyfin under test needs the
+address it will actually fetch from in `TINYFIN_IMAGE_HOSTS` — the download guard
+refuses every non-public address otherwise (docs/13's DIV-34).
+
 `-device-suffix auto` appends a random suffix to every DeviceId the runner and
 the scenarios use, so concurrent runs against one server do not revoke each
 other's tokens (a login on a DeviceId revokes that device's previous token).
