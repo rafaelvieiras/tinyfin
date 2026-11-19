@@ -330,21 +330,22 @@ go run ./cmd/conformance progress
   measured, not by how many scenarios it holds: a file's cost is not its length
   (23 scan scenarios took 163 s, 156 item scenarios 181 s), and dealing by count
   left the shards at 2.3, 6.1, 9.1 and 11.8 minutes where the weighted deal
-  gives 7.3 each. Regenerate it when the suite changes, from a run's report:
-  `go run ./cmd/conformance shards -report run.json -n 4 -write
-  docs/contract/shards.json`. The test above fails until you do, so a new
-  scenario file cannot fall out of CI.
-* CI (`.github/workflows/ci.yml`) runs the ratchet in four shards, each against
+  gives 7.3 each at four shards, or 4.9 at six. Regenerate it when the suite or
+  the shard count changes, from a run's report: `go run ./cmd/conformance
+  shards -report run.json -n 6 -write docs/contract/shards.json`. The test above
+  fails until you do, so a new scenario file cannot fall out of CI.
+* CI (`.github/workflows/ci.yml`) runs the ratchet in six shards, each against
   its own throwaway server, with `-skip-tags time-dependent,expiry,risky` (no
   scenario carries `time-dependent` any more; the access-schedule scenarios
   build their windows from the server clock; the `expiry` ones sleep about ten
   minutes to observe a request lifetime and are run by hand). The server listens
   on the runner's own (non-loopback) address and the run passes
-  `-server-data-dir`, so the remote-access and PIN scenarios run. The media tree
-  is generated once by a job of its own and handed to the shards as an artifact;
-  a separate job starts a fresh throwaway server and runs only the `risky`
-  scenarios with `-risky -strict`, because they may demote the last
-  administrator or throttle the runner's address.
+  `-server-data-dir`, so the remote-access and PIN scenarios run. A seventh job
+  of the same shape runs only the `risky` scenarios with `-risky -strict`,
+  because they may demote the last administrator or throttle the runner's
+  address. Nothing in that set waits for another job: the media tree and the
+  tool packages come from the branch's cache, which every job restores, so all
+  seven start at once and the wall time is the slowest job.
 
 ## Coverage accounting
 

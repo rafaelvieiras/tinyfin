@@ -3,6 +3,8 @@ package conformance
 import (
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -36,8 +38,19 @@ func TestCommittedShardPlanCoversTheSuite(t *testing.T) {
 	if err := plan.Check(files); err != nil {
 		t.Fatal(err)
 	}
-	if got := len(plan.Shards); got != 4 {
-		t.Errorf("plan has %d shards, the workflow runs 4", got)
+	// The count lives in the workflow's matrix. Read it from there, so a change
+	// to one of the two fails here instead of splitting CI unevenly in silence.
+	wf, err := os.ReadFile(filepath.Join("..", "..", ".github", "workflows", "ci.yml"))
+	if err != nil {
+		t.Skipf("no workflow to compare against: %v", err)
+	}
+	if m := regexp.MustCompile(`shard: 1/(\d+)`).FindSubmatch(wf); m != nil {
+		want, _ := strconv.Atoi(string(m[1]))
+		if got := len(plan.Shards); got != want {
+			t.Errorf("plan has %d shards, the workflow runs %d: run go run ./cmd/conformance shards -report run.json -n %d -write docs/contract/shards.json", got, want, want)
+		}
+	} else {
+		t.Error("the workflow no longer names a shard as 1/N")
 	}
 }
 

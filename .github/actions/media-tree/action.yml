@@ -1,0 +1,48 @@
+name: Media tree
+description: >
+  Restores the synthetic media tree the conformance scenarios run against, and
+  builds it only when the cache is cold.
+
+# The tree is a pure function of the scripts that write it and of the ffmpeg
+# they call (which the caller installs before this action runs), so it is
+# cached on both. Restoring 124 MB takes seconds; generating it takes about two
+# minutes, which is why every job that needs the tree restores it instead of
+# waiting for a job that produced it: the cache is shared by every job of the
+# branch, so there is nothing to wait for.
+#
+# Restore and save are explicit steps. The single-step form of actions/cache
+# saves in a post-job step, which is skipped when a later step fails -- that
+# threw an apt download away once.
+
+inputs:
+  revision:
+    description: Bump to rebuild the tree when its scripts did not change
+    required: false
+    default: v1
+
+runs:
+  using: composite
+  steps:
+    - name: Restore the tree
+      id: tree
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/media
+        key: media-tree-${{ runner.os }}-${{ inputs.revision }}-${{ hashFiles('scripts/conformance-media.sh', 'scripts/conformance-media/**') }}
+
+    - name: Generate the tree
+      if: steps.tree.outputs.cache-hit != 'true'
+      shell: bash
+      # The .strm fixtures point at the address the runner serves them on; the
+      # default is the Docker bridge gateway, which suits a server in a
+      # container, and here the server is on the host beside the runner.
+      env:
+        STRM_HTTP: http://127.0.0.1:18999
+      run: scripts/conformance-media.sh "$RUNNER_TEMP/media"
+
+    - name: Save the tree
+      if: steps.tree.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/media
+        key: media-tree-${{ runner.os }}-${{ inputs.revision }}-${{ hashFiles('scripts/conformance-media.sh', 'scripts/conformance-media/**') }}

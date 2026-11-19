@@ -6,12 +6,20 @@ name: CI
 # Tinyfin, the synthetic media tree and the ffmpeg the fixtures are calibrated
 # on -- is built here.
 #
-# The jobs are split so the cheap answer arrives first and the expensive work
-# runs in parallel. Measured on a pull request before the split: 1 m 50 s for
-# build/vet/test, and 33 m 07 s for the ratchet job, of which 30 m 01 s was one
-# serial run of 921 scenarios, 2 m 01 s the media tree, 35 s apt, and the rest
-# noise. The suite is now dealt to four shards on four runners, each against its
-# own server, and the media tree is built once and handed to them.
+# The shape comes from measurement. On a pull request before the split the whole
+# thing was one job: 33 m 07 s, of which 30 m 01 s was one serial run of 921
+# scenarios, 2 m 01 s the media tree, 35 s apt, and the rest noise (a second
+# measurement of the same commit took 45 m 44 s, so a faster machine is not the
+# answer). Now:
+#
+#   Format, vet, contract   30 s   answers without compiling anything
+#   Build, test             1 m 52
+#   conformance (7 jobs)    ~5-8 m   the 921 scenarios dealt across six servers,
+#                                   plus the risky ones alone
+#
+# and every job starts at once: nothing waits for another job's artifact,
+# because the media tree and the tool packages come from the branch's cache,
+# which all jobs share. Wall time is the slowest job, not the sum.
 on:
   push:
     branches: [main]
@@ -64,11 +72,11 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
-      - name: Cache the portable jellyfin-ffmpeg
+      - name: Restore the portable jellyfin-ffmpeg
         # Keyed on the version: the tarball is 60 MB and immutable, so a warm
         # cache turns the download into a copy out of ~/.cache.
         id: ffmpeg
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/jellyfin-ffmpeg/${{ env.JELLYFIN_FFMPEG_PORTABLE }}.tar.xz
           key: jellyfin-ffmpeg-${{ runner.os }}-${{ env.JELLYFIN_FFMPEG_PORTABLE }}
@@ -85,84 +93,52 @@ jobs:
           sudo chmod +x /usr/local/lib/jellyfin-ffmpeg/ffmpeg /usr/local/lib/jellyfin-ffmpeg/ffprobe
           echo /usr/local/lib/jellyfin-ffmpeg >> "$GITHUB_PATH"
           /usr/local/lib/jellyfin-ffmpeg/ffmpeg -version | head -1
+      - name: Save the portable jellyfin-ffmpeg
+        if: steps.ffmpeg.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/jellyfin-ffmpeg/${{ env.JELLYFIN_FFMPEG_PORTABLE }}.tar.xz
+          key: jellyfin-ffmpeg-${{ runner.os }}-${{ env.JELLYFIN_FFMPEG_PORTABLE }}
       - name: Build
         run: go build ./...
       - name: Test
         run: go test ./...
 
-  fixtures:
-    name: Synthetic media tree
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # The tree is a pure function of the scripts that write it and of the
-      # ffmpeg they call, so it is cached on both and rebuilt only when one of
-      # them moves. Cold it costs 2 m; warm, the copy is seconds.
-      - name: Restore the tree
-        id: tree
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ runner.temp }}/media
-          key: media-tree-${{ runner.os }}-${{ env.MEDIA_TREE_REV }}-${{ hashFiles('scripts/conformance-media.sh', 'scripts/conformance-media/**') }}
-      - name: Install the tools the tree needs
-        if: steps.tree.outputs.cache-hit != 'true'
-        # jellyfin-ffmpeg is the build the reference itself runs, and the
-        # fixtures, the expected timestamps and the expected bit rates are
-        # calibrated on it: the tree is byte-identical, the burn fixtures need
-        # its noise bsf, and only it reports HDR10+ side data. mkvtoolnix makes
-        # the Matroska statistics and Dolby Vision remuxes; xorriso makes the
-        # DVD image fixture.
-        uses: ./.github/actions/jellyfin-tools
-      - name: Generate the tree
-        if: steps.tree.outputs.cache-hit != 'true'
-        # The .strm fixtures point at the address the shards serve on; the
-        # default is the Docker bridge gateway, which suits a server in a
-        # container, and here the server is on the host beside the runner.
-        env:
-          STRM_HTTP: http://127.0.0.1:18999
-        run: scripts/conformance-media.sh "$RUNNER_TEMP/media"
-      - name: Save the tree
-        if: steps.tree.outputs.cache-hit != 'true'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ runner.temp }}/media
-          key: media-tree-${{ runner.os }}-${{ env.MEDIA_TREE_REV }}-${{ hashFiles('scripts/conformance-media.sh', 'scripts/conformance-media/**') }}
-      - name: Pack the tree
-        # One tar instead of a thousand files: the artifact action refuses a
-        # path carrying ':' or '!', and the fixtures carry both on purpose (the
-        # scenarios that exercise odd names). The fixtures are already
-        # compressed video and images, so there is nothing to gain from zipping
-        # them again.
-        run: tar -C "$RUNNER_TEMP/media" -cf "$RUNNER_TEMP/media.tar" .
-      - name: Hand the tree to the shards
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: media-tree
-          path: ${{ runner.temp }}/media.tar
-          compression-level: 0
-          retention-days: 1
-
+  # One job per shard, plus the risky scenarios as one more entry: they need a
+  # server of their own too (they may demote the last administrator or throttle
+  # the runner's address), so they are a sibling job rather than a step after
+  # the others. This way all seven start together.
+  #
+  # Which file goes to which shard is docs/contract/shards.json, weighted by the
+  # minutes each file measured; the runner refuses a plan that does not match
+  # the count below and go test ./internal/conformance refuses one that misses a
+  # scenario file. Regenerate it from a report of a full run when the suite
+  # changes: go run ./cmd/conformance shards -report run.json -n 6 -write
+  # docs/contract/shards.json
   conformance:
-    name: Conformance shard ${{ matrix.shard }}/4
-    needs: fixtures
+    name: ${{ matrix.name }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
-      # One red shard must not hide the other three: a failure anywhere is seen
+      # One red shard must not hide the others: a failure anywhere is seen
       # before the run ends.
       fail-fast: false
-      # The shard count appears three times below -- this list, the job name and
-      # the -shard flag -- because the strategy context is not available in every
-      # one of them. Which file goes to which
-      # shard is docs/contract/shards.json, weighted by the minutes each file
-      # measured; the runner refuses a plan that does not match this count and
-      # go test ./internal/conformance refuses one that misses a scenario file.
-      # Regenerate it from a report of a full run when the suite changes.
       matrix:
-        shard: [1, 2, 3, 4]
-    env:
-      SHARD: ${{ matrix.shard }}/4
+        include:
+          - name: Conformance shard 1/6
+            shard: 1/6
+          - name: Conformance shard 2/6
+            shard: 2/6
+          - name: Conformance shard 3/6
+            shard: 3/6
+          - name: Conformance shard 4/6
+            shard: 4/6
+          - name: Conformance shard 5/6
+            shard: 5/6
+          - name: Conformance shard 6/6
+            shard: 6/6
+          - name: Risky scenarios
+            shard: risky
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
@@ -171,21 +147,17 @@ jobs:
           cache-dependency-path: go.sum
       - name: Install the server's tools
         uses: ./.github/actions/jellyfin-tools
-      - name: Fetch the media tree
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      - name: Media tree
+        uses: ./.github/actions/media-tree
         with:
-          name: media-tree
-          path: ${{ runner.temp }}
-      - name: Unpack it
-        run: |
-          mkdir -p "$RUNNER_TEMP/media"
-          tar -C "$RUNNER_TEMP/media" -xf "$RUNNER_TEMP/media.tar"
+          revision: ${{ env.MEDIA_TREE_REV }}
       - name: Note the runner address
         id: net
         # The server listens on the runner's own address (not loopback) so it
         # sees a non-loopback peer, which users.auth.R21 needs.
         run: echo "ip=$(hostname -I | awk '{print $1}')" >> "$GITHUB_OUTPUT"
       - name: Serve the media the .strm fixtures point at
+        if: matrix.shard != 'risky'
         # playback.offer.strm-http, playback.offer.strm-mkv,
         # playback.offer.mp4-container-names and
         # policy.remote.force-source-transcoding read the container of the
@@ -194,14 +166,14 @@ jobs:
         run: scripts/conformance-strm-serve.sh "$RUNNER_TEMP/media" 18999
       - name: Start a throwaway Tinyfin
         id: tf
-        # Each shard gets its own server and its own data dir: the suite is
-        # dealt by file, so no scenario of one shard depends on another's
-        # state. The data dir is also where the server writes the
-        # password-reset PIN files.
+        # Every job gets its own server and its own data dir: the suite is dealt
+        # by file, so no scenario of one job depends on another's state. The
+        # data dir is also where the server writes the password-reset PIN files.
         run: |
           BIND="${{ steps.net.outputs.ip }}" scripts/conformance-tinyfin-up.sh 18098 | tee "$RUNNER_TEMP/up.log"
           echo "dir=$(sed -n 's/.*data-dir=\([^ ]*\).*/\1/p' "$RUNNER_TEMP/up.log")" >> "$GITHUB_OUTPUT"
       - name: Compare against the committed baseline
+        if: matrix.shard != 'risky'
         # Fails only when a scenario that passes in docs/contract/baseline.json
         # no longer passes; each shard compares its own share against the same
         # file. The throwaway admin credential is the script default.
@@ -211,45 +183,12 @@ jobs:
             -media-root "$RUNNER_TEMP/media" -media-local-root "$RUNNER_TEMP/media" \
             -server-data-dir "${{ steps.tf.outputs.dir }}" \
             -baseline docs/contract/baseline.json -skip-tags time-dependent,expiry,risky \
-            -device-suffix auto -shard "$SHARD" -json "$RUNNER_TEMP/results.json"
-
-  risky:
-    name: Risky scenarios
-    needs: fixtures
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      # They may delete or demote the only administrator or leave the runner's
-      # address throttled, so they get a server of their own, run alone, and are
-      # not dealt to a shard: a shard's server is shared by several files.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: go.sum
-      - name: Install the server's tools
-        uses: ./.github/actions/jellyfin-tools
-      - name: Fetch the media tree
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: media-tree
-          path: ${{ runner.temp }}
-      - name: Unpack it
-        run: |
-          mkdir -p "$RUNNER_TEMP/media"
-          tar -C "$RUNNER_TEMP/media" -xf "$RUNNER_TEMP/media.tar"
-      - name: Note the runner address
-        id: net
-        run: echo "ip=$(hostname -I | awk '{print $1}')" >> "$GITHUB_OUTPUT"
-      - name: Start a throwaway Tinyfin
-        id: tf
-        run: |
-          BIND="${{ steps.net.outputs.ip }}" scripts/conformance-tinyfin-up.sh 18099 | tee "$RUNNER_TEMP/up.log"
-          echo "dir=$(sed -n 's/.*data-dir=\([^ ]*\).*/\1/p' "$RUNNER_TEMP/up.log")" >> "$GITHUB_OUTPUT"
+            -device-suffix auto -shard "${{ matrix.shard }}"
       - name: Risky scenarios (last administrator, PIN throttle)
+        if: matrix.shard == 'risky'
         # -strict: a BLOCKED scenario fails this step too.
         run: |
-          go run ./cmd/conformance run -base "http://${{ steps.net.outputs.ip }}:18099" \
+          go run ./cmd/conformance run -base "http://${{ steps.net.outputs.ip }}:18098" \
             -admin-user admin -admin-pass 'Conformance-Admin-1' \
             -media-root "$RUNNER_TEMP/media" \
             -server-data-dir "${{ steps.tf.outputs.dir }}" \

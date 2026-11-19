@@ -20,10 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - CI ran the conformance suite in one job, one server and one serial loop, so 33 minutes of every pull request
   were spent there: 30 m 01 s of 921 scenarios, 2 m 01 s of media tree, 35 s of apt, and nothing else worth naming.
-  The suite is dealt to four shards on four runners, each against its own throwaway server, weighted by the minutes
-  each scenario file measured (`docs/contract/shards.json`, 7.3 minutes per shard instead of the 2.3 to 11.8 a deal
-  by scenario count gives, because a file's cost is not its length), and the media tree is built once and handed to
-  them as an artifact; the suite also names its ten slowest scenarios now, so a shorter
+  The suite is dealt to six shards on six runners, each against its own throwaway server, weighted by the minutes
+  each scenario file measured (`docs/contract/shards.json`, 4.9 minutes per shard instead of the 2.3 to 11.8 a deal
+  by scenario count gives, because a file's cost is not its length), the risky scenarios run as a seventh job of the
+  same shape, and every job restores the media tree and the tool packages from the branch's cache instead of waiting
+  for a job that produced them, so all seven start together; the suite also names its ten slowest scenarios now, so a shorter
   run has something to aim at. The job that answers in seconds (format, vet, contract lint, coverage) no longer
   waits behind the one that compiles, the ffmpeg tarball and the tool packages are cached, and the action pins move
   to `setup-go` v7.1.0, `cache` v6.1.0, `upload-artifact` v7.0.2 and `download-artifact` v8.0.2.
