@@ -65,7 +65,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ↔️ divergent-by-design | `DELETE /ScheduledTasks/Running/{taskId}` | RequiresElevation | yes | 2/2 | Cancels a running library scan, chapter-image or trickplay batch; stopping a task that is not running is a 204 no-op (the reference answers 500). |
 | ✅ supported | `POST /ScheduledTasks/Running/{taskId}` | RequiresElevation | yes | 5/5 | Served by `POST /ScheduledTasks/{first}/{second}`. Served by the same pattern as the trigger route: the two literal patterns would overlap on /ScheduledTasks/Running/Triggers and net/http panics on that ambiguity. Queues the task and answers 204 at once. |
 | ✅ supported | `GET /ScheduledTasks/{taskId}` | RequiresElevation | yes | 4/4 |  |
-| ✅ supported | `POST /ScheduledTasks/{taskId}/Triggers` | RequiresElevation | yes | 1/1 | Served by `POST /ScheduledTasks/{first}/{second}`. Replaces the whole trigger list and persists it (settings store); a 30 s scheduler honors Startup, Interval, Daily and Weekly triggers. MaxRuntimeTicks is stored and echoed but not enforced. |
+| ✅ supported | `POST /ScheduledTasks/{taskId}/Triggers` | RequiresElevation | yes | 1/1 | Served by `POST /ScheduledTasks/{first}/{second}`. Replaces the whole trigger list and persists it (settings store); a 30 s scheduler honors Startup, Interval, Daily and Weekly triggers. MaxRuntimeTicks bounds the runs that trigger starts: a run past its limit is cancelled (admin.tasks.R13). |
 
 ## Related features
 

@@ -115,6 +115,9 @@ type Generator struct {
 	taskCancel context.CancelFunc
 	taskCtx    context.Context
 	taskLast   TaskResult
+	// taskDone/taskTotal are the examined and expected item counts of the
+	// in-flight batch, the denominator of TaskProgress.
+	taskDone, taskTotal int
 }
 
 // TaskResult describes the most recently finished task batch.
@@ -140,6 +143,29 @@ func (g *Generator) TaskRunning() bool {
 	g.taskMu.Lock()
 	defer g.taskMu.Unlock()
 	return g.taskJobs > 0
+}
+
+// TaskProgress reports how much of the in-flight task batch is done: the
+// share of the items it set out to examine. ok is false while no batch runs
+// and when the selection is empty (nothing to be a share of).
+func (g *Generator) TaskProgress() (pct float64, ok bool) {
+	g.taskMu.Lock()
+	defer g.taskMu.Unlock()
+	if g.taskJobs == 0 || g.taskTotal <= 0 {
+		return 0, false
+	}
+	pct = float64(g.taskDone) * 100 / float64(g.taskTotal)
+	if pct > 100 {
+		pct = 100
+	}
+	return pct, true
+}
+
+// stepTask counts one more examined item towards the batch's progress.
+func (g *Generator) stepTask() {
+	g.taskMu.Lock()
+	g.taskDone++
+	g.taskMu.Unlock()
 }
 
 // TaskLast returns the last finished batch (zero Start when none yet).
@@ -170,8 +196,10 @@ func (g *Generator) RunTask(libs []storage.Library) {
 		return
 	}
 	ctx, cancel := context.WithCancel(context.Background())
+	total := g.countItems(ctx, libs)
 	g.taskCtx, g.taskCancel = ctx, cancel
 	g.taskJobs = 1
+	g.taskDone, g.taskTotal = 0, total
 	start := time.Now().UTC()
 	g.taskMu.Unlock()
 	g.wg.Add(1)
@@ -186,6 +214,7 @@ func (g *Generator) RunTask(libs []storage.Library) {
 				if ctx.Err() == nil {
 					g.process(ctx, it, opts, false)
 				}
+				g.stepTask()
 			})
 		}
 		g.taskMu.Lock()
@@ -269,12 +298,36 @@ func (g *Generator) EnqueueItem(lib storage.Library, item storage.Item, force bo
 	}()
 }
 
+// taskItemTypes are the item types a trickplay batch examines.
+var taskItemTypes = []storage.ItemType{storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeVideo, storage.ItemTypeMusicVideo}
+
+// countItems is how many items the batch will examine: the size of every
+// library whose trickplay is on. It is the denominator of TaskProgress, so a
+// library that cannot be counted (a store error) is left out of both sides.
+func (g *Generator) countItems(ctx context.Context, libs []storage.Library) int {
+	total := 0
+	for _, lib := range libs {
+		if !ParseLibraryOptions(lib.LibraryOptions).Enable {
+			continue
+		}
+		id := lib.ID
+		page, err := g.store.QueryItems(ctx, storage.ItemFilter{
+			LibraryID: &id, Recursive: true, Limit: 1, ItemTypes: taskItemTypes,
+		})
+		if err != nil {
+			continue
+		}
+		total += page.TotalCount
+	}
+	return total
+}
+
 func (g *Generator) eachItem(ctx context.Context, lib storage.Library, fn func(storage.Item)) {
 	id := lib.ID
 	for off := 0; ; off += 500 {
 		page, err := g.store.QueryItems(ctx, storage.ItemFilter{
 			LibraryID: &id, Recursive: true, Limit: 500, Offset: off,
-			ItemTypes: []storage.ItemType{storage.ItemTypeMovie, storage.ItemTypeEpisode, storage.ItemTypeVideo, storage.ItemTypeMusicVideo},
+			ItemTypes: taskItemTypes,
 		})
 		if err != nil {
 			log.Printf("trickplay: listing library %q: %v", lib.Name, err)
