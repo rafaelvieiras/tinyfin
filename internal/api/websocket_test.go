@@ -179,7 +179,9 @@ func TestSocketSessionsPushOnCapabilitiesChange(t *testing.T) {
 	// notifySessions(force=true) fires from (system.go's
 	// handleSessionsCapabilitiesFull).
 	other := createTestUser(t, st, "bob", "bobpass")
-	otherToken := loginToken(t, ts.URL, other.Name, "bobpass")
+	// Signing in on the device that reports capabilities keeps this to one
+	// session per device: the login already lists it (users.auth.R33).
+	otherToken := loginTokenWithDevice(t, ts.URL, other.Name, "bobpass", "device-bob-1")
 	capResp := sessionsAuthedRequest(t, ts.URL, otherToken, "Jellyfin Web", "Chrome", "device-bob-1", "10.11.11", http.MethodPost, "/Sessions/Capabilities/Full", sessionCapabilitiesDto{SupportsMediaControl: true})
 	capResp.Body.Close()
 
@@ -188,8 +190,21 @@ func TestSocketSessionsPushOnCapabilitiesChange(t *testing.T) {
 		t.Fatalf("message type = %q, want Sessions", msg.MessageType)
 	}
 	sessions, ok := msg.Data.([]any)
-	if !ok || len(sessions) != 1 {
-		t.Fatalf("Sessions Data = %#v, want a one-element array", msg.Data)
+	if !ok || len(sessions) != 2 {
+		t.Fatalf("Sessions Data = %#v, want the admin's login session and bob's device", msg.Data)
+	}
+	// One entry per device id: the subscriber's own login (users.auth.R33)
+	// and the device that just reported capabilities.
+	seen := map[string]bool{}
+	for _, entry := range sessions {
+		m, ok := entry.(map[string]any)
+		if !ok {
+			t.Fatalf("session entry = %#v", entry)
+		}
+		seen[m["DeviceId"].(string)] = true
+	}
+	if !seen["test-device-1"] || !seen["device-bob-1"] {
+		t.Fatalf("Sessions Data covers %v, want test-device-1 and device-bob-1", seen)
 	}
 }
 
@@ -201,7 +216,7 @@ func TestSocketSessionsPushOnCapabilitiesChange(t *testing.T) {
 func TestSocketSessionsFilteredForNonAdmin(t *testing.T) {
 	ts, st, srv := newSocketTestServer(t)
 	alice := createTestUser(t, st, "alice2", "alicepass")
-	aliceToken := loginToken(t, ts.URL, alice.Name, "alicepass")
+	aliceToken := loginTokenWithDevice(t, ts.URL, alice.Name, "alicepass", "device-alice-2")
 
 	conn := dialSocket(t, ts, aliceToken)
 	_ = readSocketMessage(t, conn) // ForceKeepAlive
@@ -229,7 +244,7 @@ func TestSocketSessionsFilteredForNonAdmin(t *testing.T) {
 	// ...a different user's device also registers capabilities. Alice's
 	// subscription must not see it.
 	bob := createTestUser(t, st, "bobby", "bobbypass")
-	bobToken := loginToken(t, ts.URL, bob.Name, "bobbypass")
+	bobToken := loginTokenWithDevice(t, ts.URL, bob.Name, "bobbypass", "device-bobby-1")
 	capResp2 := sessionsAuthedRequest(t, ts.URL, bobToken, "Jellyfin Web", "Chrome", "device-bobby-1", "10.11.11", http.MethodPost, "/Sessions/Capabilities/Full", sessionCapabilitiesDto{SupportsMediaControl: true})
 	capResp2.Body.Close()
 

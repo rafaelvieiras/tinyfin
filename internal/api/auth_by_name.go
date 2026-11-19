@@ -217,7 +217,7 @@ func (s *Server) issueLogin(w http.ResponseWriter, r *http.Request, user storage
 		return
 	}
 
-	session := s.sessions.loginSession(s.cfg.ServerID, deviceID, string(user.ID), user.Name, client, device, version, remoteEndPoint(r))
+	session := s.sessions.loginSession(ctx, s.cfg.ServerID, deviceID, string(user.ID), user.Name, client, device, version, remoteEndPoint(r))
 
 	s.logAuthSuccess(r, user, device, withAddress)
 

@@ -112,6 +112,7 @@ Index of routes:
 - **users.auth.R29** On a password login the lockout entry is written between the entry of the previous failure and the attempt's own `AuthenticationFailed` entry: listed newest first, `AuthenticationFailed` (this attempt), `UserLockedOut`, `AuthenticationFailed` (the earlier failure). Later attempts on the locked account (`403`) write nothing.
 - **users.auth.R30** A lockout does not revoke the account's tokens and writes no `SessionEnded` entry: the tokens answer `401` while the account is disabled (`users.token.R4`) and work again once an administrator re-enables the account.
 - **users.auth.R31** When a successful login replaces the same device's previous token (`users.auth.R10`; password login or QuickConnect exchange), a `SessionEnded` entry is written for the replaced session, just before the new login's `SessionStarted` (listed newest first: `AuthenticationSucceeded`, `SessionStarted`, `SessionEnded`). A first login on a device, or a login on another device, writes none.
+- **users.auth.R33** A successful login registers the session: `GET /Sessions` lists an entry for that `DeviceId` straight away, before the client reports any capabilities, with `Capabilities` empty, `IsActive` true, `LastActivityDate` set to the login time and `LastPlaybackCheckIn` the zero date. A second login on the same `DeviceId` refreshes that one entry (same `Id`) instead of adding another.
 - **users.auth.R32** A `SessionEnded` entry has `Severity` `Information`, `UserId` of the session's user, no `ItemId` and `Name` `<user name> has disconnected from <device name>`, where `<device name>` is the `Device` recorded when the ended session was created (not the name of the login that replaces it). `ShortOverview` is `IP address: <address>` with the address recorded when the ended session was created: empty (`IP address: `) for a session created by a QuickConnect exchange, the caller's address for a password login.
 
 ---
@@ -138,7 +139,7 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 - **users.token.R4** Tokens of a disabled account stop working (`401`) even though they were valid when issued; disabling an account through its policy also revokes its tokens.
 - **users.token.R5** Deleting a user revokes all of the user's tokens (`401` afterwards).
 - **users.token.R6** Legacy channels are not honored: `X-Emby-Authorization` (login without a usable `Authorization` header answers `400`), `X-Emby-Token`, `X-MediaBrowser-Token`, `Authorization: Emby ...` and the `api_key` query parameter all behave as no credential (`401` on protected endpoints). Only `Authorization: MediaBrowser ...` and `ApiKey` are honored.
-- **users.token.R7** `POST /Sessions/Logout` with a valid user token revokes that token (and only that one) and answers `204` with an empty body; the token answers `401` afterwards and the user's tokens of other devices keep working.
+- **users.token.R7** `POST /Sessions/Logout` with a valid user token revokes that token (and only that one) and answers `204` with an empty body; the token answers `401` afterwards and the user's tokens of other devices keep working. The session of that device leaves `GET /Sessions` at once (`users.auth.R33`).
 - **users.token.R8** `POST /Sessions/Logout` without a credential, or with an unknown or already revoked token, answers `401` and writes nothing. A successful logout writes a `SessionEnded` entry (`users.auth.R32`).
 - **users.token.R9** Every token that the server revokes writes one `SessionEnded` entry (`users.auth.R32`): by logout (`R7`), by a password change (`users.password.R15`), by disabling the account or restricting its devices (`users.policy.R14`) and by deleting the user (`users.delete.R8`). When one operation revokes several tokens the entries are written in token creation order (oldest token first, so a newest-first listing shows the newest token first). A lockout (`users.auth.R30`) and `ResetPassword` (`users.password.R9`) revoke nothing and write none.
 
@@ -677,6 +678,7 @@ The user object is the one of `GET /Users/{userId}` (also inside login answers, 
 | `users.auth.R30` | `users.auth.lockout-keeps-tokens` |
 | `users.auth.R31` | `users.auth.activity-session-ended-relogin` |
 | `users.auth.R32` | `users.auth.activity-session-ended-relogin`, `users.auth.activity-session-ended-address` |
+| `users.auth.R33` | `wire.date.other-members`, `users.token.logout-ends-session` |
 | `users.token.R1` | `users.auth.token-usable` |
 | `users.token.R2` | `users.token.invalid-token` |
 | `users.token.R3` | `users.token.apikey-query` |
