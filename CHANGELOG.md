@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- The preferences page renders again. `GET /UserViews/GroupingOptions` (and the legacy
+  `GET /Users/{userId}/GroupingOptions`) answer the library folders a user may group into one view, which the
+  client loads beside the user's views and hides its loading indicator for only once that request succeeds: a
+  404 left the page blank with a spinner that never stopped. The response is the groupable collection types only
+  (`movies`, `tvshows`, and libraries with no collection type — not `music`, `musicvideos`, `homevideos` or
+  `books`), ordered by name rather than by sort name, which is why `10 Coisas` comes before `9 Vidas` there.
 - Release notes render again. `conventional-changelog-conventionalcommits@10` ships its own
   `@conventional-changelog/template`, which needs `conventional-changelog-writer@9` or newer, while
   `@semantic-release/release-notes-generator@14` depends on writer 8: every step of the release succeeds until

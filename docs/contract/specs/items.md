@@ -96,6 +96,13 @@ Rule IDs are stable (`items.<topic>.R<n>`); scenarios reference them through `co
 - **items.views.R1** `GET /Users/{userId}/Views` is the legacy form of `GET /UserViews`: the same items in the same order (admin.libraries.R4) for the user in the path. A caller may ask for their own views (**200**) and an administrator for any user's (**200**); another user's views are **403**, a user identifier that names nobody is **404**, and an anonymous request is **401**.
 - **items.views.R2** `GET /UserViews?userId=` follows the same authorization, with one difference: no `userId` and the caller's own are **200**, another user's is **403** for a non-administrator (**200** for an administrator), and a `userId` that names nobody is **403** rather than `404` — the route does not tell an unknown identifier from a foreign one.
 
+### <a id="grouping"></a>Rules: grouping options
+
+- **items.grouping.R1** `GET /UserViews/GroupingOptions` lists the library folders the caller may group into one view: an array of `{Name, Id}`, with `Id` a 32-hex identifier and no dashes. A server with no groupable library answers `[]` — an empty array, never `null` — and an anonymous request is **401**.
+- **items.grouping.R2** Only the groupable collection types are listed: `movies`, `tvshows`, and a library with no collection type at all (created without one, which is also how the reference stores a photos library). `music`, `musicvideos`, `homevideos` and `books` are not listed — measured against the reference one library of each type at a time. `boxsets` and `playlists` are not library folders and never appear.
+- **items.grouping.R3** [untestable: it needs two libraries whose names order differently under the two comparators, and a scenario cannot create them without leaving them behind for every other scenario on the shared server; covered by a Go test] The order is by `Name`, compared case-insensitively and after transliteration. That is **not** the sort-name order `GET /UserViews` and `GET /Library/VirtualFolders` use: on the reference, two libraries named `10 Coisas` and `9 Vidas` come out `10 Coisas` first here, where the sort-name order (`0000000009 vidas` before `0000000010 coisas`) puts `9 Vidas` first, and `zebra` comes before `ZZZ`. The Go test is `TestGroupingOptionsFilterAndOrder` in `internal/api/library_grouping_test.go`.
+- **items.grouping.R4** `GET /Users/{userId}/GroupingOptions` is the legacy form and answers the same body. Authorization follows `GET /Users/{userId}/Views` (items.views.R1) with one measured difference: an identifier that names nobody is **200** with the caller's own list, not **404**. A value that is not an identifier at all is **400** (a validation problem document), another user's options are **403** unless the caller is an administrator, and an anonymous request is **401**.
+
 ### Rules: visibility
 
 - **items.scope.R1** A user with access to no libraries gets empty results from every listing form: the recursive queries and searches all return `Items: []` and `TotalRecordCount: 0` with status 200. The one exception is the root listing form without `ParentId` (items.list.R4), which still returns the single `Playlists` folder (`TotalRecordCount` 1); `GET /UserViews` returns none.
@@ -471,6 +478,8 @@ Every question that was open in earlier revisions has been settled by probing th
 | `items.list.R3` | `items.list.unknown-param-ignored`, `items.list.param-names-case-insensitive` |
 | `items.list.R4` | `items.list.root-views`, `items.list.root-views-ignore-paging` |
 | `items.views.R1`, `R2` | `items.views.alias` |
+| `items.grouping.R1`, `R2`, `R4` | `items.grouping.options` |
+| `items.grouping.R3` | none — asserted by `TestGroupingOptionsFilterAndOrder` |
 | `items.list.R5` | `items.list.root-filter-is-recursive` |
 | `items.list.R6` | `items.list.parent-library-direct-children`, `items.list.parent-library-types-default-recursive` |
 | `items.list.R7` | `items.list.parent-library-recursive` |

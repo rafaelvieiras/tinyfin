@@ -31,6 +31,16 @@ func NormalizeSortName(title string) string {
 	return sortKeyCore(s)
 }
 
+// NameFoldKey is the comparison key of a library *name* (contract:
+// items.grouping.R3) — lower-cased and transliterated, which is what the
+// reference server orders the grouping options by. It is deliberately not
+// NormalizeSortName: articles stay, and numbers are not zero-padded, because
+// that list orders "10 Coisas" before "9 Vidas" where a sort-name order puts
+// "9 Vidas" first (measured against the reference server).
+func NameFoldKey(name string) string {
+	return transliterate([]rune(strings.TrimFunc(name, unicode.IsSpace)))
+}
+
 // SortSearchKey is the sort-name form of a search term: NormalizeSortName
 // without the removal of leading articles (a search for "a b" must not
 // become a search for "b").
