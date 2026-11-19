@@ -33,12 +33,12 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /out/tinyfin ./cmd/tinyfin
 
-FROM alpine:3.20 AS web-false
+FROM alpine:3.24 AS web-false
 RUN mkdir -p /web
 
 # The jellyfin-web build output is platform-independent static files, so it is built once on
 # the build platform and copied into each target image.
-FROM --platform=$BUILDPLATFORM node:24-bookworm AS web-true
+FROM --platform=$BUILDPLATFORM node:26-bookworm AS web-true
 RUN apt-get update && apt-get install -y --no-install-recommends git \
 	&& rm -rf /var/lib/apt/lists/*
 RUN git clone --depth 1 https://github.com/jellyfin/jellyfin-web.git /src-web
