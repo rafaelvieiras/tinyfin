@@ -17,6 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `semantic-release` cuts the tag and writes the GitHub Release notes from the Conventional Commits. It does not
   touch this file: the entries below are written by hand, with the `[intentional deviation]` markers the project uses.
 
+### Changed
+- CI ran the conformance suite in one job, one server and one serial loop, so 33 minutes of every pull request
+  were spent there: 30 m 01 s of 921 scenarios, 2 m 01 s of media tree, 35 s of apt, and nothing else worth naming.
+  The suite is dealt to four shards on four runners, each against its own throwaway server, and the media tree is
+  built once and handed to them as an artifact; the suite also names its ten slowest scenarios now, so a shorter
+  run has something to aim at. The job that answers in seconds (format, vet, contract lint, coverage) no longer
+  waits behind the one that compiles, the ffmpeg tarball and the tool packages are cached, and the action pins move
+  to `setup-go` v7.1.0, `cache` v6.1.0, `upload-artifact` v7.0.2 and `download-artifact` v8.0.2.
+
 ### Fixed
 - Chapter pictures and trickplay sheets pinned ffmpeg's decoder to a single thread. Measured on a 1080p source,
   one picture took 256 ms that way against 145 ms with ffmpeg's own thread count (1.8x slower), and the decode of a

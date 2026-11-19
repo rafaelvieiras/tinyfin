@@ -40,6 +40,10 @@ type Result struct {
 	Message  string   `json:"message,omitempty"`
 	Covers   []string `json:"covers,omitempty"`
 	Tags     []string `json:"tags,omitempty"`
+	// DurationMS is how long the scenario took, wall clock, measured where it
+	// ran. The suite is serial, so the sum over a run is its critical path,
+	// and the slowest scenarios are where a shorter CI run comes from.
+	DurationMS int64 `json:"duration_ms,omitempty"`
 }
 
 // Client executes scenarios against one server.
@@ -388,7 +392,17 @@ func (c *Client) administratorCount(ctx context.Context) (int, error) {
 	return n, nil
 }
 
+// runOne measures one scenario. The body is separate so the deferred-timer
+// mistake cannot happen: a deferred assignment into res would not survive the
+// value return.
 func (c *Client) runOne(ctx context.Context, s Scenario, skipDivergent bool) Result {
+	started := time.Now()
+	res := c.runOneBody(ctx, s, skipDivergent)
+	res.DurationMS = time.Since(started).Milliseconds()
+	return res
+}
+
+func (c *Client) runOneBody(ctx context.Context, s Scenario, skipDivergent bool) Result {
 	res := Result{ID: s.ID, Endpoint: s.Endpoint, Scope: s.Scope, Covers: s.Covers, Tags: s.Tags}
 	if s.Pending != "" {
 		res.Status, res.Message = StatusSkipped, "pending: "+s.Pending

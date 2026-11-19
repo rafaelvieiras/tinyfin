@@ -28,8 +28,10 @@ import (
 	"os"
 	"os/signal"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -119,6 +121,7 @@ func run(args []string) int {
 	refImage := fs.String("ref-image", "jellyfin/jellyfin:12.2", "with -ref-report: reference image name recorded in the baseline")
 	fresh := fs.Bool("fresh-server", false, "the target is a server that never completed setup: run only the scenarios tagged fresh-server (they drive the first-run wizard, in file order, and consume it); no administrator login or fixtures are needed")
 	jsonOut := fs.String("json", "", "write results as JSON to this path")
+	shard := fs.String("shard", "", "run one shard of the suite, as index/total (1-based, e.g. 2/4), to split a long run across machines; files are dealt round robin and never split")
 	verbose := fs.Bool("v", false, "print passing scenarios too")
 	_ = fs.Parse(args)
 
@@ -149,6 +152,22 @@ func run(args []string) int {
 			continue
 		}
 		sel = append(sel, s)
+	}
+	// A shard is a slice of the selected scenarios, taken by file. The split
+	// happens after the tag and scope filters so every shard runs its share of
+	// what this invocation asked for.
+	if *shard != "" {
+		idx, total, err := parseShard(*shard)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "shard:", err)
+			return 2
+		}
+		sel = conformance.Shard(sel, idx, total)
+		if len(sel) == 0 {
+			fmt.Fprintf(os.Stderr, "shard: %s selects no scenario\n", *shard)
+			return 2
+		}
+		fmt.Printf("shard %s: %d scenarios from %s\n", *shard, len(sel), strings.Join(filesOf(sel), " "))
 	}
 	fx, err := conformance.LoadFixtures(*fixtures)
 	if err != nil {
@@ -215,6 +234,7 @@ func run(args []string) int {
 		fmt.Printf(" %s=%d", k, counts[k])
 	}
 	fmt.Println()
+	printSlowest(res)
 	if *jsonOut != "" {
 		b, _ := json.MarshalIndent(map[string]any{"target": *base, "reference": *reference, "counts": counts, "results": res}, "", "  ")
 		if err := os.WriteFile(*jsonOut, b, 0o644); err != nil {
@@ -448,4 +468,60 @@ func coverageCmd(args []string) int {
 	t := m.Totals()
 	fmt.Printf("coverage: wrote docs/COVERAGE.md and docs/coverage/ (%d operations, %d registered, %d verified)\n", t.Routes, t.Registered, t.Verified)
 	return 0
+}
+
+// printSlowest names the scenarios that took the most of the run, with their
+// share of it. The suite is serial, so this is where a shorter run comes from:
+// a fixture wait or a transcoding poll that one scenario pays, nine hundred
+// other scenarios do not.
+func printSlowest(res []conformance.Result) {
+	var total int64
+	for _, r := range res {
+		total += r.DurationMS
+	}
+	if total < 10_000 || len(res) < 10 {
+		return
+	}
+	sorted := make([]conformance.Result, len(res))
+	copy(sorted, res)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].DurationMS > sorted[j].DurationMS })
+	fmt.Printf("\n%d scenarios in %s; slowest:\n", len(res), (time.Duration(total) * time.Millisecond).Round(time.Second))
+	for _, r := range sorted[:10] {
+		fmt.Printf("%7.1fs %5.1f%% %s\n",
+			float64(r.DurationMS)/1000, 100*float64(r.DurationMS)/float64(total), r.ID)
+	}
+}
+
+// parseShard reads "i/N" (1-based) and returns the zero-based index.
+func parseShard(s string) (index, total int, err error) {
+	parts := strings.Split(s, "/")
+	if len(parts) != 2 {
+		return 0, 0, fmt.Errorf("%q is not index/total", s)
+	}
+	index, err = strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, 0, fmt.Errorf("%q: %w", s, err)
+	}
+	total, err = strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, 0, fmt.Errorf("%q: %w", s, err)
+	}
+	if total < 1 || index < 1 || index > total {
+		return 0, 0, fmt.Errorf("%q is outside 1..N", s)
+	}
+	return index - 1, total, nil
+}
+
+// filesOf lists the scenario files a run ended up with, so a shard's log says
+// what it took.
+func filesOf(list []conformance.Scenario) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, s := range list {
+		if !seen[s.File] {
+			seen[s.File] = true
+			out = append(out, s.File)
+		}
+	}
+	return out
 }

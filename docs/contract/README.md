@@ -319,16 +319,25 @@ go run ./cmd/conformance progress
 * `-ref-report` takes the `-json` report of a `-reference` run to record its
   counts. The reference validation itself stays manual (it needs the 12.x
   image); a scenario must pass there before it enters the baseline as a goal.
-* CI (`.github/workflows/ci.yml`, job `conformance`) builds Tinyfin, generates
-  the media tree, starts a throwaway server with
-  `scripts/conformance-tinyfin-up.sh` and runs the ratchet with
-  `-skip-tags time-dependent,expiry,risky` (no scenario carries `time-dependent` any
-  more; the access-schedule scenarios build their windows from the server clock;
-  the `expiry` ones sleep about ten minutes to observe a request lifetime and are
-  run by hand). The server listens on the runner's own (non-loopback)
-  address and the run passes `-server-data-dir`, so the remote-access and PIN
-  scenarios run; a second job step starts a fresh throwaway server and runs
-  only the `risky` scenarios with `-risky -strict`.
+* A run can be split across machines with `-shard i/N`: the selected scenarios
+  are dealt by **file**, largest first, each to the shard carrying the least so
+  far, and the scenarios of a file keep their order. A file is never cut,
+  because a `capture` is only ever read by a later scenario of the same file and
+  a scenario may rely on state an earlier one of its file left behind. The
+  shards of a run, together, are the run: `go test ./internal/conformance`
+  checks that. A shard needs its own server, so nothing is shared but the media
+  tree and the baseline.
+* CI (`.github/workflows/ci.yml`) runs the ratchet in four shards, each against
+  its own throwaway server, with `-skip-tags time-dependent,expiry,risky` (no
+  scenario carries `time-dependent` any more; the access-schedule scenarios
+  build their windows from the server clock; the `expiry` ones sleep about ten
+  minutes to observe a request lifetime and are run by hand). The server listens
+  on the runner's own (non-loopback) address and the run passes
+  `-server-data-dir`, so the remote-access and PIN scenarios run. The media tree
+  is generated once by a job of its own and handed to the shards as an artifact;
+  a separate job starts a fresh throwaway server and runs only the `risky`
+  scenarios with `-risky -strict`, because they may demote the last
+  administrator or throttle the runner's address.
 
 ## Coverage accounting
 

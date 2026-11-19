@@ -52,6 +52,10 @@ type Scenario struct {
 	// Pending marks a scenario that is specified but not yet verified against
 	// the reference server (kept out of the pass/fail gate).
 	Pending string `json:"pending,omitempty"`
+	// File is the scenario file the entry was read from ("browse.json"), set by
+	// LoadDir. The suite is sharded by file, never by scenario, so a shard keeps
+	// the order its file was written in.
+	File string `json:"-"`
 }
 
 // Divergence explains why a scenario's expectation is not the reference's.
@@ -248,6 +252,63 @@ func (i *Ints) UnmarshalJSON(b []byte) error {
 
 // LoadDir loads every *.json scenario file (an array of scenarios per file)
 // under dir, sorted by file name then position.
+// Shard takes the slice of a run that belongs to one shard of total, for a
+// suite split across machines. Files, not scenarios, are the unit, and the
+// scenarios of each file keep the order they were written in: a capture is only
+// ever used by a later scenario of the same file, and a scenario may rely on
+// state an earlier one of its file left behind -- so the split cannot cut
+// inside a file.
+//
+// Files are dealt greedily, largest first, each to the shard carrying the least
+// so far. With the deal fixed (largest first, ties by name) every machine
+// computing it agrees, and the shards end within one file of each other instead
+// of the ragged split a round robin gives when the files are not the same size.
+//
+// index is zero-based. A total of 1 returns everything.
+func Shard(list []Scenario, index, total int) []Scenario {
+	if total <= 1 {
+		return list
+	}
+	if index < 0 || index >= total {
+		return nil
+	}
+	count := map[string]int{}
+	var order []string
+	for _, s := range list {
+		if count[s.File] == 0 {
+			order = append(order, s.File)
+		}
+		count[s.File]++
+	}
+	sort.Slice(order, func(i, j int) bool {
+		if count[order[i]] != count[order[j]] {
+			return count[order[i]] > count[order[j]]
+		}
+		return order[i] < order[j]
+	})
+	load := make([]int, total)
+	mine := map[string]bool{}
+	for _, f := range order {
+		lightest := 0
+		for i := 1; i < total; i++ {
+			if load[i] < load[lightest] {
+				lightest = i
+			}
+		}
+		load[lightest] += count[f]
+		if lightest == index {
+			mine[f] = true
+		}
+	}
+	out := make([]Scenario, 0, len(list)/total)
+	for _, s := range list {
+		if mine[s.File] {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
 func LoadDir(dir string) ([]Scenario, error) {
 	files, err := filepath.Glob(filepath.Join(dir, "*.json"))
 	if err != nil {
@@ -275,6 +336,7 @@ func LoadDir(dir string) ([]Scenario, error) {
 				return nil, fmt.Errorf("%s: duplicate scenario id %q (also in %s)", f, s.ID, prev)
 			}
 			seen[s.ID] = f
+			s.File = filepath.Base(f)
 			if s.Scope == "" {
 				s.Scope = ScopeModern
 			}
