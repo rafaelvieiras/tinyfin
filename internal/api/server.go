@@ -798,6 +798,11 @@ func (s *Server) routes() {
 	// Library and item navigation (library.go) — docs/04's highest-priority
 	// group.
 	s.mux.HandleFunc("GET /UserViews", requireAuth(s.handleUserViews))
+	// items.grouping.R1/R4: the library folders a user may group into one
+	// view, in both the form the current SDK calls and the older one
+	// jellyfin-web's preferences page still uses.
+	s.mux.HandleFunc("GET /UserViews/GroupingOptions", requireAuth(s.handleUserViewsGroupingOptions))
+	s.mux.HandleFunc("GET /Users/{userId}/GroupingOptions", requireAuth(s.handleUserGroupingOptionsLegacy))
 	s.mux.HandleFunc("GET /Items", requireAuth(s.handleItemsList))
 	// Same handler as GET /Items above, {userId} accepted but ignored —
 	// exactly the precedent GET /Users/{userId}/Items/{itemId} below already

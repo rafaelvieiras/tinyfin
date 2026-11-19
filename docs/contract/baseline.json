@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 928
+    "pass": 929
   },
   "scenarios": {
     "admin.auth.providers": "pass",
@@ -211,6 +211,7 @@
     "items.get.series-and-episode": "pass",
     "items.get.user-data-per-user": "pass",
     "items.get.user-id": "pass",
+    "items.grouping.options": "pass",
     "items.homevideos-photos": "pass",
     "items.homevideos.folder-children": "pass",
     "items.homevideos.library-first-level": "pass",

@@ -8,15 +8,15 @@
    "supported": 64
   },
   "operations": 364,
-  "registered": 205,
+  "registered": 206,
   "routes_by_status": {
    "divergent-by-design": 16,
    "not-planned": 91,
    "partial": 12,
-   "planned": 68,
-   "supported": 177
+   "planned": 67,
+   "supported": 178
   },
-  "verified": 173
+  "verified": 174
  },
  "routes": [
   {
@@ -345,6 +345,7 @@
     "devices.per-user.two-accounts",
     "devices.refresh.request-headers",
     "devices.user-delete.removes-entries",
+    "items.grouping.options",
     "items.views.alias",
     "playstate.auth.token-only-header",
     "playstate.stopped.hidden-item-writes-user-data",
@@ -5576,6 +5577,7 @@
     "devices.per-user.two-accounts",
     "devices.refresh.request-headers",
     "devices.user-delete.removes-entries",
+    "items.grouping.options",
     "items.views.alias",
     "playstate.stopped.hidden-item-writes-user-data",
     "policy.delete.admin-without-flag",
@@ -6319,12 +6321,13 @@
    "tag": "UserView",
    "group": "library-browse",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
-   "web": false,
-   "notes": "Not implemented.",
-   "priority": "low"
+   "status": "supported",
+   "registered": true,
+   "verified": true,
+   "web": true,
+   "scenarios": [
+    "items.grouping.options"
+   ]
   },
   {
    "id": "POST /Videos/MergeVersions",
@@ -8875,6 +8878,7 @@
   "GET /System/Configuration/metadata",
   "GET /System/Configuration/network",
   "GET /System/Configuration/xbmcmetadata",
+  "GET /Users/{userId}/GroupingOptions",
   "GET /Users/{userId}/Items",
   "GET /Users/{userId}/Items/{itemId}",
   "GET /Users/{userId}/Items/{itemId}/Intros",

@@ -147,13 +147,13 @@ in [`CHANGELOG.md`](CHANGELOG.md).
 <!-- coverage:start -->
 ![API routes](docs/coverage/badge-routes.svg) ![contract-verified](docs/coverage/badge-verified.svg)
 
-Measured against the Jellyfin 12.2.0 OpenAPI document (364 operations): **205 registered (56%)**, **173 with a passing contract scenario (48%)**.
+Measured against the Jellyfin 12.2.0 OpenAPI document (364 operations): **206 registered (57%)**, **174 with a passing contract scenario (48%)**.
 
 | Route status | Count | Non-route features | Count |
 |---|---|---|---|
-| ✅ supported | 177 | ✅ supported | 64 |
+| ✅ supported | 178 | ✅ supported | 64 |
 | 🟡 partial | 12 | 🟡 partial | 19 |
-| 🗓️ planned | 68 | 🗓️ planned | 13 |
+| 🗓️ planned | 67 | 🗓️ planned | 13 |
 | ⛔ not-planned | 91 | ⛔ not-planned | 16 |
 | ↔️ divergent-by-design | 16 | ↔️ divergent-by-design | 0 |
 

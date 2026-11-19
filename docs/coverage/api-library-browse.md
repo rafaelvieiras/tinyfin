@@ -4,9 +4,9 @@
 
 Item listing, single items, genres/people/studios, search and the other browse endpoints.
 
-[Overview](../COVERAGE.md) · 58 operations · 47 registered (81%) · 43 verified · ✅ 45 · 🟡 1 · 🗓️ 10 · ⛔ 1 · ↔️ 1
+[Overview](../COVERAGE.md) · 58 operations · 48 registered (83%) · 44 verified · ✅ 46 · 🟡 1 · 🗓️ 9 · ⛔ 1 · ↔️ 1
 
-✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️
+✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅🟡🗓️🗓️🗓️
 
 Columns: **Auth** is the reference's authorization policy; **Web** = mentioned in docs/11 (called by the official web client); **Tests** = scenarios that exercise the route (passing / total).
 
@@ -129,7 +129,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
 | ✅ supported | `GET /UserViews` | DefaultAuthorization | yes | 24/24 |  |
-| 🗓️ planned | `GET /UserViews/GroupingOptions` | DefaultAuthorization |  |  | Not implemented. (priority: low) |
+| ✅ supported | `GET /UserViews/GroupingOptions` | DefaultAuthorization | yes | 1/1 |  |
 
 ## Year
 
