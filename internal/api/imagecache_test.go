@@ -24,7 +24,7 @@ func newCachedTestServer(t *testing.T, budget int64) (*httptest.Server, storage.
 	t.Cleanup(func() { _ = st.Close() })
 
 	cacheDir := filepath.Join(t.TempDir(), "cache")
-	srv := NewServer(st, Config{ServerName: "TestServer", ImageCacheDir: cacheDir, ImageCacheBytes: budget})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer", ImageCacheDir: cacheDir, ImageCacheBytes: budget})
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 	return ts, st, cacheDir

@@ -187,6 +187,11 @@ func main() {
 		if err := httpServer.Shutdown(shutdownCtx); err != nil {
 			log.Printf("tinyfin: shutdown error: %v", err)
 		}
+		// The watchdog, the library monitor, the task scheduler and any
+		// extraction batch still running outlive the http server; stopping
+		// them here is what keeps a container stop from leaving a half
+		// written extraction or a task cancelled by the process exit.
+		server.Shutdown()
 	}
 }
 

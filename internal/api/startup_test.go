@@ -287,7 +287,7 @@ func TestStartupWizardPersistsAcrossRestart(t *testing.T) {
 		t.Fatalf("POST User: %d %s", c, b)
 	}
 	// A restart before Complete keeps the wizard open and its account.
-	ts2 := httptest.NewServer(NewServer(st, Config{ServerName: "TestServer"}).Handler())
+	ts2 := httptest.NewServer(startTestServer(t, st, Config{ServerName: "TestServer"}).Handler())
 	defer ts2.Close()
 	if publicInfo(t, ts2.URL).StartupWizardCompleted {
 		t.Fatal("wizard completed by a restart")
@@ -298,7 +298,7 @@ func TestStartupWizardPersistsAcrossRestart(t *testing.T) {
 	if c, b := doJSON(t, ts2.URL, "POST", "/Startup/Complete", "", ""); c != 204 {
 		t.Fatalf("Complete: %d %s", c, b)
 	}
-	ts3 := httptest.NewServer(NewServer(st, Config{ServerName: "TestServer"}).Handler())
+	ts3 := httptest.NewServer(startTestServer(t, st, Config{ServerName: "TestServer"}).Handler())
 	defer ts3.Close()
 	if !publicInfo(t, ts3.URL).StartupWizardCompleted {
 		t.Error("completion not persisted")
@@ -321,7 +321,7 @@ func TestStartupExistingAccountsMeanSetUp(t *testing.T) {
 		t.Fatal("a server with accounts must report the wizard as completed")
 	}
 	// The anonymous routes are closed, with and without the in-memory latch.
-	fresh := httptest.NewServer(NewServer(st, Config{ServerName: "TestServer"}).Handler())
+	fresh := httptest.NewServer(startTestServer(t, st, Config{ServerName: "TestServer"}).Handler())
 	defer fresh.Close()
 	for _, base := range []string{u, fresh.URL} {
 		if c, b := doJSON(t, base, "POST", "/Startup/User", "", `{"Name":"evil","Password":"x"}`); c != 401 {
@@ -335,7 +335,7 @@ func TestStartupExistingAccountsMeanSetUp(t *testing.T) {
 	if err := st.DeleteUser(context.Background(), user.ID); err != nil {
 		t.Fatal(err)
 	}
-	again := httptest.NewServer(NewServer(st, Config{ServerName: "TestServer"}).Handler())
+	again := httptest.NewServer(startTestServer(t, st, Config{ServerName: "TestServer"}).Handler())
 	defer again.Close()
 	if c, b := doJSON(t, again.URL, "POST", "/Startup/User", "", `{"Name":"evil","Password":"x"}`); c != 401 {
 		t.Errorf("setup re-opened after deleting the accounts: %d %s", c, b)

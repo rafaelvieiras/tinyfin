@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   touch this file: the entries below are written by hand, with the `[intentional deviation]` markers the project uses.
 
 ### Fixed
+- The server's background loops (socket watchdog, library monitor, task scheduler) ran on a context nothing could
+  cancel, so `SIGTERM` stopped the http server and left them writing under the data directory until the process
+  died. `Server.Shutdown` now ends them, stops a chapter or trickplay batch the way the stop button does, and waits
+  for all of it; the binary calls it on `SIGINT`/`SIGTERM`. The tests call it too, which closes the race that made
+  `TestSystemInfoStorage_WebFolderPresentWhenSet` fail on CI with `t.TempDir` reporting "directory not empty".
 - The scheduled-task rows in `docs/11` and the coverage overlay described a server that no longer exists: they
   said `GET /ScheduledTasks` reports one task, that `Triggers` is always empty, that no scheduling engine exists
   and that the per-task routes are catalog-only. The server has reported the reference's twenty tasks, persisted

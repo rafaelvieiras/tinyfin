@@ -35,7 +35,7 @@ func newTestServerWithScheduledTasks(t *testing.T) (*httptest.Server, *sqlite.St
 		}
 	})
 
-	srv := NewServer(st, Config{ServerName: "TestServer"})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer"})
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /ScheduledTasks", requireAdmin(srv.handleScheduledTasks))
