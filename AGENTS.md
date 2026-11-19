@@ -49,6 +49,13 @@ or LLM, and to every artifact in the repo:
 - **Evidence is described, not narrated.** Docs record what the server does and
   why (behavior, root cause, decision), not the story of who noticed it or in
   which session. Say "a client sent X", not "<person> reported X".
+- **The release tooling is tested like code.** `scripts/release-notes-check.mjs`
+  renders release notes through the real plugin with the options from
+  `.releaserc.json`, and CI runs it on every pull request. It exists because a
+  changelog preset and `@semantic-release/release-notes-generator` are versioned
+  apart: a mismatch between them renders nothing, but only when `generateNotes`
+  runs, which never happens before a push to `main`. A dependency bump that
+  touches any of those packages has to leave that check green.
 - Quick self-check before committing:
   `git grep -nIP '[áéíóúâêôãõçÁÉÍÓÚÂÊÔÃÕÇ]'` and
   `git grep -nIE '/home/|/Users/'` should print nothing except deliberate,

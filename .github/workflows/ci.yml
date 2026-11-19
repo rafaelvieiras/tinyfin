@@ -13,6 +13,9 @@ name: CI
 # answer). Now:
 #
 #   Format, vet, contract   30 s   answers without compiling anything
+#   Release tooling         ~40 s   renders release notes, so a bump that
+#                                   breaks the render fails on the pull
+#                                   request and not on the next push to main
 #   Build, test             1 m 52
 #   conformance (7 jobs)    ~5-8 m   the 921 scenarios dealt across six servers,
 #                                   plus the risky ones alone
@@ -61,6 +64,28 @@ jobs:
         run: go run ./cmd/conformance lint
       - name: Coverage tracker is valid and up to date
         run: go run ./cmd/conformance coverage -check
+
+  release-notes:
+    name: Release tooling
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package-lock.json
+      # The render needs the plugins and nothing else; the lock file is the
+      # input, so `npm ci` here is the same install the release workflow does.
+      - name: Install
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      # A changelog preset and the notes generator are versioned apart, and a
+      # mismatch between them renders nothing only when `generateNotes` runs --
+      # which on CI never happens before a push to `main`. This does that one
+      # step offline, with the options from `.releaserc.json`.
+      - name: Render release notes
+        run: node scripts/release-notes-check.mjs
 
   test:
     name: Build, test
