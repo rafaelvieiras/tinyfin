@@ -73,6 +73,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   also listed `POST /ScheduledTasks/Running/{taskId}` and `POST /ScheduledTasks/{taskId}/Triggers` as planned,
   because they share one route pattern and the registry matches routes by literal path; the overlay now names that
   pattern with `via`. Totals move to 205 registered and 173 verified.
+- `scan.push.add-and-remove` asserted `scan.push.R3` (two additions a few seconds apart share one `LibraryChanged`)
+  without establishing the rule's precondition, the quiet period the batch timer starts from: a batch an earlier
+  scenario had armed could collect the first movie and flush before the second was copied, splitting the message
+  and failing the scenario. It waits 31 s first now. Seen once on CI, in a run where the scenario followed others
+  that scan within the same window.
 
 ## [0.1.0] - 2026-11-10
 
