@@ -22,7 +22,7 @@ How to read and edit this: [`docs/coverage/README.md`](coverage/README.md). Mach
 | Registered by Tinyfin | **206** (57%) |
 | Registered **and** a passing contract scenario | **174** (48%) |
 | Called by the official web client (docs/11) and registered | 136 of 166 (82%) |
-| Routes Tinyfin serves that the OpenAPI document lacks | 37 (legacy aliases the web client needs, `/socket`, HLS) |
+| Routes Tinyfin serves that the OpenAPI document lacks | 38 (legacy aliases the web client needs, `/socket`, HLS) |
 | Non-route features tracked | 112 (✅ 64 · 🟡 19 · 🗓️ 13 · ⛔ 16) |
 
 ### Routes by status
@@ -147,7 +147,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [devices](contract/specs/devices.md) | 13 | 13 | 6 | 6 |
 | [extras](contract/specs/extras.md) | 21 | 21 | 15 | 15 |
 | [images](contract/specs/images.md) | 20 | 18 | 14 | 14 |
-| [items](contract/specs/items.md) | 177 | 176 | 156 | 156 |
+| [items](contract/specs/items.md) | 182 | 181 | 156 | 156 |
 | [misc](contract/specs/misc.md) | 7 | 7 | 3 | 3 |
 | [music](contract/specs/music.md) | 82 | 82 | 14 | 14 |
 | [musicvideos](contract/specs/musicvideos.md) | 26 | 26 | 17 | 17 |
@@ -161,9 +161,9 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [startup](contract/specs/startup.md) | 25 | 23 | 3 | 0 |
 | [subtitles](contract/specs/subtitles.md) | 49 | 49 | 23 | 23 |
 | [trickplay](contract/specs/trickplay.md) | 11 | 11 | 10 | 10 |
-| [users](contract/specs/users.md) | 190 | 190 | 195 | 195 |
+| [users](contract/specs/users.md) | 191 | 191 | 195 | 195 |
 | [wire](contract/specs/wire.md) | 15 | 14 | 14 | 14 |
-| **total** | 1127 | 1092 | 748 | 745 |
+| **total** | 1133 | 1098 | 748 | 745 |
 
 ## Biggest gaps (planned or not planned, web-client facing)
 

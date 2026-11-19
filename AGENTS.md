@@ -49,6 +49,14 @@ or LLM, and to every artifact in the repo:
 - **Evidence is described, not narrated.** Docs record what the server does and
   why (behavior, root cause, decision), not the story of who noticed it or in
   which session. Say "a client sent X", not "<person> reported X".
+- **A page is done when its save path is asserted.** Serving the routes a page
+  loads is only half of it: a page that renders is not a page that works. For
+  every control that posts something (a checkbox, an order, a select), the
+  scenario asserts what the save changes **outside** the page — the views it
+  reorders, the row a library leaves, the field another route reads back — and
+  the Go tests cover the helpers that decide it. `users.preferences.save` is
+  the model: one scenario for the whole preferences page, walking every member
+  its save writes and the route each one shows up on.
 - **The release tooling is tested like code.** `scripts/release-notes-check.mjs`
   renders release notes through the real plugin with the options from
   `.releaserc.json`, and CI runs it on every pull request. It exists because a

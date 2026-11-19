@@ -457,6 +457,7 @@
     "users.policy.emits-user-updated",
     "users.policy.promote-and-demote",
     "users.policy.self-demotion",
+    "users.preferences.save",
     "users.quickconnect.exchange",
     "users.quickconnect.exchange-revokes-device-token",
     "users.quickconnect.secret-single-use",
@@ -2044,7 +2045,8 @@
     "items.rating.other-read-paths",
     "music.latest.albums",
     "music.latest.loose",
-    "musicvideos.latest"
+    "musicvideos.latest",
+    "users.preferences.save"
    ]
   },
   {
@@ -5722,6 +5724,7 @@
     "users.policy.replaces-whole-policy",
     "users.policy.roundtrip",
     "users.policy.self-demotion",
+    "users.preferences.save",
     "users.prefs.cast-receiver",
     "users.prefs.null-configuration",
     "users.prefs.update-keeps-cast-receiver",
@@ -5925,6 +5928,7 @@
     "users.policy.replaces-whole-policy",
     "users.policy.roundtrip",
     "users.policy.self-demotion",
+    "users.preferences.save",
     "users.prefs.cast-receiver",
     "users.prefs.null-configuration",
     "users.prefs.update-keeps-cast-receiver",
@@ -6313,7 +6317,8 @@
     "items.search.scoped",
     "items.views.alias",
     "musicvideos.views",
-    "playlists.view"
+    "playlists.view",
+    "users.preferences.save"
    ]
   },
   {
@@ -6326,7 +6331,8 @@
    "verified": true,
    "web": true,
    "scenarios": [
-    "items.grouping.options"
+    "items.grouping.options",
+    "users.preferences.save"
    ]
   },
   {
@@ -8880,6 +8886,7 @@
   "GET /System/Configuration/xbmcmetadata",
   "GET /Users/{userId}/GroupingOptions",
   "GET /Users/{userId}/Items",
+  "GET /Users/{userId}/Items/Latest",
   "GET /Users/{userId}/Items/{itemId}",
   "GET /Users/{userId}/Items/{itemId}/Intros",
   "GET /Users/{userId}/Items/{itemId}/LocalTrailers",

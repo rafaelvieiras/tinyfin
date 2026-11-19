@@ -122,6 +122,16 @@ func (s *Server) writeUserViews(w http.ResponseWriter, r *http.Request, u storag
 		return
 	}
 
+	// The account's own preferences decide what the list carries and in
+	// what order (items.views.R6/R7): MyMediaExcludes hides a view unless
+	// the caller asked for the hidden ones, and OrderedViews puts the views
+	// the page saved first.
+	cfg := s.userDtoCtx(r.Context(), u).Configuration
+	hidden, ok := includeHiddenQuery(w, r)
+	if !ok {
+		return
+	}
+
 	libs := s.viewLibraries(r.Context(), scope)
 	items := make([]baseItemDto, 0, len(libs)+1)
 	for _, lib := range libs {
@@ -134,6 +144,10 @@ func (s *Server) writeUserViews(w http.ResponseWriter, r *http.Request, u storag
 		items = append(items, s.playlistsViewDto(r.Context()))
 	}
 	sortLibraryItems(items)
+	if !hidden {
+		items = dropExcludedViews(items, cfg.MyMediaExcludes)
+	}
+	items = orderViews(items, cfg.OrderedViews)
 
 	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{
 		Items:            items,
@@ -262,6 +276,41 @@ const defaultLatestLimit = 20
 // original flat behavior, which is already correct for those per docs/12's
 // "Movies — confirmed, no grouping" section.
 func (s *Server) handleItemsLatest(w http.ResponseWriter, r *http.Request) {
+	var u storage.User
+	if ac, ok := AuthFromContext(r.Context()); ok && ac != nil {
+		u = ac.User
+	}
+	s.writeItemsLatest(w, r, u)
+}
+
+// handleUserItemsLatest serves GET /Users/{userId}/Items/Latest, the
+// per-user spelling of GET /Items/Latest the home screen also calls (the
+// reference serves both): the same list for the user in the path. An
+// administrator may ask for anybody's; anyone else's is a 403, an identifier
+// that names nobody is a 404 and one that is not an identifier is a 400.
+func (s *Server) handleUserItemsLatest(w http.ResponseWriter, r *http.Request) {
+	raw := r.PathValue("userId")
+	id, ok := parseUserGUID(raw)
+	if !ok {
+		writeInvalidID(w, "userId", raw)
+		return
+	}
+	target, err := s.store.GetUser(r.Context(), id)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	ac, _ := AuthFromContext(r.Context())
+	if ac == nil || (!ac.User.IsAdministrator && !strings.EqualFold(string(ac.User.ID), string(target.ID))) {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	s.writeItemsLatest(w, r, target)
+}
+
+// writeItemsLatest answers the "recently added" row for one user, whichever
+// route asked, so the account's own preferences apply (items.latest.R5/R6).
+func (s *Server) writeItemsLatest(w http.ResponseWriter, r *http.Request, u storage.User) {
 	q := caseInsensitiveQuery(r)
 	ctx := r.Context()
 
@@ -271,6 +320,27 @@ func (s *Server) handleItemsLatest(w http.ResponseWriter, r *http.Request) {
 		SortBy:    []storage.SortField{{By: storage.SortByDateCreated, Descending: true}},
 		// A library's own root folder item is not "recently added media".
 		ExcludeItemTypes: []storage.ItemType{storage.ItemTypeFolder, storage.ItemTypeBoxSet},
+	}
+	latestCfg := s.userDtoCtx(ctx, u).Configuration
+	// HidePlayedInLatest keeps what the account already watched out of the
+	// row (items.latest.R5); an isPlayed the request asks for wins over the
+	// preference, as it does on the reference. The filters query parameter
+	// has no effect here.
+	if played, err := itemsBool(q, "isplayed"); err != nil {
+		writeBadRequest(w)
+		return
+	} else if played != nil {
+		filter.Played = played
+	} else if latestCfg.HidePlayedInLatest {
+		unplayed := false
+		filter.Played = &unplayed
+	}
+	// The store reads play state through the user it is asked about, so a
+	// played filter needs the account (a request made with an API key has
+	// none, and then nothing is filtered).
+	if filter.Played != nil && u.ID != "" {
+		uid := u.ID
+		filter.UserID = &uid
 	}
 	// IncludeItemTypes names the kinds asked for (collections are left out
 	// of the default "recently added" list).
@@ -346,7 +416,7 @@ func (s *Server) handleItemsLatest(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	scope, err := s.callerScope(ctx)
+	scope, err := s.itemsScopeFor(ctx, u)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -398,11 +468,7 @@ func (s *Server) handleItemsLatest(w http.ResponseWriter, r *http.Request) {
 	var items []storage.Item
 	if grouped && filter.LibraryID != nil {
 		if lib, err := s.store.GetLibrary(ctx, *filter.LibraryID); err == nil && lib.CollectionType == storage.CollectionTypeTVShows {
-			ac, _ := AuthFromContext(ctx)
-			var userID storage.UserID
-			if ac != nil {
-				userID = ac.User.ID
-			}
+			userID := u.ID
 			grp, err := s.tvShowsLatestGrouped(ctx, *filter.LibraryID, filter.Limit, userID)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
@@ -441,6 +507,12 @@ func (s *Server) handleItemsLatest(w http.ResponseWriter, r *http.Request) {
 			}
 			items = kept
 		}
+	}
+
+	// LatestItemsExcludes takes a library out of the unscoped row
+	// (items.latest.R6); a request scoped to a library asked for it by name.
+	if filter.ParentID == nil && filter.LibraryID == nil {
+		items = dropExcludedLibraryItems(items, latestCfg.LatestItemsExcludes)
 	}
 
 	dtos := make([]baseItemDto, 0, len(items))

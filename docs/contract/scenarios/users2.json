@@ -664,5 +664,456 @@
     }
    }
   ]
+ },
+ {
+  "id": "users.preferences.save",
+  "endpoint": "POST /Users/{userId}/Configuration",
+  "spec": "users.md#configuration",
+  "scope": "modern",
+  "requires": [
+   "library:movies",
+   "library:shows",
+   "item:alpha"
+  ],
+  "covers": [
+   "items.views.R6",
+   "items.views.R7",
+   "items.latest.R1",
+   "items.latest.R2",
+   "items.latest.R3",
+   "users.configuration.R15"
+  ],
+  "steps": [
+   {
+    "name": "a user whose preferences the page edits",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-prefs",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u": "$.Id"
+    }
+   },
+   {
+    "name": "login tmp-prefs",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-prefs",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-prefs{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tok": "$.AccessToken"
+    }
+   },
+   {
+    "name": "the page's own load lists the libraries",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "sequence",
+       "value": [
+        "Movies",
+        "Shows"
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "the page saves a new order",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u}}/Configuration",
+     "body": {
+      "OrderedViews": [
+       "{{library.shows.id}}",
+       "{{library.movies.id}}"
+      ]
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "the home screen gets the saved order",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "sequence",
+       "value": [
+        "Shows",
+        "Movies"
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "the legacy view route gets it too",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Users/{{capture.u}}/Views"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "sequence",
+       "value": [
+        "Shows",
+        "Movies"
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "the grouping options keep their own order",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews/GroupingOptions"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Name",
+       "op": "sequence",
+       "value": [
+        "Movies",
+        "Shows"
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "the page unchecks a library from My Media",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u}}/Configuration",
+     "body": {
+      "OrderedViews": [
+       "{{library.shows.id}}",
+       "{{library.movies.id}}"
+      ],
+      "MyMediaExcludes": [
+       "{{library.movies.id}}"
+      ]
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "the unchecked library is not in the home screen",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "notcontains",
+       "value": "Movies"
+      },
+      {
+       "path": "$.Items[*].Name",
+       "op": "contains",
+       "value": "Shows"
+      }
+     ]
+    }
+   },
+   {
+    "name": "includeHidden lists it again, in the saved order",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews?includeHidden=true"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "sequence",
+       "value": [
+        "Shows",
+        "Movies"
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "the legacy route takes includeHidden too",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Users/{{capture.u}}/Views?includeHidden=true"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "sequence",
+       "value": [
+        "Shows",
+        "Movies"
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "a value that is not a boolean is refused",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews?includeHidden=1"
+    },
+    "expect": {
+     "status": 400,
+     "problem": 400
+    }
+   },
+   {
+    "name": "a watched movie is marked",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u}}/PlayedItems/{{item.alpha.id}}"
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "watched media leaves the latest row",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest?limit=30"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Alpha Movie (2015)"
+      }
+     ]
+    }
+   },
+   {
+    "name": "turning the preference off brings it back",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u}}/Configuration",
+     "body": {
+      "OrderedViews": [
+       "{{library.shows.id}}",
+       "{{library.movies.id}}"
+      ],
+      "HidePlayedInLatest": false
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "the played movie is in the latest row again",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest?limit=30"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Alpha Movie (2015)"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the page unchecks a library from latest",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u}}/Configuration",
+     "body": {
+      "HidePlayedInLatest": false,
+      "LatestItemsExcludes": [
+       "{{library.movies.id}}"
+      ]
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "that library's media leaves the latest row",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest?limit=30"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Name",
+       "op": "notcontains",
+       "value": "Alpha Movie (2015)"
+      }
+     ]
+    }
+   },
+   {
+    "name": "grouped folders are stored",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "POST",
+     "path": "/Users/{{capture.u}}/Configuration",
+     "body": {
+      "GroupedFolders": [
+       "{{library.movies.id}}"
+      ]
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "and come back on the user",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Users/{{capture.u}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Configuration.GroupedFolders[0]",
+       "op": "eq",
+       "value": "{{library.movies.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "another user's latest row is refused",
+    "as": "alice",
+    "request": {
+     "method": "GET",
+     "path": "/Users/{{capture.u}}/Items/Latest?limit=3"
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "a latest row for an identifier that names nobody is not found",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Users/0123456789abcdef0123456789abcdef/Items/Latest"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "a malformed identifier is a bad request",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Users/nope/Items/Latest"
+    },
+    "expect": {
+     "status": 400
+    }
+   },
+   {
+    "name": "anonymous is unauthorized",
+    "request": {
+     "method": "GET",
+     "path": "/Users/{{capture.u}}/Items/Latest"
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "remove the temporary user",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u}}"
+    },
+    "expect": {
+     "status": [
+      200,
+      204,
+      404
+     ]
+    }
+   }
+  ]
  }
 ]

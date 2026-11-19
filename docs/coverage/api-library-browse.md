@@ -41,7 +41,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | 🗓️ planned | `DELETE /Items` | DefaultAuthorization | yes |  | Library notification hooks and file/download endpoints are not implemented. (priority: low) |
 | ↔️ divergent-by-design | `GET /Items` | DefaultAuthorization | yes | 188/188 | The library-access restriction also applies when items are requested by Ids (the reference skips it). Recorded as a divergence in the contract scenarios. |
 | ✅ supported | `GET /Items/Counts` | DefaultAuthorization | yes | 3/3 |  |
-| ✅ supported | `GET /Items/Latest` | DefaultAuthorization | yes | 5/5 |  |
+| ✅ supported | `GET /Items/Latest` | DefaultAuthorization | yes | 6/6 |  |
 | ✅ supported | `GET /Items/Root` | DefaultAuthorization | yes | 1/1 |  |
 | ✅ supported | `DELETE /Items/{itemId}` | DefaultAuthorization | yes | 10/10 |  |
 | ✅ supported | `GET /Items/{itemId}` | DefaultAuthorization | yes | 235/235 |  |
@@ -128,8 +128,8 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ✅ supported | `GET /UserViews` | DefaultAuthorization | yes | 24/24 |  |
-| ✅ supported | `GET /UserViews/GroupingOptions` | DefaultAuthorization | yes | 1/1 |  |
+| ✅ supported | `GET /UserViews` | DefaultAuthorization | yes | 25/25 |  |
+| ✅ supported | `GET /UserViews/GroupingOptions` | DefaultAuthorization | yes | 2/2 |  |
 
 ## Year
 
