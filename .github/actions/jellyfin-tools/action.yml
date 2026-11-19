@@ -25,9 +25,12 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Cache the packages
+    # Restore and save as two steps, both run here. The single-step form saves
+    # in a post-job step, and a post-job step only runs when the job is about to
+    # finish cleanly: a later failure threw away a fifteen-minute download.
+    - name: Restore the packages
       id: debs
-      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ~/.cache/jellyfin-debs
         key: jellyfin-debs-${{ runner.os }}-noble-${{ inputs.cache-revision }}
@@ -51,6 +54,13 @@ runs:
           curl gnupg ffmpeg mkvtoolnix xorriso jellyfin-ffmpeg8
         sudo cp /var/cache/apt/archives/*.deb ~/.cache/jellyfin-debs/
         echo "$(ls ~/.cache/jellyfin-debs | wc -l) packages cached"
+
+    - name: Save the packages
+      if: steps.debs.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/jellyfin-debs
+        key: jellyfin-debs-${{ runner.os }}-noble-${{ inputs.cache-revision }}
 
     - name: Install them
       shell: bash
