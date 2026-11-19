@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -61,6 +62,74 @@ func (w *wsConn) take(typ string, accept func(map[string]any) bool) (map[string]
 		}
 	}
 	return nil, false
+}
+
+// wsKeepAliveEvery is how often an open socket says KeepAlive. The server
+// declares a connection lost when nothing arrives from the client for its own
+// lost timeout (60 s, the reference's value), so a scenario that keeps a socket
+// open across two batches — a wait of a minute each — needs to speak, exactly
+// as a real client does. Without this the socket died mid-scenario, the push
+// found no connection to go to, and the scenario failed on a harness artefact.
+var wsKeepAliveEvery = 20 * time.Second
+
+// keepAlive keeps this socket alive for as long as it is open.
+func (w *wsConn) keepAlive(ctx context.Context) {
+	t := time.NewTicker(wsKeepAliveEvery)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			if err := w.conn.Write(ctx, websocket.MessageText, []byte(`{"MessageType":"KeepAlive"}`)); err != nil {
+				return
+			}
+		}
+	}
+}
+
+// buffered summarizes what this socket received, for the error of a wait that
+// timed out: a message that arrived with the wrong content looks exactly like
+// one that never arrived, and the difference is the whole investigation.
+func (w *wsConn) buffered() string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if len(w.msgs) == 0 {
+		return " (the socket received nothing)"
+	}
+	counts := map[string]int{}
+	var kinds []string
+	for _, m := range w.msgs {
+		typ, _ := m["MessageType"].(string)
+		counts[typ]++
+	}
+	for typ := range counts {
+		kinds = append(kinds, typ)
+	}
+	sort.Strings(kinds)
+	parts := make([]string, 0, len(kinds))
+	for _, typ := range kinds {
+		parts = append(parts, fmt.Sprintf("%s x%d", typ, counts[typ]))
+	}
+	out := " (the socket received: " + strings.Join(parts, ", ")
+	// For the push messages, name the non-empty arrays: a LibraryChanged that
+	// carries other fields than the ones expected is the usual culprit.
+	for _, m := range w.msgs {
+		if m["MessageType"] != "LibraryChanged" {
+			continue
+		}
+		d, _ := m["Data"].(map[string]any)
+		var fields []string
+		for _, k := range []string{"ItemsAdded", "ItemsRemoved", "ItemsUpdated", "FoldersAddedTo", "FoldersRemovedFrom"} {
+			if arr, ok := d[k].([]any); ok && len(arr) > 0 {
+				fields = append(fields, fmt.Sprintf("%s=%d", k, len(arr)))
+			}
+		}
+		if len(fields) > 0 {
+			out += "; LibraryChanged with " + strings.Join(fields, " ")
+		}
+	}
+	return out + ")"
 }
 
 // findInHistory returns the first message of the given type anywhere in this
@@ -166,6 +235,7 @@ func (c *Client) runWS(ctx context.Context, ws *WSStep, rs *runState) (*Response
 		}
 		rs.sockets[ws.Open] = w
 		go w.readLoop(rctx)
+		go w.keepAlive(rctx)
 		return nil, nil
 	case ws.Close != "":
 		if w := rs.sockets[ws.Close]; w != nil {
@@ -210,7 +280,7 @@ func (c *Client) runWS(ctx context.Context, ws *WSStep, rs *runState) (*Response
 			return nil, nil
 		}
 		if !ok {
-			return nil, fmt.Errorf("socket %s: no %q message within %v", ws.Wait, ws.Type, timeout)
+			return nil, fmt.Errorf("socket %s: no %q message within %v%s", ws.Wait, ws.Type, timeout, w.buffered())
 		}
 		b, _ := json.Marshal(m)
 		return &Response{Status: 200, Body: b, JSON: m}, nil

@@ -12,6 +12,7 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -63,6 +64,9 @@ type Client struct {
 	Tokens map[string]string
 	// Available is the set of fixture keys that exist ("user:alice", "item:movie").
 	Available map[string]bool
+	// Trace logs every step with its start time, so a flaky scenario can be
+	// lined up against the server's own log instead of guessed at.
+	Trace bool
 	// RetryFailed re-runs each failed scenario this many times after the main
 	// pass. Zero means no retry.
 	RetryFailed int
@@ -488,6 +492,9 @@ func (c *Client) runOneBody(ctx context.Context, s Scenario, skipDivergent bool)
 	defer c.setActive(nil)
 	status, msg := StatusPass, ""
 	for i, st := range s.Steps {
+		if c.Trace {
+			log.Printf("trace %s step %d/%d %q at %s", s.ID, i+1, len(s.Steps), st.Name, time.Now().UTC().Format("15:04:05.000"))
+		}
 		if err := c.runStep(ctx, st, rs); err != nil {
 			var be *blockedError
 			if asBlocked(err, &be) {

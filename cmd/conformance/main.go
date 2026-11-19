@@ -111,6 +111,7 @@ func run(args []string) int {
 	tags := fs.String("tags", "", "comma-separated tags; scenario must have all")
 	only := fs.String("only", "", "substring filter on scenario id")
 	retryFailed := fs.Int("retry-failed", 0, "re-run each failed scenario this many times after the main pass")
+	trace := fs.Bool("trace", false, "log every step with its start time")
 	reference := fs.Bool("reference", false, "target is the reference server (skip intentional divergences)")
 	skipTags := fs.String("skip-tags", "", "comma-separated tags; scenarios with any of them are not run")
 	risky := fs.Bool("risky", false, "also run scenarios tagged risky (demote/delete the last administrator)")
@@ -210,6 +211,7 @@ func run(args []string) int {
 	c.MediaLocalRoot = *mediaLocal
 	c.FFmpegPath, c.Reference = *ffmpeg, *reference
 	c.RetryFailed = *retryFailed
+	c.Trace = *trace
 	switch *suffix {
 	case "":
 	case "auto":

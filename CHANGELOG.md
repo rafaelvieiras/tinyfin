@@ -34,6 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to `setup-go` v7.1.0, `cache` v6.1.0, `upload-artifact` v7.0.2 and `download-artifact` v8.0.2.
 
 ### Fixed
+- The conformance runner never answered a socket the server asked to keep alive, so an open socket was dropped after
+  the server's 60 s lost timeout — a connection that said nothing is a connection that is gone. A scenario that waits a
+  minute for one `LibraryChanged` and then a minute for the next crossed that limit, and the push it was waiting for
+  was flushed with no connection to go to. Sockets now send `KeepAlive` every 20 s, like a real client.
+- A socket wait that times out now says what the socket did receive, and the runner can trace every step with its
+  start time (`-trace`): a message that arrived with the wrong content used to look exactly like one that never came.
 - The conformance runner can look at everything a socket received (`lookback`) instead of only what arrives after
   the step starts, which is what an assertion of the form "this change was pushed" needs: the push may land while
   the previous step is still running, and a wait only looked forward from the message it matched last.
