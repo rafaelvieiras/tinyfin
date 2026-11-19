@@ -172,7 +172,8 @@
        "op": "contains",
        "value": "{{capture.one}}"
       }
-     ]
+     ],
+     "lookback": true
     },
     "expect": {
      "json": [
@@ -300,7 +301,8 @@
        "op": "contains",
        "value": "{{capture.one}}"
       }
-     ]
+     ],
+     "lookback": true
     },
     "expect": {
      "json": [
@@ -329,7 +331,8 @@
        "op": "contains",
        "value": "{{capture.one}}"
       }
-     ]
+     ],
+     "lookback": true
     },
     "expect": {
      "json": [

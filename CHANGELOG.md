@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to `setup-go` v7.1.0, `cache` v6.1.0, `upload-artifact` v7.0.2 and `download-artifact` v8.0.2.
 
 ### Fixed
+- The conformance runner can look at everything a socket received (`lookback`) instead of only what arrives after
+  the step starts, which is what an assertion of the form "this change was pushed" needs: the push may land while
+  the previous step is still running, and a wait only looked forward from the message it matched last.
 - A change the realtime monitor picked up was never pushed. Its rescan walked the library and cataloged the new
   files, but outside the tracking that turns a walk into a `LibraryChanged`, so a client that never asked for a
   refresh went on showing the old list — and the scan a client runs afterwards found nothing new to report, which

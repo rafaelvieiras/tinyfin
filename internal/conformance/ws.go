@@ -63,6 +63,22 @@ func (w *wsConn) take(typ string, accept func(map[string]any) bool) (map[string]
 	return nil, false
 }
 
+// findInHistory returns the first message of the given type anywhere in this
+// socket's buffer, including the ones a previous wait already stepped over,
+// without consuming anything. A scenario that asserts "this change was pushed
+// at some point" needs it: the push can arrive before the step that looks for
+// it starts, and a wait only looks forward from the last message it matched.
+func (w *wsConn) findInHistory(typ string, accept func(map[string]any) bool) (map[string]any, bool) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	for _, m := range w.msgs {
+		if (typ == "" || m["MessageType"] == typ) && (accept == nil || accept(m)) {
+			return m, true
+		}
+	}
+	return nil, false
+}
+
 // waitFor blocks until take succeeds or the timeout elapses.
 func (w *wsConn) waitFor(ctx context.Context, typ string, accept func(map[string]any) bool, timeout time.Duration) (map[string]any, bool) {
 	deadline := time.NewTimer(timeout)
@@ -179,7 +195,14 @@ func (c *Client) runWS(ctx context.Context, ws *WSStep, rs *runState) (*Response
 				return true
 			}
 		}
-		m, ok := w.waitFor(ctx, ws.Type, accept, timeout)
+		var m map[string]any
+		var ok bool
+		if ws.Lookback {
+			m, ok = w.findInHistory(ws.Type, accept)
+		}
+		if !ok {
+			m, ok = w.waitFor(ctx, ws.Type, accept, timeout)
+		}
 		if ws.Absent {
 			if ok {
 				return nil, fmt.Errorf("socket %s: unexpected %q message %s", ws.Wait, ws.Type, show(m))

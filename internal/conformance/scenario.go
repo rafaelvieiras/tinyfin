@@ -143,7 +143,11 @@ type WSStep struct {
 	// ignore pushes that belong to earlier, unrelated library changes.
 	Where []Assert `json:"where,omitempty"`
 	// Absent inverts Wait: no such message may arrive within TimeoutMs.
-	Absent    bool `json:"absent,omitempty"`
+	Absent bool `json:"absent,omitempty"`
+	// Lookback also accepts a message that arrived before this step started
+	// (one an earlier wait stepped over), so an assertion of the form "this
+	// change was pushed" does not depend on catching the push in the window.
+	Lookback  bool `json:"lookback,omitempty"`
 	TimeoutMs int  `json:"timeoutMs,omitempty"`
 	// Close disconnects the named socket (sockets are also closed when the
 	// scenario ends).
