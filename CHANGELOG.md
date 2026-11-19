@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Saving the home-screen order works. `POST /Users/{userId}/Configuration` stored `OrderedViews` and then nothing
+  read it, so the libraries kept their default order after the page said "Settings saved". `GET /UserViews` and
+  `GET /Users/{userId}/Views` now order the views by it — the views it names first, in its order, the rest behind
+  them in the default order — and the same applies to the libraries the page unchecked from "My Media"
+  (`MyMediaExcludes`), which are hidden unless the request asks with `includeHidden=true`.
+- The "recently added" row follows the account's preferences: `HidePlayedInLatest` drops what the user already
+  watched (an explicit `isPlayed` still wins, as on the reference) and `LatestItemsExcludes` takes a library out.
+  `GET /Users/{userId}/Items/Latest`, the per-user spelling the home screen also calls, is served with the same
+  authorization as the views route.
 - The preferences page renders again. `GET /UserViews/GroupingOptions` (and the legacy
   `GET /Users/{userId}/GroupingOptions`) answer the library folders a user may group into one view, which the
   client loads beside the user's views and hides its loading indicator for only once that request succeeds: a

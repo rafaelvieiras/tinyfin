@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 929
+    "pass": 930
   },
   "scenarios": {
     "admin.auth.providers": "pass",
@@ -866,6 +866,7 @@
     "users.policy.replaces-whole-policy": "pass",
     "users.policy.roundtrip": "pass",
     "users.policy.self-demotion": "pass",
+    "users.preferences.save": "pass",
     "users.prefs.cast-receiver": "pass",
     "users.prefs.null-configuration": "pass",
     "users.prefs.update-keeps-cast-receiver": "pass",

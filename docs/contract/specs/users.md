@@ -475,6 +475,7 @@ When both the header token and `ApiKey` are present the header wins. Protected r
 - **users.configuration.R12** `POST /Users` validates its `Configuration` member exactly like R7-R10 and answers `400` for a member of the wrong type; a `Configuration` that is a string or an array is `400` too (an explicit `null` is `users.prefs.R3`). The `400` leaves the account unchanged, rename included.
 - **users.configuration.R13** Order of checks, on all three routes: authentication (`401`) first, then the body (`400` for R4, R7-R11), then the target id (`400` for a malformed or all-zero id, `users.ids.R1`), the authorization on the target (`403`) and the lookup (`404`). So a bad body answers `400` even for another user's account that the caller may not touch or for an unknown user, and an anonymous caller always gets `401`.
 - **users.configuration.R14** A refused request changes nothing: no member of the stored configuration is applied when any member of the body is refused.
+- **users.configuration.R15** Four members are the preferences page's own controls and are stored and echoed only: `GroupedFolders` (the "Group folders" checkbox) changes nothing on any measured route — `GET /UserViews`, `GET /Users/{userId}/Views` and `GET /Items/Latest` answer the same before and after it is set. The members that do change something are specified where that happens: `OrderedViews` and `MyMediaExcludes` in `items.views.R6`/`R7`, `LatestItemsExcludes` and `HidePlayedInLatest` in `items.latest.R2`/`R3`. The rest of the page (home-screen sections, landing screens, TV home screen) never reaches the server: jellyfin-web keeps those in the browser's own `userSettings` storage.
 
 ---
 
@@ -786,6 +787,7 @@ The user object is the one of `GET /Users/{userId}` (also inside login answers, 
 | `users.configuration.R4` | `users.configuration.errors` |
 | `users.configuration.R5` | `users.configuration-alias.update`, `users.configuration-alias.errors` |
 | `users.configuration.R6` | `users.configuration.empty-language-preference` |
+| `users.configuration.R15` | `users.preferences.save` |
 | `users.configuration.R7` | `users.configuration.invalid-members`, `users.configuration-alias.invalid-members` |
 | `users.configuration.R8` | `users.configuration.invalid-members`, `users.configuration-alias.invalid-members`, `users.configuration.lenient-values`, `users.configuration-alias.lenient-values` |
 | `users.configuration.R9` | `users.configuration.lenient-values`, `users.configuration-alias.lenient-values` |

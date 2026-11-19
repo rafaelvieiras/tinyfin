@@ -96,6 +96,9 @@ Rule IDs are stable (`items.<topic>.R<n>`); scenarios reference them through `co
 - **items.views.R1** `GET /Users/{userId}/Views` is the legacy form of `GET /UserViews`: the same items in the same order (admin.libraries.R4) for the user in the path. A caller may ask for their own views (**200**) and an administrator for any user's (**200**); another user's views are **403**, a user identifier that names nobody is **404**, and an anonymous request is **401**.
 - **items.views.R2** `GET /UserViews?userId=` follows the same authorization, with one difference: no `userId` and the caller's own are **200**, another user's is **403** for a non-administrator (**200** for an administrator), and a `userId` that names nobody is **403** rather than `404` — the route does not tell an unknown identifier from a foreign one.
 
+- **items.views.R6** The account's `Configuration.OrderedViews` (the order the preferences page saves with its up/down buttons and `POST /Users/{userId}/Configuration`) orders **both** view routes: the views it names come first, in its own order, and every view it does not name keeps the default order (admin.libraries.R4) behind them. An identifier that names no view is ignored, and so is a repeat. It changes nothing else: `GET /UserViews/GroupingOptions` keeps its name order (items.grouping.R3), and `GET /Library/MediaFolders`, `GET /Library/VirtualFolders` and the `GET /Items` root listing keep theirs. Measured against the reference.
+- **items.views.R7** The account's `Configuration.MyMediaExcludes` (the "Include in My Media" checkboxes) takes those libraries out of both view routes. `includeHidden=true` lists them again — on both routes, in the `OrderedViews` order — and `includeHidden=false` behaves like leaving it out. The parameter binds like a boolean and nothing else: `true`/`false` in any capitalization are accepted, and any other value (`1`, `yes`, an empty value) is **400** with a validation problem document. Implemented from measurement; the reference refuses the same values.
+
 ### <a id="grouping"></a>Rules: grouping options
 
 - **items.grouping.R1** `GET /UserViews/GroupingOptions` lists the library folders the caller may group into one view: an array of `{Name, Id}`, with `Id` a 32-hex identifier and no dashes. A server with no groupable library answers `[]` — an empty array, never `null` — and an anonymous request is **401**.
@@ -317,6 +320,12 @@ the 12.2 reference with fixture items whose rating comes from a sidecar `.nfo` (
 
 ---
 
+## <a id="latest"></a>GET /Items/Latest and GET /Users/{userId}/Items/Latest
+
+- **items.latest.R1** `GET /Users/{userId}/Items/Latest` is the per-user spelling of `GET /Items/Latest` and answers the same array for the user in the path. Authorization follows `GET /Users/{userId}/Views` (items.views.R1): own and administrator **200**, another user's **403**, an identifier that names nobody **404**, a value that is not an identifier **400**, anonymous **401**.
+- **items.latest.R2** `Configuration.HidePlayedInLatest` (default `true`) keeps what the account already played out of the row, on both routes and with or without `ParentId`. An `isPlayed` the request asks for wins over the preference (`isPlayed=true` lists only the played media). The `filters` parameter has no effect on this route: `filters=IsPlayed` and `filters=IsUnplayed` are ignored, and the preference still applies. Measured against the reference.
+- **items.latest.R3** `Configuration.LatestItemsExcludes` (the "Include in latest media" checkboxes) takes those libraries' media out of the row a request without `ParentId` asks for. A request scoped with `ParentId` still lists the library it names — asking for it by name is not an accident. Measured against the reference, which additionally truncates the row when the excluded library is not the last one it reads (see `DIV-35` in [`../13-divergences.md`](../13-divergences.md)); this server filters only the excluded library.
+
 ## <a id="resume"></a>GET /UserItems/Resume
 
 **Purpose.** Items the user started and did not finish ("continue watching"), most recent first.
@@ -478,7 +487,9 @@ Every question that was open in earlier revisions has been settled by probing th
 | `items.list.R3` | `items.list.unknown-param-ignored`, `items.list.param-names-case-insensitive` |
 | `items.list.R4` | `items.list.root-views`, `items.list.root-views-ignore-paging` |
 | `items.views.R1`, `R2` | `items.views.alias` |
+| `items.views.R6`, `R7` | `users.preferences.save` |
 | `items.grouping.R1`, `R2`, `R4` | `items.grouping.options` |
+| `items.latest.R1`–`R3` | `users.preferences.save` |
 | `items.grouping.R3` | none — asserted by `TestGroupingOptionsFilterAndOrder` |
 | `items.list.R5` | `items.list.root-filter-is-recursive` |
 | `items.list.R6` | `items.list.parent-library-direct-children`, `items.list.parent-library-types-default-recursive` |
