@@ -34,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to `setup-go` v7.1.0, `cache` v6.1.0, `upload-artifact` v7.0.2 and `download-artifact` v8.0.2.
 
 ### Fixed
+- A change the realtime monitor picked up was never pushed. Its rescan walked the library and cataloged the new
+  files, but outside the tracking that turns a walk into a `LibraryChanged`, so a client that never asked for a
+  refresh went on showing the old list — and the scan a client runs afterwards found nothing new to report, which
+  lost the change for good. The rescan is tracked like any other scan now.
 - A login now registers the session, as the reference does: `GET /Sessions` lists the device straight away with empty
   capabilities, before the client reports anything, and `POST /Sessions/Logout` removes it. Tinyfin used to list a
   session only after `POST /Sessions/Capabilities/Full`, so a client that logged in and never reported capabilities was

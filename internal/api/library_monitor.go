@@ -112,14 +112,30 @@ func (s *Server) kickMonitor() {
 	}
 }
 
-// rescanChanged re-walks the part of a library a monitor reported.
+// scanTracked walks a library and queues what the walk changed, so a change
+// the monitor found is pushed exactly like one an explicit scan found. Split
+// out from rescanChanged so the tracking is testable without a media tree.
+func (s *Server) scanTracked(ctx context.Context, lib storage.Library, walk func() error) error {
+	var err error
+	s.trackLibraryChanges(ctx, lib.ID, func() { err = walk() })
+	return err
+}
+
+// rescanChanged re-walks the part of a library a monitor reported. The walk
+// is tracked like any other scan: what the monitor finds is a change the
+// clients have to hear about (LibraryChanged), and a change picked up here and
+// then not pushed was lost for good, because the explicit scan that follows
+// finds nothing new to report.
 func (s *Server) rescanChanged(id storage.LibraryID, root, top string) {
 	ctx := context.Background()
 	lib, err := s.store.GetLibrary(ctx, id)
 	if err != nil || !realtimeMonitorOn(lib) {
 		return
 	}
-	if err := s.scanner.RescanPath(ctx, lib, filepath.Clean(root), top); err != nil {
-		log.Printf("api: rescanning %q after a change in %s: %v", lib.Name, filepath.Join(root, top), err)
+	scanErr := s.scanTracked(ctx, lib, func() error {
+		return s.scanner.RescanPath(ctx, lib, filepath.Clean(root), top)
+	})
+	if scanErr != nil {
+		log.Printf("api: rescanning %q after a change in %s: %v", lib.Name, filepath.Join(root, top), scanErr)
 	}
 }
