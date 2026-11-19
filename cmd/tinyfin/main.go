@@ -83,7 +83,7 @@ func main() {
 	scanForceProbe := flag.Bool("scan-force-probe", envOrDefault("TINYFIN_SCAN_FORCE_PROBE", "") != "",
 		"re-run ffprobe on every file even when size and mtime are unchanged. Overridable via TINYFIN_SCAN_FORCE_PROBE.")
 	trickplayConc := flag.Int("trickplay-concurrency", envInt("TINYFIN_TRICKPLAY_CONCURRENCY", 0),
-		"max simultaneous ffmpeg processes generating trickplay sheets (default 1, each single-threaded). Overridable via TINYFIN_TRICKPLAY_CONCURRENCY.")
+		"max simultaneous ffmpeg processes generating trickplay sheets (default 1; each one uses ffmpeg's own thread count). Overridable via TINYFIN_TRICKPLAY_CONCURRENCY.")
 	imageCacheMB := flag.Int("image-cache-size", envInt("TINYFIN_IMAGE_CACHE_MB", 2048),
 		"size budget in megabytes for the served-image cache kept next to the database; 0 disables it. "+
 			"The cache exists so a client scrolling a library does not re-read the same poster off a remote media "+
@@ -187,6 +187,11 @@ func main() {
 		if err := httpServer.Shutdown(shutdownCtx); err != nil {
 			log.Printf("tinyfin: shutdown error: %v", err)
 		}
+		// The watchdog, the library monitor, the task scheduler and any
+		// extraction batch still running outlive the http server; stopping
+		// them here is what keeps a container stop from leaving a half
+		// written extraction or a task cancelled by the process exit.
+		server.Shutdown()
 	}
 }
 

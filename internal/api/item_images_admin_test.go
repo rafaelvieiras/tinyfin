@@ -48,7 +48,7 @@ func newTestServerWithImageDir(t *testing.T) (*httptest.Server, *sqlite.Store, s
 		t.Fatalf("MkdirAll: %v", err)
 	}
 
-	srv := NewServer(st, Config{ServerName: "TestServer", ScanImageDir: imgDir})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer", ScanImageDir: imgDir})
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /Items/{itemId}/Images", requireAdmin(srv.handleListItemImages))

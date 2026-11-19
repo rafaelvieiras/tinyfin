@@ -128,7 +128,7 @@ func TestSessionsCapabilitiesFullRegistersSession(t *testing.T) {
 // default window).
 func TestSessionsActiveWithinSecondsExcludesStale(t *testing.T) {
 	_, st := newTestServer(t)
-	srv := NewServer(st, Config{ServerName: "TestServer"})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer"})
 
 	srv.sessions.upsertCapabilities(context.Background(), "dev-fresh", "user-1", "Fresh", "Jellyfin Web", "Chrome", "10.11.11", "10.0.0.5", sessionCapabilitiesDto{SupportsMediaControl: true})
 	srv.sessions.upsertCapabilities(context.Background(), "dev-stale", "user-2", "Stale", "Jellyfin Web", "Chrome", "10.11.11", "10.0.0.6", sessionCapabilitiesDto{SupportsMediaControl: true})
@@ -172,7 +172,7 @@ func TestSessionsActiveWithinSecondsExcludesStale(t *testing.T) {
 // either way.
 func TestSessionsListEmptyIsEmptyArrayNotNull(t *testing.T) {
 	_, st := newTestServer(t)
-	srv := NewServer(st, Config{ServerName: "TestServer"})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer"})
 
 	w := callHandlerDirect(t, srv.handleSessionsList, http.MethodGet, "/Sessions", nil)
 	if w.Code != http.StatusOK {

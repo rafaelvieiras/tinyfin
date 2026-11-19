@@ -32,7 +32,7 @@ func newTestServerWithActivityLog(t *testing.T) (*httptest.Server, *sqlite.Store
 		}
 	})
 
-	srv := NewServer(st, Config{ServerName: "TestServer"})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer"})
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /System/ActivityLog/Entries", requireAdmin(srv.handleActivityLogEntries))

@@ -22,7 +22,7 @@ import (
 // comment in items_counts.go).
 func TestItemsCounts_MoviesSeriesEpisodes(t *testing.T) {
 	_, st := newTestServer(t)
-	srv := NewServer(st, Config{ServerName: "TestServer"})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer"})
 
 	libID := createTestLibrary(t, st, "Movies", storage.CollectionTypeMovies)
 
@@ -106,7 +106,7 @@ func TestItemsCounts_MoviesSeriesEpisodes(t *testing.T) {
 // a perfectly ordinary zero-match query, not a failure mode.
 func TestItemsCounts_EmptyStore(t *testing.T) {
 	_, st := newTestServer(t)
-	srv := NewServer(st, Config{ServerName: "TestServer"})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer"})
 
 	w := callHandlerDirect(t, srv.handleItemsCounts, http.MethodGet, "/Items/Counts", nil)
 	if w.Code != http.StatusOK {

@@ -33,7 +33,7 @@ func TestLocalNetworkSubnets(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = st.Close() })
-	srv := NewServer(st, Config{ServerName: "T"})
+	srv := startTestServer(t, st, Config{ServerName: "T"})
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 
@@ -88,7 +88,7 @@ func TestLocalNetworkSubnets(t *testing.T) {
 	}
 
 	// Persisted: a restarted server over the same store keeps the subnets.
-	srv2 := NewServer(st, Config{ServerName: "T"})
+	srv2 := startTestServer(t, st, Config{ServerName: "T"})
 	if srv2.isLocalAddress(parseIP(t, "172.17.0.1")) {
 		t.Error("subnets not persisted across restart")
 	}
@@ -119,7 +119,7 @@ func TestNetworkRemoteAccessGate(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = st.Close() })
-	srv := NewServer(st, Config{ServerName: "T"})
+	srv := startTestServer(t, st, Config{ServerName: "T"})
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 	createTestAdminUser(t, st, "root", "pw")

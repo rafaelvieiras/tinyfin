@@ -36,6 +36,12 @@ const (
 	// time zero is taken (a black opening is not worth a picture).
 	firstChapterSeconds = 15
 	ticksPerSecond      = int64(10_000_000)
+	// sampleFrames is how many frames the picture of a chapter is chosen
+	// from: ffmpeg's thumbnail filter reads that many from the chapter's
+	// start and keeps the most representative one, so a chapter that opens
+	// on a black frame, a fade or a duplicate still gets a usable picture.
+	// The reference samples the same number.
+	sampleFrames = 24
 )
 
 // LibraryOptions are the members of a library's LibraryOptions that drive
@@ -275,6 +281,19 @@ func (g *Generator) eachItem(ctx context.Context, lib storage.Library, fn func(s
 	}
 }
 
+// StillArgs is the ffmpeg invocation that takes the picture of a chapter
+// starting at startTicks out of path and writes it to out. The decoder runs
+// with ffmpeg's own thread count: pinning it to one thread cost about twice
+// the time on a 1080p source for no gain, and the reference does not pin it
+// either.
+func StillArgs(path string, startTicks int64, out string) []string {
+	secs := strconv.FormatFloat(float64(ExtractTicks(storage.ChapterRef{StartTicks: startTicks}))/
+		float64(ticksPerSecond), 'f', 3, 64)
+	return []string{"-v", "error", "-nostdin", "-ss", secs, "-i", path,
+		"-an", "-sn", "-vf", fmt.Sprintf("thumbnail=n=%d", sampleFrames),
+		"-frames:v", "1", "-q:v", "4", "-y", out}
+}
+
 func stampOf(fi os.FileInfo) string {
 	return fmt.Sprintf("%d %d", fi.Size(), fi.ModTime().UnixNano())
 }
@@ -327,9 +346,8 @@ func (g *Generator) process(ctx context.Context, item storage.Item) {
 		}
 		out := g.Path(item.ID, c.StartTicks)
 		tmp := out + ".part.jpg"
+		args := StillArgs(item.Path, c.StartTicks, tmp)
 		secs := strconv.FormatFloat(float64(ExtractTicks(c))/float64(ticksPerSecond), 'f', 3, 64)
-		args := []string{"-v", "error", "-nostdin", "-threads", "1", "-ss", secs, "-i", item.Path,
-			"-an", "-sn", "-frames:v", "1", "-q:v", "4", "-y", tmp}
 		if b, err := exec.CommandContext(ctx, g.ffmpeg, args...).CombinedOutput(); err != nil {
 			if ctx.Err() != nil {
 				_ = os.RemoveAll(dir)
