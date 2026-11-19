@@ -8,7 +8,7 @@
 //	                 [-server-data-dir <dir>] [-read-file-cmd "<argv prefix>"]
 //	                 [-baseline docs/contract/baseline.json] [-write-baseline <file>] [-ref-report <json>]
 //	conformance progress [-baseline docs/contract/baseline.json]
-//	conformance lint [-dir docs/contract]
+//	conformance lint [-dir docs/contract] [-baseline docs/contract/baseline.json]
 //	conformance seed-admin -db tinyfin.db -user admin -pass '...'
 //	conformance coverage [-root .] [-check]            regenerate docs/COVERAGE.md and docs/coverage/ (or verify them)
 //	conformance coverage import-openapi <openapi.json> [-root .] [-source text]
@@ -73,6 +73,7 @@ func lint(args []string) int {
 	dir := fs.String("dir", "docs/contract", "directory to lint")
 	scenarios := fs.String("scenarios", "docs/contract/scenarios", "scenarios directory (checked against the divergence registry)")
 	registry := fs.String("divergences", "docs/13-divergences.md", "the divergence registry every scenario's divergence record must appear in")
+	baseline := fs.String("baseline", "docs/contract/baseline.json", "the committed baseline every scenario must have an entry in")
 	_ = fs.Parse(args)
 	v, err := conformance.LintDir(*dir)
 	if err != nil {
@@ -85,15 +86,31 @@ func lint(args []string) int {
 		return 2
 	}
 	v = append(v, missing...)
+	// A scenario with no baseline entry is not a ratchet, it is a habit: Compare
+	// reports it NEW and its failure gates nothing. This is the same check
+	// `go test ./internal/conformance` runs, here so the contract job fails in
+	// seconds instead of the conformance jobs failing to notice at all.
+	cov, err := conformance.CheckBaselineCoversTheSuite(*scenarios, *baseline)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 2
+	}
+	for _, id := range cov.Missing {
+		v = append(v, fmt.Sprintf("scenario %q is not in %s: Compare would report it NEW, so a failure of it gates nothing", id, *baseline))
+	}
+	for _, id := range cov.Stale {
+		v = append(v, fmt.Sprintf("%s has an entry for %q, which is not a scenario under %s", *baseline, id, *scenarios))
+	}
 	for _, x := range v {
 		fmt.Println(x)
 	}
 	if len(v) > 0 {
-		fmt.Printf("%d clean-room/divergence violation(s)\n", len(v))
+		fmt.Printf("%d contract violation(s)\n", len(v))
 		return 1
 	}
 	fmt.Println("clean-room lint: ok")
 	fmt.Println("divergence registry: ok")
+	fmt.Println("baseline coverage: ok")
 	return 0
 }
 

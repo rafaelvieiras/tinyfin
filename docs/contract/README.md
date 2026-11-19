@@ -316,9 +316,23 @@ go run ./cmd/conformance progress
 
 * Regressions fail the run; `IMPROVED` and `NEW` scenarios are listed so the
   baseline can be refreshed in the same change that fixed (or added) them.
+* Every scenario in `docs/contract/scenarios` **must** have an entry, because a
+  scenario the baseline does not know is reported as `NEW` and never as a
+  regression: it can fail on every run and gate nothing. `go test
+  ./internal/conformance` and `conformance lint` fail, naming the scenarios and
+  the reason, when one is missing. `images.api.size` is why this is worth
+  enforcing: it was passing, but the coverage report reads the baseline, so the
+  rules it covers stayed counted as unverified (10/11) until it had an entry.
+  The same check reports an entry that names no scenario: a renamed or deleted
+  scenario would otherwise keep the counts high. Scenarios tagged `fresh-server`
+  are exempt, since no baselined run selects them (see *Fresh-server
+  scenarios*), and the exemption is both ways: an entry for one is not stale.
 * Refresh when a change flips scenarios to passing or adds scenarios; commit
   the new file with the change. A refresh that lowers a count needs a reason
   in the commit message.
+* A refresh needs a run that covers the whole suite: `-shard`, `-only`,
+  `-skip-tags` and `-reference` runs write a baseline of what they happened to
+  select, which would drop every other entry.
 * `-ref-report` takes the `-json` report of a `-reference` run to record its
   counts. The reference validation itself stays manual (it needs the 12.x
   image); a scenario must pass there before it enters the baseline as a goal.

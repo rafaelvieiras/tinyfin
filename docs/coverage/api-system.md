@@ -69,8 +69,8 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ✅ supported | `POST /System/Configuration` | RequiresElevation | yes | 1/1 |  |
 | ✅ supported | `POST /System/Configuration/Branding` | RequiresElevation |  | 2/2 |  |
 | 🗓️ planned | `GET /System/Configuration/MetadataOptions/Default` | RequiresElevation |  |  | Not implemented. (priority: low) |
-| 🟡 partial | `GET /System/Configuration/{key}` | DefaultAuthorization | yes | 6/10 | Only the network key is served (GET /System/Configuration/network). |
-| 🟡 partial | `POST /System/Configuration/{key}` | RequiresElevation | yes | 5/8 | Only the network key is served (POST /System/Configuration/network). |
+| 🟡 partial | `GET /System/Configuration/{key}` | DefaultAuthorization | yes | 9/10 | Only the network key is served (GET /System/Configuration/network). |
+| 🟡 partial | `POST /System/Configuration/{key}` | RequiresElevation | yes | 8/8 | Only the network key is served (POST /System/Configuration/network). |
 | ✅ supported *(no scenario)* | `GET /System/Endpoint` | DefaultAuthorization | yes |  |  |
 | ✅ supported | `GET /System/Info` | FirstTimeSetupOrIgnoreParentalControl | yes | 2/4 |  |
 | ✅ supported | `GET /System/Info/Public` | Anonymous | yes | 4/6 |  |

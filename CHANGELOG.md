@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- A check that every scenario in `docs/contract/scenarios` has an entry in `docs/contract/baseline.json`, run by
+  `go test ./internal/conformance` and by `conformance lint` (so the 24-second contract job reports it). A scenario the
+  baseline does not know is compared as `NEW`, never as a regression, so it could fail on every run and gate nothing;
+  six scenarios were in that state, `images.api.size` among them, whose rules were counted as unverified (10/11)
+  although it passed. The check also reports an entry that names no scenario (renamed or deleted, counts stayed high)
+  and exempts the `fresh-server` scenarios, which no baselined run selects.
 - `GET /Users/{userId}/Views`, the legacy form of `GET /UserViews` that older clients and the published SDK still
   call: the same items in the same order for the user in the path, `403` for another user's views and `404` for an
   identifier that names nobody. `GET /UserViews` now honors its `userId` parameter the same way, except that an
