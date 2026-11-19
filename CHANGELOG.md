@@ -10,12 +10,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `GET /Users/{userId}/Views`, the legacy form of `GET /UserViews` that older clients and the published SDK still
+  call: the same items in the same order for the user in the path, `403` for another user's views and `404` for an
+  identifier that names nobody. `GET /UserViews` now honors its `userId` parameter the same way, except that an
+  unknown identifier is `403` there and not `404`.
 - Container images published on every release, for `linux/amd64` and `linux/arm64`:
   `ghcr.io/rafaelvieiras/tinyfin` (API only, MIT only) and `ghcr.io/rafaelvieiras/tinyfin-web` (bundles the
   GPL-2.0 `jellyfin-web` build). Every push to `main` also publishes `edge` and `sha-<commit>`.
 - `compose.yaml` and `.env.example`, so a first run needs no build step.
 - `semantic-release` cuts the tag and writes the GitHub Release notes from the Conventional Commits. It does not
   touch this file: the entries below are written by hand, with the `[intentional deviation]` markers the project uses.
+
+### Fixed
+- Library lists are ordered by the library's sort name, the way item titles are: case and accents folded, numbers
+  compared as numbers. `GET /UserViews`, `GET /Library/MediaFolders` and the root form of `GET /Items` were ordered
+  by the bytes of the name, so `10 Coisas` came before `2 Coisas`, every capital before every small letter and every
+  accented name after `z`, which is not the order the reference server gives. The views list also stopped switching
+  comparators when the user could read a playlist. `GET /Library/VirtualFolders` lists the libraries newest first,
+  like the reference, instead of sorting them.
 
 ### Changed
 - The runner can re-run a failed scenario once (`-retry-failed`), which CI does per shard: a few scenarios read

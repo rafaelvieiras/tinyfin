@@ -1099,6 +1099,10 @@ func (s *Server) viewLibraries(ctx context.Context, sc itemsScope) []storage.Lib
 		}
 		out = append(out, lib)
 	}
+	// Every list of libraries is ordered by the library's sort name
+	// (admin.libraries.R4); the store hands them over by `name`, which is a
+	// byte comparison and not the order the reference produces.
+	sortLibraries(out)
 	return out
 }
 

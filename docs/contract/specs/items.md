@@ -30,7 +30,8 @@ Rule IDs are stable (`items.<topic>.R<n>`); scenarios reference them through `co
   extension of a home-videos album).
 * Users: `admin`, `alice` (default policy), `nofolders` (`EnableAllFolders=false`, no enabled folders),
   `nodownload`, `disabled`. The `disabled` user cannot authenticate, so no scenario uses it.
-* Library ids used as `ParentId` are captured from `GET /UserViews` (libraries sort alphabetically: Movies, Shows).
+* Library ids used as `ParentId` are captured from `GET /UserViews` (libraries are ordered by their sort name, so
+  Movies comes before Shows: admin.libraries.R4).
 * Writing scenarios touch only `alice`'s user data and restore flags, position and play count in `cleanup`.
   A last-played date, and a rating or like value, cannot be cleared through the API and may remain.
 
@@ -89,6 +90,11 @@ Rule IDs are stable (`items.<topic>.R<n>`); scenarios reference them through `co
 - **items.list.R9** `ParentId` = a season: returns that season's episodes.
 - **items.list.R10** `ParentId` that is the all-zero id, malformed, or does not exist is rejected: **400** (malformed id included, via parameter binding).
 - **items.list.R11** `ParentId` that names a non-folder item (for example a movie) is not an error (**200**) and the parent is effectively ignored: the request is handled as if `ParentId` were absent but without the Playlists extra. Non-recursive with no filters returns the user's library views (the two libraries); `Recursive=true` returns everything the user may access (movies, series, seasons, episodes and folders); `IncludeItemTypes` filters that global set. A user with no library access gets an empty result.
+
+### <a id="views"></a>Rules: user views and who may ask for them
+
+- **items.views.R1** `GET /Users/{userId}/Views` is the legacy form of `GET /UserViews`: the same items in the same order (admin.libraries.R4) for the user in the path. A caller may ask for their own views (**200**) and an administrator for any user's (**200**); another user's views are **403**, a user identifier that names nobody is **404**, and an anonymous request is **401**.
+- **items.views.R2** `GET /UserViews?userId=` follows the same authorization, with one difference: no `userId` and the caller's own are **200**, another user's is **403** for a non-administrator (**200** for an administrator), and a `userId` that names nobody is **403** rather than `404` — the route does not tell an unknown identifier from a foreign one.
 
 ### Rules: visibility
 
@@ -464,6 +470,7 @@ Every question that was open in earlier revisions has been settled by probing th
 | `items.list.R2` | `items.list.shape-recursive-movies` |
 | `items.list.R3` | `items.list.unknown-param-ignored`, `items.list.param-names-case-insensitive` |
 | `items.list.R4` | `items.list.root-views`, `items.list.root-views-ignore-paging` |
+| `items.views.R1`, `R2` | `items.views.alias` |
 | `items.list.R5` | `items.list.root-filter-is-recursive` |
 | `items.list.R6` | `items.list.parent-library-direct-children`, `items.list.parent-library-types-default-recursive` |
 | `items.list.R7` | `items.list.parent-library-recursive` |

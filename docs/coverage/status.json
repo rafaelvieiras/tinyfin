@@ -345,6 +345,7 @@
     "devices.per-user.two-accounts",
     "devices.refresh.request-headers",
     "devices.user-delete.removes-entries",
+    "items.views.alias",
     "playstate.auth.token-only-header",
     "playstate.stopped.hidden-item-writes-user-data",
     "policy.delete.admin-without-flag",
@@ -1820,6 +1821,7 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "admin.libraries.order",
     "browse.item-filters",
     "chapters.images.generate",
     "chapters.item.listing",
@@ -2555,6 +2557,7 @@
    "verified": true,
    "web": false,
    "scenarios": [
+    "admin.libraries.order",
     "admin.mediafolders.list",
     "admin.mediafolders.path-etag"
    ]
@@ -2716,6 +2719,7 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "admin.libraries.order",
     "admin.libraries.rename-during-scan",
     "admin.libraries.rename-rules",
     "collections.list.by-content-library",
@@ -2736,6 +2740,7 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "admin.libraries.order",
     "admin.libraries.rename-during-scan",
     "admin.libraries.rename-rules",
     "collections.auto.build",
@@ -5568,6 +5573,7 @@
     "devices.per-user.two-accounts",
     "devices.refresh.request-headers",
     "devices.user-delete.removes-entries",
+    "items.views.alias",
     "playstate.stopped.hidden-item-writes-user-data",
     "policy.delete.admin-without-flag",
     "policy.delete.folders-not-matching",
@@ -6279,6 +6285,7 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "admin.libraries.order",
     "collections.auto.rescan",
     "collections.create.parent-and-locked",
     "collections.list.by-content-library",
@@ -6299,6 +6306,7 @@
     "items.scope.no-libraries-user",
     "items.scope.parent-library-forbidden",
     "items.search.scoped",
+    "items.views.alias",
     "musicvideos.views",
     "playlists.view"
    ]
@@ -8868,6 +8876,7 @@
   "GET /Users/{userId}/Items/{itemId}/LocalTrailers",
   "GET /Users/{userId}/Items/{itemId}/SpecialFeatures",
   "GET /Users/{userId}/Items/{itemId}/UserData",
+  "GET /Users/{userId}/Views",
   "GET /Videos/{itemId}/hls1/{playlistId}/{segment}",
   "GET /Videos/{itemId}/main.m3u8",
   "GET /Videos/{itemId}/master.m3u8",

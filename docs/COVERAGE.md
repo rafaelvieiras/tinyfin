@@ -22,7 +22,7 @@ How to read and edit this: [`docs/coverage/README.md`](coverage/README.md). Mach
 | Registered by Tinyfin | **205** (56%) |
 | Registered **and** a passing contract scenario | **173** (48%) |
 | Called by the official web client (docs/11) and registered | 135 of 165 (82%) |
-| Routes Tinyfin serves that the OpenAPI document lacks | 35 (legacy aliases the web client needs, `/socket`, HLS) |
+| Routes Tinyfin serves that the OpenAPI document lacks | 36 (legacy aliases the web client needs, `/socket`, HLS) |
 | Non-route features tracked | 112 (✅ 64 · 🟡 19 · 🗓️ 13 · ⛔ 16) |
 
 ### Routes by status
@@ -139,7 +139,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 
 | Spec | Rules | Rules with a scenario | Scenarios | Passing |
 |---|---|---|---|---|
-| [admin](contract/specs/admin.md) | 42 | 40 | 11 | 11 |
+| [admin](contract/specs/admin.md) | 44 | 42 | 11 | 11 |
 | [bitmap](contract/specs/bitmap.md) | 42 | 20 | 11 | 11 |
 | [browse](contract/specs/browse.md) | 29 | 29 | 15 | 15 |
 | [chapters](contract/specs/chapters.md) | 26 | 26 | 5 | 5 |
@@ -147,7 +147,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [devices](contract/specs/devices.md) | 13 | 13 | 6 | 6 |
 | [extras](contract/specs/extras.md) | 21 | 21 | 15 | 15 |
 | [images](contract/specs/images.md) | 20 | 18 | 14 | 13 |
-| [items](contract/specs/items.md) | 171 | 171 | 156 | 156 |
+| [items](contract/specs/items.md) | 173 | 173 | 156 | 156 |
 | [misc](contract/specs/misc.md) | 7 | 7 | 3 | 3 |
 | [music](contract/specs/music.md) | 82 | 82 | 14 | 14 |
 | [musicvideos](contract/specs/musicvideos.md) | 26 | 26 | 17 | 17 |
@@ -163,7 +163,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [trickplay](contract/specs/trickplay.md) | 11 | 11 | 10 | 10 |
 | [users](contract/specs/users.md) | 190 | 190 | 195 | 195 |
 | [wire](contract/specs/wire.md) | 15 | 14 | 14 | 14 |
-| **total** | 1118 | 1084 | 747 | 743 |
+| **total** | 1122 | 1088 | 747 | 743 |
 
 ## Biggest gaps (planned or not planned, web-client facing)
 

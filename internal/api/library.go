@@ -63,10 +63,60 @@ const unboundedEpisodesLimit = 1 << 20
 // library count is operator-scale, not catalog-scale, same reasoning as
 // UserStore.QueryUsers), so no paging is applied here.
 func (s *Server) handleUserViews(w http.ResponseWriter, r *http.Request) {
+	// items.views.R2: the optional userId names whose views are asked for.
+	// The caller's own, or none, is always allowed; an administrator may ask
+	// for anybody's; anyone else's is refused, and so is an identifier that
+	// names nobody — this route does not tell the two apart.
+	ac, _ := AuthFromContext(r.Context())
+	target := ac.User
+	if raw := caseInsensitiveQuery(r).Get("userid"); raw != "" && !strings.EqualFold(raw, string(ac.User.ID)) {
+		if !ac.User.IsAdministrator {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		id, ok := parseUserGUID(raw)
+		if !ok {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		u, err := s.store.GetUser(r.Context(), id)
+		if err != nil {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		target = u
+	}
+	s.writeUserViews(w, r, target)
+}
+
+// handleUserViewsLegacy serves GET /Users/{userId}/Views, the legacy form of
+// GET /UserViews (contract: items.views.R1): the same items, in the same
+// order, for the user in the path. Unlike GET /UserViews an identifier that
+// names nobody here is a 404, and one that names another user is a 403.
+func (s *Server) handleUserViewsLegacy(w http.ResponseWriter, r *http.Request) {
+	id, ok := parseUserGUID(r.PathValue("userId"))
+	if !ok {
+		writeInvalidID(w, "userId", r.PathValue("userId"))
+		return
+	}
+	target, err := s.store.GetUser(r.Context(), id)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	ac, _ := AuthFromContext(r.Context())
+	if !ac.User.IsAdministrator && !strings.EqualFold(string(ac.User.ID), string(target.ID)) {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	s.writeUserViews(w, r, target)
+}
+
+// writeUserViews answers the views of one user, whichever route asked.
+func (s *Server) writeUserViews(w http.ResponseWriter, r *http.Request, u storage.User) {
 	// Only the libraries the user may access (policy EnableAllFolders /
 	// EnabledFolders) are listed.
-	ac, _ := AuthFromContext(r.Context())
-	scope, err := s.itemsScopeFor(r.Context(), ac.User)
+	scope, err := s.itemsScopeFor(r.Context(), u)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -77,14 +127,13 @@ func (s *Server) handleUserViews(w http.ResponseWriter, r *http.Request) {
 	for _, lib := range libs {
 		items = append(items, s.libraryBaseItemDto(r.Context(), lib))
 	}
-	// The Playlists view is listed once the user can read a playlist; the
-	// views are ordered by name.
+	// The Playlists view is listed once the user can read a playlist, and it
+	// takes its place among the libraries like any other view
+	// (admin.libraries.R4).
 	if s.userHasPlaylists(r.Context(), scope) {
 		items = append(items, s.playlistsViewDto(r.Context()))
-		sort.SliceStable(items, func(i, j int) bool {
-			return strings.ToLower(items[i].Name) < strings.ToLower(items[j].Name)
-		})
 	}
+	sortLibraryItems(items)
 
 	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{
 		Items:            items,

@@ -76,6 +76,11 @@ The administration pages call these on load; none carries state.
 - **admin.libraries.R2** A new name that another library already has (compared exactly, case-sensitive) answers `409` and changes nothing.
 - **admin.libraries.R3** Renaming a library to its own name answers `204` and changes nothing; an unknown `name` answers `404`.
 
+## <a id="library-order"></a>Library order
+
+- **admin.libraries.R4** Every list of libraries is ordered by the library's *sort name* (`items.sort.R8`), so case and accents are folded and numbers compare as numbers: `2 Coisas` before `10 Coisas`, `apple` before `Banana`, `Ábaco` before `apple`. The rule holds for `GET /UserViews` (and its legacy form `GET /Users/{userId}/Views`, `items.views.R1`), for `GET /Library/MediaFolders` (the playlists folder takes its place in the same order) and for the root form of `GET /Items` (the playlists folder stays last there, `items.list.R4`). Two names that fold to the same key come out in an order the reference does not derive from the names, so the contract asserts the folded order alone. A name whose leading character is punctuation the sort-name set leaves alone (`_`) is placed differently by the reference on each of those routes; Tinyfin follows the sort name (`DIV-32`).
+- **admin.libraries.R5** `GET /Library/VirtualFolders` is not sorted: the libraries come newest first, the reverse of the order they were created in, whatever their names are.
+
 ## Known differences
 
 * **Task list.** Twenty tasks like the reference, but most only exist to keep the list and the dashboard identical: they complete at once and do nothing (`admin.tasks.R10`). `isEnabled` and `isHidden=true` filtering is by the trigger list and `IsHidden` here; the reference additionally treats the library tasks as disabled while no library exists.
@@ -126,3 +131,4 @@ The administration pages call these on load; none carries state.
 | `admin.config.R11` | `admin.config.section-invalid` (divergent) |
 | `admin.libraries.R1` | `admin.libraries.rename-during-scan` |
 | `admin.libraries.R2`, `R3` | `admin.libraries.rename-rules` |
+| `admin.libraries.R4`, `R5` | `admin.libraries.order` |

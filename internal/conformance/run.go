@@ -1038,6 +1038,40 @@ func (c *Client) checkAssert(r *Response, a Assert, scratch map[string]string) e
 				return fmt.Errorf("%s does not match %v", show(x), want)
 			}
 		}
+	case "sequence":
+		// order, not membership: the values named appear in this order among
+		// whatever else the response carries. A list assertion that demanded
+		// the exact set would fail on a server another scenario has already
+		// touched, which is how an order rule ends up untested.
+		if !found {
+			return fmt.Errorf("not found")
+		}
+		wantArr, ok := want.([]any)
+		if !ok || len(wantArr) == 0 {
+			return fmt.Errorf("sequence needs a non-empty list")
+		}
+		gotArr, ok := got.([]any)
+		if !ok {
+			return fmt.Errorf("%s is not a list", show(got))
+		}
+		names := make(map[string]bool, len(wantArr))
+		for _, w := range wantArr {
+			names[fmt.Sprint(w)] = true
+		}
+		observed := make([]string, 0, len(wantArr))
+		for _, x := range gotArr {
+			if str := fmt.Sprint(x); names[str] {
+				observed = append(observed, str)
+			}
+		}
+		if len(observed) != len(wantArr) {
+			return fmt.Errorf("saw %d of the %d named values in %s", len(observed), len(wantArr), show(got))
+		}
+		for i := range wantArr {
+			if observed[i] != fmt.Sprint(wantArr[i]) {
+				return fmt.Errorf("order is %s, want %s", show(observed), show(wantArr))
+			}
+		}
 	case "hex32":
 		if !found {
 			return fmt.Errorf("not found")

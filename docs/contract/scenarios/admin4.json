@@ -315,5 +315,352 @@
     "expect": {}
    }
   ]
+ },
+ {
+  "id": "admin.libraries.order",
+  "endpoint": "GET /Library/VirtualFolders",
+  "spec": "admin.md#library-order",
+  "scope": "modern",
+  "tags": [
+   "admin"
+  ],
+  "covers": [
+   "admin.libraries.R4",
+   "admin.libraries.R5"
+  ],
+  "steps": [
+   {
+    "name": "create Zebra",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "Zebra",
+      "collectionType": "movies",
+      "refreshLibrary": "false"
+     },
+     "body": {
+      "LibraryOptions": {
+       "PathInfos": [
+        {
+         "Path": "{{server.mediaroot}}/Many"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "create apple",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "apple",
+      "collectionType": "movies",
+      "refreshLibrary": "false"
+     },
+     "body": {
+      "LibraryOptions": {
+       "PathInfos": [
+        {
+         "Path": "{{server.mediaroot}}/Many"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "create \u00c1baco",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "\u00c1baco",
+      "collectionType": "movies",
+      "refreshLibrary": "false"
+     },
+     "body": {
+      "LibraryOptions": {
+       "PathInfos": [
+        {
+         "Path": "{{server.mediaroot}}/Many"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "create 10 Coisas",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "10 Coisas",
+      "collectionType": "movies",
+      "refreshLibrary": "false"
+     },
+     "body": {
+      "LibraryOptions": {
+       "PathInfos": [
+        {
+         "Path": "{{server.mediaroot}}/Many"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "create Banana",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "Banana",
+      "collectionType": "movies",
+      "refreshLibrary": "false"
+     },
+     "body": {
+      "LibraryOptions": {
+       "PathInfos": [
+        {
+         "Path": "{{server.mediaroot}}/Many"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "create 2 Coisas",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "2 Coisas",
+      "collectionType": "movies",
+      "refreshLibrary": "false"
+     },
+     "body": {
+      "LibraryOptions": {
+       "PathInfos": [
+        {
+         "Path": "{{server.mediaroot}}/Many"
+        }
+       ]
+      }
+     }
+    },
+    "expect": {
+     "status": 204
+    }
+   },
+   {
+    "name": "the admin list is newest first, not sorted",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Library/VirtualFolders"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Name",
+       "op": "sequence",
+       "value": [
+        "2 Coisas",
+        "Banana",
+        "10 Coisas",
+        "\u00c1baco",
+        "apple",
+        "Zebra"
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "the views are ordered by sort name, not by byte",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews?userId={{user.admin.id}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "sequence",
+       "value": [
+        "2 Coisas",
+        "10 Coisas",
+        "\u00c1baco",
+        "apple",
+        "Banana",
+        "Zebra"
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "the administrator's folder list is ordered the same way, playlists in its place",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Library/MediaFolders"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "sequence",
+       "value": [
+        "2 Coisas",
+        "10 Coisas",
+        "\u00c1baco",
+        "apple",
+        "Banana",
+        "Playlists",
+        "Zebra"
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "and the root listing of Items, playlists last",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "sequence",
+       "value": [
+        "2 Coisas",
+        "10 Coisas",
+        "\u00c1baco",
+        "apple",
+        "Banana",
+        "Zebra",
+        "Playlists"
+       ]
+      }
+     ]
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "remove Zebra",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "Zebra",
+      "refreshLibrary": "false"
+     }
+    },
+    "expect": {}
+   },
+   {
+    "name": "remove apple",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "apple",
+      "refreshLibrary": "false"
+     }
+    },
+    "expect": {}
+   },
+   {
+    "name": "remove \u00c1baco",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "\u00c1baco",
+      "refreshLibrary": "false"
+     }
+    },
+    "expect": {}
+   },
+   {
+    "name": "remove 10 Coisas",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "10 Coisas",
+      "refreshLibrary": "false"
+     }
+    },
+    "expect": {}
+   },
+   {
+    "name": "remove Banana",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "Banana",
+      "refreshLibrary": "false"
+     }
+    },
+    "expect": {}
+   },
+   {
+    "name": "remove 2 Coisas",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Library/VirtualFolders",
+     "query": {
+      "name": "2 Coisas",
+      "refreshLibrary": "false"
+     }
+    },
+    "expect": {}
+   }
+  ]
  }
 ]

@@ -270,5 +270,187 @@
     "expect": {}
    }
   ]
+ },
+ {
+  "id": "items.views.alias",
+  "endpoint": "GET /Users/{userId}/Views",
+  "spec": "items.md#views",
+  "scope": "modern",
+  "requires": [
+   "library:movies",
+   "library:shows"
+  ],
+  "covers": [
+   "items.views.R1",
+   "items.views.R2"
+  ],
+  "steps": [
+   {
+    "name": "a user to ask for",
+    "as": "admin",
+    "request": {
+     "method": "POST",
+     "path": "/Users/New",
+     "body": {
+      "Name": "tmp-views-alias",
+      "Password": "Tmp-Pass-1"
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "u": "$.Id"
+    }
+   },
+   {
+    "name": "login tmp-views-alias",
+    "request": {
+     "method": "POST",
+     "path": "/Users/AuthenticateByName",
+     "body": {
+      "Username": "tmp-views-alias",
+      "Pw": "Tmp-Pass-1"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Client=\"Conformance\", Device=\"Conformance\", DeviceId=\"sc-views-alias{{run.suffix}}\", Version=\"1.0.0\""
+     }
+    },
+    "expect": {
+     "status": 200
+    },
+    "capture": {
+     "tok": "$.AccessToken"
+    }
+   },
+   {
+    "name": "the legacy path answers the caller's own views",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Users/{{capture.u}}/Views"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "sequence",
+       "value": [
+        "Movies",
+        "Shows"
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "an administrator may ask for another user's views",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Users/{{capture.u}}/Views"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "sequence",
+       "value": [
+        "Movies",
+        "Shows"
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "another user's views are refused",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Users/{{user.admin.id}}/Views"
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "an identifier that names nobody is not found",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Users/0123456789abcdef0123456789abcdef/Views"
+    },
+    "expect": {
+     "status": 404
+    }
+   },
+   {
+    "name": "anonymous is unauthorized",
+    "request": {
+     "method": "GET",
+     "path": "/Users/{{capture.u}}/Views"
+    },
+    "expect": {
+     "status": 401
+    }
+   },
+   {
+    "name": "UserViews takes the same user parameter",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews?userId={{capture.u}}"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.Items[*].Name",
+       "op": "sequence",
+       "value": [
+        "Movies",
+        "Shows"
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "UserViews refuses another user's views",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews?userId={{user.admin.id}}"
+    },
+    "expect": {
+     "status": 403
+    }
+   },
+   {
+    "name": "UserViews answers 403, not 404, for an unknown user",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews?userId=0123456789abcdef0123456789abcdef"
+    },
+    "expect": {
+     "status": 403
+    }
+   }
+  ],
+  "cleanup": [
+   {
+    "name": "remove tmp-views-alias",
+    "as": "admin",
+    "request": {
+     "method": "DELETE",
+     "path": "/Users/{{capture.u}}"
+    },
+    "expect": {}
+   }
+  ]
  }
 ]
