@@ -578,6 +578,24 @@ type baseItemPersonDto struct {
 	ID   string `json:"Id"`
 	Role string `json:"Role"`
 	Type string `json:"Type"`
+
+	// PrimaryImageTag is present exactly when the credit publishes a photo,
+	// and it is the field the client builds the image URL from: without it
+	// jellyfin-web draws an empty avatar and never asks for the picture, so
+	// nothing can be downloaded on demand. It is derived from the photo's URL
+	// (personImageTag), which means it is known before the bytes are — the
+	// download happens when the URL this tag points at is requested.
+	//
+	// Measured against the reference server with a cataloged movie whose NFO
+	// carries <actor><thumb>: the field is there when the person has a
+	// picture and absent when it does not, and the picture is served by the
+	// ordinary item image route.
+	PrimaryImageTag string `json:"PrimaryImageTag,omitempty"`
+
+	// ImageBlurHashes is the same shape BaseItemDto.ImageBlurHashes has: kind
+	// -> tag -> placeholder. The reference publishes it for a person with a
+	// picture, so the avatar fades in instead of popping.
+	ImageBlurHashes map[string]map[string]string `json:"ImageBlurHashes,omitzero"`
 }
 
 // personID mints a stable, canonical 32-hex Id for a cast/crew
@@ -589,13 +607,31 @@ type baseItemPersonDto struct {
 // a fresh one per response.
 func personID(name string) string { return namedItemID(storage.NamedPerson, name) }
 
-func peopleDtos(people []storage.Person) []baseItemPersonDto {
+// peopleDtos builds an item's credit list. The photo of each credit is a
+// separate lookup (person_images, one query for the whole list) because a
+// person is not a catalog item and its picture is downloaded on demand —
+// see person_image.go for why the tag is published before the bytes exist.
+func (s *Server) peopleDtos(ctx context.Context, people []storage.Person) []baseItemPersonDto {
 	if len(people) == 0 {
 		return nil
 	}
+	images := s.personImagesFor(ctx, people)
 	dtos := make([]baseItemPersonDto, 0, len(people))
 	for _, p := range people {
-		dtos = append(dtos, baseItemPersonDto{Name: p.Name, ID: personID(p.Name), Role: p.Role, Type: p.Type})
+		dto := baseItemPersonDto{Name: p.Name, ID: personID(p.Name), Role: p.Role, Type: p.Type}
+		if img, ok := images[storage.ItemID(dto.ID)]; ok && img.Source != "" {
+			tag := img.Tag
+			if tag == "" {
+				tag = personImageTag(img.Source)
+			}
+			dto.PrimaryImageTag = tag
+			if img.BlurHash != "" {
+				dto.ImageBlurHashes = map[string]map[string]string{
+					string(personPrimaryImageKind): {tag: img.BlurHash},
+				}
+			}
+		}
+		dtos = append(dtos, dto)
 	}
 	return dtos
 }
@@ -1262,7 +1298,7 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 		BackdropImageTags:       orEmptySlice(backdropImageTags),
 		ImageBlurHashes:         orEmptyNested(imageBlurHashes),
 		PrimaryImageAspectRatio: primaryImageAspectRatio,
-		People:                  peopleDtos(item.People),
+		People:                  s.peopleDtos(ctx, item.People),
 		GenreItems:              genreItemsFor(item.Genres),
 		Studios:                 studioItemsFor(item.Studios),
 		ExternalUrls:            externalURLsFor(item.Type, item.ProviderIDs),

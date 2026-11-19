@@ -24,6 +24,7 @@ import (
 
 	"github.com/rafaelvieiras/tinyfin/internal/chapterimg"
 	"github.com/rafaelvieiras/tinyfin/internal/guid"
+	"github.com/rafaelvieiras/tinyfin/internal/imagefetch"
 	"github.com/rafaelvieiras/tinyfin/internal/metadata"
 	"github.com/rafaelvieiras/tinyfin/internal/scan"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
@@ -110,6 +111,14 @@ type Config struct {
 	// library folder's own poster.jpg/fanart.jpg already provides.
 	ScanImageDir string
 
+	// ImageHosts is the operator's allowlist of hosts a downloaded image may
+	// come from beyond public addresses — a host name, an IP or a CIDR each
+	// (TINYFIN_IMAGE_HOSTS / -image-hosts). It covers both downloads the
+	// server makes on its own: the scanner's provider artwork, and an actor
+	// photo an NFO file names, which is untrusted input from inside the
+	// library. Empty allows public addresses only (internal/imagefetch).
+	ImageHosts []string
+
 	// ScanConcurrency bounds per-library scan workers (0 = scanner default).
 	ScanConcurrency int
 	// ScanProbeConcurrency bounds simultaneous ffprobe processes across all
@@ -183,11 +192,19 @@ type Server struct {
 	// imageCache holds copies of the images already served (imagecache.go);
 	// nil when the cache is disabled.
 	imageCache *imageCache
-	trickplay  *trickplay.Generator
-	chapterimg *chapterimg.Generator
-	scanState  *scanTracker
-	taskRTOnce sync.Once
-	taskRTv    *taskRuntime
+	// personImageFetcher downloads an actor photo the first time a client
+	// asks for it (person_image.go); the flights collapse concurrent
+	// requests for the same person into one download.
+	personImageFetcher personImageFetcher
+	personFlights      personImageFlights
+	// personImageClock is time.Now in production and a fixed clock in tests,
+	// so the negative cache's retry window is testable.
+	personImageClock func() time.Time
+	trickplay        *trickplay.Generator
+	chapterimg       *chapterimg.Generator
+	scanState        *scanTracker
+	taskRTOnce       sync.Once
+	taskRTv          *taskRuntime
 	// scanLibSem bounds libraries scanning concurrently (runScan).
 	scanLibSem chan struct{}
 	sessions   *sessionRegistry
@@ -249,17 +266,20 @@ func NewServer(store storage.Store, cfg Config) *Server {
 		scanner: scan.New(store, provider, scan.Config{
 			FFprobePath:      cfg.ScanFFprobePath,
 			ImageDir:         cfg.ScanImageDir,
+			ImageHosts:       cfg.ImageHosts,
 			Concurrency:      cfg.ScanConcurrency,
 			ProbeConcurrency: cfg.ScanProbeConcurrency,
 			ForceProbe:       cfg.ScanForceProbe,
 			DataDir:          cfg.DataDir,
 		}),
-		scanLibSem: make(chan struct{}, scanLibParallelism(cfg.ScanLibraryParallelism)),
-		scanState:  &scanTracker{},
-		sessions:   newSessionRegistry(store),
-		hub:        newWSHub(),
-		quick:      newQuickConnectState(),
-		pinLimit:   newPinThrottle(),
+		personImageFetcher: imagefetch.New(cfg.ImageHosts),
+		personImageClock:   time.Now,
+		scanLibSem:         make(chan struct{}, scanLibParallelism(cfg.ScanLibraryParallelism)),
+		scanState:          &scanTracker{},
+		sessions:           newSessionRegistry(store),
+		hub:                newWSHub(),
+		quick:              newQuickConnectState(),
+		pinLimit:           newPinThrottle(),
 	}
 	// Sessions persisted by a previous run are listed again before any client
 	// reports (sessions.go's restore): a restart must not empty GET /Sessions.

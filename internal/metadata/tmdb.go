@@ -17,6 +17,12 @@ import (
 // publicly documented image CDN, not configurable per-request.
 const tmdbImageBase = "https://image.tmdb.org/t/p/original"
 
+// tmdbProfileBase is where a person's profile_path resolves. TMDb publishes
+// profile photos at a fixed set of widths; w300 is the largest the reference
+// server's own client draws an actor avatar at, and a full-resolution original
+// would be several megabytes for a thumbnail no page ever shows bigger.
+const tmdbProfileBase = "https://image.tmdb.org/t/p/w300"
+
 // TMDBProvider is the direct-provider reference implementation D3 calls
 // for (docs/00-decision-log.md, docs/08) — queries The Movie Database's
 // public v3 REST API directly over HTTP. This is ordinary third-party API
@@ -138,6 +144,16 @@ type tmdbCrewMember struct {
 	ProfilePath string `json:"profile_path"`
 }
 
+// profileURL turns a credit's TMDB profile_path into the absolute URL its
+// photo is published at, or "" when the provider has none for that person
+// (which is common for crew and for minor cast).
+func profileURL(profilePath string) string {
+	if profilePath == "" {
+		return ""
+	}
+	return tmdbProfileBase + profilePath
+}
+
 // maxCastCredits bounds how many cast entries lookupMovie carries onto a
 // Result.People — a movie's full TMDB cast list can run to 50+ people, most
 // of them uncredited bit parts a detail page never needs; this project's
@@ -203,14 +219,14 @@ func creditsToPeople(c tmdbCredits) []Person {
 
 	people := make([]Person, 0, len(cast)+len(c.Crew))
 	for _, m := range cast {
-		people = append(people, Person{Name: m.Name, Role: m.Character, Type: "Actor", TMDBID: m.ID})
+		people = append(people, Person{Name: m.Name, Role: m.Character, Type: "Actor", TMDBID: m.ID, ImageURL: profileURL(m.ProfilePath)})
 	}
 	for _, m := range c.Crew {
 		t, ok := crewTypeForJob(m.Job)
 		if !ok {
 			continue
 		}
-		people = append(people, Person{Name: m.Name, Type: t, TMDBID: m.ID})
+		people = append(people, Person{Name: m.Name, Type: t, TMDBID: m.ID, ImageURL: profileURL(m.ProfilePath)})
 	}
 	sort.SliceStable(people, func(i, j int) bool {
 		return personPriority(people[i].Type) < personPriority(people[j].Type)

@@ -123,6 +123,12 @@ type Person struct {
 	Role   string // character name — Actor credits only, empty otherwise
 	Type   string // "Actor", "Director", "Writer", "Producer", ...
 	TMDBID int
+	// ImageURL is the absolute URL of the person's photo, empty when the
+	// provider has none. It is the provider's own URL, not a copy made here:
+	// internal/scan stores it on the credit (storage.Person.ImageURL) and the
+	// API downloads and caches the picture the first time a client asks
+	// (storage.PersonImage).
+	ImageURL string
 }
 
 // Result is the enrichment Lookup returns on a match. Every field is

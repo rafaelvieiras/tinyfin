@@ -1,5 +1,7 @@
 package storage
 
+import "time"
+
 // ImageRef is one entry in the list ImageStore.GetImageRefs returns for a
 // given (itemID, kind). ID is its storage identity (see ImageStore in
 // store.go for why this is ID-addressed, not positional). ItemID and Kind
@@ -61,4 +63,46 @@ type LibraryImage struct {
 	Width    int
 	Height   int
 	Size     int64
+}
+
+// PersonImage is the cached photo of one cast/crew credit — a person's own
+// picture, not any item's artwork (Person.ImageURL is where it comes from).
+//
+// It is a table of its own for the reason LibraryImage is: ImageRef hangs off
+// items(id) with a foreign key, and a person is not a catalog item here — the
+// person exists only as a name carried by items (storage.NamedID), with no
+// items row to attach a picture to. The person id is the key, and one row
+// holds both halves of the feature:
+//
+//   - Source, the URL the picture is published at, written by a scan from the
+//     item's credits and served as BaseItemPerson.PrimaryImageTag's input. It
+//     is what lets the DTO advertise an image before any byte is downloaded,
+//     which is the only way an on-demand download can ever start: the client
+//     asks for what the DTO names.
+//   - the download cache (Path/Tag/BlurHash/Width/Height/Size), filled the
+//     first time a client requests the picture, plus FailedAt, the negative
+//     cache that keeps a URL which does not answer from being retried on every
+//     request.
+//
+// Tag is derived from Source, not from the downloaded bytes: it has to be
+// stable before the download exists, and it has to change when Source changes,
+// which is also what makes a stale Path detectable.
+type PersonImage struct {
+	PersonID ItemID
+
+	// Source is the absolute URL the photo is published at, empty when the
+	// credit has none.
+	Source string
+
+	Path     string
+	Tag      string
+	BlurHash string
+	Width    int
+	Height   int
+	Size     int64
+
+	// FailedAt is when a download of Source last failed. Zero means no
+	// failure is recorded. A later attempt is allowed once it is older than
+	// the retry interval, and immediately when Source changes.
+	FailedAt time.Time
 }

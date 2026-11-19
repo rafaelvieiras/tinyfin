@@ -62,14 +62,18 @@ type commonNFOFields struct {
 	Writers   []string  `xml:"writer"`
 }
 
-// actorEl is one <actor><name/><role/><type/><order/></actor> credit. Type
-// is the credit kind and defaults to Actor; Order ranks the actors of one
-// document (credits without one come last, in document order).
+// actorEl is one <actor><name/><role/><type/><order/><thumb/></actor> credit.
+// Type is the credit kind and defaults to Actor; Order ranks the actors of one
+// document (credits without one come last, in document order). Thumb is where
+// the person's photo is published — an absolute URL written by whichever tool
+// built the NFO — and is the only source of a person image a library on disk
+// provides (storage.Person.ImageURL).
 type actorEl struct {
 	Name  string `xml:"name"`
 	Role  string `xml:"role"`
 	Type  string `xml:"type"`
 	Order string `xml:"order"`
+	Thumb string `xml:"thumb"`
 }
 
 // ratingsEl is Kodi's newer <ratings><rating><value>...</value></rating>
@@ -341,7 +345,9 @@ func nfoPeople(n commonNFOFields) []storage.Person {
 		if v := nfoNumber(a.Order); v != nil && *v >= 0 {
 			order = *v
 		}
-		actors = append(actors, ranked{p: storage.Person{Name: name, Role: trimSpace(a.Role), Type: typ}, order: order, seq: i})
+		actors = append(actors, ranked{p: storage.Person{
+			Name: name, Role: trimSpace(a.Role), Type: typ, ImageURL: trimSpace(a.Thumb),
+		}, order: order, seq: i})
 	}
 	sort.SliceStable(actors, func(i, j int) bool { return actors[i].order < actors[j].order })
 	var out []storage.Person
