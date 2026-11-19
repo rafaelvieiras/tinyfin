@@ -16415,7 +16415,8 @@
     ],
     "covers": [
       "users.token.R7",
-      "users.token.R8"
+      "users.token.R8",
+      "users.auth.R33"
     ],
     "steps": [
       {
@@ -16525,6 +16526,29 @@
         },
         "expect": {
           "status": 401
+        }
+      },
+      {
+        "name": "the logged-out session is gone",
+        "as": "admin",
+        "request": {
+          "method": "GET",
+          "path": "/Sessions"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$[*].DeviceId",
+              "op": "contains",
+              "value": "sc-users-token-logout-b{{run.suffix}}"
+            },
+            {
+              "path": "$[*].DeviceId",
+              "op": "notcontains",
+              "value": "sc-users-token-logout-a{{run.suffix}}"
+            }
+          ]
         }
       },
       {

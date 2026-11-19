@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to `setup-go` v7.1.0, `cache` v6.1.0, `upload-artifact` v7.0.2 and `download-artifact` v8.0.2.
 
 ### Fixed
+- A login now registers the session, as the reference does: `GET /Sessions` lists the device straight away with empty
+  capabilities, before the client reports anything, and `POST /Sessions/Logout` removes it. Tinyfin used to list a
+  session only after `POST /Sessions/Capabilities/Full`, so a client that logged in and never reported capabilities was
+  invisible to the admin dashboard, and a logged-out device stayed listed.
 - Chapter pictures and trickplay sheets pinned ffmpeg's decoder to a single thread. Measured on a 1080p source,
   one picture took 256 ms that way against 145 ms with ffmpeg's own thread count (1.8x slower), and the decode of a
   whole video, which is what one trickplay sheet costs, took 3.1 s against 0.8 s (3.9x slower). Neither step pins the

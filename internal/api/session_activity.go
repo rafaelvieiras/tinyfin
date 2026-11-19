@@ -96,6 +96,9 @@ func (s *Server) handleSessionsLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.writeActivity(ctx, sessionEndedEntry(ac.User.ID, ac.User.Name, s.tokenDeviceName(ctx, ac.AuthToken), ac.AuthToken.RemoteAddress))
+	// The reference drops the ended session from GET /Sessions (users.token.R10),
+	// rather than leaving it listed until the process restarts.
+	s.sessions.dropDevice(ctx, string(ac.AuthToken.DeviceID))
 	w.WriteHeader(http.StatusNoContent)
 }
 

@@ -52,7 +52,10 @@ func TestSessionsCapabilitiesFullRegistersSession(t *testing.T) {
 	// GET /Sessions is admin-only (server.go) — it lists every user's
 	// session, IP address included, not just the caller's own.
 	user := createTestAdminUser(t, st, "alice", "hunter2")
-	token := loginToken(t, ts.URL, user.Name, "hunter2")
+	// The login registers the session (users.auth.R33) and the capabilities
+	// below fill that same session, so the login carries the device id the
+	// rest of the test uses.
+	token := loginTokenWithDevice(t, ts.URL, user.Name, "hunter2", "device-alice-1")
 
 	capBody := sessionCapabilitiesDto{
 		PlayableMediaTypes:           []string{"Audio", "Video"},
@@ -180,5 +183,68 @@ func TestSessionsListEmptyIsEmptyArrayNotNull(t *testing.T) {
 	}
 	if got := strings.TrimSpace(w.Body.String()); got != "[]" {
 		t.Errorf("body = %q, want %q", got, "[]")
+	}
+}
+
+// TestLoginListsTheSessionAndLogoutDropsIt covers users.auth.R33 and
+// users.token.R10: the reference lists a device in GET /Sessions as soon as
+// it logs in — before it reports any capabilities — and drops it when the
+// session ends. Measured against the reference: a login answers 200 and
+// GET /Sessions then holds one entry for that DeviceId; POST /Sessions/Logout
+// answers 204 and the entry is gone.
+func TestLoginListsTheSessionAndLogoutDropsIt(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestAdminUser(t, st, "alice", "hunter2")
+	token := loginTokenWithDevice(t, ts.URL, user.Name, "hunter2", "device-alice-9")
+
+	listSessions := func() []sessionInfoDto {
+		t.Helper()
+		resp := sessionsAuthedRequest(t, ts.URL, token, "Jellyfin Web", "Chrome", "device-alice-9", "10.11.11", http.MethodGet, "/Sessions", nil)
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("GET /Sessions status = %d, want 200", resp.StatusCode)
+		}
+		var out []sessionInfoDto
+		if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+			t.Fatalf("decoding /Sessions: %v", err)
+		}
+		return out
+	}
+
+	sessions := listSessions()
+	if len(sessions) != 1 {
+		t.Fatalf("len(sessions) after login = %d, want 1", len(sessions))
+	}
+	if sessions[0].DeviceID != "device-alice-9" {
+		t.Errorf("DeviceId = %q, want device-alice-9", sessions[0].DeviceID)
+	}
+	if sessions[0].UserID != string(user.ID) {
+		t.Errorf("UserId = %q, want %q", sessions[0].UserID, user.ID)
+	}
+	if sessions[0].LastActivityDate.IsZero() {
+		t.Error("LastActivityDate is zero, want the login time")
+	}
+	if !sessions[0].LastPlaybackCheckIn.IsZero() {
+		t.Errorf("LastPlaybackCheckIn = %v, want the zero date (wire.date.R3)", sessions[0].LastPlaybackCheckIn)
+	}
+
+	logout := sessionsAuthedRequest(t, ts.URL, token, "Jellyfin Web", "Chrome", "device-alice-9", "10.11.11", http.MethodPost, "/Sessions/Logout", nil)
+	defer logout.Body.Close()
+	if logout.StatusCode != http.StatusNoContent {
+		t.Fatalf("POST /Sessions/Logout status = %d, want 204", logout.StatusCode)
+	}
+	// The token is gone, so list through a fresh login on another device.
+	other := loginTokenWithDevice(t, ts.URL, user.Name, "hunter2", "device-alice-10")
+	_ = other
+	resp := sessionsAuthedRequest(t, ts.URL, other, "Jellyfin Web", "Chrome", "device-alice-10", "10.11.11", http.MethodGet, "/Sessions", nil)
+	defer resp.Body.Close()
+	var after []sessionInfoDto
+	if err := json.NewDecoder(resp.Body).Decode(&after); err != nil {
+		t.Fatalf("decoding /Sessions: %v", err)
+	}
+	for _, s := range after {
+		if s.DeviceID == "device-alice-9" {
+			t.Fatalf("the logged-out device is still listed: %#v", s)
+		}
 	}
 }

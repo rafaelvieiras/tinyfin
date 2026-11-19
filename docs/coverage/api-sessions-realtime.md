@@ -21,7 +21,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| 🟡 partial | `GET /Sessions` | DefaultAuthorization | yes | 19/19 | In-process registry fed by authentication and playback reports; admin only. |
+| 🟡 partial | `GET /Sessions` | DefaultAuthorization | yes | 20/20 | In-process registry fed by authentication and playback reports; admin only. |
 | 🗓️ planned | `POST /Sessions/Capabilities` | DefaultAuthorization |  |  | The Full variant is served; the plain one is the older form of the same report. (priority: low) |
 | ✅ supported | `POST /Sessions/Capabilities/Full` | DefaultAuthorization | yes | 7/7 |  |
 | ✅ supported | `POST /Sessions/Logout` | DefaultAuthorization | yes | 1/1 |  |

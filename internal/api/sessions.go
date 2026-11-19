@@ -5,11 +5,13 @@
 // show who's currently connected.
 //
 // This is deliberately a small slice, not a general session-liveness
-// system: the registry is populated from exactly two signals this project
-// already produces — POST /Sessions/Capabilities/Full (system.go's
-// handleSessionsCapabilitiesFull, previously discarded entirely) and the
-// three playback-report routes (sessions_playback.go) touching
-// LastActivityDate on an already-registered device. No other route updates
+// system: the registry is populated from exactly three signals this project
+// already produces — a successful login (auth_by_name.go), which the
+// reference lists as a session before the client reports anything, POST
+// /Sessions/Capabilities/Full (system.go's handleSessionsCapabilitiesFull,
+// previously discarded entirely) which adds the capabilities to that same
+// session, and the three playback-report routes (sessions_playback.go)
+// touching LastActivityDate on an already-registered device. No other route updates
 // it, and there is no expiry/eviction beyond GET /Sessions's own
 // activeWithinSeconds filter — a session for a device that stops calling
 // either of those stays listed (IsActive: true) forever until the process
@@ -379,26 +381,35 @@ func (r *sessionRegistry) upsertCapabilities(ctx context.Context, deviceID, user
 	r.persist(ctx, snap)
 }
 
-// loginSession renders the session a login creates (users.auth.R12)
-// without registering it: the registry only tracks sessions that reported
-// capabilities (this file's package doc comment). An already-registered
-// session of the same device keeps its id and capabilities.
-func (r *sessionRegistry) loginSession(serverID, deviceID, userID, userName, client, deviceName, appVersion, remoteEndPoint string) sessionInfoDto {
-	ts := trackedSession{id: randomID()}
+// loginSession registers the session a login creates (users.auth.R12,
+// users.auth.R33) and renders it. The reference lists the device in GET
+// /Sessions as soon as it logs in, before it reports any capabilities; an
+// already-registered session of the same device keeps its id and
+// capabilities, so a second login refreshes one session rather than adding
+// another.
+func (r *sessionRegistry) loginSession(ctx context.Context, serverID, deviceID, userID, userName, client, deviceName, appVersion, remoteEndPoint string) sessionInfoDto {
+	ts := &trackedSession{id: randomID()}
 	r.mu.Lock()
 	if cur, ok := r.byDevice[deviceID]; ok {
-		ts.id = cur.id
-		ts.capabilities = cur.capabilities
+		ts = cur
 	} else {
 		// users.shape.R4: a fresh login session reports persistent ids.
 		ts.capabilities.SupportsPersistentIdentifier = true
 	}
-	r.mu.Unlock()
 	ts.userID, ts.userName, ts.client = userID, userName, client
 	ts.deviceName, ts.deviceID, ts.appVersion = deviceName, deviceID, appVersion
 	ts.remoteEndPoint = remoteEndPoint
 	ts.lastActivityDate = time.Now().UTC()
-	return ts.dto(serverID)
+	d := ts.dto(serverID)
+	snap := ts.snapshot()
+	if deviceID != "" {
+		r.byDevice[deviceID] = ts
+	}
+	r.mu.Unlock()
+	if deviceID != "" {
+		r.persist(ctx, snap)
+	}
+	return d
 }
 
 // touch stamps LastActivityDate to now for an already-registered session,

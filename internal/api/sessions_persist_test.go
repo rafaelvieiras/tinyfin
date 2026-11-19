@@ -114,6 +114,11 @@ func TestSessionsSurviveRestart(t *testing.T) {
 	if resp := sessionsAuthedRequest(t, ts2.URL, token, "Jellyfin Web", "Chrome", "device-restart", "10.11.11", http.MethodDelete, "/Devices?id=device-restart", nil); resp.StatusCode != http.StatusNoContent {
 		t.Fatalf("DELETE /Devices status = %d", resp.StatusCode)
 	}
+	// Nothing of the deleted session is left in the store: otherwise the next
+	// restart would resurrect it.
+	if saved, err := st2.QuerySessions(context.Background()); err != nil || len(saved) != 0 {
+		t.Fatalf("persisted sessions after deletion = %v, %v", saved, err)
+	}
 	// Deleting the device revoked its token (devices.R8), so the check
 	// signs in again; the new login must find no session to list.
 	relogin := sessionsAuthedRequest(t, ts2.URL, "", "Jellyfin Web", "Chrome", "device-restart", "10.11.11", http.MethodPost, "/Users/AuthenticateByName", map[string]string{"Username": user.Name, "Pw": "hunter2"})
@@ -127,11 +132,14 @@ func TestSessionsSurviveRestart(t *testing.T) {
 		t.Fatalf("decoding re-login: %v", err)
 	}
 	_ = relogin.Body.Close()
-	if left := listSessions(t, ts2.URL, again.AccessToken); len(left) != 0 {
-		t.Fatalf("after device deletion: %d sessions, want 0", len(left))
+	// The re-login itself lists a session (users.auth.R33), but a fresh one:
+	// no capabilities, a new id, nothing of the deleted device's state.
+	left := listSessions(t, ts2.URL, again.AccessToken)
+	if len(left) != 1 || left[0].DeviceID != "device-restart" {
+		t.Fatalf("after device deletion: %#v, want the re-login's own one session", left)
 	}
-	if saved, err := st2.QuerySessions(context.Background()); err != nil || len(saved) != 0 {
-		t.Fatalf("persisted sessions after deletion = %v, %v", saved, err)
+	if len(left[0].Capabilities.PlayableMediaTypes) != 0 || left[0].ID == before[0].ID {
+		t.Fatalf("the re-login restored the deleted session: %+v", left[0])
 	}
 }
 

@@ -4164,6 +4164,7 @@
     "playstate.session.transcoding-info-segment-restart",
     "playstate.session.transcoding-info-stopped",
     "playstate.start.ignored-fields-accepted",
+    "users.token.logout-ends-session",
     "wire.date.other-members",
     "wire.path.trailing-slash-reads"
    ],

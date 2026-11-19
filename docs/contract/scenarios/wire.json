@@ -938,7 +938,8 @@
     ],
     "covers": [
       "wire.date.R1",
-      "wire.date.R3"
+      "wire.date.R3",
+      "users.auth.R33"
     ],
     "requires": [
       "identity:apikey"
