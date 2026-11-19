@@ -909,6 +909,45 @@
     }
    },
    {
+    "name": "hiding a library from My Media leaves the grouping options alone",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/UserViews/GroupingOptions"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Name",
+       "op": "sequence",
+       "value": [
+        "Movies",
+        "Shows"
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "and leaves the latest row alone",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest?limit=30"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Alpha Movie (2015)"
+      }
+     ]
+    }
+   },
+   {
     "name": "a value that is not a boolean is refused",
     "as": "token:{{capture.tok}}",
     "request": {
@@ -986,6 +1025,24 @@
     }
    },
    {
+    "name": "the filters parameter does not bring it back",
+    "as": "token:{{capture.tok}}",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest?limit=30&filters=IsUnplayed"
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Name",
+       "op": "contains",
+       "value": "Alpha Movie (2015)"
+      }
+     ]
+    }
+   },
+   {
     "name": "the page unchecks a library from latest",
     "as": "token:{{capture.tok}}",
     "request": {
@@ -1021,15 +1078,26 @@
     }
    },
    {
-    "name": "grouped folders are stored",
+    "name": "the page saves every member in one request",
     "as": "token:{{capture.tok}}",
     "request": {
      "method": "POST",
      "path": "/Users/{{capture.u}}/Configuration",
      "body": {
+      "OrderedViews": [
+       "{{library.shows.id}}",
+       "{{library.movies.id}}"
+      ],
+      "MyMediaExcludes": [
+       "{{library.movies.id}}"
+      ],
+      "LatestItemsExcludes": [
+       "{{library.movies.id}}"
+      ],
       "GroupedFolders": [
        "{{library.movies.id}}"
-      ]
+      ],
+      "HidePlayedInLatest": false
      }
     },
     "expect": {
@@ -1037,7 +1105,7 @@
     }
    },
    {
-    "name": "and come back on the user",
+    "name": "every member the page saves comes back on the user",
     "as": "token:{{capture.tok}}",
     "request": {
      "method": "GET",
@@ -1047,9 +1115,34 @@
      "status": 200,
      "json": [
       {
+       "path": "$.Configuration.OrderedViews[0]",
+       "op": "eq",
+       "value": "{{library.shows.id}}"
+      },
+      {
+       "path": "$.Configuration.OrderedViews[1]",
+       "op": "eq",
+       "value": "{{library.movies.id}}"
+      },
+      {
+       "path": "$.Configuration.MyMediaExcludes[0]",
+       "op": "eq",
+       "value": "{{library.movies.id}}"
+      },
+      {
+       "path": "$.Configuration.LatestItemsExcludes[0]",
+       "op": "eq",
+       "value": "{{library.movies.id}}"
+      },
+      {
        "path": "$.Configuration.GroupedFolders[0]",
        "op": "eq",
        "value": "{{library.movies.id}}"
+      },
+      {
+       "path": "$.Configuration.HidePlayedInLatest",
+       "op": "eq",
+       "value": false
       }
      ]
     }

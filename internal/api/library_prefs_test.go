@@ -336,3 +336,46 @@ func TestUserItemsLatestRoute(t *testing.T) {
 		}
 	}
 }
+
+// TestGroupingOptionsIgnoreMyMediaExcludes is items.views.R7's other half: the
+// "Include in My Media" checkboxes take a library out of the views, and out of
+// nothing else — the grouping options keep offering it, as the reference does.
+func TestGroupingOptionsIgnoreMyMediaExcludes(t *testing.T) {
+	base, token, adminID, _ := newGroupingEnv(t)
+
+	opts, status := getGroupingOptions(t, base, token, "/UserViews/GroupingOptions")
+	if status != http.StatusOK {
+		t.Fatalf("GroupingOptions: status %d", status)
+	}
+	var moviesID string
+	for _, o := range opts {
+		if o.Name == "9 Vidas" {
+			moviesID = o.Id
+		}
+	}
+	if moviesID == "" {
+		t.Fatalf("the fixture has no library to exclude: %v", opts)
+	}
+
+	resp := doPrefsJSON(t, http.MethodPost, base+"/Users/"+adminID+"/Configuration", token,
+		map[string]any{"MyMediaExcludes": []string{moviesID}})
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("POST Configuration: status %d", resp.StatusCode)
+	}
+
+	if names, _ := viewNames(t, base+"/UserViews", token); containsName(names, "9 Vidas") {
+		t.Fatalf("an excluded library is still in the views: %v", names)
+	}
+	after, status := getGroupingOptions(t, base, token, "/UserViews/GroupingOptions")
+	if status != http.StatusOK {
+		t.Fatalf("GroupingOptions after the save: status %d", status)
+	}
+	found := false
+	for _, o := range after {
+		found = found || o.Id == moviesID
+	}
+	if !found {
+		t.Fatalf("the excluded library left the grouping options: %v", after)
+	}
+}
