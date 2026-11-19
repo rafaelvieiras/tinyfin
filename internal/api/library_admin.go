@@ -58,7 +58,9 @@ type virtualFolderInfo struct {
 }
 
 func (s *Server) handleGetVirtualFolders(w http.ResponseWriter, r *http.Request) {
-	libs, err := s.store.QueryLibraries(r.Context())
+	// Not sorted: newest first, the reverse of the creation order
+	// (admin.libraries.R5).
+	libs, err := s.store.QueryLibrariesNewestFirst(r.Context())
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

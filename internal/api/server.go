@@ -759,6 +759,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /Users", requireAuth(s.handleUsersList))
 	s.mux.HandleFunc("POST /Users/New", requireAdmin(s.handleUsersCreate))
 	s.mux.HandleFunc("GET /Users/{userId}", requireAuth(s.handleUsersGet))
+	// items.views.R1: the legacy form of GET /UserViews, which older clients
+	// (and the published SDK's getUserViews) still call.
+	s.mux.HandleFunc("GET /Users/{userId}/Views", requireAuth(s.handleUserViewsLegacy))
 	s.mux.HandleFunc("DELETE /Users/{userId}", requireAdmin(s.handleUsersDelete))
 	s.mux.HandleFunc("POST /Users/{userId}/Policy", requireAdmin(s.handleUsersPolicy))
 	// Update and configuration: self or administrator (users.update,

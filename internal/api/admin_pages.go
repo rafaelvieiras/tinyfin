@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
-	"sort"
 	"strings"
 
 	"github.com/rafaelvieiras/tinyfin/internal/guid"
@@ -193,7 +192,8 @@ func (s *Server) handleMediaFolders(w http.ResponseWriter, r *http.Request) {
 	default:
 		items = append(items, pl)
 	}
-	sort.SliceStable(items, func(i, j int) bool { return strings.ToLower(items[i].Name) < strings.ToLower(items[j].Name) })
+	// Ordered by sort name, the playlists folder included (admin.libraries.R4).
+	sortLibraryItems(items)
 	writeJSON(w, http.StatusOK, baseItemDtoQueryResult{Items: items, TotalRecordCount: len(items), StartIndex: 0})
 }
 

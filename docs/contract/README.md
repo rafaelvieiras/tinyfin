@@ -120,11 +120,13 @@ reference source open in the same session.
 * `expect.status` is a number or an array (any of); `expect.headers` values are
   `present`, `absent`, `/regex/` or a literal (case-insensitive); `expect.json`
   asserts on `$.path` with ops `eq ne exists absent type len gte lte contains
-  notcontains matches allmatch in hex32` (`hex32`: every value at the path is 32
+  notcontains matches allmatch sequence in hex32` (`hex32`: every value at the path is 32
   lowercase hex digits without dashes; an empty wildcard result fails;
   `allmatch`: every value at the path, one value or each element of a
   wildcard, is a string matching the regular expression; an empty wildcard
-  result fails).
+  result fails; `sequence`: the named values appear in this order among
+  whatever else the list carries, and every named value is there — an order
+  rule stays assertable on a server other scenarios have already used).
   `expect.problem: <status>` asserts an RFC 9110 problem document (`type`,
   `title`, `status` equal to the number). `expect.text` asserts on the raw body
   (subtitle documents, playlists): a list of `{"op", "value"}` with ops `eq`

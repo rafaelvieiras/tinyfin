@@ -324,6 +324,9 @@ type LyricStore interface {
 type LibraryStore interface {
 	GetLibrary(ctx context.Context, id LibraryID) (Library, error)
 	QueryLibraries(ctx context.Context) ([]Library, error)
+	// QueryLibrariesNewestFirst lists the libraries newest first, the reverse
+	// of the order they were created in (admin.libraries.R5).
+	QueryLibrariesNewestFirst(ctx context.Context) ([]Library, error)
 	UpsertLibrary(ctx context.Context, lib Library) error
 	// SetLibraryScanned records the end of a scan on an existing library
 	// without touching any other column, so a scan that started before a

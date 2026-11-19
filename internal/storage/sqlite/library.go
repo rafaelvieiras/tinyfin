@@ -52,7 +52,20 @@ func (s *Store) GetLibrary(ctx context.Context, id storage.LibraryID) (storage.L
 }
 
 func (s *Store) QueryLibraries(ctx context.Context) ([]storage.Library, error) {
-	rows, err := s.ex.QueryContext(ctx, `SELECT id, name, collection_type, paths, last_scanned_at, library_options FROM libraries ORDER BY name ASC`)
+	return s.queryLibraries(ctx, `ORDER BY name ASC`)
+}
+
+// QueryLibrariesNewestFirst lists the libraries in the reverse of the order
+// they were created in, which is the order GET /Library/VirtualFolders reports
+// (contract: admin.libraries.R5). SQLite's rowid is that order: the table has
+// a TEXT primary key, so the implicit rowid still grows with every insert, and
+// a rename updates the row in place instead of moving it.
+func (s *Store) QueryLibrariesNewestFirst(ctx context.Context) ([]storage.Library, error) {
+	return s.queryLibraries(ctx, `ORDER BY rowid DESC`)
+}
+
+func (s *Store) queryLibraries(ctx context.Context, order string) ([]storage.Library, error) {
+	rows, err := s.ex.QueryContext(ctx, `SELECT id, name, collection_type, paths, last_scanned_at, library_options FROM libraries `+order)
 	if err != nil {
 		return nil, fmt.Errorf("sqlite: querying libraries: %w", err)
 	}
