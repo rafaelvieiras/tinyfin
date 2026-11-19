@@ -1,0 +1,76 @@
+name: Jellyfin tools
+description: >
+  Installs the ffmpeg the reference server runs, plus the tools the media
+  scripts call, from packages resolved once and kept as .deb files.
+
+# Why a cache instead of a plain apt install: no hosted image ships
+# jellyfin-ffmpeg, so every run added the Jellyfin repository and pulled the
+# closure of the distro ffmpeg on top of it -- about eighty packages, and on a
+# mirror having a bad day the download alone outlived the job's timeout. The
+# packages are immutable for a given release, so they are fetched once, stored
+# under ~/.cache and installed offline from there.
+#
+# The two builds on purpose: the distro ffmpeg stays first in $PATH because the
+# fixtures are pinned to the bytes the reference's own build writes (the media
+# scripts take them from the Jellyfin container image) and playback9's rates
+# follow those bytes; the server and the runner read the packaged build through
+# TINYFIN_FFMPEG_PATH.
+
+inputs:
+  cache-revision:
+    description: Bump to invalidate the package cache (e.g. after a noble point release)
+    required: false
+    default: v1
+
+runs:
+  using: composite
+  steps:
+    # Restore and save as two steps, both run here. The single-step form saves
+    # in a post-job step, and a post-job step only runs when the job is about to
+    # finish cleanly: a later failure threw away a fifteen-minute download.
+    - name: Restore the packages
+      id: debs
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/jellyfin-debs
+        key: jellyfin-debs-${{ runner.os }}-noble-${{ inputs.cache-revision }}
+
+    - name: Download them
+      if: steps.debs.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        sudo apt-get update
+        mkdir -p ~/.cache/jellyfin-debs
+        sudo install -d -m 0755 /etc/apt/keyrings
+        curl -fsSL https://repo.jellyfin.org/jellyfin_team.gpg.key \
+          | gpg --dearmor | sudo tee /etc/apt/keyrings/jellyfin.gpg >/dev/null
+        echo "deb [signed-by=/etc/apt/keyrings/jellyfin.gpg] https://repo.jellyfin.org/ubuntu noble main" \
+          | sudo tee /etc/apt/sources.list.d/jellyfin.list >/dev/null
+        sudo apt-get update
+        # -d = download only: apt resolves the whole closure into the archive
+        # directory and dpkg installs it later without touching the network.
+        sudo apt-get install -d -y --no-install-recommends \
+          curl gnupg ffmpeg mkvtoolnix xorriso jellyfin-ffmpeg8
+        sudo cp /var/cache/apt/archives/*.deb ~/.cache/jellyfin-debs/
+        echo "$(ls ~/.cache/jellyfin-debs | wc -l) packages cached"
+
+    - name: Save the packages
+      if: steps.debs.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/jellyfin-debs
+        key: jellyfin-debs-${{ runner.os }}-noble-${{ inputs.cache-revision }}
+
+    - name: Install them
+      shell: bash
+      run: |
+        set -euo pipefail
+        # dpkg does not resolve an order by itself; -f install completes what the
+        # cached set left out of order, and reaches the mirror only if the cache
+        # is not what the manifest expects.
+        sudo dpkg -i ~/.cache/jellyfin-debs/*.deb || sudo apt-get -f install -y
+        echo TINYFIN_FFMPEG_PATH=/usr/lib/jellyfin-ffmpeg/ffmpeg >> "$GITHUB_ENV"
+        echo TINYFIN_FFPROBE_PATH=/usr/lib/jellyfin-ffmpeg/ffprobe >> "$GITHUB_ENV"
+        ffmpeg -version | head -1
+        /usr/lib/jellyfin-ffmpeg/ffmpeg -version | head -1
