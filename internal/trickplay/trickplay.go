@@ -399,7 +399,7 @@ func (g *Generator) generate(ctx context.Context, input, dir string, p Plan, sta
 		return storage.TrickplayInfo{}, err
 	}
 	vf := fmt.Sprintf("fps=1000/%d,scale=%d:%d", p.IntervalMS, p.Width, p.Height)
-	if err := g.run(ctx, "-i", input, "-map", "0:v:0", "-an", "-sn", "-vf", vf, "-threads", "1",
+	if err := g.run(ctx, "-i", input, "-map", "0:v:0", "-an", "-sn", "-vf", vf,
 		"-c:v", "mjpeg", "-q:v", strconv.Itoa(jpegQScale), "-start_number", "0",
 		"-f", "image2", filepath.Join(thumbs, "%d.jpg")); err != nil {
 		return storage.TrickplayInfo{}, err
@@ -415,7 +415,7 @@ func (g *Generator) generate(ctx context.Context, input, dir string, p Plan, sta
 		return storage.TrickplayInfo{}, fmt.Errorf("ffmpeg produced no thumbnail")
 	}
 	if err := g.run(ctx, "-start_number", "0", "-i", filepath.Join(thumbs, "%d.jpg"),
-		"-vf", fmt.Sprintf("tile=%dx%d", p.TileWidth, p.TileHeight), "-threads", "1",
+		"-vf", fmt.Sprintf("tile=%dx%d", p.TileWidth, p.TileHeight),
 		"-c:v", "mjpeg", "-q:v", strconv.Itoa(jpegQScale), "-start_number", "0",
 		"-f", "image2", filepath.Join(tmp, "%d.jpg")); err != nil {
 		return storage.TrickplayInfo{}, err
@@ -457,8 +457,13 @@ func (g *Generator) generate(ctx context.Context, input, dir string, p Plan, sta
 	}, nil
 }
 
+// run executes one ffmpeg step. It does not pin the thread count: the decode
+// of a whole video is the expensive part of a sheet, and one thread made it
+// about four times slower on a 1080p source (the reference does not pin it
+// either). TrickplayConcurrency, not this, is the knob that bounds how much
+// CPU a batch takes.
 func (g *Generator) run(ctx context.Context, args ...string) error {
-	full := append([]string{"-v", "error", "-nostdin", "-threads", "1"}, args...)
+	full := append([]string{"-v", "error", "-nostdin"}, args...)
 	if out, err := exec.CommandContext(ctx, g.ffmpeg, full...).CombinedOutput(); err != nil {
 		return fmt.Errorf("ffmpeg: %v: %s", err, tail(string(out)))
 	}

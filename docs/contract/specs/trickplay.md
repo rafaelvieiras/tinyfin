@@ -34,7 +34,7 @@ Scenarios: [`../scenarios/trickplay.json`](../scenarios/trickplay.json). Fixture
 
 ## Known differences
 
-* **Options.** The reference reads width, interval, grid, JPEG quality, thread count and priority from server configuration (`TrickplayOptions`); Tinyfin always uses its defaults (320 px, 10 s, 10x10, quality 4) and runs one single-threaded ffmpeg at a time (`-trickplay-concurrency` / `TINYFIN_TRICKPLAY_CONCURRENCY`).
+* **Options.** The reference reads width, interval, grid, JPEG quality, thread count and priority from server configuration (`TrickplayOptions`); Tinyfin always uses its defaults (320 px, 10 s, 10x10, quality 4) and runs one ffmpeg at a time, with ffmpeg's own thread count (`-trickplay-concurrency` / `TINYFIN_TRICKPLAY_CONCURRENCY` bounds how many run at once).
 * **When.** The reference also generates through a daily scheduled task for libraries that switched generation on but not the during-scan option; Tinyfin does that only on a refresh with `RegenerateTrickplay=true` (item or library), which also forces the sheets to be made again.
 * **Disabling.** Turning the option off and scanning again removes the files in both servers; the reference keeps the `Trickplay` member (pointing at nothing), Tinyfin removes it too. Not asserted.
 * **Storage.** Sheets are kept in `<data dir>/trickplay/<item id>/<width>/<n>.jpg`, or beside the video in `<name>.trickplay/<width> - <c>x<r>/` when `SaveTrickplayWithMedia` is set. JPEG bytes and sizes differ, so `Bandwidth` differs by value (asserted only to be positive).

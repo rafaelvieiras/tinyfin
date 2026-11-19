@@ -18,6 +18,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   touch this file: the entries below are written by hand, with the `[intentional deviation]` markers the project uses.
 
 ### Fixed
+- Chapter pictures and trickplay sheets pinned ffmpeg's decoder to a single thread. Measured on a 1080p source,
+  one picture took 256 ms that way against 145 ms with ffmpeg's own thread count (1.8x slower), and the decode of a
+  whole video, which is what one trickplay sheet costs, took 3.1 s against 0.8 s (3.9x slower). Neither step pins the
+  thread count any more; the reference does not pin it either, and `-trickplay-concurrency` remains the knob that
+  bounds how much CPU a batch takes.
+- A chapter's picture was the single frame at the chapter mark, so a chapter that opens on a black frame or a fade
+  got a black or a blurry picture. It is now chosen out of the 24 frames that follow the mark, as the reference does
+  (measured on a chapter opening in a black segment: a 672-byte black still before, a 10 KB picture after). Chapters
+  near the end of a file behave as before: with no frame left to read, no picture is written and the item stops there.
 - The server's background loops (socket watchdog, library monitor, task scheduler) ran on a context nothing could
   cancel, so `SIGTERM` stopped the http server and left them writing under the data directory until the process
   died. `Server.Shutdown` now ends them, stops a chapter or trickplay batch the way the stop button does, and waits
