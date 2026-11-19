@@ -252,7 +252,7 @@ func TestQuickConnectDisabled(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = st.Close() })
-	ts := httptest.NewServer(NewServer(st, Config{ServerName: "T", QuickConnectDisabled: true}).Handler())
+	ts := httptest.NewServer(startTestServer(t, st, Config{ServerName: "T", QuickConnectDisabled: true}).Handler())
 	t.Cleanup(ts.Close)
 
 	if code, body := rawDo(t, ts.URL, http.MethodGet, "/QuickConnect/Enabled", "", ""); code != 200 || string(bytes.TrimSpace(body)) != "false" {
@@ -309,7 +309,7 @@ func TestQuickConnectDisabledValidationFirst(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = st.Close() })
 	createTestAdminUser(t, st, "admin", "adminpw")
-	ts := httptest.NewServer(NewServer(st, Config{ServerName: "T", QuickConnectDisabled: true}).Handler())
+	ts := httptest.NewServer(startTestServer(t, st, Config{ServerName: "T", QuickConnectDisabled: true}).Handler())
 	t.Cleanup(ts.Close)
 	admin := deviceLogin(t, ts.URL, "admin", "adminpw", "adm")
 	auth := authHeader("adm", admin)
@@ -398,7 +398,7 @@ func TestQuickConnectLifetimes(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = st.Close() })
-	srv := NewServer(st, Config{ServerName: "TestServer"})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer"})
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 	createTestUser(t, st, "alice", "pw")

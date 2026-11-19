@@ -31,7 +31,7 @@ func newTestServer(t *testing.T) (*httptest.Server, *sqlite.Store) {
 		}
 	})
 
-	srv := NewServer(st, Config{ServerName: "TestServer"})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer"})
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 	return ts, st

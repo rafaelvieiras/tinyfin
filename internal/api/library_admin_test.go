@@ -214,7 +214,7 @@ func TestSaveLibraryOptions_RoundTripsThroughGet(t *testing.T) {
 	admin := createTestAdminUser(t, st, "admin", "adminpass")
 	token := loginToken(t, ts.URL, admin.Name, "adminpass")
 	client := adminClient(t, ts.URL, token)
-	srv := NewServer(st, Config{ServerName: "TestServer"})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer"})
 
 	libID := createTestLibrary(t, st, "Movies", storage.CollectionTypeMovies)
 
@@ -259,7 +259,7 @@ func TestSaveLibraryOptions_RoundTripsThroughGet(t *testing.T) {
 
 func TestSaveLibraryOptions_UnknownIdIs404(t *testing.T) {
 	_, st := newTestServer(t)
-	srv := NewServer(st, Config{ServerName: "TestServer"})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer"})
 
 	body := map[string]any{"Id": "does-not-exist", "LibraryOptions": map[string]any{}}
 	w := callHandlerDirect(t, srv.handleSaveLibraryOptions, http.MethodPost, "/Library/VirtualFolders/LibraryOptions", body)
@@ -270,7 +270,7 @@ func TestSaveLibraryOptions_UnknownIdIs404(t *testing.T) {
 
 func TestRenameVirtualFolder_Success(t *testing.T) {
 	_, st := newTestServer(t)
-	srv := NewServer(st, Config{ServerName: "TestServer"})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer"})
 
 	libID := createTestLibrary(t, st, "OldName", storage.CollectionTypeMovies)
 
@@ -293,7 +293,7 @@ func TestRenameVirtualFolder_Success(t *testing.T) {
 
 func TestRenameVirtualFolder_UnknownNameIs404(t *testing.T) {
 	_, st := newTestServer(t)
-	srv := NewServer(st, Config{ServerName: "TestServer"})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer"})
 
 	w := callHandlerDirect(t, srv.handleRenameVirtualFolder, http.MethodPost, "/Library/VirtualFolders/Name?name=DoesNotExist&newName=Whatever", nil)
 	if w.Code != http.StatusNotFound {
@@ -303,7 +303,7 @@ func TestRenameVirtualFolder_UnknownNameIs404(t *testing.T) {
 
 func TestRenameVirtualFolder_EmptyNewNameIs400(t *testing.T) {
 	_, st := newTestServer(t)
-	srv := NewServer(st, Config{ServerName: "TestServer"})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer"})
 
 	createTestLibrary(t, st, "SomeLib", storage.CollectionTypeMovies)
 

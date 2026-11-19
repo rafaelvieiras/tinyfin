@@ -322,7 +322,9 @@ func (s *Server) startTask(ctx context.Context, def taskDef) error {
 		rt.mu.Unlock()
 		start := time.Now().UTC()
 		s.notifyScheduledTasks(context.Background(), true)
+		s.bg.Add(1)
 		go func() {
+			defer s.bg.Done()
 			status := "Completed"
 			if err := s.runMaintenanceTask(def.key, start); err != nil {
 				log.Printf("api: scheduled task %s: %v", def.key, err)
@@ -376,11 +378,19 @@ func (s *Server) stopTask(def taskDef) {
 	}
 }
 
+// schedulerStep is how often the task scheduler looks at its triggers: the
+// reference's 30 seconds. A variable so a test can watch a trigger fire
+// without waiting half a minute.
+var schedulerStep = 30 * time.Second
+
 // runTaskScheduler fires triggers: StartupTrigger once at boot, Interval
 // every IntervalTicks since the last fire, Daily/Weekly at the local time
-// of day (and weekday). Checked every 30 seconds.
+// of day (and weekday). Checked every schedulerStep.
 func (s *Server) runTaskScheduler(ctx context.Context) {
-	const step = 30 * time.Second
+	step := schedulerStep
+	if step <= 0 {
+		step = 30 * time.Second
+	}
 	boot := time.Now()
 	prev := boot
 	first := true

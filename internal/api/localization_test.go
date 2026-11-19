@@ -14,7 +14,7 @@ import (
 
 func TestLocalizationCultures(t *testing.T) {
 	_, st := newTestServer(t)
-	srv := NewServer(st, Config{ServerName: "TestServer"})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer"})
 
 	w := callHandlerDirect(t, srv.handleLocalizationCultures, http.MethodGet, "/Localization/cultures", nil)
 	if w.Code != http.StatusOK {
@@ -52,7 +52,7 @@ func TestLocalizationCultures(t *testing.T) {
 
 func TestLocalizationCountries(t *testing.T) {
 	_, st := newTestServer(t)
-	srv := NewServer(st, Config{ServerName: "TestServer"})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer"})
 
 	w := callHandlerDirect(t, srv.handleLocalizationCountries, http.MethodGet, "/Localization/countries", nil)
 	if w.Code != http.StatusOK {
@@ -91,7 +91,7 @@ func TestLocalizationCountries(t *testing.T) {
 // this project's one real metadata.Provider (internal/metadata/tmdb.go).
 func TestLibrariesAvailableOptions_Movies(t *testing.T) {
 	_, st := newTestServer(t)
-	srv := NewServer(st, Config{ServerName: "TestServer"})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer"})
 
 	w := callHandlerDirect(t, srv.handleLibrariesAvailableOptions, http.MethodGet, "/Libraries/AvailableOptions?IsNewLibrary=false&LibraryContentType=movies", nil)
 	if w.Code != http.StatusOK {
@@ -125,7 +125,7 @@ func TestLibrariesAvailableOptions_Movies(t *testing.T) {
 // LibraryContentType=mixed): Series/Season/Episode/Movie, in that order.
 func TestLibrariesAvailableOptions_NoContentTypeDefaultsToMixed(t *testing.T) {
 	_, st := newTestServer(t)
-	srv := NewServer(st, Config{ServerName: "TestServer"})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer"})
 
 	w := callHandlerDirect(t, srv.handleLibrariesAvailableOptions, http.MethodGet, "/Libraries/AvailableOptions?IsNewLibrary=false", nil)
 	if w.Code != http.StatusOK {
@@ -154,7 +154,7 @@ func TestLibrariesAvailableOptions_NoContentTypeDefaultsToMixed(t *testing.T) {
 // fetcher lists rather than an invented capability.
 func TestLibrariesAvailableOptions_MusicHasNoFetchers(t *testing.T) {
 	_, st := newTestServer(t)
-	srv := NewServer(st, Config{ServerName: "TestServer"})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer"})
 
 	w := callHandlerDirect(t, srv.handleLibrariesAvailableOptions, http.MethodGet, "/Libraries/AvailableOptions?IsNewLibrary=false&LibraryContentType=music", nil)
 	if w.Code != http.StatusOK {

@@ -212,6 +212,15 @@ type Server struct {
 	// wizardMu serializes the wizard's state transitions (first account,
 	// completion) so two concurrent posts cannot both win.
 	wizardMu sync.Mutex
+	// baseCtx is the context the server's long-lived loops run under, and
+	// baseCancel is how Shutdown ends them; bg counts those loops so
+	// Shutdown waits for them. A server that nobody shuts down (every test
+	// that builds one) keeps writing to its data directory until the
+	// process ends, which is how a temp directory removal used to race a
+	// background write.
+	baseCtx    context.Context
+	baseCancel context.CancelFunc
+	bg         sync.WaitGroup
 }
 
 // NewServer builds a Server backed by store, applying cfg defaults where
@@ -262,10 +271,39 @@ func NewServer(store storage.Store, cfg Config) *Server {
 	s.monitorKick = make(chan struct{}, 1)
 	s.loadLocalNetwork()
 	s.routes()
-	go s.runWSWatchdog(context.Background())
-	go s.runLibraryMonitor(context.Background())
-	go s.runTaskScheduler(context.Background())
+	s.baseCtx, s.baseCancel = context.WithCancel(context.Background())
+	s.background(s.runWSWatchdog)
+	s.background(s.runLibraryMonitor)
+	s.background(s.runTaskScheduler)
 	return s
+}
+
+// background starts one of the server's long-lived loops under baseCtx and
+// counts it, so Shutdown can wait for it to return.
+func (s *Server) background(loop func(context.Context)) {
+	s.bg.Add(1)
+	go func() {
+		defer s.bg.Done()
+		loop(s.baseCtx)
+	}()
+}
+
+// Shutdown ends what the server started in the background and waits for it:
+// the socket watchdog, the library monitor, the task scheduler, and any
+// chapter or trickplay batch still running, which is stopped the way the stop
+// button stops it. Requests in flight belong to http.Server.Serve, so close
+// that first (cmd/tinyfin does). Calling it twice is harmless.
+func (s *Server) Shutdown() {
+	if s.baseCancel == nil {
+		return
+	}
+	s.baseCancel()
+	s.scanState.cancelAll()
+	s.chapterimg.CancelTask()
+	s.trickplay.CancelTask()
+	s.bg.Wait()
+	s.chapterimg.Wait()
+	s.trickplay.Wait()
 }
 
 // scanRun is one library scan in the current batch: which library it reads,

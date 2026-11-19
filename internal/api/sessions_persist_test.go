@@ -50,7 +50,7 @@ func TestSessionsSurviveRestart(t *testing.T) {
 	}
 	user := createTestAdminUser(t, st, "alice", "hunter2")
 
-	srv := NewServer(st, Config{ServerName: "TestServer"})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer"})
 	ts := httptest.NewServer(srv.Handler())
 	// The login carries the same DeviceId as the rest of the test: that is
 	// what registers the device entry DELETE /Devices acts on.
@@ -87,7 +87,7 @@ func TestSessionsSurviveRestart(t *testing.T) {
 		t.Fatalf("sqlite.New (second): %v", err)
 	}
 	t.Cleanup(func() { _ = st2.Close() })
-	srv2 := NewServer(st2, Config{ServerName: "TestServer"})
+	srv2 := startTestServer(t, st2, Config{ServerName: "TestServer"})
 	ts2 := httptest.NewServer(srv2.Handler())
 	t.Cleanup(ts2.Close)
 

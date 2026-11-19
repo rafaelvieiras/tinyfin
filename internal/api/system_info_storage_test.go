@@ -30,7 +30,7 @@ func newStorageTestServer(t *testing.T, dataDir, webDir string) (*Server, *sqlit
 			t.Errorf("Close: %v", err)
 		}
 	})
-	srv := NewServer(st, Config{ServerName: "TestServer", DataDir: dataDir, WebDir: webDir})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer", DataDir: dataDir, WebDir: webDir})
 	return srv, st
 }
 

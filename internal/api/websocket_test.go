@@ -31,7 +31,7 @@ func newSocketTestServer(t *testing.T) (*httptest.Server, *sqlite.Store, *Server
 			t.Errorf("Close: %v", err)
 		}
 	})
-	srv := NewServer(st, Config{ServerName: "TestServer"})
+	srv := startTestServer(t, st, Config{ServerName: "TestServer"})
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 	return ts, st, srv

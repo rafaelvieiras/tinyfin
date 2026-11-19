@@ -27,7 +27,7 @@ func newForgotServer(t *testing.T) (*httptest.Server, *sqlite.Store, string) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = st.Close() })
-	srv := NewServer(st, Config{ServerName: "T", DataDir: dir})
+	srv := startTestServer(t, st, Config{ServerName: "T", DataDir: dir})
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 	return ts, st, dir
