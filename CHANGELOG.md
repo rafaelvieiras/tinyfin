@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Release notes render again. `conventional-changelog-conventionalcommits@10` ships its own
+  `@conventional-changelog/template`, which needs `conventional-changelog-writer@9` or newer, while
+  `@semantic-release/release-notes-generator@14` depends on writer 8: every step of the release succeeds until
+  `generateNotes` renders the template, so the release pipeline broke and only a push to `main` could show it.
+  The preset is back on `9.3.1`, the last major that this notes generator can render, and
+  `scripts/release-notes-check.mjs` does that one render offline — it fails today with preset 10 and passes with 9 —
+  so the next bump of either package is answered on the pull request.
+
 ### Added
 - Cast and crew photos. `BaseItemPerson.PrimaryImageTag` is published for a credit that has a photo, which is the
   field jellyfin-web builds the avatar URL from — without it the client draws an empty circle and never asks for
