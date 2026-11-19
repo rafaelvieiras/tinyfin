@@ -154,9 +154,11 @@ jobs:
       # before the run ends.
       fail-fast: false
       # The shard count is the length of this list: the job name and the -shard
-      # flag read it back through strategy.job-total, so adding a shard is one
-      # line. Four was chosen from the measurement in the header -- 30 minutes of
-      # serial scenarios, so four runners put each shard near eight.
+      # flag read it back through strategy.job-total. Which file goes to which
+      # shard is docs/contract/shards.json, weighted by the minutes each file
+      # measured; the runner refuses a plan that does not match this count and
+      # go test ./internal/conformance refuses one that misses a scenario file.
+      # Regenerate it from a report of a full run when the suite changes.
       matrix:
         shard: [1, 2, 3, 4]
     env:

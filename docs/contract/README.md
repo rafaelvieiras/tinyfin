@@ -57,6 +57,7 @@ reference source open in the same session.
 | `scenarios/<area>.json` | Executable scenarios (array per file) |
 | `fixtures.json` | Declarative server state (users, libraries, items) applied via the public API |
 | `baseline.json` | Committed per-scenario status of Tinyfin (the ratchet, see *Baseline and ratchet*); never edited by hand |
+| `shards.json` | The deal of scenario files to CI shards, weighted by the minutes each file measured (see *Baseline and ratchet*); never edited by hand |
 | `../coverage/`, `../COVERAGE.md` | Coverage tracker built on top of the contract (what is and is not supported, per route and per subsystem); see `../coverage/README.md` |
 | `scope-excluded.md` | Legacy routes excluded from the contract, with their replacement |
 | `../../internal/conformance` | Runner, assertions, fixtures, clean-room lint |
@@ -319,14 +320,20 @@ go run ./cmd/conformance progress
 * `-ref-report` takes the `-json` report of a `-reference` run to record its
   counts. The reference validation itself stays manual (it needs the 12.x
   image); a scenario must pass there before it enters the baseline as a goal.
-* A run can be split across machines with `-shard i/N`: the selected scenarios
-  are dealt by **file**, largest first, each to the shard carrying the least so
-  far, and the scenarios of a file keep their order. A file is never cut,
-  because a `capture` is only ever read by a later scenario of the same file and
-  a scenario may rely on state an earlier one of its file left behind. The
-  shards of a run, together, are the run: `go test ./internal/conformance`
-  checks that. A shard needs its own server, so nothing is shared but the media
-  tree and the baseline.
+* A run can be split across machines with `-shard i/N`. Files are the unit and
+  never cut: a `capture` is only ever read by a later scenario of the same file,
+  and a scenario may rely on state an earlier one of its file left behind. The
+  shards of a run, together, are the run, which `go test ./internal/conformance`
+  checks. A shard needs its own server, so nothing is shared but the media tree
+  and the baseline.
+* The deal is `docs/contract/shards.json`, weighted by the minutes each file
+  measured, not by how many scenarios it holds: a file's cost is not its length
+  (23 scan scenarios took 163 s, 156 item scenarios 181 s), and dealing by count
+  left the shards at 2.3, 6.1, 9.1 and 11.8 minutes where the weighted deal
+  gives 7.3 each. Regenerate it when the suite changes, from a run's report:
+  `go run ./cmd/conformance shards -report run.json -n 4 -write
+  docs/contract/shards.json`. The test above fails until you do, so a new
+  scenario file cannot fall out of CI.
 * CI (`.github/workflows/ci.yml`) runs the ratchet in four shards, each against
   its own throwaway server, with `-skip-tags time-dependent,expiry,risky` (no
   scenario carries `time-dependent` any more; the access-schedule scenarios
