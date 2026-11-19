@@ -141,7 +141,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 |---|---|---|---|---|
 | [admin](contract/specs/admin.md) | 44 | 42 | 11 | 11 |
 | [bitmap](contract/specs/bitmap.md) | 42 | 20 | 11 | 11 |
-| [browse](contract/specs/browse.md) | 29 | 29 | 15 | 15 |
+| [browse](contract/specs/browse.md) | 30 | 30 | 16 | 16 |
 | [chapters](contract/specs/chapters.md) | 26 | 26 | 5 | 5 |
 | [collections](contract/specs/collections.md) | 51 | 51 | 30 | 30 |
 | [devices](contract/specs/devices.md) | 13 | 13 | 6 | 6 |
@@ -163,7 +163,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [trickplay](contract/specs/trickplay.md) | 11 | 11 | 10 | 10 |
 | [users](contract/specs/users.md) | 190 | 190 | 195 | 195 |
 | [wire](contract/specs/wire.md) | 15 | 14 | 14 | 14 |
-| **total** | 1122 | 1088 | 747 | 744 |
+| **total** | 1123 | 1089 | 748 | 745 |
 
 ## Biggest gaps (planned or not planned, web-client facing)
 

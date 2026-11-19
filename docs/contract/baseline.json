@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 927
+    "pass": 928
   },
   "scenarios": {
     "admin.auth.providers": "pass",
@@ -55,6 +55,7 @@
     "browse.persons": "pass",
     "browse.persons.credits": "pass",
     "browse.persons.hidden": "pass",
+    "browse.persons.image": "pass",
     "browse.recommendations": "pass",
     "browse.similar": "pass",
     "browse.studios": "pass",

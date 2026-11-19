@@ -1135,6 +1135,7 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "browse.persons.image",
     "chapters.images.generate",
     "images.api.index-lookup",
     "images.api.size",
@@ -1158,6 +1159,7 @@
    "verified": true,
    "web": true,
    "scenarios": [
+    "browse.persons.image",
     "chapters.images.generate",
     "images.api.index-lookup",
     "images.api.size",
@@ -2096,6 +2098,7 @@
     "browse.genres.single",
     "browse.persons",
     "browse.persons.credits",
+    "browse.persons.image",
     "browse.years",
     "chapters.images.as-is",
     "chapters.images.blur-box",
@@ -8198,18 +8201,20 @@
    "id": "scan.nfo",
    "title": "NFO sidecars",
    "status": "supported",
-   "description": "`\u003cmovie\u003e`, `\u003ctvshow\u003e`, `\u003cepisodedetails\u003e` (several documents merge), `\u003cnamedseason\u003e`; title, originaltitle, sorttitle, plot, year, premiered/aired, genre, tag, mpaa, ratings, uniqueid, set, runtime, season/episode. Also `\u003cstudio\u003e`, `\u003cactor\u003e` (role, type, order), `\u003cdirector\u003e`, `\u003ccredits\u003e` and `\u003cwriter\u003e`.",
+   "description": "`\u003cmovie\u003e`, `\u003ctvshow\u003e`, `\u003cepisodedetails\u003e` (several documents merge), `\u003cnamedseason\u003e`; title, originaltitle, sorttitle, plot, year, premiered/aired, genre, tag, mpaa, ratings, uniqueid, set, runtime, season/episode. Also `\u003cstudio\u003e`, `\u003cactor\u003e` (role, type, order, `\u003cthumb\u003e`), `\u003cdirector\u003e`, `\u003ccredits\u003e` and `\u003cwriter\u003e`.",
    "reference": "Reads the Kodi NFO schema including cast and studios.",
-   "notes": "Not read: `\u003ctrailer\u003e`, `\u003cfileinfo\u003e`, actor thumbnails, artist/album NFOs.",
+   "notes": "Not read: `\u003ctrailer\u003e`, `\u003cfileinfo\u003e`; the credit's `\u003cthumb\u003e` is kept as the URL the person's photo is downloaded from (browse.persons.R5), artist/album NFOs are not read.",
    "spec_rules": [
     "items.names.R6",
-    "browse.persons.R4"
+    "browse.persons.R4",
+    "browse.persons.R5"
    ],
    "scenarios": [
     "items.names.series-nfo-and-named-season",
     "items.names.nfo-trims-surrounding-whitespace",
     "items.runtime.series-from-nfo",
-    "browse.persons.credits"
+    "browse.persons.credits",
+    "browse.persons.image"
    ],
    "code": [
     "internal/scan/nfo.go"

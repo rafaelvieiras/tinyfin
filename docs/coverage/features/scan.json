@@ -278,18 +278,20 @@
    "id": "scan.nfo",
    "title": "NFO sidecars",
    "status": "supported",
-   "description": "`<movie>`, `<tvshow>`, `<episodedetails>` (several documents merge), `<namedseason>`; title, originaltitle, sorttitle, plot, year, premiered/aired, genre, tag, mpaa, ratings, uniqueid, set, runtime, season/episode. Also `<studio>`, `<actor>` (role, type, order), `<director>`, `<credits>` and `<writer>`.",
+   "description": "`<movie>`, `<tvshow>`, `<episodedetails>` (several documents merge), `<namedseason>`; title, originaltitle, sorttitle, plot, year, premiered/aired, genre, tag, mpaa, ratings, uniqueid, set, runtime, season/episode. Also `<studio>`, `<actor>` (role, type, order, `<thumb>`), `<director>`, `<credits>` and `<writer>`.",
    "reference": "Reads the Kodi NFO schema including cast and studios.",
-   "notes": "Not read: `<trailer>`, `<fileinfo>`, actor thumbnails, artist/album NFOs.",
+   "notes": "Not read: `<trailer>`, `<fileinfo>`; the credit's `<thumb>` is kept as the URL the person's photo is downloaded from (browse.persons.R5), artist/album NFOs are not read.",
    "spec_rules": [
     "items.names.R6",
-    "browse.persons.R4"
+    "browse.persons.R4",
+    "browse.persons.R5"
    ],
    "scenarios": [
     "items.names.series-nfo-and-named-season",
     "items.names.nfo-trims-surrounding-whitespace",
     "items.runtime.series-from-nfo",
-    "browse.persons.credits"
+    "browse.persons.credits",
+    "browse.persons.image"
    ],
    "code": [
     "internal/scan/nfo.go"

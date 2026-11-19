@@ -300,6 +300,15 @@ vid "$H/Root Video-trailer.mp4"
 # numbering, season folders, several documents in one .nfo, photos and sort
 # names (own libraries "Names", "EpNum", "SeasonDirs", "NfoMulti", "Photos",
 # "SortWords", lazy). Files are copies of one tiny clip.
+# The URL the fixtures that point at the runner use: the .strm file below, and
+# the <thumb> of a cast credit. Defaults to the Docker bridge gateway, which a
+# server in a container reaches; a run whose server is on the host beside the
+# runner sets STRM_HTTP to the loopback address instead.
+if [ -z "${STRM_HTTP:-}" ]; then
+  gw="$(docker network inspect bridge -f '{{(index .IPAM.Config 0).Gateway}}' 2>/dev/null || true)"
+  STRM_HTTP="http://${gw:-172.17.0.1}:18999"
+fi
+
 img() { # <out>: a tiny picture, format by extension
   mkdir -p "$(dirname "$1")"
   [ -f "$1" ] && return 0
@@ -760,10 +769,6 @@ fi
 SM="$ROOT/Strm"
 mkdir -p "$SM/Strm Url (2341)" "$SM/Strm Local (2342)" "$SM/Strm Empty (2343)" "$SM/Strm Http (2345)" "$ROOT/.strm-http"
 [ -f "$ROOT/.strm-http/strm-src.mp4" ] || cp "$many_src" "$ROOT/.strm-http/strm-src.mp4"
-if [ -z "${STRM_HTTP:-}" ]; then
-  gw="$(docker network inspect bridge -f '{{(index .IPAM.Config 0).Gateway}}' 2>/dev/null || true)"
-  STRM_HTTP="http://${gw:-172.17.0.1}:18999"
-fi
 printf '%s/strm-src.mp4\n' "$STRM_HTTP" >"$SM/Strm Http (2345)/Strm Http (2345).strm"
 printf 'http://127.0.0.1:1/unreachable.mp4\n' >"$SM/Strm Url (2341)/Strm Url (2341).strm"
 printf '/nonexistent/path/video.mp4\n' >"$SM/Strm Local (2342)/Strm Local (2342).strm"
@@ -826,7 +831,12 @@ searchmovie "Alpha Wolf" 2014 "Horror" "" "" "" "" "R"
 # directors, <credits> and <writer> as writers, repeated names and genres.
 WC="$ROOT/Search/Writers Cut (2017)"
 vid "$WC/Writers Cut (2017).mp4"
-nfo "$WC/Writers Cut (2017).nfo" "<movie><title>Writers Cut</title><year>2017</year><credits>Wally Writer</credits><writer>Walt Writer</writer><director>Dana Director</director><director>Dee Second</director><actor><name>Zed Last</name><role>Third</role><order>2</order></actor><actor><name>Ann Actor</name><role>First</role><order>0</order></actor><actor><name>Gus Guest</name><role>Cameo</role><type>GuestStar</type><order>1</order></actor><actor><name>Dana Director</name><role>Self</role><order>3</order></actor><studio>Acme Pictures</studio><studio>acme pictures</studio><genre>action</genre><genre>Action</genre></movie>"
+# The photo Ann Actor's credit points at. Served by conformance-strm-serve.sh
+# beside the .strm media, so both the server under test and a reference
+# container can fetch it; the credit without a <thumb> (Zed Last) is the
+# negative case.
+img "$ROOT/.strm-http/actor.png"
+nfo "$WC/Writers Cut (2017).nfo" "<movie><title>Writers Cut</title><year>2017</year><credits>Wally Writer</credits><writer>Walt Writer</writer><director>Dana Director</director><director>Dee Second</director><actor><name>Zed Last</name><role>Third</role><order>2</order></actor><actor><name>Ann Actor</name><role>First</role><order>0</order><thumb>${STRM_HTTP}/actor.png</thumb></actor><actor><name>Gus Guest</name><role>Cameo</role><type>GuestStar</type><order>1</order></actor><actor><name>Dana Director</name><role>Self</role><order>3</order></actor><studio>Acme Pictures</studio><studio>acme pictures</studio><genre>action</genre><genre>Action</genre></movie>"
 SS="$ROOT/SearchShows/Search Show (2016)"
 vid "$SS/Season 01/Search Show (2016) S01E01.mp4"
 nfo "$SS/tvshow.nfo" "<tvshow><title>Search Show</title><genre>Drama</genre><genre>Comedy</genre><studio>Bolt Films</studio><actor><name>Ann Actor</name><role>Lead</role></actor><mpaa>TV-14</mpaa></tvshow>"
