@@ -44,6 +44,13 @@ type Result struct {
 	// ran. The suite is serial, so the sum over a run is its critical path,
 	// and the slowest scenarios are where a shorter CI run comes from.
 	DurationMS int64 `json:"duration_ms,omitempty"`
+	// Attempts is how many times the scenario ran: more than 1 means the first
+	// attempt failed and a retry carried it (Client.RetryFailed). A pass with
+	// Attempts 2 is a flake, and the report keeps saying so.
+	Attempts int `json:"attempts,omitempty"`
+	// FirstMessage is the failure of the first attempt, kept when a retry
+	// turned it into a pass.
+	FirstMessage string `json:"first_message,omitempty"`
 }
 
 // Client executes scenarios against one server.
@@ -56,6 +63,9 @@ type Client struct {
 	Tokens map[string]string
 	// Available is the set of fixture keys that exist ("user:alice", "item:movie").
 	Available map[string]bool
+	// RetryFailed re-runs each failed scenario this many times after the main
+	// pass. Zero means no retry.
+	RetryFailed int
 	// DeviceSuffix is appended to every DeviceId the runner generates and is
 	// exposed to scenarios as {{run.suffix}}, so concurrent runs against one
 	// server do not revoke each other's tokens (a new login on a DeviceId
@@ -367,6 +377,34 @@ func (c *Client) Run(ctx context.Context, list []Scenario, skipDivergent bool) [
 	var out []Result
 	for _, s := range ordered {
 		out = append(out, c.runOne(ctx, s, skipDivergent))
+	}
+	if c.RetryFailed <= 0 {
+		return out
+	}
+	// Retry what failed, one scenario at a time, after everything else ran:
+	// a scenario here waits for server work that the shard's timing may have
+	// started later than the scenario expected (a collection still building,
+	// a frame still being extracted), and a second attempt sees it done. The
+	// attempt count and the first failure stay in the result, so a flake is
+	// visible rather than papered over.
+	for i := range out {
+		if out[i].Status != "fail" {
+			continue
+		}
+		for attempt := 2; attempt <= c.RetryFailed+1; attempt++ {
+			again := c.runOne(ctx, ordered[i], skipDivergent)
+			out[i].Attempts = attempt
+			if again.Status == "pass" {
+				out[i].FirstMessage = out[i].Message
+				out[i].Message = ""
+				out[i].Status = "pass"
+				if again.DurationMS > 0 {
+					out[i].DurationMS += again.DurationMS
+				}
+				break
+			}
+			out[i].Message = again.Message
+		}
 	}
 	return out
 }

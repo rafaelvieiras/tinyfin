@@ -110,6 +110,7 @@ func run(args []string) int {
 	scope := fs.String("scope", "", "only run scenarios with this scope (modern|legacy-web-required|scope-negative)")
 	tags := fs.String("tags", "", "comma-separated tags; scenario must have all")
 	only := fs.String("only", "", "substring filter on scenario id")
+	retryFailed := fs.Int("retry-failed", 0, "re-run each failed scenario this many times after the main pass")
 	reference := fs.Bool("reference", false, "target is the reference server (skip intentional divergences)")
 	skipTags := fs.String("skip-tags", "", "comma-separated tags; scenarios with any of them are not run")
 	risky := fs.Bool("risky", false, "also run scenarios tagged risky (demote/delete the last administrator)")
@@ -208,6 +209,7 @@ func run(args []string) int {
 	c.ReadFileCmd = *readCmd
 	c.MediaLocalRoot = *mediaLocal
 	c.FFmpegPath, c.Reference = *ffmpeg, *reference
+	c.RetryFailed = *retryFailed
 	switch *suffix {
 	case "":
 	case "auto":
@@ -245,8 +247,15 @@ func run(args []string) int {
 	}
 
 	counts := map[string]int{}
+	retried := 0
 	for _, r := range res {
 		counts[r.Status]++
+		if r.Attempts > 1 {
+			retried++
+			if r.Status == conformance.StatusPass {
+				fmt.Printf("%-8s %-58s passed on attempt %d, first attempt: %s\n", "RETRY", r.ID, r.Attempts, r.FirstMessage)
+			}
+		}
 		if r.Status != conformance.StatusPass || *verbose {
 			fmt.Printf("%-8s %-58s %s\n", strings.ToUpper(r.Status), r.ID, r.Message)
 		}
@@ -259,6 +268,9 @@ func run(args []string) int {
 	fmt.Printf("\n%d scenarios:", len(res))
 	for _, k := range keys {
 		fmt.Printf(" %s=%d", k, counts[k])
+	}
+	if retried > 0 {
+		fmt.Printf(" retried=%d", retried)
 	}
 	fmt.Println()
 	printSlowest(res)

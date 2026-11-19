@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   touch this file: the entries below are written by hand, with the `[intentional deviation]` markers the project uses.
 
 ### Changed
+- The runner can re-run a failed scenario once (`-retry-failed`), which CI does per shard: a few scenarios read
+  state the server builds in the background — a box set still being assembled, a frame still being extracted — and
+  with the suite split across runners the timing that hid that is gone. The retry is printed as `RETRY <id>`, with
+  the first attempt's failure, and the result carries the attempt count, so a flake is visible instead of silent.
 - CI ran the conformance suite in one job, one server and one serial loop, so 33 minutes of every pull request
   were spent there: 30 m 01 s of 921 scenarios, 2 m 01 s of media tree, 35 s of apt, and nothing else worth naming.
   The suite is dealt to six shards on six runners, each against its own throwaway server, weighted by the minutes

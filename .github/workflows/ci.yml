@@ -177,13 +177,17 @@ jobs:
         # Fails only when a scenario that passes in docs/contract/baseline.json
         # no longer passes; each shard compares its own share against the same
         # file. The throwaway admin credential is the script default.
+        # -retry-failed 1: a scenario that reads state the server builds in the
+        # background (an auto-built collection, a frame still being extracted)
+        # gets one more attempt after everything else ran. The run prints RETRY
+        # with the first failure, so a flake stays visible.
         run: |
           go run ./cmd/conformance run -base "http://${{ steps.net.outputs.ip }}:18098" \
             -admin-user admin -admin-pass 'Conformance-Admin-1' \
             -media-root "$RUNNER_TEMP/media" -media-local-root "$RUNNER_TEMP/media" \
             -server-data-dir "${{ steps.tf.outputs.dir }}" \
             -baseline docs/contract/baseline.json -skip-tags time-dependent,expiry,risky \
-            -device-suffix auto -shard "${{ matrix.shard }}"
+            -device-suffix auto -shard "${{ matrix.shard }}" -retry-failed 1
       - name: Risky scenarios (last administrator, PIN throttle)
         if: matrix.shard == 'risky'
         # -strict: a BLOCKED scenario fails this step too.

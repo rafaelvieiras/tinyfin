@@ -343,7 +343,12 @@ go run ./cmd/conformance progress
   `-server-data-dir`, so the remote-access and PIN scenarios run. A seventh job
   of the same shape runs only the `risky` scenarios with `-risky -strict`,
   because they may demote the last administrator or throttle the runner's
-  address. Nothing in that set waits for another job: the media tree and the
+  address. Each shard runs with `-retry-failed 1`: a scenario that reads state
+  the server builds in the background (an auto-built collection, a frame still
+  being extracted) gets one more attempt after everything else ran, and the run
+  prints `RETRY` with the first failure, so a flake stays visible instead of
+  becoming a green run nobody looks at again. Nothing in that set waits for
+  another job: the media tree and the
   tool packages come from the branch's cache, which every job restores, so all
   seven start at once and the wall time is the slowest job.
 

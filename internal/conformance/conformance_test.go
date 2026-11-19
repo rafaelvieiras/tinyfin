@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -218,5 +219,48 @@ func TestNearTakesAWanderingEstimate(t *testing.T) {
 		if len(got) != 1 || got[0].Status != tc.want {
 			t.Errorf("%s: %+v, want %s", tc.name, got, tc.want)
 		}
+	}
+}
+
+// TestRetryFailedCarriesAFlake covers Client.RetryFailed: a scenario that
+// fails on its first attempt and passes on the next one ends as a pass that
+// still says it needed two attempts, keeping the first failure.
+func TestRetryFailedCarriesAFlake(t *testing.T) {
+	var calls int32
+	mux := http.NewServeMux()
+	mux.HandleFunc("/Users/AuthenticateByName", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"AccessToken":"tok","User":{"Id":"u1","Name":"alice"}}`))
+	})
+	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		// The first attempt reads the state before the background work is done.
+		if atomic.AddInt32(&calls, 1) == 1 {
+			_, _ = w.Write([]byte(`{"Ready":false}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"Ready":true}`))
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	scenarios := []Scenario{{ID: "flake", Steps: []Step{{
+		Request: Request{Method: "GET", Path: "/ready"},
+		Expect:  Expect{Status: Ints{200}, JSON: []Assert{{Path: "$.Ready", Op: "eq", Value: true}}},
+	}}}}
+	c := NewClient(srv.URL)
+	c.RetryFailed = 1
+	res := c.Run(context.Background(), scenarios, false)
+	if len(res) != 1 {
+		t.Fatalf("got %d results, want 1", len(res))
+	}
+	if res[0].Status != StatusPass {
+		t.Fatalf("status = %s (%s), want pass after the retry", res[0].Status, res[0].Message)
+	}
+	if res[0].Attempts != 2 {
+		t.Errorf("Attempts = %d, want 2", res[0].Attempts)
+	}
+	if res[0].FirstMessage == "" {
+		t.Error("FirstMessage is empty, want the first attempt's failure")
 	}
 }
