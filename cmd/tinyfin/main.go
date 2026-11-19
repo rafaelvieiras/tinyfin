@@ -14,6 +14,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -42,6 +43,21 @@ func envInt(key string, def int) int {
 		}
 	}
 	return def
+}
+
+// splitList parses a comma-separated flag value into its non-empty entries.
+func splitList(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if v := strings.TrimSpace(p); v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
 }
 
 func main() {
@@ -84,6 +100,8 @@ func main() {
 		"re-run ffprobe on every file even when size and mtime are unchanged. Overridable via TINYFIN_SCAN_FORCE_PROBE.")
 	trickplayConc := flag.Int("trickplay-concurrency", envInt("TINYFIN_TRICKPLAY_CONCURRENCY", 0),
 		"max simultaneous ffmpeg processes generating trickplay sheets (default 1; each one uses ffmpeg's own thread count). Overridable via TINYFIN_TRICKPLAY_CONCURRENCY.")
+	imageHosts := flag.String("image-hosts", envOrDefault("TINYFIN_IMAGE_HOSTS", ""),
+		"comma-separated hosts, IPs or CIDRs a downloaded image may come from beyond public addresses")
 	imageCacheMB := flag.Int("image-cache-size", envInt("TINYFIN_IMAGE_CACHE_MB", 2048),
 		"size budget in megabytes for the served-image cache kept next to the database; 0 disables it. "+
 			"The cache exists so a client scrolling a library does not re-read the same poster off a remote media "+
@@ -142,6 +160,7 @@ func main() {
 		TranscodeFontsDir:      *fontsDir,
 		ScanFFprobePath:        resolvedFFprobePath,
 		ScanImageDir:           scanImageDir,
+		ImageHosts:             splitList(*imageHosts),
 		ImageCacheDir:          filepath.Join(scanImageDir, "cache"),
 		ImageCacheBytes:        int64(*imageCacheMB) << 20,
 		ScanConcurrency:        *scanConc,

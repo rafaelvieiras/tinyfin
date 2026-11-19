@@ -8,6 +8,7 @@ import (
 	"image/png"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sync"
@@ -87,14 +88,14 @@ func TestScanLibraryMovies(t *testing.T) {
 	writeFile(t, filepath.Join(root, "The Matrix (1999)", "movie.mkv"), "not a real video, just enough to exist")
 
 	imgSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("fake-jpeg-bytes"))
+		w.Write(testPosterBytes(t))
 	}))
 	defer imgSrv.Close()
 
 	st := newTestStore(t)
 	provider := &fakeProvider{imageURL: imgSrv.URL + "/poster.jpg"}
 	imageDir := t.TempDir()
-	s := New(st, provider, Config{ImageDir: imageDir})
+	s := New(st, provider, Config{ImageDir: imageDir, ImageHosts: imageHostsFor(imgSrv)})
 
 	lib := storage.Library{
 		ID: "lib-movies", Name: "Movies", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
@@ -603,16 +604,9 @@ func TestScanLibraryRecordsPosterDimensions(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "The Matrix (1999)", "movie.mkv"), "not a real video, just enough to exist")
 
-	// A real 400x600 (2:3 poster) PNG, not the other tests' opaque
-	// "fake-jpeg-bytes" placeholder — image.DecodeConfig needs an
+	// A real 400x600 (2:3 poster) PNG: image.DecodeConfig needs an
 	// actually-decodable image to report dimensions from.
-	img := image.NewRGBA(image.Rect(0, 0, 400, 600))
-	draw(img, color.RGBA{R: 255, A: 255})
-	var buf bytes.Buffer
-	if err := png.Encode(&buf, img); err != nil {
-		t.Fatalf("png.Encode: %v", err)
-	}
-	posterBytes := buf.Bytes()
+	posterBytes := testPosterBytes(t)
 
 	imgSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write(posterBytes)
@@ -621,7 +615,7 @@ func TestScanLibraryRecordsPosterDimensions(t *testing.T) {
 
 	st := newTestStore(t)
 	provider := &fakeProvider{imageURL: imgSrv.URL + "/poster.jpg"}
-	s := New(st, provider, Config{ImageDir: t.TempDir()})
+	s := New(st, provider, Config{ImageDir: t.TempDir(), ImageHosts: imageHostsFor(imgSrv)})
 
 	lib := storage.Library{
 		ID: "lib-movies", Name: "Movies", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
@@ -1145,14 +1139,14 @@ func TestRefreshItemImagesRespectReplaceAllImages(t *testing.T) {
 	writeFile(t, filepath.Join(movieDir, "poster.jpg"), "local-poster-bytes")
 
 	imgSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("remote-poster-bytes"))
+		w.Write(testPosterBytes(t))
 	}))
 	defer imgSrv.Close()
 
 	st := newTestStore(t)
 	provider := &fakeProvider{imageURL: imgSrv.URL + "/poster.jpg"}
 	imageDir := t.TempDir()
-	s := New(st, provider, Config{ImageDir: imageDir})
+	s := New(st, provider, Config{ImageDir: imageDir, ImageHosts: imageHostsFor(imgSrv)})
 
 	lib := storage.Library{
 		ID: "lib-replace-images", Name: "Movies", CollectionType: storage.CollectionTypeMovies, Paths: []string{root},
@@ -1218,6 +1212,32 @@ func TestRefreshItemImagesRespectReplaceAllImages(t *testing.T) {
 	if _, err := os.Stat(refs[0].Path); err != nil {
 		t.Errorf("downloaded provider image file missing at %s: %v", refs[0].Path, err)
 	}
+}
+
+// testPosterBytes is a real 400x600 (2:3 poster) PNG. A provider image has to
+// be decodable to have dimensions, and it has to sniff as an image at all: the
+// scan's download goes through internal/imagefetch, which refuses a body that is
+// not an image (and, by default, any non-public address — hence imageHostsFor).
+func testPosterBytes(t *testing.T) []byte {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, 400, 600))
+	draw(img, color.RGBA{R: 255, A: 255})
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatalf("png.Encode: %v", err)
+	}
+	return buf.Bytes()
+}
+
+// imageHostsFor is the allowlist a test needs for its own httptest server: the
+// download guard refuses loopback unless the operator names it, which is the
+// production default these tests must not weaken.
+func imageHostsFor(imgSrv *httptest.Server) []string {
+	u, err := url.Parse(imgSrv.URL)
+	if err != nil {
+		return nil
+	}
+	return []string{u.Hostname()}
 }
 
 // draw fills every pixel of img with c — image/draw would pull in another

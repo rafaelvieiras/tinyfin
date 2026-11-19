@@ -203,6 +203,46 @@ The observable behavior is specified in `docs/contract/specs/items.md` (rules `i
 - Text from `.nfo` files is trimmed of surrounding white space when stored (`applyCommonNFOFields`);
   a series takes its runtime from `<runtime>` of `tvshow.nfo` only.
 
+## Cast photos: the URL is kept at scan time, the picture is downloaded on demand
+
+A credit's photo reaches the catalog in one of two ways, and both stop at the *URL*:
+
+- an `.nfo` credit's `<thumb>`, an absolute URL written by whichever tool built the sidecar
+  (`internal/scan/nfo.go`'s `actorEl.Thumb`), and
+- a provider credit's `profile_path`, resolved against the provider's image base
+  (`internal/metadata`'s `Person.ImageURL`, `https://image.tmdb.org/t/p/w300` + the path for TMDb).
+
+The scan stores that URL on the credit (`storage.Person.ImageURL`) and nothing else; it does not
+download the picture. Two reasons: a scan can legitimately run with no route to the internet (a
+library mounted read-only, a host that is offline at night), and a photo nobody ever looks at is a
+request the server should not make. The NFO and the provider each keep their own meaning — an
+`.nfo`'s credits still replace the provider's when both exist, as they did before, so the URL in
+force is the one from whichever source supplied the credit list.
+
+What the client sees is the reference server's shape: `BaseItemPerson.PrimaryImageTag` is present
+when the person publishes a photo and absent when they do not, and `BaseItemPerson.Id` is the id the
+client builds the picture URL from (`GET /Items/{personId}/Images/Primary`). The tag is derived from
+the URL (`personImageTag`, a hash of it), which is what makes it available *before* the download —
+the client only asks for an image the DTO named, so a tag published after the fact would never start
+anything — and what makes it change when the URL changes.
+
+The first request for that URL is the download: one fetch per person (concurrent requests for the
+same person wait for that one), written to `{imageDir}/{personId}-Primary.{ext}`, with its dimensions
+and BlurHash recorded in `person_images` (a table of its own, because a person is not a catalog item
+and `image_refs` hangs off `items`). Later requests are served from the file like any other picture,
+through the same route, the same size parameters and the same ETag. A URL that does not answer —
+404, timeout, a body that is not an image — is one attempt and then a day of quiet: the attempt is
+recorded in `failed_at`, the route answers 404, and the item around it keeps rendering. Changing the
+URL in the library retries immediately.
+
+Both downloads the server makes on its own — this one and the scanner's provider artwork — go through
+`internal/imagefetch`, which accepts `http`/`https` only, refuses a non-public address unless the
+operator allowlisted it (`TINYFIN_IMAGE_HOSTS` / `-image-hosts`, a host name, IP or CIDR each),
+bounds the body at 8 MiB and requires the body to sniff as an image. The NFO's `<thumb>` is the
+reason that guard exists: it is a URL from a file inside the library, often on a writable share, and
+without the guard it is a server-side request forgery primitive (loopback, the container network,
+cloud metadata). The reference server performs the request unguarded (`docs/13`'s DIV-34).
+
 ## What the scanner does not do
 
 - Does not maintain its own competing "source of truth" for titles, artwork, or user overrides —

@@ -246,6 +246,16 @@ type Person struct {
 	// without re-searching TMDB by name. 0 when unknown (e.g. a filename-
 	// derived item with no provider enrichment yet).
 	TMDBID int
+
+	// ImageURL is where this credit's photo is published: the absolute URL a
+	// Kodi/Jellyfin-style NFO writes in <actor><thumb>, or the one the
+	// metadata provider answered with for the person's profile. Stored
+	// verbatim, never rewritten at scan time — it is the key the person's
+	// picture is downloaded and cached under (storage.PersonImage, which is
+	// also where the negative cache of a URL that never answered lives).
+	// Empty means the credit has no photo anywhere, and the client is told
+	// so by the absence of BaseItemPerson.PrimaryImageTag.
+	ImageURL string
 }
 
 // Item is the generic item model backing ItemStore — the storage-side

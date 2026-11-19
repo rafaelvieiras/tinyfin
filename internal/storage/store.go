@@ -30,6 +30,7 @@ type Store interface {
 	LyricStore
 	LibraryStore
 	LibraryImageStore
+	PersonImageStore
 	ActivityLogStore
 	APIKeyStore
 	SettingStore
@@ -401,6 +402,28 @@ type APIKeyStore interface {
 	LookupAPIKey(ctx context.Context, token string) (APIKey, error)
 	// RevokeAPIKey removes a key; revoking an unknown token is not an error.
 	RevokeAPIKey(ctx context.Context, token string) error
+}
+
+// PersonImageStore keeps the cached photo of a cast/crew credit
+// (storage.PersonImage). Reading it in bulk is what the item DTO needs: one
+// detail response carries a list of credits, and each one's
+// PrimaryImageTag has to be there before the client will request a picture.
+type PersonImageStore interface {
+	// GetPersonImage reports the person's photo row and whether it exists at
+	// all, so a caller can tell "no photo" from one that has not been
+	// downloaded yet.
+	GetPersonImage(ctx context.Context, personID ItemID) (PersonImage, bool, error)
+	// QueryPersonImages returns the rows for the given people, keyed by
+	// person id — one query for a detail response's whole credit list.
+	QueryPersonImages(ctx context.Context, ids []ItemID) (map[ItemID]PersonImage, error)
+	// UpsertPersonImage writes a row's cached picture (and its Source), the
+	// write the API makes after a download succeeded or failed.
+	UpsertPersonImage(ctx context.Context, img PersonImage) error
+	// UpsertPersonImageSource records where a person's photo is published, the
+	// write a scan makes for every credit that carries one. An unchanged
+	// source leaves the cached picture alone; a changed one drops it, so a
+	// picture from the old URL is never served under the new tag.
+	UpsertPersonImageSource(ctx context.Context, personID ItemID, source string) error
 }
 
 // SettingStartupWizardCompleted is the SettingStore key that records the

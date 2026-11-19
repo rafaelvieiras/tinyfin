@@ -795,6 +795,15 @@ func (s *Server) handleItemImage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if len(refs) == 0 {
+		// A cast/crew credit is not a catalog item either, and its picture is
+		// kept in person_images and downloaded the first time a client asks
+		// (person_image.go) — the reference server downloads during the scan
+		// instead, which a client cannot tell apart (docs/13).
+		if ref, ok := s.personImageRef(r.Context(), itemID, kind); ok {
+			refs = []storage.ImageRef{ref}
+		}
+	}
+	if len(refs) == 0 {
 		// Nothing cataloged an image of this kind for this item — an expected
 		// gap, not a bug to mask. 404 cleanly instead of panicking on an
 		// empty slice.

@@ -67,6 +67,13 @@ type Config struct {
 	// goal).
 	ImageDir string
 
+	// ImageHosts is the operator's allowlist of hosts a downloaded image may
+	// come from, beyond public internet addresses — the shape a home
+	// deployment has when artwork is served by a NAS or a proxy on a private
+	// range. Each entry is a host name, an IP or a CIDR; an empty list allows
+	// public addresses only (internal/imagefetch).
+	ImageHosts []string
+
 	// Concurrency bounds simultaneous ffprobe subprocesses and provider
 	// calls. <= 0 defaults to defaultConcurrency.
 	Concurrency int
@@ -136,7 +143,7 @@ func New(store storage.Store, provider metadata.Provider, cfg Config) *Scanner {
 		probeSem:    make(chan struct{}, probeConc),
 		forceProbe:  cfg.ForceProbe,
 		dataDir:     cfg.DataDir,
-		httpClient:  defaultImageFetcher{},
+		httpClient:  newImageFetcher(cfg.ImageHosts),
 	}
 }
 
@@ -1987,7 +1994,7 @@ func (s *Scanner) parentSeries(ctx context.Context, item storage.Item) (storage.
 func peopleFromResult(people []metadata.Person) []storage.Person {
 	out := make([]storage.Person, 0, len(people))
 	for _, p := range people {
-		out = append(out, storage.Person{Name: p.Name, Role: p.Role, Type: p.Type, TMDBID: p.TMDBID})
+		out = append(out, storage.Person{Name: p.Name, Role: p.Role, Type: p.Type, TMDBID: p.TMDBID, ImageURL: p.ImageURL})
 	}
 	return out
 }

@@ -250,6 +250,7 @@ func registerNamed(ctx context.Context, ex dbtx, item storage.Item) error {
 	type row struct{ id, kind, name string }
 	var rows []row
 	seen := map[string]bool{}
+	sources := map[string]string{}
 	add := func(kind storage.NamedKind, name string) {
 		name = strings.TrimSpace(name)
 		if name == "" {
@@ -270,6 +271,17 @@ func registerNamed(ctx context.Context, ex dbtx, item storage.Item) error {
 	}
 	for _, p := range item.People {
 		add(storage.NamedPerson, p.Name)
+		// A credit's photo is published at a URL; recording it here is what
+		// lets the DTO advertise a PrimaryImageTag before any byte has been
+		// downloaded (storage.PersonImage). Ids are deduped like names, and
+		// the first URL a scan sees for one person wins within the item, so a
+		// repeated credit cannot make the source depend on credit order.
+		if source := strings.TrimSpace(p.ImageURL); source != "" {
+			id := string(storage.NamedID(storage.NamedPerson, strings.TrimSpace(p.Name)))
+			if _, ok := sources[id]; !ok && strings.TrimSpace(p.Name) != "" {
+				sources[id] = source
+			}
+		}
 	}
 	if item.ProductionYear != nil {
 		add(storage.NamedYear, strconv.Itoa(*item.ProductionYear))
@@ -289,6 +301,11 @@ func registerNamed(ctx context.Context, ex dbtx, item storage.Item) error {
 			return err
 		}
 		rows = rows[n:]
+	}
+	for id, source := range sources {
+		if err := upsertPersonImageSource(ctx, ex.ExecContext, storage.ItemID(id), source); err != nil {
+			return err
+		}
 	}
 	return nil
 }

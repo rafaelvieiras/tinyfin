@@ -101,8 +101,8 @@ func TestTMDBProviderLookupMovieIncludesCredits(t *testing.T) {
 			tmdbSearchResult: tmdbSearchResult{ID: 603, Title: "The Matrix", ReleaseDate: "1999-03-31"},
 			Credits: tmdbCredits{
 				Cast: []tmdbCastMember{
-					{ID: 8, Name: "Carrie-Anne Moss", Character: "Trinity", Order: 1},
-					{ID: 6384, Name: "Keanu Reeves", Character: "Neo", Order: 0},
+					{ID: 8, Name: "Carrie-Anne Moss", Character: "Trinity", Order: 1, ProfilePath: "/moss.jpg"},
+					{ID: 6384, Name: "Keanu Reeves", Character: "Neo", Order: 0, ProfilePath: "/reeves.jpg"},
 				},
 				Crew: []tmdbCrewMember{
 					{ID: 9, Name: "Lana Wachowski", Job: "Director"},
@@ -130,6 +130,16 @@ func TestTMDBProviderLookupMovieIncludesCredits(t *testing.T) {
 	}
 	if got := res.People[1]; got.Name != "Carrie-Anne Moss" || got.Role != "Trinity" || got.Type != "Actor" {
 		t.Errorf("People[1] = %+v, want {Carrie-Anne Moss, Trinity, Actor, ...}", got)
+	}
+	// profile_path is carried through as the absolute URL the person's photo
+	// is published at, which is what becomes BaseItemPerson.PrimaryImageTag.
+	if got, want := res.People[0].ImageURL, tmdbProfileBase+"/reeves.jpg"; got != want {
+		t.Errorf("People[0].ImageURL = %q, want %q", got, want)
+	}
+	// A credit with no profile_path has no image source at all, so nothing
+	// advertises an image that does not exist.
+	if got := res.People[2].ImageURL; got != "" {
+		t.Errorf("People[2] (%s) has ImageURL %q, want empty (no profile_path)", res.People[2].Name, got)
 	}
 	var gotTypes []string
 	for _, p := range res.People[2:] {

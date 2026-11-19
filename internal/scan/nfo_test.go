@@ -379,3 +379,32 @@ func TestNFOSortTitle(t *testing.T) {
 		t.Errorf("Name %q SortName %q, want the title and the sort title", item.Name, item.SortName)
 	}
 }
+
+// TestNFOPeopleCarryTheCreditPhoto proves a credit's <thumb> reaches
+// storage.Person.ImageURL, which is the only thing a library on disk provides
+// about where an actor's photo lives. It also pins the cases that must not
+// produce an image: no <thumb>, and a <thumb> that is only whitespace — a row
+// of empty spaces is not a URL, and advertising one would make the client
+// request a picture that can never be downloaded.
+func TestNFOPeopleCarryTheCreditPhoto(t *testing.T) {
+	people := nfoPeople(commonNFOFields{
+		Actors: []actorEl{
+			{Name: "Ann Actor", Role: "Lead", Thumb: "https://images.example.com/ann.jpg"},
+			{Name: "Bob Actor", Role: "Friend"},
+			{Name: "Cid Actor", Role: "Extra", Thumb: "   "},
+			{Name: "Ann Actor", Role: "Lead again", Thumb: "https://images.example.com/ann-2.jpg"},
+		},
+	})
+	if len(people) != 3 {
+		t.Fatalf("people = %+v, want 3 (Ann once, Bob, Cid)", people)
+	}
+	if got := people[0].ImageURL; got != "https://images.example.com/ann.jpg" {
+		t.Errorf("people[0].ImageURL = %q, want the first credit's thumb", got)
+	}
+	if got := people[1].ImageURL; got != "" {
+		t.Errorf("people[1].ImageURL = %q, want empty (no <thumb>)", got)
+	}
+	if got := people[2].ImageURL; got != "" {
+		t.Errorf("people[2].ImageURL = %q, want empty (whitespace <thumb>)", got)
+	}
+}

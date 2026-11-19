@@ -10,6 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Cast and crew photos. `BaseItemPerson.PrimaryImageTag` is published for a credit that has a photo, which is the
+  field jellyfin-web builds the avatar URL from — without it the client draws an empty circle and never asks for
+  anything. The photo's source is kept at scan time (a Kodi-style NFO credit's `<thumb>`, or the provider credit's
+  profile URL) and the picture itself is downloaded on the first `GET /Items/{personId}/Images/Primary`, then served
+  from disk through the existing item image route, size parameters included. Concurrent requests for one person
+  cause one download, a URL that does not answer is one attempt followed by a day of quiet (`failed_at` in the new
+  `person_images` table), and changing the URL in the library retries at once. `[intentional deviation]` — the
+  reference downloads during the scan instead (`DIV-33`).
+- `internal/imagefetch`, the one guarded path both of the server's own image downloads go through: `http`/`https`
+  only, no non-public address unless the operator allowlists the host (`TINYFIN_IMAGE_HOSTS` / `-image-hosts`), an
+  8 MiB body ceiling (the scanner's provider download previously read the whole body with no bound), and a body that
+  must sniff as an image. An NFO `<thumb>` is untrusted input from inside the library, and the reference fetches it
+  unguarded. `[intentional deviation]` — `DIV-34`.
 - A check that every scenario in `docs/contract/scenarios` has an entry in `docs/contract/baseline.json`, run by
   `go test ./internal/conformance` and by `conformance lint` (so the 24-second contract job reports it). A scenario the
   baseline does not know is compared as `NEW`, never as a regression, so it could fail on every run and gate nothing;
