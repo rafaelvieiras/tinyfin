@@ -34,6 +34,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to `setup-go` v7.1.0, `cache` v6.1.0, `upload-artifact` v7.0.2 and `download-artifact` v8.0.2.
 
 ### Fixed
+- The conformance runner never answered a socket the server asked to keep alive, so an open socket was dropped after
+  the server's 60 s lost timeout — a connection that said nothing is a connection that is gone. A scenario that waits a
+  minute for one `LibraryChanged` and then a minute for the next crossed that limit, and the push it was waiting for
+  was flushed with no connection to go to. Sockets now send `KeepAlive` every 20 s, like a real client.
+- A socket wait that times out now says what the socket did receive, and the runner can trace every step with its
+  start time (`-trace`): a message that arrived with the wrong content used to look exactly like one that never came.
+- The conformance runner can look at everything a socket received (`lookback`) instead of only what arrives after
+  the step starts, which is what an assertion of the form "this change was pushed" needs: the push may land while
+  the previous step is still running, and a wait only looked forward from the message it matched last.
 - A change the realtime monitor picked up was never pushed. Its rescan walked the library and cataloged the new
   files, but outside the tracking that turns a walk into a `LibraryChanged`, so a client that never asked for a
   refresh went on showing the old list — and the scan a client runs afterwards found nothing new to report, which
@@ -73,6 +82,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   also listed `POST /ScheduledTasks/Running/{taskId}` and `POST /ScheduledTasks/{taskId}/Triggers` as planned,
   because they share one route pattern and the registry matches routes by literal path; the overlay now names that
   pattern with `via`. Totals move to 205 registered and 173 verified.
+- `scan.push.add-and-remove` asserted `scan.push.R3` (two additions a few seconds apart share one `LibraryChanged`)
+  without establishing the rule's precondition, the quiet period the batch timer starts from: a batch an earlier
+  scenario had armed could collect the first movie and flush before the second was copied, splitting the message
+  and failing the scenario. It waits 31 s first now. Seen once on CI, in a run where the scenario followed others
+  that scan within the same window.
 
 ## [0.1.0] - 2026-11-10
 

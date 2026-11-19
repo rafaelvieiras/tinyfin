@@ -39,6 +39,10 @@
     }
    },
    {
+    "name": "a quiet period first, so this batch starts its own timer",
+    "sleepMs": 31000
+   },
+   {
     "name": "a movie is copied in",
     "request": {
      "method": "",
@@ -168,7 +172,8 @@
        "op": "contains",
        "value": "{{capture.one}}"
       }
-     ]
+     ],
+     "lookback": true
     },
     "expect": {
      "json": [
@@ -296,7 +301,8 @@
        "op": "contains",
        "value": "{{capture.one}}"
       }
-     ]
+     ],
+     "lookback": true
     },
     "expect": {
      "json": [
@@ -325,7 +331,8 @@
        "op": "contains",
        "value": "{{capture.one}}"
       }
-     ]
+     ],
+     "lookback": true
     },
     "expect": {
      "json": [
