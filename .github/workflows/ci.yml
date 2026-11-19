@@ -113,19 +113,7 @@ jobs:
         # its noise bsf, and only it reports HDR10+ side data. mkvtoolnix makes
         # the Matroska statistics and Dolby Vision remuxes; xorriso makes the
         # DVD image fixture.
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends curl gnupg ffmpeg mkvtoolnix xorriso
-          sudo install -d -m 0755 /etc/apt/keyrings
-          curl -fsSL https://repo.jellyfin.org/jellyfin_team.gpg.key \
-            | gpg --dearmor | sudo tee /etc/apt/keyrings/jellyfin.gpg >/dev/null
-          echo "deb [signed-by=/etc/apt/keyrings/jellyfin.gpg] https://repo.jellyfin.org/ubuntu noble main" \
-            | sudo tee /etc/apt/sources.list.d/jellyfin.list >/dev/null
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends jellyfin-ffmpeg8
-          echo TINYFIN_FFMPEG_PATH=/usr/lib/jellyfin-ffmpeg/ffmpeg >> "$GITHUB_ENV"
-          echo TINYFIN_FFPROBE_PATH=/usr/lib/jellyfin-ffmpeg/ffprobe >> "$GITHUB_ENV"
-          /usr/lib/jellyfin-ffmpeg/ffmpeg -version | head -1
+        uses: ./.github/actions/jellyfin-tools
       - name: Generate the tree
         if: steps.tree.outputs.cache-hit != 'true'
         # The .strm fixtures point at the address the shards serve on; the
@@ -145,7 +133,7 @@ jobs:
           retention-days: 1
 
   conformance:
-    name: Conformance shard ${{ matrix.shard }}/${{ strategy.job-total }}
+    name: Conformance shard ${{ matrix.shard }}/4
     needs: fixtures
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -153,8 +141,9 @@ jobs:
       # One red shard must not hide the other three: a failure anywhere is seen
       # before the run ends.
       fail-fast: false
-      # The shard count is the length of this list: the job name and the -shard
-      # flag read it back through strategy.job-total. Which file goes to which
+      # The shard count appears three times below -- this list, the job name and
+      # the -shard flag -- because the strategy context is not available in every
+      # one of them. Which file goes to which
       # shard is docs/contract/shards.json, weighted by the minutes each file
       # measured; the runner refuses a plan that does not match this count and
       # go test ./internal/conformance refuses one that misses a scenario file.
@@ -162,48 +151,15 @@ jobs:
       matrix:
         shard: [1, 2, 3, 4]
     env:
-      SHARD: ${{ matrix.shard }}/${{ strategy.job-total }}
+      SHARD: ${{ matrix.shard }}/4
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
-      - name: Cache the ffmpeg packages
-        # A hosted image ships no jellyfin-ffmpeg, so every run had apt fetch
-        # 80-odd packages from the mirror for the distro ffmpeg plus the
-        # Jellyfin build. Resolved once and kept as .deb files, the install is
-        # offline; a cold cache is the old behaviour plus a cache write.
-        id: debs
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/jellyfin-debs
-          key: jellyfin-debs-${{ runner.os }}-noble-v1
       - name: Install the server's tools
-        # The distro ffmpeg stays first in $PATH on purpose: the fixtures are
-        # pinned to the bytes the reference's own build writes, which the media
-        # scripts take from the Jellyfin container image, and playback9's rates
-        # follow those bytes. The server and the runner read the packaged build
-        # through TINYFIN_FFMPEG_PATH.
-        run: |
-          set -euo pipefail
-          if [ "${{ steps.debs.outputs.cache-hit }}" != "true" ]; then
-            sudo apt-get update
-            mkdir -p ~/.cache/jellyfin-debs
-            sudo install -d -m 0755 /etc/apt/keyrings
-            curl -fsSL https://repo.jellyfin.org/jellyfin_team.gpg.key \
-              | gpg --dearmor | sudo tee /etc/apt/keyrings/jellyfin.gpg >/dev/null
-            echo "deb [signed-by=/etc/apt/keyrings/jellyfin.gpg] https://repo.jellyfin.org/ubuntu noble main" \
-              | sudo tee /etc/apt/sources.list.d/jellyfin.list >/dev/null
-            sudo apt-get update
-            # -d = download only: apt resolves the closure into the archive dir.
-            sudo apt-get install -d -y --no-install-recommends ffmpeg mkvtoolnix xorriso jellyfin-ffmpeg8
-            sudo cp /var/cache/apt/archives/*.deb ~/.cache/jellyfin-debs/
-          fi
-          sudo dpkg -i ~/.cache/jellyfin-debs/*.deb || sudo apt-get -f install -y
-          echo TINYFIN_FFMPEG_PATH=/usr/lib/jellyfin-ffmpeg/ffmpeg >> "$GITHUB_ENV"
-          echo TINYFIN_FFPROBE_PATH=/usr/lib/jellyfin-ffmpeg/ffprobe >> "$GITHUB_ENV"
-          /usr/lib/jellyfin-ffmpeg/ffmpeg -version | head -1
+        uses: ./.github/actions/jellyfin-tools
       - name: Fetch the media tree
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -256,30 +212,8 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
-      - name: Cache the ffmpeg packages
-        id: debs
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/jellyfin-debs
-          key: jellyfin-debs-${{ runner.os }}-noble-v1
       - name: Install the server's tools
-        run: |
-          set -euo pipefail
-          if [ "${{ steps.debs.outputs.cache-hit }}" != "true" ]; then
-            sudo apt-get update
-            mkdir -p ~/.cache/jellyfin-debs
-            sudo install -d -m 0755 /etc/apt/keyrings
-            curl -fsSL https://repo.jellyfin.org/jellyfin_team.gpg.key \
-              | gpg --dearmor | sudo tee /etc/apt/keyrings/jellyfin.gpg >/dev/null
-            echo "deb [signed-by=/etc/apt/keyrings/jellyfin.gpg] https://repo.jellyfin.org/ubuntu noble main" \
-              | sudo tee /etc/apt/sources.list.d/jellyfin.list >/dev/null
-            sudo apt-get update
-            sudo apt-get install -d -y --no-install-recommends ffmpeg mkvtoolnix xorriso jellyfin-ffmpeg8
-            sudo cp /var/cache/apt/archives/*.deb ~/.cache/jellyfin-debs/
-          fi
-          sudo dpkg -i ~/.cache/jellyfin-debs/*.deb || sudo apt-get -f install -y
-          echo TINYFIN_FFMPEG_PATH=/usr/lib/jellyfin-ffmpeg/ffmpeg >> "$GITHUB_ENV"
-          echo TINYFIN_FFPROBE_PATH=/usr/lib/jellyfin-ffmpeg/ffprobe >> "$GITHUB_ENV"
+        uses: ./.github/actions/jellyfin-tools
       - name: Fetch the media tree
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
