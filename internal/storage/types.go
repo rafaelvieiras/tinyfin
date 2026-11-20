@@ -87,9 +87,15 @@ type ItemFilter struct {
 	// otherwise, same as Played/Favorite above. With no SortBy the result is
 	// ordered by last played date, most recent first.
 	Resume bool
-	SortBy []SortField
-	Limit  int
-	Offset int
+	// DateCreatedAfter keeps the items whose DateCreated is at or after the
+	// bound, inclusive. A zero value means no restriction. It exists for the
+	// queries that ask for "what landed in a window" — the home screen's
+	// recently-added grouping narrows one series to its last 24 hours instead
+	// of reading every row it ever had and filtering in Go.
+	DateCreatedAfter *time.Time
+	SortBy           []SortField
+	Limit            int
+	Offset           int
 
 	// Listing/query filters (GET /Items). Every field is optional and
 	// ANDed with the rest; a zero value means "no restriction".

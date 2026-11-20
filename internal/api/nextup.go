@@ -177,21 +177,17 @@ func (s *Server) handleShowsNextUp(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if seriesIDs == nil {
-		seriesFilter := storage.ItemFilter{
-			ItemTypes: []storage.ItemType{storage.ItemTypeSeries},
-			Recursive: true,
-			Limit:     nextUpSeriesScanLimit,
-		}
-		scope.apply(&seriesFilter)
-		page, err := s.store.QueryItems(r.Context(), seriesFilter)
+		// Only the series the user has actually watched can produce an entry:
+		// step 3 of nextUpCandidateForSeries' documented rule is "a series with
+		// no touched episode produces no candidate", so walking the rest is
+		// work that cannot change the answer. It cost 4.4 seconds of a
+		// production home screen, answered with an empty list.
+		active, err := s.store.ActiveSeries(r.Context(), userID, scope.libraryIDs(), nextUpSeriesScanLimit)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		seriesIDs = make([]storage.ItemID, 0, len(page.Items))
-		for _, it := range page.Items {
-			seriesIDs = append(seriesIDs, it.ID)
-		}
+		seriesIDs = active
 	}
 
 	candidates := make([]nextUpCandidate, 0, len(seriesIDs))

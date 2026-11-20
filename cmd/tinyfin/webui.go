@@ -35,7 +35,9 @@ func withWebUI(api http.Handler, dir string) http.Handler {
 		case strings.EqualFold(strings.TrimSuffix(r.URL.Path, "/"), "/web/ConfigurationPages"):
 			api.ServeHTTP(w, r)
 		case strings.HasPrefix(r.URL.Path, "/web/"):
-			fileServer.ServeHTTP(w, r)
+			// The cache headers and the compression the plain file server
+			// does not do (webui_cache.go).
+			withWebUICache(fileServer).ServeHTTP(w, r)
 		default:
 			api.ServeHTTP(w, r)
 		}

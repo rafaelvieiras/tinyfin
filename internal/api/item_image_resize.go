@@ -28,6 +28,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gen2brain/webp"
+
 	"github.com/rafaelvieiras/tinyfin/internal/picture"
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
@@ -116,6 +118,15 @@ func (s *Server) itemImagePlan(sizing itemImageSizing, ref storage.ImageRef) (pl
 	if plan.Rejected || plan.W < 1 || plan.H < 1 {
 		return plan, quality, format, false
 	}
+	// A size that changes the picture makes it be made again, a fill box
+	// included. Measured on the reference at the item-image route: a 1509x2116
+	// poster asked for fillWidth=223&fillHeight=313 comes back 224x313 (92 KB),
+	// fillWidth=100 alone comes back 100x140, and the same route with no size
+	// member answers the stored 2.7 MB file. The fill box alone rule the
+	// chapter images follow is that route's, not this one's.
+	if plan.W != srcW || plan.H != srcH {
+		plan.Forces = true
+	}
 	// A quality below the pass threshold makes the picture again at its own
 	// size, the rule the reference applies to a JPEG.
 	if !plan.Forces && !(sizing.Quality != nil && quality < itemImagePassQuality) {
@@ -151,10 +162,19 @@ func formatOfPath(path string) string {
 func (s *Server) serveResizedItemImage(w http.ResponseWriter, r *http.Request, ref storage.ImageRef, itemID storage.ItemID, kind storage.ImageKind, index int, sourceInfo os.FileInfo, plan picture.Plan, quality int, format string) bool {
 	// The answer keeps the source's format: a PNG stays PNG, everything else
 	// (JPEG, GIF, WebP, a tbn holding any of them) is answered as JPEG, which
-	// is what the item-image route has always served.
+	// is what the item-image route has always served. A JPEG source is answered
+	// as WebP when the client says it takes one, the negotiation the reference
+	// does too (measured: Accept: image/webp answers image/webp at the same
+	// box, Accept: */* answers image/jpeg). A PNG keeps its own format: WebP
+	// lossy would drop a card's transparency.
 	outFormat, ext := "jpeg", ".jpg"
-	if format == "png" {
+	switch format {
+	case "png":
 		outFormat, ext = "png", ".png"
+	default:
+		if acceptsWebP(r.Header.Get("Accept")) {
+			outFormat, ext = "webp", ".webp"
+		}
 	}
 
 	file, ok := s.openResizedItemImage(ref, itemID, kind, index, sourceInfo, plan, quality, outFormat, ext)
@@ -164,6 +184,9 @@ func (s *Server) serveResizedItemImage(w http.ResponseWriter, r *http.Request, r
 	defer file.Close()
 
 	w.Header().Set("Content-Type", "image/"+outFormat)
+	// The same URL answers different bytes depending on what the client said it
+	// takes, so anything in front of this server has to keep the two apart.
+	w.Header().Add("Vary", "Accept")
 	// Last-Modified is the stored picture's own, like the passthrough path:
 	// the answer changes when the picture does, and conditional requests keep
 	// working.
@@ -230,8 +253,15 @@ func (s *Server) writeResizedImage(ref storage.ImageRef, plan picture.Plan, qual
 		return err
 	}
 	dst := picture.Resize(src, plan.W, plan.H)
-	if format == "png" {
+	switch format {
+	case "png":
 		return png.Encode(out, dst)
+	case "webp":
+		// The same quality number the request asked for: libwebp and the Go
+		// JPEG encoder are not the same scale, and measured on this server the
+		// WebP encode is smaller at every quality the client asks for (q96 of a
+		// 224x313 card: 36 KB against 66 KB).
+		return webp.Encode(out, dst, webp.Options{Quality: quality, Method: 4})
 	}
 	return jpeg.Encode(out, dst, &jpeg.Options{Quality: quality})
 }

@@ -10,6 +10,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- A card picture asked for at a size is answered at that size. A `fillWidth`/`fillHeight` box now makes the
+  server produce the picture again instead of serving the stored file: on production every card on the home
+  screen was arriving as the original poster — one home view pulled 13.6 MB of pictures where the reference
+  server answers ~2 MB for the same screen.
+- Pictures are answered as WebP when the client says it takes one (`Accept: image/webp`), which the web client
+  always does, and in the source's own format otherwise. The answer names `Accept` in `Vary`.
+- Answers are compressed: JSON and text go out gzipped when the client accepts it (one movie library's
+  "recently added" answer is 246 KB of JSON, 47 KB gzipped), as do the bundled web client's files (3.8 MB of
+  JavaScript, ~1.1 MB gzipped).
+- The bundled web client's files carry `Cache-Control`: a versioned bundle is `immutable` for a year, the
+  entry point and the root files are always revalidated, so a new build is still picked up.
+- `GET /Items/Latest` with a parent TV library took 8.3 to 9.3 seconds on a large library and could leave the
+  home screen waiting; it now answers in 0.56 to 0.63 seconds. The "is this series fully watched" check is one
+  grouped query instead of one per episode, and the 24-hour window is applied by the database instead of being
+  read and filtered in memory.
+- `GET /Shows/NextUp` took 4.4 seconds to answer an empty list, because it walked every series in the catalog
+  and read every episode of each; it now starts from the series that have play activity and answers in
+  milliseconds.
+- A credit's photo whose `<thumb>` names a path this server cannot read (a Jellyfin install writes its own
+  config path there) is no longer stored, and the local `.actors` folder beside the media is used instead, so
+  cast cards stop answering `404`: on a migrated library 20,657 credits carried such a path and one had a
+  readable photo. A photo replaced on disk is noticed by its modification time, and a source that failed once
+  is not advertised again until the retry window passes.
 
 - `GET /Items/Latest` without a parent library — the "recently added" row the home screen draws — now comes back
   with one card per series instead of the flat list of episodes, seasons and series rows it used to answer, ordered

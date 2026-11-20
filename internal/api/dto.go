@@ -619,7 +619,11 @@ func (s *Server) peopleDtos(ctx context.Context, people []storage.Person) []base
 	dtos := make([]baseItemPersonDto, 0, len(people))
 	for _, p := range people {
 		dto := baseItemPersonDto{Name: p.Name, ID: personID(p.Name), Role: p.Role, Type: p.Type}
-		if img, ok := images[storage.ItemID(dto.ID)]; ok && img.Source != "" {
+		// A picture is advertised only when one can actually be served: the
+		// bytes are already stored, or the source has not failed before.
+		// Publishing the tag for a source that cannot be read is what made a
+		// details page request nine actor images and get nine 404s.
+		if img, ok := images[storage.ItemID(dto.ID)]; ok && img.Source != "" && s.personImageServable(img) {
 			tag := img.Tag
 			if tag == "" {
 				tag = personImageTag(img.Source)

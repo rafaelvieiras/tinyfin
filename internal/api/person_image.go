@@ -8,6 +8,7 @@ import (
 	"mime"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -124,7 +125,10 @@ func (s *Server) personImageRef(ctx context.Context, personID storage.ItemID, ki
 	// A row without a file is either never downloaded or lost its file
 	// out-of-band; both are re-downloaded below rather than served as a 404
 	// forever.
-	if ref, ok := s.cachedPersonImageRef(img); ok {
+	// A local photo replaced on disk is re-read instead of serving the old
+	// copy: the source is a file this server can see, and its mtime is the
+	// whole change signal.
+	if ref, ok := s.cachedPersonImageRef(img); ok && !personImageStale(img) {
 		return ref, true
 	}
 	if s.personImageCoolingDown(img, s.personImageClock()) {
@@ -139,6 +143,17 @@ func (s *Server) personImageRef(ctx context.Context, personID storage.ItemID, ki
 		return storage.ImageRef{}, false
 	}
 	return s.cachedPersonImageRef(img)
+}
+
+// personImageServable reports whether a stored person image row can answer a
+// request now: the picture is on disk, or the source is one that has not failed
+// before. A row whose source failed stays quiet until the retry window passes,
+// instead of advertising a tag that answers 404 on every page view.
+func (s *Server) personImageServable(img storage.PersonImage) bool {
+	if img.Path != "" {
+		return true
+	}
+	return !s.personImageCoolingDown(img, s.personImageClock())
 }
 
 // cachedPersonImageRef builds the serving view of an already downloaded
@@ -206,7 +221,7 @@ func (s *Server) downloadPersonImage(ctx context.Context, img storage.PersonImag
 	}
 	width, height := imageDimensionsOf(path)
 	img.Path = path
-	img.Tag = personImageTag(img.Source)
+	img.Tag = personImageTagOf(img.Source, fetched.Modified)
 	img.FailedAt = time.Time{}
 	img.Width, img.Height = width, height
 	img.Size = int64(len(fetched.Bytes))
@@ -291,4 +306,32 @@ func imageDimensionsOf(path string) (int, int) {
 		return 0, 0
 	}
 	return cfg.Width, cfg.Height
+}
+
+// personImageTagOf is the tag a person's picture is published under. For a
+// download it is the source URL's hash, so a change of URL changes the tag. For
+// a file on this server the path alone would not change when the picture is
+// replaced, so the file's own modification time joins the hash.
+func personImageTagOf(source string, modified time.Time) string {
+	if modified.IsZero() {
+		return personImageTag(source)
+	}
+	return personImageTag(source + "|" + strconv.FormatInt(modified.UnixNano(), 10))
+}
+
+// personImageStale reports whether a local source file is newer than the copy
+// taken from it.
+func personImageStale(img storage.PersonImage) bool {
+	if img.Path == "" || !filepath.IsAbs(img.Source) {
+		return false
+	}
+	src, err := os.Stat(img.Source)
+	if err != nil {
+		return false
+	}
+	stored, err := os.Stat(img.Path)
+	if err != nil {
+		return false
+	}
+	return src.ModTime().After(stored.ModTime())
 }

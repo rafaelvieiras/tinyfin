@@ -652,3 +652,68 @@ func TestGetUserByNameIsCaseInsensitive(t *testing.T) {
 		t.Fatalf("GetUserByName = %+v, %v; want the account stored as MixedCase", got, err)
 	}
 }
+
+// TestSeriesWatchStatesGroupsInOneQuery locks the tally the recently-added
+// grouping reads: episodes counted, unwatched counted, a series absent when it
+// has no episode, and one series' play states never leaking into another's.
+func TestSeriesWatchStatesGroupsInOneQuery(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+	libraryID, seriesID, _, episodeID, _ := seedTree(t, st)
+	user, err := st.CreateUser(ctx, storage.User{Name: "watcher"})
+	if err != nil {
+		t.Fatalf("CreateUser: %v", err)
+	}
+
+	second := storage.Item{
+		ID: storage.ItemID(newID()), Type: storage.ItemTypeSeries, LibraryID: libraryID,
+		Name:        "Second Show",
+		DateCreated: time.Now().UTC(),
+	}
+	if err := st.UpsertItem(ctx, second); err != nil {
+		t.Fatalf("UpsertItem series: %v", err)
+	}
+	secondSeason := storage.Item{
+		ID: storage.ItemID(newID()), Type: storage.ItemTypeSeason, LibraryID: libraryID,
+		Name:     "Second Season",
+		SeriesID: &second.ID, ParentID: &second.ID,
+		DateCreated: time.Now().UTC(),
+	}
+	if err := st.UpsertItem(ctx, secondSeason); err != nil {
+		t.Fatalf("UpsertItem season: %v", err)
+	}
+	for i, played := range []bool{true, false} {
+		ep := storage.Item{
+			ID: storage.ItemID(newID()), Type: storage.ItemTypeEpisode, LibraryID: libraryID,
+			Name:     "S2E" + string(rune('1'+i)),
+			SeriesID: &second.ID, SeasonID: &secondSeason.ID, ParentID: &secondSeason.ID,
+			DateCreated: time.Now().UTC(),
+		}
+		if err := st.UpsertItem(ctx, ep); err != nil {
+			t.Fatalf("UpsertItem episode: %v", err)
+		}
+		if played {
+			if err := st.SetPlaystate(ctx, user, ep.ID, storage.Playstate{Played: true, PlayCount: 1}); err != nil {
+				t.Fatalf("SetPlaystate: %v", err)
+			}
+		}
+	}
+	// The seeded series has one episode, played.
+	if err := st.SetPlaystate(ctx, user, episodeID, storage.Playstate{Played: true, PlayCount: 1}); err != nil {
+		t.Fatalf("SetPlaystate: %v", err)
+	}
+
+	states, err := st.SeriesWatchStates(ctx, user, []storage.ItemID{seriesID, second.ID, "no-such-series"})
+	if err != nil {
+		t.Fatalf("SeriesWatchStates: %v", err)
+	}
+	if got := states[seriesID]; got.Episodes != 1 || got.Unwatched != 0 {
+		t.Errorf("first series = %+v, want 1 episode and 0 unwatched", got)
+	}
+	if got := states[second.ID]; got.Episodes != 2 || got.Unwatched != 1 {
+		t.Errorf("second series = %+v, want 2 episodes and 1 unwatched", got)
+	}
+	if _, ok := states["no-such-series"]; ok {
+		t.Errorf("a series with no episode came back with a tally")
+	}
+}
