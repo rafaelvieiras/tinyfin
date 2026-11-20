@@ -145,15 +145,75 @@ func (s *Server) personImageRef(ctx context.Context, personID storage.ItemID, ki
 	return s.cachedPersonImageRef(img)
 }
 
+// personSourceRecheck is how long a decision about a source that is a path on
+// this server is trusted. A path that names nothing today can start naming a
+// picture tomorrow (the file is copied in, the mount comes back), and the row
+// keeps the same source through a scan, so the answer has to expire instead of
+// being cached for the life of the process.
+const personSourceRecheck = 5 * time.Minute
+
+// personSourceEntry is one remembered answer about one path source.
+type personSourceEntry struct {
+	servable bool
+	at       time.Time
+}
+
+// personSourceLookup remembers, for a bounded time, whether a path source names
+// a readable file. Without it a library migrated from another server answers
+// every credit of every response with a stat of a path that is not there — on a
+// list response that is thousands of them, and on a FUSE mount each one is a
+// syscall through the FUSE layer.
+type personSourceLookup struct {
+	mu sync.Mutex
+	m  map[string]personSourceEntry
+}
+
+// personSourceServable reports whether source, when it is a path on this server,
+// names a file that can be read. A URL is always "servable" here: whether it
+// answers is decided by the download, and a failure is recorded then.
+func (s *Server) personSourceServable(source string, now time.Time) bool {
+	if !filepath.IsAbs(source) {
+		return true
+	}
+	s.personSources.mu.Lock()
+	entry, remembered := s.personSources.m[source]
+	s.personSources.mu.Unlock()
+	if remembered && now.Sub(entry.at) < personSourceRecheck {
+		return entry.servable
+	}
+	info, err := os.Stat(source)
+	servable := err == nil && info.Mode().IsRegular()
+	s.personSources.mu.Lock()
+	if s.personSources.m == nil {
+		s.personSources.m = make(map[string]personSourceEntry)
+	}
+	if len(s.personSources.m) >= 20000 {
+		// Bounded on purpose: a library with more credits than this keeps the
+		// most recent answers and re-checks the rest, instead of growing a map
+		// the process never releases.
+		s.personSources.m = make(map[string]personSourceEntry)
+	}
+	s.personSources.m[source] = personSourceEntry{servable: servable, at: now}
+	s.personSources.mu.Unlock()
+	return servable
+}
+
 // personImageServable reports whether a stored person image row can answer a
-// request now: the picture is on disk, or the source is one that has not failed
-// before. A row whose source failed stays quiet until the retry window passes,
-// instead of advertising a tag that answers 404 on every page view.
+// request now: the picture is on disk, the source is a file that is really
+// there, or — for a URL — it has not failed before. A row whose source cannot
+// answer stays quiet instead of advertising a tag that answers 404 on every
+// page view. A migrated library is where this matters: measured on production,
+// 14,078 credits carried a path from the server they came from, which made one
+// details page request nine pictures and get nine 404s.
 func (s *Server) personImageServable(img storage.PersonImage) bool {
 	if img.Path != "" {
 		return true
 	}
-	return !s.personImageCoolingDown(img, s.personImageClock())
+	now := s.personImageClock()
+	if !s.personSourceServable(img.Source, now) {
+		return false
+	}
+	return !s.personImageCoolingDown(img, now)
 }
 
 // cachedPersonImageRef builds the serving view of an already downloaded

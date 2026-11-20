@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- A credit's photo whose stored source is a path this server cannot read is no longer advertised, so a details
+  page stops requesting pictures that can only answer `404`: on a library migrated from a Jellyfin install 14,078 of
+  its 20,657 credits carried such a path, and one details page asked for nine pictures and got nine `404`s. That page
+  now publishes three tags, one per credit whose photo is really reachable, and all three answer `200`.
 - A card picture asked for at a size is answered at that size. A `fillWidth`/`fillHeight` box now makes the
   server produce the picture again instead of serving the stored file: on production every card on the home
   screen was arriving as the original poster — one home view pulled 13.6 MB of pictures where the reference

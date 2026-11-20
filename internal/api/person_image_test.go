@@ -131,7 +131,10 @@ func getItemPeople(t *testing.T, ts *httptest.Server, st *sqlite.Store, itemID s
 	ImageBlurHashes map[string]map[string]string `json:"ImageBlurHashes"`
 } {
 	t.Helper()
-	createTestUser(t, st, "watcher", "watcherpass")
+	// A test may ask for the same item twice; the user is created once.
+	if _, err := st.GetUserByName(context.Background(), "watcher"); err != nil {
+		createTestUser(t, st, "watcher", "watcherpass")
+	}
 	token := loginToken(t, ts.URL, "watcher", "watcherpass")
 	resp := authedClient(t, ts.URL, token)("GET", "/Items/"+itemID)
 	defer resp.Body.Close()
@@ -256,6 +259,53 @@ func TestPersonDTOPublishesTheBlurHashOnceThePictureExists(t *testing.T) {
 	}
 	if _, ok := hashes[people[0].PrimaryImageTag]; !ok {
 		t.Errorf("blurhash is not filed under the published tag %q: %v", people[0].PrimaryImageTag, hashes)
+	}
+}
+
+// TestPersonDTODoesNotAdvertiseAPathThatIsNotThere is the migrated-library
+// case: a credit's <thumb> names a path from the server the media came from, so
+// nothing here can read it. Measured on production, 14,078 credits carried such
+// a path and one details page answered nine pictures with nine 404s. The tag
+// has to be withheld — a photo nobody can see is not advertised.
+func TestPersonDTODoesNotAdvertiseAPathThatIsNotThere(t *testing.T) {
+	ts, srv, st, fake := personImageFixture(t)
+	ctx := context.Background()
+	dead := "/config/data/metadata/People/A/Ann Actor/folder.jpg"
+	if err := st.UpsertPersonImage(ctx, storage.PersonImage{
+		PersonID: storage.ItemID(personID("Ann Actor")),
+		Source:   dead,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	people := getItemPeople(t, ts, st, movieID)
+	if got := people[0].PrimaryImageTag; got != "" {
+		t.Errorf("People[0].PrimaryImageTag = %q, want absent for a source that is not there", got)
+	}
+	if fake.count() != 0 {
+		t.Errorf("a source that is not there caused %d download(s)", fake.count())
+	}
+
+	// A path that is really there is advertised: the local .actors photo.
+	real := filepath.Join(t.TempDir(), "ann.jpg")
+	if err := os.WriteFile(real, personImagePNG(t, 40, 60), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.UpsertPersonImage(ctx, storage.PersonImage{
+		PersonID: storage.ItemID(personID("Ann Actor")),
+		Source:   real,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// The answer about a path is remembered for a while; expire it the way the
+	// process would after personSourceRecheck.
+	srv.personSources.mu.Lock()
+	srv.personSources.m = nil
+	srv.personSources.mu.Unlock()
+
+	people = getItemPeople(t, ts, st, movieID)
+	if got, want := people[0].PrimaryImageTag, personImageTag(real); got != want {
+		t.Errorf("People[0].PrimaryImageTag = %q, want %q for a file that is there", got, want)
 	}
 }
 

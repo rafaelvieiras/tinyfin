@@ -197,6 +197,9 @@ type Server struct {
 	// requests for the same person into one download.
 	personImageFetcher personImageFetcher
 	personFlights      personImageFlights
+	// personSources remembers, briefly, which path sources name a file that is
+	// really there (person_image.go).
+	personSources personSourceLookup
 	// personImageClock is time.Now in production and a fixed clock in tests,
 	// so the negative cache's retry window is testable.
 	personImageClock func() time.Time
