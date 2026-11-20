@@ -168,6 +168,7 @@ func (s *Server) extrasItem(w http.ResponseWriter, r *http.Request) (ctx context
 
 func (s *Server) extraDtos(ctx context.Context, extras []storage.Item) []baseItemDto {
 	out := make([]baseItemDto, 0, len(extras))
+	ctx = s.prefetchDTOs(ctx, extras)
 	for _, x := range extras {
 		out = append(out, s.baseItemDto(ctx, x))
 	}

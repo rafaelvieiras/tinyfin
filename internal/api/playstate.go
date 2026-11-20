@@ -59,10 +59,11 @@ func (s *Server) applyFolderUserData(ctx context.Context, userID storage.UserID,
 		return
 	}
 	if isMarkFolder(item.Type) {
-		total, unplayed, err := s.store.FolderLeafCounts(ctx, userID, item.ID)
-		if err != nil {
+		counts, ok := s.leafCounts(ctx, userID, item.ID)
+		if !ok {
 			return
 		}
+		total, unplayed := counts.Total, counts.Unplayed
 		dto.UnplayedItemCount = &unplayed
 		if total > 0 {
 			dto.Played = unplayed == 0

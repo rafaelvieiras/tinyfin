@@ -100,6 +100,7 @@ func (s *Server) handleItemSimilar(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		ctx = s.prefetchDTOs(ctx, items)
 		for _, it := range items {
 			out = append(out, shapeListItem(s.baseItemDto(ctx, it), iq))
 		}
@@ -121,6 +122,7 @@ func (s *Server) handleItemSimilar(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		ctx = s.prefetchDTOs(ctx, page.Items)
 		for _, it := range page.Items {
 			out = append(out, shapeListItem(s.baseItemDto(ctx, it), iq))
 		}
@@ -259,6 +261,7 @@ func (s *Server) handleItemCollections(w http.ResponseWriter, r *http.Request) {
 			start = len(page.Items)
 		}
 		items := page.Items[start:]
+		ctx = s.prefetchDTOs(ctx, items)
 		if iq.limitGiven && iq.limit < len(items) {
 			items = items[:iq.limit]
 		}
@@ -376,6 +379,7 @@ func (s *Server) handleMovieRecommendations(w http.ResponseWriter, r *http.Reque
 			return nil, err
 		}
 		items := make([]baseItemDto, 0, len(page.Items))
+		ctx = s.prefetchDTOs(ctx, page.Items)
 		for _, it := range page.Items {
 			items = append(items, shapeListItem(s.baseItemDto(ctx, it), iq))
 		}

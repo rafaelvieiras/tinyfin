@@ -421,12 +421,18 @@ var childCountItemTypes = map[storage.ItemType]bool{
 // helper's own ItemTypes narrowing (a Series' direct children are Seasons,
 // but a BoxSet's direct children can be any collected type).
 func (s *Server) childCountFor(ctx context.Context, id storage.ItemID) (int, error) {
+	if pf := dtoPrefetchFrom(ctx); pf != nil && pf.counted[id] {
+		return pf.direct[id] + pf.merged[id], nil
+	}
 	return s.childCountOf(ctx, storage.Item{ID: id})
 }
 
 // childCountOf is childCountFor for a loaded item: a library's own root
 // folder has no children by parent; its children are the top-level items.
 func (s *Server) childCountOf(ctx context.Context, item storage.Item) (int, error) {
+	if child, _, ok := s.prefetchedChildCounts(ctx, item); ok {
+		return child, nil
+	}
 	filter := storage.ItemFilter{ParentID: &item.ID, Limit: 1}
 	if item.Type == storage.ItemTypeFolder && item.ParentID == nil && item.LibraryID != "" {
 		if lib, err := s.store.GetLibrary(ctx, item.LibraryID); err == nil {
@@ -461,6 +467,9 @@ func (s *Server) childCountOf(ctx context.Context, item storage.Item) (int, erro
 // themselves (RecursiveItemCount). A library's root folder counts everything
 // the library holds.
 func (s *Server) recursiveItemCountOf(ctx context.Context, item storage.Item) (int, error) {
+	if _, recursive, ok := s.prefetchedChildCounts(ctx, item); ok {
+		return recursive, nil
+	}
 	filter := storage.ItemFilter{ParentID: &item.ID, Recursive: true, ExcludeItemTypes: storage.FolderItemTypes, Limit: 1}
 	if item.Type == storage.ItemTypeFolder && item.ParentID == nil && item.LibraryID != "" {
 		if lib, err := s.store.GetLibrary(ctx, item.LibraryID); err == nil {
@@ -956,6 +965,14 @@ var singleInstanceImageKinds = []storage.ImageKind{"Primary", "Art", "Logo", "Ba
 // codebase today: storeProviderImage/seedFolderImage never set Index
 // explicitly, so it defaults to 0).
 func (s *Server) imageTagsFor(ctx context.Context, id storage.ItemID) (tags map[string]string, aspectRatio *float64, backdropTags []string, blurHashes map[string]map[string]string) {
+	if pf := dtoPrefetchFrom(ctx); pf != nil {
+		if set, ok := pf.tagSets[id]; ok {
+			return set.tags, set.aspectRatio, set.backdrops, set.blurHashes
+		}
+		defer func() {
+			pf.tagSets[id] = &imageTagSet{tags: tags, aspectRatio: aspectRatio, backdrops: backdropTags, blurHashes: blurHashes}
+		}()
+	}
 	addHash := func(kind storage.ImageKind, tag, hash string) {
 		if hash == "" {
 			return
@@ -969,7 +986,7 @@ func (s *Server) imageTagsFor(ctx context.Context, id storage.ItemID) (tags map[
 		blurHashes[string(kind)][tag] = hash
 	}
 	for _, kind := range singleInstanceImageKinds {
-		refs, err := s.store.GetImageRefs(ctx, id, kind)
+		refs, err := s.imageRefs(ctx, id, kind)
 		if err != nil || len(refs) == 0 {
 			continue
 		}
@@ -988,7 +1005,7 @@ func (s *Server) imageTagsFor(ctx context.Context, id storage.ItemID) (tags map[
 		}
 	}
 
-	if refs, err := s.store.GetImageRefs(ctx, id, storage.ImageKind("Backdrop")); err == nil && len(refs) > 0 {
+	if refs, err := s.imageRefs(ctx, id, storage.ImageKind("Backdrop")); err == nil && len(refs) > 0 {
 		backdropTags = make([]string, 0, len(refs))
 		for _, ref := range refs {
 			tag := ref.Tag
@@ -1254,10 +1271,7 @@ func (s *Server) libraryBaseItemDto(ctx context.Context, lib storage.Library) ba
 // don't break the item response over a secondary field" posture ChildCount
 // itself already takes in baseItemDto below.
 func (s *Server) userDataFor(ctx context.Context, userID storage.UserID, item storage.Item) *userItemDataDto {
-	state, err := s.store.GetPlaystate(ctx, userID, item.ID)
-	if err != nil {
-		state = storage.Playstate{}
-	}
+	state := s.playstate(ctx, userID, item.ID)
 	dto := userItemDataFromState(state, item)
 	s.applyFolderUserData(ctx, userID, item, dto)
 	return dto
@@ -1332,7 +1346,7 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 	}
 	s.decorateMusic(ctx, item, &dto)
 	if item.Type == storage.ItemTypePhoto {
-		if refs, err := s.store.GetImageRefs(ctx, item.ID, storage.ImageKind("Primary")); err == nil && len(refs) > 0 && refs[0].Width > 0 {
+		if refs, err := s.imageRefs(ctx, item.ID, storage.ImageKind("Primary")); err == nil && len(refs) > 0 && refs[0].Width > 0 {
 			w, h := refs[0].Width, refs[0].Height
 			dto.Width, dto.Height = &w, &h
 		}
@@ -1341,7 +1355,7 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 	var seriesItem, seasonItem *storage.Item
 	if item.SeriesID != nil {
 		dto.SeriesID = string(*item.SeriesID)
-		if series, err := s.store.GetItem(ctx, *item.SeriesID); err == nil {
+		if series, ok := s.seriesFor(ctx, *item.SeriesID); ok {
 			dto.SeriesName = series.Name
 			seriesItem = &series
 			if len(series.Studios) > 0 {
@@ -1351,7 +1365,7 @@ func (s *Server) baseItemDto(ctx context.Context, item storage.Item) baseItemDto
 	}
 	if item.SeasonID != nil {
 		dto.SeasonID = string(*item.SeasonID)
-		if season, err := s.store.GetItem(ctx, *item.SeasonID); err == nil {
+		if season, ok := s.seasonFor(ctx, *item.SeasonID); ok {
 			dto.SeasonName = season.Name
 			seasonItem = &season
 		}

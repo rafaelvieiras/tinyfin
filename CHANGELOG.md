@@ -25,6 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   JavaScript, ~1.1 MB gzipped).
 - The bundled web client's files carry `Cache-Control`: a versioned bundle is `immutable` for a year, the
   entry point and the root files are always revalidated, so a new build is still picked up.
+- A listing page asked the store one question per card — the item's picture refs, its playstate, a folder's
+  leaf counts, two counts and one lookup per ancestor — and an episode card asked for its ancestors' pictures
+  once per inherited field, 49 lookups for one card. A 100-episode page made 5,901 statements and took 265 ms;
+  it now makes 4 and takes 42 ms. A 600-episode page went from 1,444 ms to 164 ms and a 300-season page from
+  813 ms to 101 ms. The answers are unchanged: six routes, including `GET /Items/Latest` unscoped and
+  `GET /UserViews`, were compared field by field against the previous build and are identical. Two tests pin
+  the property: a page's statement count does not grow with the page, and with the batching disabled they
+  report 5,600 picture lookups for 100 cards.
 - A grouped "recently added" row for a TV library took 640 ms for 16 cards on a 6,187-item library; it now
   takes 140 ms. The row asked four store reads per card (that card's 24-hour window plus three counts: the
   season's episode total, the series' season total, and the season's children); those are now five batched

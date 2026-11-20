@@ -1009,6 +1009,7 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 	}
 	items := make([]baseItemDto, 0, len(page.Items))
 	if !countOnly {
+		ctx = s.prefetchDTOs(ctx, page.Items)
 		wantExtras := iq.fields["localtrailercount"] || iq.fields["specialfeaturecount"] || iq.fields["partcount"]
 		for _, it := range page.Items {
 			dto := s.baseItemDto(ctx, it)
@@ -1055,6 +1056,13 @@ func (s *Server) writeSearchItems(ctx context.Context, w http.ResponseWriter, fi
 		sc.apply(&scope)
 	}
 	wantExtras := iq.fields["localtrailercount"] || iq.fields["specialfeaturecount"] || iq.fields["partcount"]
+	hitItems := make([]storage.Item, 0, len(page.Hits))
+	for _, h := range page.Hits {
+		if h.Item != nil {
+			hitItems = append(hitItems, *h.Item)
+		}
+	}
+	ctx = s.prefetchDTOs(ctx, hitItems)
 	for _, h := range page.Hits {
 		switch {
 		case h.Item != nil:
