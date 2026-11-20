@@ -467,6 +467,15 @@ func (i Item) HasMediaFile() bool {
 // the earliest per-episode timestamps had none of its rows survive a
 // 200-item pool once the other three's combined episode counts exceeded
 // it, so it never appeared in the grouped result at all, at any limit).
+// SeriesWatchState is one series' episode tally for one user, the answer
+// SeriesWatchStates gives: Episodes is how many episodes the series holds and
+// Unwatched how many of those have no play for that user. A series is "fully
+// watched" when it has episodes and none is unwatched.
+type SeriesWatchState struct {
+	Episodes  int
+	Unwatched int
+}
+
 type SeriesActivity struct {
 	SeriesID ItemID
 	Latest   time.Time

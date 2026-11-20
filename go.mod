@@ -4,6 +4,7 @@ go 1.26.0
 
 require (
 	github.com/coder/websocket v1.8.15
+	github.com/gen2brain/webp v0.6.4
 	golang.org/x/crypto v0.59.0
 	golang.org/x/image v0.48.0
 	golang.org/x/sys v0.50.0
@@ -12,6 +13,7 @@ require (
 
 require (
 	github.com/dustin/go-humanize v1.1.0 // indirect
+	github.com/ebitengine/purego v0.10.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect

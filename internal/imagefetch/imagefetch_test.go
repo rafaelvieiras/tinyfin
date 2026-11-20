@@ -1,11 +1,16 @@
 package imagefetch
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"image"
+	"image/png"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -246,4 +251,67 @@ func mustAddr(t *testing.T, raw string) netip.Addr {
 		t.Fatalf("parse %q: %v", raw, err)
 	}
 	return addr
+}
+
+// TestFetchReadsALocalPicture: a credit photo found beside the media is read,
+// not downloaded, and its mtime comes back so a replaced file is noticed.
+func TestFetchReadsALocalPicture(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".actors", "Brad Pitt.jpg")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(path, tinyPNG(t), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	img, err := New(nil).Fetch(context.Background(), path)
+	if err != nil {
+		t.Fatalf("Fetch(%q): %v", path, err)
+	}
+	if img.URL != path {
+		t.Errorf("URL = %q, want the path", img.URL)
+	}
+	if img.MIME != "image/png" {
+		t.Errorf("MIME = %q, want image/png", img.MIME)
+	}
+	if img.Modified.IsZero() {
+		t.Errorf("Modified is zero, want the file's own time")
+	}
+}
+
+// TestFetchRefusesFilesThatAreNotPictures: the path came out of an NFO, so a
+// text file, an unknown extension and a missing file are all refused.
+func TestFetchRefusesFilesThatAreNotPictures(t *testing.T) {
+	dir := t.TempDir()
+	text := filepath.Join(dir, "notes.txt")
+	if err := os.WriteFile(text, []byte("just text"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	disguised := filepath.Join(dir, "passwd.jpg")
+	if err := os.WriteFile(disguised, []byte("root:x:0:0:root:/root:/bin/bash\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	for name, path := range map[string]string{
+		"text file":     text,
+		"not a picture": disguised,
+		"missing file":  filepath.Join(dir, "missing.jpg"),
+		"a directory":   dir,
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := New(nil).Fetch(context.Background(), path); err == nil {
+				t.Fatalf("Fetch(%q) succeeded, want a refusal", path)
+			}
+		})
+	}
+}
+
+// tinyPNG builds a 1x1 PNG for the local-read tests.
+func tinyPNG(t *testing.T) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, image.NewRGBA(image.Rect(0, 0, 1, 1))); err != nil {
+		t.Fatalf("png.Encode: %v", err)
+	}
+	return buf.Bytes()
 }

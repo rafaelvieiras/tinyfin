@@ -30,7 +30,7 @@
 // whole series — not just the items that happen to be in this file's
 // candidate pool) is excluded from the grouped result entirely, and does
 // not consume one of the request's limit slots by being excluded — see
-// isSeriesFullyWatched and its use in tvShowsLatestGrouped below.
+// fullyWatched and its use in tvShowsLatestGrouped below.
 package api
 
 import (
@@ -48,7 +48,7 @@ const seriesLatestWindowHours = 24
 
 // latestSeriesPoolMin/Multiplier/Max bound the single QuerySeriesLatestActivity
 // call tvShowsLatestGrouped issues: enough distinct series ranked ahead of
-// the request's own `limit` to absorb isSeriesFullyWatched skips, but still
+// the request's own `limit` to absorb fully-watched skips, but still
 // one bounded query — never the whole catalog (AGENTS.md principle 1, "idle
 // memory is a budget"). Unlike this file's previous raw-item-count-bounded
 // pool, this bound is in units of *series*, not episodes, so a handful of
@@ -229,57 +229,30 @@ func (s *Server) pickSeriesCard(ctx context.Context, g *seriesGroup) (*storage.I
 	return &latest, nil
 }
 
-// isSeriesFullyWatched reports whether every episode of seriesID is played
-// (PlayCount > 0) for userID — confirmed live against the reference server
-// (docs/12's "Implementation findings"): a 4-season series with every
-// episode's Played set true for the requesting user never appeared in the
-// grouped GET /Items/Latest result, at any limit large enough to otherwise
-// include it, while a series ranked just behind it by recency but with at
-// least one unwatched episode took its place. Checked across the whole
-// series, not just the Episode/Season rows that happen to have landed in
-// tvShowsLatestGrouped's candidate pool — confirmed live: marking every
-// episode of a series played still excluded it even though only a few of
-// its episodes were recent enough to be in that pool.
+// fullyWatched reports whether every episode of a series is played
+// (PlayCount > 0) for the requesting user — confirmed live against the
+// reference server (docs/12's "Implementation findings"): a 4-season series
+// with every episode's Played set true never appeared in the grouped
+// GET /Items/Latest result, at any limit large enough to otherwise include it,
+// while a series ranked just behind it by recency but with at least one
+// unwatched episode took its place. Checked across the whole series, not just
+// the Episode/Season rows that happen to have landed in the candidate pool.
 //
-// "Played" reuses nextUpCandidateForSeries' PlayCount > 0 criterion
-// (nextup.go, same package) rather than the Played bool: GetPlaystate's own
-// zero-value convention (sqlite/playstate.go) means an episode with no
-// playstate row at all — never touched — already reads back PlayCount 0,
-// so "never watched" and "explicitly not played" both correctly fail this
-// check with no special-casing needed.
+// A series with zero episodes reports false — nothing to hide.
 //
-// A series with zero episodes (defensive only: every group passed here was
-// built from at least one Episode/Season candidate row, so its series has
-// at least one) reports false — nothing to hide.
-func (s *Server) isSeriesFullyWatched(ctx context.Context, userID storage.UserID, seriesID storage.ItemID) (bool, error) {
-	page, err := s.store.QueryItems(ctx, storage.ItemFilter{
-		ItemTypes: []storage.ItemType{storage.ItemTypeEpisode},
-		SeriesID:  &seriesID,
-		Limit:     nextUpEpisodeScanLimit,
-	})
-	if err != nil {
-		return false, err
-	}
-	if len(page.Items) == 0 {
-		return false, nil
-	}
-	for _, ep := range page.Items {
-		st, err := s.store.GetPlaystate(ctx, userID, ep.ID)
-		if err != nil {
-			return false, err
-		}
-		if st.PlayCount <= 0 {
-			return false, nil
-		}
-	}
-	return true, nil
+// The tally comes from one grouped query (storage.SeriesWatchStates) instead of
+// a query per episode: the per-episode walk this replaced cost one round trip
+// for every episode of every candidate series, and measured 8.3 to 9.3 seconds
+// on a library with 86 series.
+func fullyWatched(state storage.SeriesWatchState) bool {
+	return state.Episodes > 0 && state.Unwatched == 0
 }
 
 // tvShowsLatestGrouped implements docs/12's "Items/Latest — series grouping"
 // for a TV-shows library: at most one card per series, chosen by
 // pickSeriesCard, newest-series-addition first, truncated to limit groups —
 // limit counts groups (series), not raw episodes (docs/12 step 2). A series
-// that isSeriesFullyWatched reports as fully watched for userID is skipped
+// that fullyWatched reports as fully watched for userID is skipped
 // entirely rather than counted against limit — confirmed live, see that
 // function's doc comment — so it never displaces an otherwise-lower-ranked
 // series that still has something unwatched.
@@ -291,25 +264,37 @@ func (s *Server) tvShowsLatestGrouped(ctx context.Context, libID storage.Library
 		return nil, err
 	}
 
+	// One query answers "which of these series still has something unwatched"
+	// for the whole pool. Asking per series meant a query per episode — a
+	// measured 8.3 to 9.3 seconds on a 86-series library.
+	poolIDs := make([]storage.ItemID, 0, len(ranked))
+	for _, activity := range ranked {
+		poolIDs = append(poolIDs, activity.SeriesID)
+	}
+	states, err := s.store.SeriesWatchStates(ctx, userID, poolIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	cards := make([]latestCard, 0, limit)
 	for _, activity := range ranked {
 		if len(cards) >= limit {
 			break
 		}
 
-		fullyWatched, err := s.isSeriesFullyWatched(ctx, userID, activity.SeriesID)
-		if err != nil {
-			return nil, err
-		}
-		if fullyWatched {
+		if fullyWatched(states[activity.SeriesID]) {
 			continue
 		}
 
+		// The window is pushed into the query: a series only contributes the
+		// rows of its last 24 hours, not the thousand it ever had.
+		windowStart := activity.Latest.Add(-seriesLatestWindowHours * time.Hour)
 		page, err := s.store.QueryItems(ctx, storage.ItemFilter{
-			SeriesID:  &activity.SeriesID,
-			ItemTypes: []storage.ItemType{storage.ItemTypeEpisode, storage.ItemTypeSeason},
-			SortBy:    []storage.SortField{{By: storage.SortByDateCreated, Descending: true}},
-			Limit:     latestSeriesItemFetchLimit,
+			SeriesID:         &activity.SeriesID,
+			ItemTypes:        []storage.ItemType{storage.ItemTypeEpisode, storage.ItemTypeSeason},
+			DateCreatedAfter: &windowStart,
+			SortBy:           []storage.SortField{{By: storage.SortByDateCreated, Descending: true}},
+			Limit:            latestSeriesItemFetchLimit,
 		})
 		if err != nil {
 			return nil, err

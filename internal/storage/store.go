@@ -81,6 +81,22 @@ type ItemStore interface {
 	// no-full-catalog enforcement as QueryItems.
 	QuerySeriesLatestActivity(ctx context.Context, libraryID LibraryID, itemTypes []ItemType, limit int) ([]SeriesActivity, error)
 
+	// SeriesWatchStates answers, for several series at once, how many episodes
+	// each holds and how many of them userID has not played. It replaces the
+	// per-episode GetPlaystate walk the recently-added grouping used to do: a
+	// series with a couple of hundred episodes cost a couple of hundred point
+	// queries per request, and the home screen asked for a pool of them. A
+	// series with no episode is absent from the answer.
+	SeriesWatchStates(ctx context.Context, userID UserID, seriesIDs []ItemID) (map[ItemID]SeriesWatchState, error)
+
+	// ActiveSeries answers which series hold at least one episode userID has
+	// watched (a play count above zero), optionally restricted to libraryIDs.
+	// It backs GET /Shows/NextUp when the caller names no series: without it
+	// the handler walked every series in the catalog and read every episode of
+	// each — measured at 4.4 seconds on a library with 86 series and no
+	// progress at all, to answer an empty list.
+	ActiveSeries(ctx context.Context, userID UserID, libraryIDs []LibraryID, limit int) ([]ItemID, error)
+
 	// QueryRelations/UpsertRelation/DeleteRelation cover N:M and ordered
 	// item links that a single ParentID can't express: collection
 	// membership, playlist membership (with its own per-playlist order),

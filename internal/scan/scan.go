@@ -1668,6 +1668,10 @@ func (s *Scanner) enrich(ctx context.Context, pool *jobPool, item *storage.Item,
 	}
 	if len(res.People) > 0 {
 		item.People = peopleFromResult(res.People)
+		// Where each credit's photo really is, for this library, on this
+		// server (person_image.go). A thumb that points at the config
+		// directory of the machine that wrote the NFO is not a source.
+		resolvePersonImageSources(item)
 	}
 
 	for _, img := range res.Images {

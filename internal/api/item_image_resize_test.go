@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
@@ -108,11 +109,13 @@ func TestItemImageResizeAnswersAtTheAskedSize(t *testing.T) {
 		{name: "jpeg maxWidth", format: "jpg", query: "?maxWidth=100", wantW: 100, wantH: 50, wantFormat: "jpeg"},
 		{name: "jpeg maxHeight", format: "jpg", query: "?maxHeight=50", wantW: 100, wantH: 50, wantFormat: "jpeg"},
 		{name: "png keeps its format", format: "png", query: "?maxWidth=100", wantW: 100, wantH: 50, wantFormat: "png"},
-		// A fill box only shapes the size once something else asks for the
-		// picture to be made again — the reference ignores one that arrives
-		// alone (picture.PlanFor's doc comment), so quality rides along here.
+		// A fill box makes the picture again on this route, on its own: measured
+		// on the reference, fillWidth=223&fillHeight=313 of a 1509x2116 poster
+		// answers 224x313 while the same request with no member at all answers
+		// the stored file. The "a fill box alone changes nothing" rule belongs
+		// to the chapter images, not here.
 		{name: "fill covers the box", format: "jpg", query: "?fillWidth=60&fillHeight=60&quality=80", wantW: 120, wantH: 60, wantFormat: "jpeg"},
-		{name: "fill alone is the stored picture", format: "jpg", query: "?fillWidth=60&fillHeight=60", wantW: 200, wantH: 100, wantFormat: "jpeg", wantSameBytes: true},
+		{name: "fill alone covers the box", format: "jpg", query: "?fillWidth=60&fillHeight=60", wantW: 120, wantH: 60, wantFormat: "jpeg"},
 		{name: "bigger than the picture is the picture", format: "jpg", query: "?maxWidth=5000", wantW: 200, wantH: 100, wantFormat: "jpeg", wantSameBytes: true},
 		{name: "nothing asked for", format: "jpg", query: "", wantW: 200, wantH: 100, wantFormat: "jpeg", wantSameBytes: true},
 	}
@@ -224,5 +227,78 @@ func TestLibraryCardImageResized(t *testing.T) {
 	w, h, format := decodeImage(t, resp.Body)
 	if w != 300 || h != 169 || format != "png" {
 		t.Errorf("answer = %dx%d %s, want 300x169 png", w, h, format)
+	}
+}
+
+// TestItemImageFillBoxServesTheBoxNotTheOriginal: measured on the reference, a
+// card request (fillWidth/fillHeight at quality=96 — what jellyfin-web sends)
+// answers the box, never the stored picture. Serving the original is what made
+// one home screen pull 13.6 MB of posters.
+func TestItemImageFillBoxServesTheBoxNotTheOriginal(t *testing.T) {
+	base, token, path, original := seededImageServer(t, 1509, 2116, "jpg")
+	resp := authedRequestHeaders(t, base, token, http.MethodGet,
+		path+"?fillWidth=224&fillHeight=313&quality=96", "", nil, map[string]string{"Accept": "*/*"})
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	if len(body) > len(original)/4 {
+		t.Fatalf("answered %d bytes for a 224x313 box out of a %d-byte original, want a resize",
+			len(body), len(original))
+	}
+	// The box is covered, not fitted: the side that reaches 224 decides and
+	// the other comes out at or just above 313, the same rounding the
+	// reference's fill does.
+	w, h, _ := decodeImage(t, bytes.NewReader(body))
+	if w != 224 || h < 313 || h > 316 {
+		t.Fatalf("size = %dx%d, want 224 wide and 313 to 316 tall", w, h)
+	}
+}
+
+// TestItemImageNegotiatesWebP: the same route answers WebP when the client
+// lists image/webp, keeps JPEG for a client that does not, and never turns a
+// PNG into a lossy WebP (a card's transparency would go).
+func TestItemImageNegotiatesWebP(t *testing.T) {
+	base, token, path, _ := seededImageServer(t, 1509, 2116, "jpg")
+	query := path + "?fillWidth=224&fillHeight=313&quality=96"
+
+	webpResp := authedRequestHeaders(t, base, token, http.MethodGet, query, "", nil, map[string]string{
+		"Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+	})
+	defer webpResp.Body.Close()
+	if ct := webpResp.Header.Get("Content-Type"); ct != "image/webp" {
+		t.Fatalf("Content-Type = %q, want image/webp", ct)
+	}
+	if vary := webpResp.Header.Get("Vary"); !strings.Contains(vary, "Accept") {
+		t.Errorf("Vary = %q, want it to name Accept", vary)
+	}
+	webpBody, err := io.ReadAll(webpResp.Body)
+	if err != nil {
+		t.Fatalf("read webp body: %v", err)
+	}
+	if w, h, format := decodeImage(t, bytes.NewReader(webpBody)); w != 224 || h < 313 || h > 316 || format != "webp" {
+		t.Fatalf("webp answer = %dx%d %s, want 224 wide, 313 to 316 tall, webp", w, h, format)
+	}
+
+	jpegResp := authedRequestHeaders(t, base, token, http.MethodGet, query, "", nil, map[string]string{"Accept": "*/*"})
+	defer jpegResp.Body.Close()
+	if ct := jpegResp.Header.Get("Content-Type"); ct != "image/jpeg" {
+		t.Fatalf("Content-Type = %q, want image/jpeg", ct)
+	}
+	jpegBody, err := io.ReadAll(jpegResp.Body)
+	if err != nil {
+		t.Fatalf("read jpeg body: %v", err)
+	}
+	if len(webpBody) >= len(jpegBody) {
+		t.Errorf("webp answer is %d bytes, jpeg %d: webp is not smaller here", len(webpBody), len(jpegBody))
+	}
+
+	pngBase, pngToken, pngPath, _ := seededImageServer(t, 200, 300, "png")
+	pngResp := authedRequestHeaders(t, pngBase, pngToken, http.MethodGet, pngPath+"?maxWidth=100", "", nil,
+		map[string]string{"Accept": "image/webp,*/*"})
+	defer pngResp.Body.Close()
+	if ct := pngResp.Header.Get("Content-Type"); ct != "image/png" {
+		t.Fatalf("PNG source answered %q, want image/png", ct)
 	}
 }

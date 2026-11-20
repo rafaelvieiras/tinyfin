@@ -639,7 +639,10 @@ func (s *Server) refreshItemNow(itemID storage.ItemID, replaceImages bool) {
 // segments refused: wire.path.R1-R2) runs just inside CORS, before anything
 // else looks at the path.
 func (s *Server) Handler() http.Handler {
-	return withAccessLog(withCORS(withTrailingSlash(withCanonicalIDs(s.withAuthContext(withCaseInsensitivePaths(s.mux))))))
+	// withGzip sits closest to the routes: it must see the Content-Type a
+	// handler set and must not sit between a websocket upgrade and the
+	// concrete writer.
+	return withAccessLog(withCORS(withTrailingSlash(withCanonicalIDs(s.withAuthContext(withCaseInsensitivePaths(withGzip(s.mux)))))))
 }
 
 // statusRecorder captures the status code a handler wrote, since

@@ -76,6 +76,13 @@ func newTestServerWithImageDir(t *testing.T) (*httptest.Server, *sqlite.Store, s
 // handler needs.
 func authedRequest(t *testing.T, ts, token, method, path, contentType string, body []byte) *http.Response {
 	t.Helper()
+	return authedRequestHeaders(t, ts, token, method, path, contentType, body, nil)
+}
+
+// authedRequestHeaders is authedRequest plus request headers, for the answers
+// that depend on what the client says it accepts (the WebP negotiation).
+func authedRequestHeaders(t *testing.T, ts, token, method, path, contentType string, body []byte, headers map[string]string) *http.Response {
+	t.Helper()
 	var reader *bytes.Reader
 	if body != nil {
 		reader = bytes.NewReader(body)
@@ -89,6 +96,9 @@ func authedRequest(t *testing.T, ts, token, method, path, contentType string, bo
 	req.Header.Set("Authorization", `MediaBrowser Token="`+token+`"`)
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
+	}
+	for k, v := range headers {
+		req.Header.Set(k, v)
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

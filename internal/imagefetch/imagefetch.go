@@ -43,6 +43,8 @@ import (
 	"net/http"
 	"net/netip"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -85,8 +87,12 @@ type Image struct {
 	// MIME is the sniffed media type, always an image/... value.
 	MIME string
 	// URL is the URL that served the body: the original one unless a
-	// redirect was followed.
+	// redirect was followed. For a local file it is the path that was read.
 	URL string
+	// Modified is the source file's modification time for a local read, and
+	// the zero time for a download — the API uses it to notice a photo that
+	// was replaced on disk.
+	Modified time.Time
 }
 
 // Fetcher downloads images behind the guard. It is safe for concurrent use:
@@ -145,7 +151,15 @@ func (f *Fetcher) Guard() *Guard { return f.guard }
 // caller can distinguish "this URL will never work" from "the network is
 // down" for a negative cache.
 func (f *Fetcher) Fetch(ctx context.Context, rawURL string) (Image, error) {
-	u, err := url.Parse(strings.TrimSpace(rawURL))
+	raw := strings.TrimSpace(rawURL)
+	// A credit photo may be a file the scanner found beside the media (the
+	// .actors convention, internal/scan/person_image.go): that is not a
+	// download, so it is read instead of fetched. See readLocal for what is
+	// checked before a path is opened.
+	if filepath.IsAbs(raw) {
+		return f.readLocal(raw)
+	}
+	u, err := url.Parse(raw)
 	if err != nil {
 		return Image{}, fmt.Errorf("imagefetch: parse %q: %w", rawURL, err)
 	}
@@ -355,4 +369,66 @@ func (g *Guard) transport() *http.Transport {
 		// directly.
 		Proxy: nil,
 	}
+}
+
+// readLocal answers a credit photo that lives on this server: a file the scanner
+// found beside the media, inside the item's own folder.
+//
+// The checks are the reason this is not just os.ReadFile: the path reached the
+// database from an NFO written by some other tool, so it is untrusted data. Only
+// a picture file of a known extension is opened, a symlink that resolves
+// elsewhere is refused by comparing the resolved path with the one asked for,
+// the size ceiling applies exactly as it does to a download, and the bytes must
+// sniff as an image — so a path pointing at a text file answers "not an image"
+// instead of serving it.
+func (f *Fetcher) readLocal(path string) (Image, error) {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp":
+	default:
+		return Image{}, fmt.Errorf("%w: %q is not a picture", ErrNotImage, path)
+	}
+	real, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return Image{}, fmt.Errorf("imagefetch: %q: %w", path, err)
+	}
+	if real != path && !sameFile(real, path) {
+		return Image{}, fmt.Errorf("imagefetch: %q resolves elsewhere", path)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return Image{}, fmt.Errorf("imagefetch: %q: %w", path, err)
+	}
+	if !info.Mode().IsRegular() {
+		return Image{}, fmt.Errorf("imagefetch: %q is not a file", path)
+	}
+	limit := f.maxBytes
+	if limit <= 0 {
+		limit = DefaultMaxBytes
+	}
+	if info.Size() > limit {
+		return Image{}, fmt.Errorf("%w: %d bytes", ErrTooLarge, limit)
+	}
+	body, err := os.ReadFile(path)
+	if err != nil {
+		return Image{}, fmt.Errorf("imagefetch: %q: %w", path, err)
+	}
+	mime := http.DetectContentType(body)
+	if !strings.HasPrefix(mime, "image/") {
+		return Image{}, fmt.Errorf("%w: %s", ErrNotImage, mime)
+	}
+	return Image{Bytes: body, MIME: mime, URL: path, Modified: info.ModTime()}, nil
+}
+
+// sameFile reports whether two paths name the same file, which they do when the
+// difference is only in how the path was spelled.
+func sameFile(a, b string) bool {
+	ia, err := os.Stat(a)
+	if err != nil {
+		return false
+	}
+	ib, err := os.Stat(b)
+	if err != nil {
+		return false
+	}
+	return os.SameFile(ia, ib)
 }

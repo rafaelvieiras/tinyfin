@@ -673,6 +673,12 @@ func buildItemParts(filter storage.ItemFilter) (itemParts, bool) {
 	if filter.Path != "" {
 		addWhere("items.path = ?", filter.Path)
 	}
+	// Timestamps are stored in time.Time.String() layout (conn.go's
+	// formatTime), which sorts correctly as text: the same layout the rows
+	// were written in is what the bound is written in.
+	if filter.DateCreatedAfter != nil {
+		addWhere("items.date_created >= ?", filter.DateCreatedAfter.UTC().String())
+	}
 
 	if len(filter.IDs) > 0 {
 		addWhere("items.id IN ("+sqlPlaceholders(len(filter.IDs))+")", idArgs(filter.IDs)...)
@@ -1350,4 +1356,79 @@ func (s *Store) DeleteRelation(ctx context.Context, id storage.ItemRelationID) e
 		return fmt.Errorf("sqlite: deleting relation %q: %w", id, err)
 	}
 	return nil
+}
+
+// SeriesWatchStates implements storage.ItemStore's method of the same name: one
+// grouped query answers the episode and unwatched tallies of every series asked
+// for, instead of a query per episode.
+func (s *Store) SeriesWatchStates(ctx context.Context, userID storage.UserID, seriesIDs []storage.ItemID) (map[storage.ItemID]storage.SeriesWatchState, error) {
+	out := make(map[storage.ItemID]storage.SeriesWatchState, len(seriesIDs))
+	if len(seriesIDs) == 0 {
+		return out, nil
+	}
+	ids := make([]any, 0, len(seriesIDs)+1)
+	ids = append(ids, string(userID))
+	for _, id := range seriesIDs {
+		ids = append(ids, string(id))
+	}
+	rows, err := s.ex.QueryContext(ctx, `SELECT items.series_id, COUNT(*),
+			SUM(CASE WHEN COALESCE(p.play_count, 0) <= 0 THEN 1 ELSE 0 END)
+		FROM items
+		LEFT JOIN playstates p ON p.item_id = items.id AND p.user_id = ?
+		WHERE items.type = 'Episode' AND items.series_id IN (`+sqlPlaceholders(len(seriesIDs))+`)
+		GROUP BY items.series_id`, ids...)
+	if err != nil {
+		return nil, fmt.Errorf("sqlite: reading series watch states: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		var state storage.SeriesWatchState
+		if err := rows.Scan(&id, &state.Episodes, &state.Unwatched); err != nil {
+			return nil, fmt.Errorf("sqlite: scanning a series watch state: %w", err)
+		}
+		out[storage.ItemID(id)] = state
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("sqlite: reading series watch states: %w", err)
+	}
+	return out, nil
+}
+
+// ActiveSeries implements storage.ItemStore's method of the same name.
+func (s *Store) ActiveSeries(ctx context.Context, userID storage.UserID, libraryIDs []storage.LibraryID, limit int) ([]storage.ItemID, error) {
+	args := []any{string(userID)}
+	where := "items.type = 'Episode' AND items.series_id IS NOT NULL AND p.play_count > 0"
+	if len(libraryIDs) > 0 {
+		ids := make([]any, 0, len(libraryIDs))
+		for _, id := range libraryIDs {
+			ids = append(ids, string(id))
+		}
+		where += " AND items.library_id IN (" + sqlPlaceholders(len(ids)) + ")"
+		args = append(args, ids...)
+	}
+	query := `SELECT DISTINCT items.series_id FROM items
+		JOIN playstates p ON p.item_id = items.id AND p.user_id = ?
+		WHERE ` + where
+	if limit > 0 {
+		query += " LIMIT ?"
+		args = append(args, limit)
+	}
+	rows, err := s.ex.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("sqlite: reading the series with play activity: %w", err)
+	}
+	defer rows.Close()
+	var out []storage.ItemID
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("sqlite: scanning a series with play activity: %w", err)
+		}
+		out = append(out, storage.ItemID(id))
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("sqlite: reading the series with play activity: %w", err)
+	}
+	return out, nil
 }
