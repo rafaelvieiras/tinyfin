@@ -79,6 +79,12 @@ mkdir -p data && sudo chown 65532:65532 data
 The same applies to the `./data` bind in `compose.yaml`. Without it the container stops at start
 with `unable to open database file`.
 
+Keep `/data` on a local disk, not on a network or FUSE mount. The database is SQLite, and every page
+reads it several times: the same library's "recently added" row answered in **0.83 s** from the pool's
+own NVMe against **9.98 s** through Unraid's `/mnt/user` FUSE view of that same file (and 105 s on a
+cold cache), measured on one host with one binary and one database. On Unraid, bind
+`/mnt/cache/appdata/tinyfin` rather than `/mnt/user/appdata/tinyfin`.
+
 Prefer Compose? Copy [`.env.example`](.env.example) to `.env`, edit it, then run
 `docker compose up -d`.
 
