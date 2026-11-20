@@ -522,6 +522,7 @@ func (s *Server) handlePlaylistItems(w http.ResponseWriter, r *http.Request) {
 		page = page[:iq.limit]
 	}
 	out := make([]baseItemDto, 0, len(page))
+	ctx = s.prefetchDTOs(ctx, page)
 	for _, it := range page {
 		dto := s.baseItemDto(ctx, it)
 		dto.PlaylistItemID = string(it.ID)

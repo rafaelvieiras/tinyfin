@@ -2,6 +2,15 @@ package storage
 
 import "time"
 
+// LeafCount is how many leaves (non-folder items) sit below a folder and how
+// many of them are unplayed for one user, seen through the folder marks on
+// their ancestors — what FolderLeafCounts answers one folder at a time and
+// LeafCountsFor answers for a page.
+type LeafCount struct {
+	Total    int
+	Unplayed int
+}
+
 // Playstate is the storage-side counterpart of the per-user fields on the
 // reference server's UserItemDataDto — durable resume position and
 // watched status (docs/05's PlaystateStore comment: "explicitly storage,

@@ -2,9 +2,10 @@
 
 **Status:** analysis only — nothing in this document is implemented.
 
-**Last re-measured:** 21/nov/2026, on `v0.3.5` plus the batched-grouping change, after the query work in #54
-and the mount fix in #55. The verdict changed with those numbers, twice: the rows this document was written to
-rescue went from 8.3 s to 0.9 s with the earlier work, and from 640 ms to 139 ms with the batching described in
+**Last re-measured:** 21/nov/2026, on `v0.3.5` plus the two batching changes, after the query work in #54 and
+the mount fix in #55. The verdict changed with those numbers, three times: the rows this document was written to
+rescue went from 8.3 s to 0.9 s with the earlier work, from 640 ms to 139 ms with the grouping batching, and to
+101 ms with the DTO batching described in
 [Where the time went](#where-the-time-went-and-what-was-done-about-it). Read
 [Does a file cache still pay?](#does-a-file-cache-still-pay) before building anything from here.
 
@@ -70,10 +71,37 @@ copy of the production database, same machine, median of 7, while both binaries 
 | `Documentários`, `limit=16` | 671.2 ms | **101.5 ms** | 6.6x |
 | `Filmes` (movies, ungrouped), `limit=16` | 33.1 ms | 33.2 ms | unchanged, as expected |
 
-What is left in the 139 ms is now mostly the DTO builder, which still answers three questions per card
-(`ChildCount`, `RecursiveItemCount` and `UserData.UnplayedItemCount`, internal/api/dto.go) with one count query
-each. That is ~8.7 ms per card, and it is the next measured step — batching it is a change to shared DTO code,
-not to the grouping path, so it was kept out of this one.
+### The DTO's per-card questions
+
+The next measurement said the per-card share was not three count queries but **eight statements**: the item's
+own picture refs (six single-instance kinds plus Backdrop), its playstate, a folder's leaf counts, the two
+counts, and one lookup per ancestor — and an Episode card asked for its ancestors' picture refs three times
+over, once per inherited field (logo, thumb, backdrop), so one episode card cost **49 picture lookups**.
+
+On a listing page that scaled with the page, and it was the largest N+1 left in the server:
+
+| request (production database copy) | before | after | |
+|---|---|---|---|
+| `GET /Items`, 100 episodes | 265.4 ms | **42.1 ms** | 6.3x |
+| `GET /Items`, 300 episodes | 743.3 ms | **97.0 ms** | 7.7x |
+| `GET /Items`, 600 episodes | 1444.0 ms | **164.2 ms** | 8.8x |
+| `GET /Items`, 100 seasons | 271.0 ms | **47.6 ms** | 5.7x |
+| `GET /Items`, 300 seasons | 813.3 ms | **100.8 ms** | 8.1x |
+| `GET /Items/Latest`, TV library, `limit=16` | 131.3 ms | **101.3 ms** | 1.3x |
+| `GET /Items/Latest`, other library, `limit=16` | 97.1 ms | **67.1 ms** | 1.4x |
+| `GET /Items/Latest`, movies, `limit=16` | 32.0 ms | **28.1 ms** | 1.1x |
+
+The statement counts say the same thing more plainly. A 100-episode page asked the store **5,901** times
+(5,600 picture lookups, 200 ancestor lookups, 100 playstates and the listing query) and now asks **4**; a
+100-season page asks 7. A grouped `limit=16` row asked 62 times and now asks 13. The answers are unchanged:
+six routes, including the unscoped "recently added" row and `UserViews`, were compared field by field against
+the previous build and are byte-identical.
+
+What is left in a grouped row's ~101 ms is mostly **fixed work, not per card**: the ranking query (16 ms), the
+episode tally behind the "fully watched" check (20 ms on this library), the windows, and serialising the
+answer. Roughly 2 ms per card is left. The next measured step, if the row is still worth chasing, is that
+episode tally: it counts every episode of every candidate series, and the row only needs to know whether a
+series is fully watched.
 
 ### The test that pins the property
 
@@ -88,12 +116,17 @@ pool of 12 series and a pool of 60:
 It also pins the batched counts' parity with the per-parent `QueryItems` they replaced: extras are excluded from
 both tallies, the way the catalog-facing queries exclude them.
 
+`internal/api/dto_prefetch_test.go` pins the same property for the listing route, over a page of 20 and a page of
+120 episodes: the page's statement count is identical, the per-card calls (`GetImageRefs`, `GetPlaystate`,
+`GetItem`, `FolderLeafCounts`) are never made, and the page stays inside the row's budget. With the prefetch
+disabled it reports what the code used to do — 5,600 picture lookups for 100 cards.
+
 ## Does a file cache still pay?
 
-**No, and the case got weaker.** The argument for it in the first version of this document was that an 8.3 s row
-made every other consideration secondary. That row is now 140 ms on the same database, and the remaining cost is
-one more batched query away from being a fraction of that. Three concrete reasons to keep fixing the path
-instead:
+**No, and the case got weaker twice.** The argument for it in the first version of this document was that an 8.3 s
+row made every other consideration secondary. That row is now 101 ms on the same database, the listing pages that
+walk the catalog went from 265-1444 ms to 42-164 ms, and what remains in a row is fixed work rather than anything
+a cache would skip. Three concrete reasons to keep fixing the path instead:
 
 1. **Batching beats caching for every caller.** The pooled queries help any row that walks series; a cache only
    helps the one endpoint it wraps, and only the second time it is asked.
@@ -101,11 +134,12 @@ instead:
    leave the per-card query pattern in place for good.
 3. **Freshness has a cost this row does not justify.** A scan of a 13,800-episode library is a burst that lands
    between two requests; an answer one minute stale after that burst is exactly the bug users report as "the new
-   episode did not appear". Paying that risk to save 140 ms is a bad trade while the 140 ms is fixable.
+   episode did not appear". Paying that risk to save 100 ms is a bad trade while those 100 ms are mostly fixed
+   work that a second batched query can shrink.
 
 What would make it pay again, in order of likelihood:
 
-- after the DTO counts are batched, a row that is **still above ~50 ms** — at that point the remaining time is
+- a row that is **still above ~50 ms** once the episode tally is batched — at that point the remaining time is
   reading the catalog itself, and an answer from disk beats computing it;
 - a **second instance** behind a load balancer, which needs shared answers rather than per-process ones;
 - a **CDN in front**, for the same reason it already helps `/web/**` and the picture routes.
@@ -172,11 +206,13 @@ exactly the bug users report as "the new episode did not appear".
 
 1. ~~Batch the per-series work in `tvShowsLatestGrouped`.~~ Done: five reads for the row, 640.7 ms to 139.5 ms
    on the production database copy.
-2. **Batch the DTO builder's per-card counts** (`ChildCount`, `RecursiveItemCount`, `UnplayedItemCount`):
-   three count queries per card, ~8.7 ms per card today, and the same shape for every list route that asks for
-   those fields.
-3. Re-measure the fifteen rows. If the biggest is under ~50 ms, stop here: the file cache has no case.
-4. Only if it is still slow: catalog generation per library and play-state generation per user (one column
+2. ~~Batch the DTO's per-card questions.~~ Done: pictures, playstates, leaf counts, the two counts and the
+   ancestors are answered for the page, and a picture's tag set is computed once per request. A 100-episode
+   page went from 5,901 statements to 4, and from 265 ms to 42 ms.
+3. **Measure the "fully watched" episode tally** (`SeriesWatchStates`): it reads every episode of every
+   candidate series (20 ms on an 86-series library) and the row only needs a yes/no per series.
+4. Re-measure the fifteen rows. If the biggest is under ~50 ms, stop here: the file cache has no case.
+5. Only if it is still slow: catalog generation per library and play-state generation per user (one column
    each, bumped in the write paths), then a file cache behind `GET /Items/Latest`.
-5. `GET /Shows/NextUp` and `GET /UserViews` last, keyed by the same generations, and only once step 4 exists.
-6. Only then reach for a CDN, which needs the `Cache-Control`/`Vary` work on `GET /web/**` that #54 landed.
+6. `GET /Shows/NextUp` and `GET /UserViews` last, keyed by the same generations, and only once step 5 exists.
+7. Only then reach for a CDN, which needs the `Cache-Control`/`Vary` work on `GET /web/**` that #54 landed.

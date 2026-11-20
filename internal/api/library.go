@@ -531,6 +531,7 @@ func (s *Server) writeItemsLatest(w http.ResponseWriter, r *http.Request, u stor
 		latestFields[strings.ToLower(tok)] = true
 	}
 	dtos := make([]baseItemDto, 0, len(items))
+	ctx = s.prefetchDTOs(ctx, items)
 	for _, it := range items {
 		dto := s.baseItemDto(ctx, it)
 		s.applyDateLastMediaAdded(ctx, &dto, it, latestFields)

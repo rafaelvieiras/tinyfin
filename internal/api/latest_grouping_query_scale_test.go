@@ -96,6 +96,51 @@ func (c *countingStore) ChildItemCounts(ctx context.Context, parentIDs []storage
 	return c.Store.ChildItemCounts(ctx, parentIDs, itemType)
 }
 
+func (c *countingStore) ImageRefsFor(ctx context.Context, itemIDs []storage.ItemID, kinds []storage.ImageKind) (map[storage.ItemID]map[storage.ImageKind][]storage.ImageRef, error) {
+	c.hit("ImageRefsFor")
+	return c.Store.ImageRefsFor(ctx, itemIDs, kinds)
+}
+
+func (c *countingStore) PlaystatesFor(ctx context.Context, userID storage.UserID, itemIDs []storage.ItemID) (map[storage.ItemID]storage.Playstate, error) {
+	c.hit("PlaystatesFor")
+	return c.Store.PlaystatesFor(ctx, userID, itemIDs)
+}
+
+func (c *countingStore) LeafCountsFor(ctx context.Context, userID storage.UserID, folderIDs []storage.ItemID) (map[storage.ItemID]storage.LeafCount, error) {
+	c.hit("LeafCountsFor")
+	return c.Store.LeafCountsFor(ctx, userID, folderIDs)
+}
+
+func (c *countingStore) ChildCountsFor(ctx context.Context, parentIDs []storage.ItemID) (map[storage.ItemID]int, error) {
+	c.hit("ChildCountsFor")
+	return c.Store.ChildCountsFor(ctx, parentIDs)
+}
+
+func (c *countingStore) OwnedExtraCountsFor(ctx context.Context, ownerIDs []storage.ItemID, extraType string) (map[storage.ItemID]int, error) {
+	c.hit("OwnedExtraCountsFor")
+	return c.Store.OwnedExtraCountsFor(ctx, ownerIDs, extraType)
+}
+
+func (c *countingStore) RecursiveItemCountsFor(ctx context.Context, parentIDs []storage.ItemID, excludeTypes []storage.ItemType) (map[storage.ItemID]int, error) {
+	c.hit("RecursiveItemCountsFor")
+	return c.Store.RecursiveItemCountsFor(ctx, parentIDs, excludeTypes)
+}
+
+func (c *countingStore) GetPlaystate(ctx context.Context, userID storage.UserID, itemID storage.ItemID) (storage.Playstate, error) {
+	c.hit("GetPlaystate")
+	return c.Store.GetPlaystate(ctx, userID, itemID)
+}
+
+func (c *countingStore) GetImageRefs(ctx context.Context, itemID storage.ItemID, kind storage.ImageKind) ([]storage.ImageRef, error) {
+	c.hit("GetImageRefs")
+	return c.Store.GetImageRefs(ctx, itemID, kind)
+}
+
+func (c *countingStore) FolderLeafCounts(ctx context.Context, userID storage.UserID, folderID storage.ItemID) (int, int, error) {
+	c.hit("FolderLeafCounts")
+	return c.Store.FolderLeafCounts(ctx, userID, folderID)
+}
+
 // openTestStore opens a fresh sqlite store in the test's temp dir.
 func openTestStore(t *testing.T) *sqlite.Store {
 	t.Helper()
@@ -177,13 +222,23 @@ func seedSeriesBurst(t *testing.T, st storage.ItemStore, libID storage.LibraryID
 // counted here as four named plus QueryItems' bounded share below).
 const maxFixedGroupedRowCalls = 6
 
-// maxPerCardReadCalls is the DTO's share, still paid per card: converting one
-// Series/Season item asks the store for its ChildCount, its RecursiveItemCount
-// and its UnplayedItemCount (internal/api/dto.go), so three QueryItems per card.
-// It is pinned rather than removed because the fix is not in this file: the DTO
-// builder is shared by every route, and batching its counts is the next measured
-// step in docs/15-response-cache-analysis.md.
-const maxPerCardReadCalls = 3
+// dtoPerItemCalls are the calls baseItemDto used to make once per card: its
+// picture refs (six single-instance kinds plus Backdrop), the caller's playstate,
+// a folder's leaf counts, the two counts, and one lookup per ancestor. The row
+// is now answered without any of them, which is what makes its statement count
+// independent of the number of cards.
+var dtoPerItemCalls = []string{"GetImageRefs", "GetPlaystate", "FolderLeafCounts", "GetItem"}
+
+// dtoBatchedCalls are the page-wide answers s.prefetchDTOs issues for a
+// Series/Season row, each exactly once.
+var dtoBatchedCalls = []string{"ImageRefsFor", "PlaystatesFor", "LeafCountsFor", "ChildCountsFor", "OwnedExtraCountsFor", "RecursiveItemCountsFor"}
+
+// maxGroupedRowCalls is the whole row's statement budget, and it is a constant:
+// the grouping path's fixed reads, the DTO's page-wide reads, and the two
+// bounded fetches (the picked items and their ancestors). It does not grow with
+// the pool and it does not grow with the limit — that is the property the two
+// tests below assert.
+const maxGroupedRowCalls = 13
 
 // TestItemsLatestSeriesGroupingCostDoesNotGrowWithThePool is the regression
 // guard for the second N+1 found while re-measuring docs/15: one grouped row
@@ -250,16 +305,75 @@ func TestItemsLatestSeriesGroupingCostDoesNotGrowWithThePool(t *testing.T) {
 			t.Errorf("pool of %d series: GetItem called %d times, want 0 — the picked items come from one fetch (%v)",
 				pool, tally["GetItem"], tally)
 		}
-		if perCard := maxFixedGroupedRowCalls + maxPerCardReadCalls*wantLimit + 1; costs[i] > perCard {
-			t.Errorf("pool of %d series: the row cost %d store reads (%v), want at most %d "+
-				"(fixed budget plus %d per card)",
-				pool, costs[i], tally, perCard, maxPerCardReadCalls)
+		for _, name := range dtoPerItemCalls {
+			if tally[name] != 0 {
+				t.Errorf("pool of %d series: %s called %d times, want 0 — the DTO's per-card questions are answered for the page (%v)",
+					pool, name, tally[name], tally)
+			}
+		}
+		for _, name := range dtoBatchedCalls {
+			if tally[name] != 1 {
+				t.Errorf("pool of %d series: %s called %d times, want exactly 1 (%v)", pool, name, tally[name], tally)
+			}
+		}
+		if costs[i] > maxGroupedRowCalls {
+			t.Errorf("pool of %d series: the row cost %d store reads (%v), want at most %d",
+				pool, costs[i], tally, maxGroupedRowCalls)
 		}
 	}
 
 	if costs[0] != costs[1] {
 		t.Errorf("cost depends on the pool size: %d series cost %d read calls (%v), %d series cost %d (%v)",
 			pools[0], costs[0], tallies[0], pools[1], costs[1], tallies[1])
+	}
+}
+
+// TestItemsLatestSeriesGroupingCostDoesNotGrowWithTheLimit asserts the other
+// half of the same property: the row's statement count does not grow with the
+// number of cards either. A page of 4 cards and a page of 16 cost the same,
+// because every per-card question is answered for the page in one statement.
+//
+// It is a different failure from a per-series loop: a limit-driven regression
+// here means the DTO went back to asking the store one question per item.
+func TestItemsLatestSeriesGroupingCostDoesNotGrowWithTheLimit(t *testing.T) {
+	const pool = 30
+	limits := []int{4, 16}
+	costs := make([]int, len(limits))
+	tallies := make([]map[string]int, len(limits))
+
+	for i, limit := range limits {
+		st := openTestStore(t)
+		cs := &countingStore{Store: st}
+		ts := startTestServerWithStore(t, cs)
+
+		user := createTestUser(t, st, "erin", "erinpass")
+		token := loginToken(t, ts.URL, user.Name, "erinpass")
+		get := authedClient(t, ts.URL, token)
+
+		libID := createTestLibrary(t, st, fmt.Sprintf("Limit Shows %02d", limit), storage.CollectionTypeTVShows)
+		seedSeriesBurst(t, st, libID, pool)
+
+		if got := latestGrouped(t, get, libID, fmt.Sprintf("&limit=%d", limit)); len(got) != limit {
+			t.Fatalf("warm-up Items/Latest limit=%d over %d series returned %d cards", limit, pool, len(got))
+		}
+		cs.reset()
+		if got := latestGrouped(t, get, libID, fmt.Sprintf("&limit=%d", limit)); len(got) != limit {
+			t.Fatalf("Items/Latest limit=%d over %d series returned %d cards", limit, pool, len(got))
+		}
+		costs[i] = cs.total()
+		tallies[i] = cs.tally()
+	}
+
+	for i, limit := range limits {
+		for _, name := range dtoPerItemCalls {
+			if tallies[i][name] != 0 {
+				t.Errorf("limit=%d: %s called %d times, want 0 (%v)", limit, name, tallies[i][name], tallies[i])
+			}
+		}
+	}
+	if costs[0] != costs[1] {
+		t.Errorf("cost depends on the limit: %d cards cost %d store reads (%v), %d cards cost %d (%v)",
+			limits[0], costs[0], tallies[0], limits[1], costs[1], tallies[1])
 	}
 }
 

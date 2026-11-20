@@ -98,6 +98,37 @@ type ItemStore interface {
 	// Parents with no child of that type are absent from the map.
 	ChildItemCounts(ctx context.Context, parentIDs []ItemID, itemType ItemType) (map[ItemID]int, error)
 
+	// ImageRefsFor answers GetImageRefs for many items and kinds in one query,
+	// keyed by item and then by kind. Every item a list route answers carries
+	// its picture tags, and the single-item lookup was one statement per card.
+	ImageRefsFor(ctx context.Context, itemIDs []ItemID, kinds []ImageKind) (map[ItemID]map[ImageKind][]ImageRef, error)
+
+	// PlaystatesFor answers GetPlaystate for many items at once, for one user.
+	// An item without a stored state is absent from the map (the single-item
+	// call's zero state).
+	PlaystatesFor(ctx context.Context, userID UserID, itemIDs []ItemID) (map[ItemID]Playstate, error)
+
+	// LeafCountsFor answers FolderLeafCounts for many folders at once: how many
+	// leaves sit below each and how many are unplayed, through the same
+	// ancestor folder marks the single-folder call applies. Folders with no
+	// leaves are absent from the map.
+	LeafCountsFor(ctx context.Context, userID UserID, folderIDs []ItemID) (map[ItemID]LeafCount, error)
+
+	// ChildCountsFor answers childCountOf's direct-children count for many
+	// parents at once: items parented by the parent plus the members a
+	// collection links, extras excluded. Parents with no children are absent
+	// from the map.
+	ChildCountsFor(ctx context.Context, parentIDs []ItemID) (map[ItemID]int, error)
+
+	// OwnedExtraCountsFor counts, per owner, the extras of one type the owner
+	// holds (the merged-season rows childCountOf adds for a series). Those rows
+	// are owned, not parented, so ChildCountsFor does not see them.
+	OwnedExtraCountsFor(ctx context.Context, ownerIDs []ItemID, extraType string) (map[ItemID]int, error)
+
+	// RecursiveItemCountsFor answers recursiveItemCountOf for many parents at
+	// once: how many non-folder descendants each holds, extras excluded.
+	RecursiveItemCountsFor(ctx context.Context, parentIDs []ItemID, excludeTypes []ItemType) (map[ItemID]int, error)
+
 	// SeriesWatchStates answers, for several series at once, how many episodes
 	// each holds and how many of them userID has not played. It replaces the
 	// per-episode GetPlaystate walk the recently-added grouping used to do: a
