@@ -1298,6 +1298,106 @@ func (s *Store) QuerySeriesLatestActivity(ctx context.Context, libraryID storage
 	return out, nil
 }
 
+// SeriesRecentItems answers several series' trailing windows in one statement:
+// a VALUES list of (series, since) joined to items, with a per-series row
+// number so perSeriesLimit still caps each series independently. Bounding by
+// the series list (not by a global date) is what keeps a bulk import from
+// pushing another series' rows out of the answer.
+func (s *Store) SeriesRecentItems(ctx context.Context, windows []storage.SeriesWindow, itemTypes []storage.ItemType, perSeriesLimit int) (map[storage.ItemID][]storage.Item, error) {
+	if len(windows) == 0 {
+		return map[storage.ItemID][]storage.Item{}, nil
+	}
+	if perSeriesLimit <= 0 {
+		return nil, fmt.Errorf("sqlite: SeriesRecentItems: perSeriesLimit must be > 0, got %d", perSeriesLimit)
+	}
+
+	var b strings.Builder
+	b.WriteString("WITH w(series_id, since) AS (VALUES ")
+	args := make([]any, 0, len(windows)*2+len(itemTypes)+1)
+	for i, w := range windows {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString("(?, ?)")
+		args = append(args, string(w.SeriesID), w.Since.UTC().String())
+	}
+	b.WriteString("), picked AS (SELECT ")
+	b.WriteString(itemColumns)
+	b.WriteString(", ROW_NUMBER() OVER (PARTITION BY items.series_id ORDER BY items.date_created DESC, items.id ASC) AS rn")
+	b.WriteString(" FROM items JOIN w ON w.series_id = items.series_id WHERE items.date_created >= w.since AND items.extra_type = ''")
+	if len(itemTypes) > 0 {
+		ph := make([]string, len(itemTypes))
+		for i, t := range itemTypes {
+			ph[i] = "?"
+			args = append(args, string(t))
+		}
+		b.WriteString(" AND items.type IN (" + strings.Join(ph, ",") + ")")
+	}
+	b.WriteString(") SELECT ")
+	b.WriteString(itemColumns)
+	b.WriteString(" FROM picked AS items WHERE items.rn <= ?")
+	b.WriteString(" ORDER BY items.series_id ASC, items.date_created DESC, items.id ASC")
+	args = append(args, perSeriesLimit)
+
+	rows, err := s.ex.QueryContext(ctx, b.String(), args...)
+	if err != nil {
+		return nil, fmt.Errorf("sqlite: querying series windows: %w", err)
+	}
+	defer rows.Close()
+
+	out := make(map[storage.ItemID][]storage.Item, len(windows))
+	for rows.Next() {
+		it, err := scanItem(rows)
+		if err != nil {
+			return nil, err
+		}
+		if it.SeriesID == nil {
+			continue
+		}
+		out[*it.SeriesID] = append(out[*it.SeriesID], it)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("sqlite: iterating series windows: %w", err)
+	}
+	return out, nil
+}
+
+// ChildItemCounts counts direct children of one item type for several parents
+// in one grouped statement — the batched form of the count QueryItems used to
+// answer one parent at a time.
+func (s *Store) ChildItemCounts(ctx context.Context, parentIDs []storage.ItemID, itemType storage.ItemType) (map[storage.ItemID]int, error) {
+	if len(parentIDs) == 0 {
+		return map[storage.ItemID]int{}, nil
+	}
+	args := make([]any, 0, len(parentIDs)+1)
+	for _, id := range parentIDs {
+		args = append(args, string(id))
+	}
+	args = append(args, string(itemType))
+	query := "SELECT items.parent_id, COUNT(*) FROM items WHERE items.parent_id IN (" +
+		sqlPlaceholders(len(parentIDs)) + ") AND items.type = ? AND items.extra_type = '' GROUP BY items.parent_id"
+
+	rows, err := s.ex.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("sqlite: counting children: %w", err)
+	}
+	defer rows.Close()
+
+	out := make(map[storage.ItemID]int, len(parentIDs))
+	for rows.Next() {
+		var parentID string
+		var n int
+		if err := rows.Scan(&parentID, &n); err != nil {
+			return nil, fmt.Errorf("sqlite: scanning child count: %w", err)
+		}
+		out[storage.ItemID(parentID)] = n
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("sqlite: iterating child counts: %w", err)
+	}
+	return out, nil
+}
+
 func (s *Store) QueryRelations(ctx context.Context, itemID storage.ItemID, kind string, asParent bool) ([]storage.ItemRelation, error) {
 	col := "parent_id"
 	if !asParent {

@@ -110,22 +110,39 @@ func seasonKeyOf(it storage.Item) (storage.ItemID, bool) {
 	return "", false
 }
 
-// itemTypeCount is a cheap Limit=1 QueryItems call read only for its
-// TotalCount — how many itemType rows exist directly under parentID.
-// Backs both "how many episodes does this season have in total" and "how
-// many seasons does this series have in total" (docs/12's bulk/season-vs-
-// series branch), the same ParentID convention handleShowSeasons/
-// handleShowEpisodes already use for those two relationships.
-func (s *Server) itemTypeCount(ctx context.Context, parentID storage.ItemID, itemType storage.ItemType) (int, error) {
-	page, err := s.store.QueryItems(ctx, storage.ItemFilter{
-		ParentID:  &parentID,
-		ItemTypes: []storage.ItemType{itemType},
-		Limit:     1,
-	})
-	if err != nil {
-		return 0, err
+// seriesPick is one candidate series' resolved representative before the items
+// themselves are loaded: which item stands for the series, and the series' own
+// latest addition timestamp (carried for latestCard's ordering).
+type seriesPick struct {
+	repID  storage.ItemID
+	latest time.Time
+}
+
+// singleSeasonOf reports the one season key g's window touches, when it touches
+// exactly one — the branch of docs/12 step 3 that needs that season's episode
+// total. It is a pure read of g.items so the caller can decide, before asking
+// for any count, which seasons the batched count query has to cover.
+func singleSeasonOf(g *seriesGroup) (storage.ItemID, bool) {
+	windowStart := g.latest.Add(-seriesLatestWindowHours * time.Hour)
+	var one storage.ItemID
+	seen := false
+	for _, it := range g.items {
+		if it.DateCreated.Before(windowStart) {
+			continue
+		}
+		sid, ok := seasonKeyOf(it)
+		if !ok {
+			continue
+		}
+		if !seen {
+			one, seen = sid, true
+			continue
+		}
+		if sid != one {
+			return "", false
+		}
 	}
-	return page.TotalCount, nil
+	return one, seen
 }
 
 // latestItemInGroup returns g's own most recent item — used both as the
@@ -143,18 +160,22 @@ func latestItemInGroup(g *seriesGroup) storage.Item {
 	return latest
 }
 
-// pickSeriesCard resolves docs/12 step 3 for one series group: which single
+// representativeOf resolves docs/12 step 3 for one series group: which single
 // item — a Season, the Series itself, or one Episode — represents it in the
-// final result. Returns nil, nil if the chosen representative can no longer
-// be read (e.g. deleted between the candidate query and here) rather than
-// failing the whole request over one series.
+// final result.
+//
+// It is deliberately pure. The rule needs two tallies (the season's episode
+// total and the series' season total), and asking for them here is what made
+// the row cost two queries per card; they now arrive from one batched query
+// each, through the two lookups below. A tally of zero (a season with no
+// episode, which cannot happen for a season that just received one) keeps the
+// pre-batching behaviour.
 //
 // docs/12 step 4 (falling back to the single latest episode when the chosen
-// entity fails a per-user visibility check) is intentionally not
-// implemented: Tinyfin has no parental/user-visibility concept yet
-// (internal/api/users.go's confirmed "every user is public" note), so that
-// check is a no-op today — every entity resolved here is used directly.
-func (s *Server) pickSeriesCard(ctx context.Context, g *seriesGroup) (*storage.Item, error) {
+// entity fails a per-user visibility check) is intentionally not implemented:
+// Tinyfin has no parental/user-visibility concept yet (internal/api/users.go's
+// confirmed "every user is public" note), so that check is a no-op today.
+func representativeOf(g *seriesGroup, episodeTotalOf, seasonTotalOf func(storage.ItemID) int) storage.ItemID {
 	windowStart := g.latest.Add(-seriesLatestWindowHours * time.Hour)
 
 	var window []storage.Item
@@ -189,44 +210,25 @@ func (s *Server) pickSeriesCard(ctx context.Context, g *seriesGroup) (*storage.I
 			}
 		}
 
-		seasonTotal, err := s.itemTypeCount(ctx, seasonID, storage.ItemTypeEpisode)
-		if err != nil {
-			return nil, err
-		}
-
-		// docs/12: "more than one episode landed in the window, or the
-		// count landed in the window happens to equal that season's total
-		// episode count (i.e. even a single episode counts as bulk when
-		// it's the entirety of a short/complete season)".
-		bulk := episodeCount > 1 || (episodeCount > 0 && episodeCount == seasonTotal)
+		// docs/12: "more than one episode landed in the window, or the count
+		// landed in the window happens to equal that season's total episode
+		// count (i.e. even a single episode counts as bulk when it's the
+		// entirety of a short/complete season)".
+		bulk := episodeCount > 1 || (episodeCount > 0 && episodeCount == episodeTotalOf(seasonID))
 		if bulk {
-			seasonsInSeries, err := s.itemTypeCount(ctx, g.seriesID, storage.ItemTypeSeason)
-			if err != nil {
-				return nil, err
+			if seasonTotalOf(g.seriesID) > 1 {
+				return seasonID
 			}
-			repID := g.seriesID
-			if seasonsInSeries > 1 {
-				repID = seasonID
-			}
-			item, err := s.store.GetItem(ctx, repID)
-			if err != nil {
-				return nil, nil
-			}
-			return &item, nil
+			return g.seriesID
 		}
 
 	default:
-		// docs/12: "If the window's items span more than one season, the
-		// card represents the series."
-		item, err := s.store.GetItem(ctx, g.seriesID)
-		if err != nil {
-			return nil, nil
-		}
-		return &item, nil
+		// docs/12: "If the window's items span more than one season, the card
+		// represents the series."
+		return g.seriesID
 	}
 
-	latest := latestItemInGroup(g)
-	return &latest, nil
+	return latestItemInGroup(g).ID
 }
 
 // fullyWatched reports whether every episode of a series is played
@@ -250,12 +252,19 @@ func fullyWatched(state storage.SeriesWatchState) bool {
 
 // tvShowsLatestGrouped implements docs/12's "Items/Latest — series grouping"
 // for a TV-shows library: at most one card per series, chosen by
-// pickSeriesCard, newest-series-addition first, truncated to limit groups —
+// representativeOf, newest-series-addition first, truncated to limit groups —
 // limit counts groups (series), not raw episodes (docs/12 step 2). A series
-// that fullyWatched reports as fully watched for userID is skipped
-// entirely rather than counted against limit — confirmed live, see that
-// function's doc comment — so it never displaces an otherwise-lower-ranked
-// series that still has something unwatched.
+// that fullyWatched reports as fully watched for userID is skipped entirely
+// rather than counted against limit — confirmed live, see that function's doc
+// comment — so it never displaces an otherwise-lower-ranked series that still
+// has something unwatched.
+//
+// The whole row costs six store reads, whatever the pool holds: the ranking, the
+// candidates' windows, their watch states, their season episode totals, their
+// season totals and one fetch of the picked items. It used to be four reads per
+// card — the window plus three counts — measured at 30 ms per card on a
+// 6,187-item library, which is why a 16-card row cost 565 ms while the ranking
+// query itself took 16 ms (docs/15-response-cache-analysis.md).
 func (s *Server) tvShowsLatestGrouped(ctx context.Context, libID storage.LibraryID, limit int, userID storage.UserID) ([]latestCard, error) {
 	ranked, err := s.store.QuerySeriesLatestActivity(ctx, libID,
 		[]storage.ItemType{storage.ItemTypeEpisode, storage.ItemTypeSeason},
@@ -276,46 +285,106 @@ func (s *Server) tvShowsLatestGrouped(ctx context.Context, libID storage.Library
 		return nil, err
 	}
 
-	cards := make([]latestCard, 0, limit)
+	// The pool exists to absorb fully-watched skips. Every candidate that
+	// survives that filter yields exactly one card, so only the first `limit`
+	// of them can reach the answer: the window query below is scoped to those,
+	// not to the whole pool.
+	candidates := make([]storage.SeriesActivity, 0, limit)
 	for _, activity := range ranked {
-		if len(cards) >= limit {
+		if len(candidates) >= limit {
 			break
 		}
-
 		if fullyWatched(states[activity.SeriesID]) {
 			continue
 		}
+		candidates = append(candidates, activity)
+	}
+	if len(candidates) == 0 {
+		return nil, nil
+	}
 
-		// The window is pushed into the query: a series only contributes the
-		// rows of its last 24 hours, not the thousand it ever had.
-		windowStart := activity.Latest.Add(-seriesLatestWindowHours * time.Hour)
-		page, err := s.store.QueryItems(ctx, storage.ItemFilter{
-			SeriesID:         &activity.SeriesID,
-			ItemTypes:        []storage.ItemType{storage.ItemTypeEpisode, storage.ItemTypeSeason},
-			DateCreatedAfter: &windowStart,
-			SortBy:           []storage.SortField{{By: storage.SortByDateCreated, Descending: true}},
-			Limit:            latestSeriesItemFetchLimit,
+	// One query for every candidate's 24-hour window (docs/12 step 1), instead
+	// of one query per candidate.
+	windows := make([]storage.SeriesWindow, 0, len(candidates))
+	for _, activity := range candidates {
+		windows = append(windows, storage.SeriesWindow{
+			SeriesID: activity.SeriesID,
+			Since:    activity.Latest.Add(-seriesLatestWindowHours * time.Hour),
 		})
-		if err != nil {
-			return nil, err
-		}
-		if len(page.Items) == 0 {
-			// Defensive only: QuerySeriesLatestActivity's own candidate rows
-			// are the same Episode/Season types being re-fetched here, so
-			// this series should always have at least one. Skip rather than
-			// crash over a data anomaly (e.g. deleted between the two
-			// queries).
+	}
+	recent, err := s.store.SeriesRecentItems(ctx, windows,
+		[]storage.ItemType{storage.ItemTypeEpisode, storage.ItemTypeSeason}, latestSeriesItemFetchLimit)
+	if err != nil {
+		return nil, err
+	}
+
+	groups := make([]*seriesGroup, 0, len(candidates))
+	seasonParents := make([]storage.ItemID, 0, len(candidates))
+	seriesParents := make([]storage.ItemID, 0, len(candidates))
+	for _, activity := range candidates {
+		items := recent[activity.SeriesID]
+		if len(items) == 0 {
+			// Defensive only: the ranking's own candidate rows are the same
+			// Episode/Season types fetched here, so a candidate should always
+			// have at least one. Skip rather than crash over a data anomaly
+			// (e.g. deleted between the two queries).
 			continue
 		}
-		g := &seriesGroup{seriesID: activity.SeriesID, items: page.Items, latest: activity.Latest}
+		g := &seriesGroup{seriesID: activity.SeriesID, items: items, latest: activity.Latest}
+		groups = append(groups, g)
+		if seasonID, ok := singleSeasonOf(g); ok {
+			seasonParents = append(seasonParents, seasonID)
+			seriesParents = append(seriesParents, activity.SeriesID)
+		}
+	}
 
-		card, err := s.pickSeriesCard(ctx, g)
-		if err != nil {
-			return nil, err
+	// The two tallies representativeOf's bulk rule reads, one query each for
+	// the whole row: how many episodes that season holds, and how many seasons
+	// the series holds.
+	episodeTotals, err := s.store.ChildItemCounts(ctx, seasonParents, storage.ItemTypeEpisode)
+	if err != nil {
+		return nil, err
+	}
+	seasonTotals, err := s.store.ChildItemCounts(ctx, seriesParents, storage.ItemTypeSeason)
+	if err != nil {
+		return nil, err
+	}
+
+	picks := make([]seriesPick, 0, limit)
+	for _, g := range groups {
+		if len(picks) >= limit {
+			break
 		}
-		if card != nil {
-			cards = append(cards, latestCard{item: *card, latest: activity.Latest})
+		picks = append(picks, seriesPick{
+			repID: representativeOf(g, func(id storage.ItemID) int { return episodeTotals[id] },
+				func(id storage.ItemID) int { return seasonTotals[id] }),
+			latest: g.latest,
+		})
+	}
+
+	// One fetch for every picked item, ordered by our own list.
+	ids := make([]storage.ItemID, 0, len(picks))
+	for _, p := range picks {
+		ids = append(ids, p.repID)
+	}
+	page, err := s.store.QueryItems(ctx, storage.ItemFilter{IDs: ids, OrderByIDs: true, Limit: len(ids)})
+	if err != nil {
+		return nil, err
+	}
+	byID := make(map[storage.ItemID]storage.Item, len(page.Items))
+	for _, it := range page.Items {
+		byID[it.ID] = it
+	}
+
+	cards := make([]latestCard, 0, len(picks))
+	for _, p := range picks {
+		item, ok := byID[p.repID]
+		if !ok {
+			// Deleted between the count queries and this fetch: skip the card
+			// rather than failing the whole row, same as before.
+			continue
 		}
+		cards = append(cards, latestCard{item: item, latest: p.latest})
 	}
 	return cards, nil
 }
