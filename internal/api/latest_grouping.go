@@ -283,7 +283,7 @@ func (s *Server) isSeriesFullyWatched(ctx context.Context, userID storage.UserID
 // entirely rather than counted against limit — confirmed live, see that
 // function's doc comment — so it never displaces an otherwise-lower-ranked
 // series that still has something unwatched.
-func (s *Server) tvShowsLatestGrouped(ctx context.Context, libID storage.LibraryID, limit int, userID storage.UserID) ([]storage.Item, error) {
+func (s *Server) tvShowsLatestGrouped(ctx context.Context, libID storage.LibraryID, limit int, userID storage.UserID) ([]latestCard, error) {
 	ranked, err := s.store.QuerySeriesLatestActivity(ctx, libID,
 		[]storage.ItemType{storage.ItemTypeEpisode, storage.ItemTypeSeason},
 		latestSeriesPoolSize(limit))
@@ -291,7 +291,7 @@ func (s *Server) tvShowsLatestGrouped(ctx context.Context, libID storage.Library
 		return nil, err
 	}
 
-	cards := make([]storage.Item, 0, limit)
+	cards := make([]latestCard, 0, limit)
 	for _, activity := range ranked {
 		if len(cards) >= limit {
 			break
@@ -329,7 +329,7 @@ func (s *Server) tvShowsLatestGrouped(ctx context.Context, libID storage.Library
 			return nil, err
 		}
 		if card != nil {
-			cards = append(cards, *card)
+			cards = append(cards, latestCard{item: *card, latest: activity.Latest})
 		}
 	}
 	return cards, nil

@@ -2042,6 +2042,7 @@
    "web": true,
    "scenarios": [
     "collections.list.latest-and-counts",
+    "items.latest.grouping",
     "items.rating.other-read-paths",
     "music.latest.albums",
     "music.latest.loose",

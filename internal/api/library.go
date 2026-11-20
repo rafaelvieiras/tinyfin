@@ -392,6 +392,11 @@ func (s *Server) writeItemsLatest(w http.ResponseWriter, r *http.Request, u stor
 		} else {
 			filter.ExcludeItemTypes = append(filter.ExcludeItemTypes, storage.ItemTypeMusicAlbum)
 		}
+		// A show is never a row of its own here: ungrouped this route lists the
+		// episodes themselves and never the season or the series, and grouped
+		// those rows come back as one card (items.latest.R4/R5). Asking for the
+		// type by name (IncludeItemTypes) keeps it.
+		filter.ExcludeItemTypes = append(filter.ExcludeItemTypes, storage.ItemTypeSeason, storage.ItemTypeSeries)
 	}
 	s.applyParentID(r, &filter)
 	// Scoped to a folder (an artist, a library root folder) and grouped, a
@@ -477,12 +482,24 @@ func (s *Server) writeItemsLatest(w http.ResponseWriter, r *http.Request, u stor
 			// The grouped cards bypass QueryItems, so apply the rules here.
 			vis := []storage.Item{}
 			for _, g := range grp {
-				if s.itemReadable(ctx, scope, g) {
-					vis = append(vis, g)
+				if s.itemReadable(ctx, scope, g.item) {
+					vis = append(vis, g.item)
 				}
 			}
 			items = vis
 		}
+	}
+
+	// A request that names no library still gets one card per series
+	// (items.latest.R4): that is the row the home screen draws. Explicitly
+	// asking for a type keeps the flat answer the caller described.
+	if items == nil && grouped && filter.ParentID == nil && filter.LibraryID == nil && len(filter.ItemTypes) == 0 {
+		mixed, err := s.latestGroupedMixed(ctx, &filter, scope, u, wantLimit, keepLoose)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		items = mixed
 	}
 
 	if items == nil {
@@ -493,15 +510,7 @@ func (s *Server) writeItemsLatest(w http.ResponseWriter, r *http.Request, u stor
 		}
 		items = page.Items
 		if keepLoose {
-			kept := make([]storage.Item, 0, len(items))
-			for _, it := range items {
-				if it.Type == storage.ItemTypeAudio && it.ParentID != nil {
-					if p, err := s.store.GetItem(ctx, *it.ParentID); err == nil && p.Type == storage.ItemTypeMusicAlbum {
-						continue
-					}
-				}
-				kept = append(kept, it)
-			}
+			kept := s.dropAlbumTracks(ctx, items)
 			if len(kept) > wantLimit {
 				kept = kept[:wantLimit]
 			}
@@ -515,9 +524,17 @@ func (s *Server) writeItemsLatest(w http.ResponseWriter, r *http.Request, u stor
 		items = dropExcludedLibraryItems(items, latestCfg.LatestItemsExcludes)
 	}
 
+	// The date the client sorts "recently added" by, when it asks for it: the
+	// newest addition inside a series (items.latest.R6).
+	latestFields := map[string]bool{}
+	for _, tok := range itemsListParam(q, "fields") {
+		latestFields[strings.ToLower(tok)] = true
+	}
 	dtos := make([]baseItemDto, 0, len(items))
 	for _, it := range items {
-		dtos = append(dtos, s.baseItemDto(ctx, it))
+		dto := s.baseItemDto(ctx, it)
+		s.applyDateLastMediaAdded(ctx, &dto, it, latestFields)
+		dtos = append(dtos, dto)
 	}
 	writeJSON(w, http.StatusOK, dtos)
 }
