@@ -314,18 +314,19 @@ func TestItemsLatestGroupItemsFalse(t *testing.T) {
 		t.Fatalf("Items/Latest (grouped) = %+v, want exactly 1 Series card", grouped)
 	}
 
-	// groupItems=false: back to one row per series/season/episode item —
-	// 4 rows total (the series, its season, and the 2 episodes).
+	// groupItems=false lists the episodes themselves — and nothing else. Measured
+	// on the reference: the ungrouped row never carries a Season or a Series
+	// item of its own, only the concrete media (items.latest.R5).
 	items := latestGrouped(t, get, libID, "&groupItems=false")
-	if len(items) != 4 {
-		t.Fatalf("Items/Latest?groupItems=false = %+v, want the 4 flat rows", items)
+	if len(items) != 2 {
+		t.Fatalf("Items/Latest?groupItems=false = %+v, want the 2 episode rows", items)
 	}
 	types := map[string]int{}
 	for _, it := range items {
 		types[it.Type]++
 	}
-	if types["Episode"] != 2 || types["Season"] != 1 || types["Series"] != 1 {
-		t.Errorf("Items/Latest?groupItems=false type counts = %+v, want 2 Episode + 1 Season + 1 Series", types)
+	if types["Episode"] != 2 || types["Season"] != 0 || types["Series"] != 0 {
+		t.Errorf("Items/Latest?groupItems=false type counts = %+v, want 2 Episode and no Season or Series", types)
 	}
 }
 
@@ -602,4 +603,106 @@ func TestItemsLatestSeriesGroupingHighEpisodeCountSeriesDoesNotHideOthers(t *tes
 	if !found {
 		t.Errorf("Long Series's 103-episode series never appeared despite being the 4th-most-recent of only 4 series — the crowding-out bug regressed: %+v", items)
 	}
+}
+
+// upsertMovie is upsertSeries without the show plumbing.
+func upsertMovie(t *testing.T, st storage.ItemStore, libID storage.LibraryID, name string, dateCreated time.Time) storage.ItemID {
+	t.Helper()
+	item := storage.Item{
+		Type: storage.ItemTypeMovie, LibraryID: libID, Name: name,
+		Path: "/media/movies/" + name + ".mp4", DateCreated: dateCreated,
+	}
+	if err := st.UpsertItem(context.Background(), item); err != nil {
+		t.Fatalf("UpsertItem movie %q: %v", name, err)
+	}
+	return mustFindItemByName(t, st, libID, name)
+}
+
+// TestItemsLatestGroupsSeriesWithoutParent: the home row asks for
+// /Items/Latest with no parentId, and it gets one card per series there too
+// (items.latest.R4). Before this, the unscoped row listed every episode, its
+// season and the series itself. Order is each series' newest addition, so a
+// show added after a movie sits above it even though the series item itself
+// is older. Measured on the reference.
+func TestItemsLatestGroupsSeriesWithoutParent(t *testing.T) {
+	ts, st := newTestServer(t)
+	user := createTestUser(t, st, "erin", "erinpass")
+	token := loginToken(t, ts.URL, user.Name, "erinpass")
+	get := authedClient(t, ts.URL, token)
+
+	now := time.Now().UTC().Truncate(time.Second)
+	moviesLib := createTestLibrary(t, st, "Movies", storage.CollectionTypeMovies)
+	showsLib := createTestLibrary(t, st, "Shows", storage.CollectionTypeTVShows)
+
+	upsertMovie(t, st, moviesLib, "Old Movie", now.Add(-3*time.Hour))
+	upsertMovie(t, st, moviesLib, "New Movie", now.Add(-30*time.Minute))
+
+	showA := upsertSeries(t, st, showsLib, "Show A", now.Add(-6*time.Hour))
+	seasonA := upsertSeason(t, st, showsLib, showA, "Season 1", 1, now.Add(-6*time.Hour))
+	upsertEpisode(t, st, showsLib, showA, seasonA, "A1", 1, now.Add(-2*time.Hour))
+	upsertEpisode(t, st, showsLib, showA, seasonA, "A2", 2, now.Add(-1*time.Hour))
+
+	showB := upsertSeries(t, st, showsLib, "Show B", now.Add(-5*time.Hour))
+	seasonB := upsertSeason(t, st, showsLib, showB, "Season 1", 1, now.Add(-5*time.Hour))
+	upsertEpisode(t, st, showsLib, showB, seasonB, "B1", 1, now.Add(-10*time.Minute))
+	upsertEpisode(t, st, showsLib, showB, seasonB, "B2", 2, now.Add(-5*time.Minute))
+
+	row := latestRow(t, get, "?limit=50")
+	if len(row) != 4 {
+		t.Fatalf("/Items/Latest = %+v, want Show B, New Movie, Show A, Old Movie", row)
+	}
+	want := []string{"Show B", "New Movie", "Show A", "Old Movie"}
+	for i, w := range want {
+		if row[i].Name != w {
+			t.Fatalf("/Items/Latest = %v, want %v", rowNames(row), want)
+		}
+	}
+	for _, it := range row {
+		if it.Type == "Episode" || it.Type == "Season" {
+			t.Fatalf("/Items/Latest returned a %s row: %v", it.Type, rowNames(row))
+		}
+	}
+	if row[0].Type != "Series" || row[2].Type != "Series" {
+		t.Fatalf("/Items/Latest = %v, want the show rows to be Series cards", rowNames(row))
+	}
+
+	// limit counts cards: two series worth of episodes must not eat the row.
+	short := latestRow(t, get, "?limit=2")
+	if len(short) != 2 || short[0].Name != "Show B" || short[1].Name != "New Movie" {
+		t.Fatalf("/Items/Latest?limit=2 = %v, want Show B and New Movie", rowNames(short))
+	}
+
+	// groupItems=false lists the episodes and no Season or Series (R5).
+	flat := latestRow(t, get, "?limit=50&groupItems=false")
+	types := map[string]int{}
+	for _, it := range flat {
+		types[it.Type]++
+	}
+	if types["Episode"] != 4 || types["Season"] != 0 || types["Series"] != 0 {
+		t.Fatalf("/Items/Latest?groupItems=false types = %+v, want 4 Episode and no Season or Series", types)
+	}
+}
+
+// latestRow issues GET /Items/Latest with a raw query string and decodes the
+// array handleItemsLatest returns.
+func latestRow(t *testing.T, get func(method, path string) *http.Response, query string) []baseItemDto {
+	t.Helper()
+	resp := get(http.MethodGet, "/Items/Latest"+query)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /Items/Latest%s status = %d, want 200", query, resp.StatusCode)
+	}
+	var items []baseItemDto
+	if err := json.NewDecoder(resp.Body).Decode(&items); err != nil {
+		t.Fatalf("decoding /Items/Latest%s: %v", query, err)
+	}
+	return items
+}
+
+func rowNames(items []baseItemDto) []string {
+	out := make([]string, 0, len(items))
+	for _, it := range items {
+		out = append(out, it.Type+":"+it.Name)
+	}
+	return out
 }

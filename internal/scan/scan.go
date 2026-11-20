@@ -2135,7 +2135,20 @@ func fileDateAdded(path string) time.Time {
 	if err != nil {
 		return time.Now().UTC()
 	}
-	return fi.ModTime().UTC()
+	return clampFutureDateAdded(fi.ModTime().UTC())
+}
+
+// clampFutureDateAdded keeps a modification time that sits in the future from
+// dating an item in the future. Measured on the reference: a file with an mtime
+// one hour ahead and one a day ahead both come back dated with the moment the
+// scan read them, while a past mtime is used exactly as the file reports it. A
+// file copied with a bad stamp would otherwise sit at the top of "recently
+// added" until the clock caught up with it.
+func clampFutureDateAdded(t time.Time) time.Time {
+	if now := time.Now().UTC(); t.After(now) {
+		return now
+	}
+	return t
 }
 
 func largestVideoFile(dir string) (string, int64) {

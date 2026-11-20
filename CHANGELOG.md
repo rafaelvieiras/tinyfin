@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+
+- `GET /Items/Latest` without a parent library — the "recently added" row the home screen draws — now comes back
+  with one card per series instead of the flat list of episodes, seasons and series rows it used to answer, ordered
+  by each series' newest addition. `groupItems=false` no longer lists `Season` or `Series` rows either. The row also
+  publishes `DateLastMediaAdded` when `Fields` asks for it, and a file whose modification time sits in the future is
+  dated by the scan instead of by that future time.
 - Saving the home-screen order works. `POST /Users/{userId}/Configuration` stored `OrderedViews` and then nothing
   read it, so the libraries kept their default order after the page said "Settings saved". `GET /UserViews` and
   `GET /Users/{userId}/Views` now order the views by it — the views it names first, in its order, the rest behind

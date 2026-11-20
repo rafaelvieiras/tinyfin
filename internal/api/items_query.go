@@ -1012,6 +1012,7 @@ func (s *Server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 		wantExtras := iq.fields["localtrailercount"] || iq.fields["specialfeaturecount"] || iq.fields["partcount"]
 		for _, it := range page.Items {
 			dto := s.baseItemDto(ctx, it)
+			s.applyDateLastMediaAdded(ctx, &dto, it, iq.fields)
 			if wantExtras {
 				s.applyExtraInfo(ctx, &dto, it)
 			}

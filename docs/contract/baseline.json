@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 930
+    "pass": 931
   },
   "scenarios": {
     "admin.auth.providers": "pass",
@@ -224,6 +224,7 @@
     "items.ids.invalid-token-dropped": "pass",
     "items.ids.order-preserved": "pass",
     "items.ids.with-filters": "pass",
+    "items.latest.grouping": "pass",
     "items.legacy.item-alias": "pass",
     "items.legacy.item-alias-path-ids": "pass",
     "items.legacy.item-user-rules": "pass",

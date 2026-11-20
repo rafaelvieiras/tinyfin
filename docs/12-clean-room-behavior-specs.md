@@ -32,6 +32,25 @@ against the reference server showed and what `docs/11-jellyfin-web-route-coverag
 `GET /Items/Latest` entry flags as a confirmed, unresolved divergence. This section is that
 resolution.
 
+### Measured against the reference (19/nov/2026)
+
+The row a request without a parent library gets — the one the home screen draws — follows the same rule here:
+one card per series, ordered by the newest addition inside the series, merged with the movies and albums that
+share the row. The reference was measured on a throwaway `jellyfin/jellyfin:12.2` with a two-library tree:
+
+- **One card per series, and the card is the `Series` item.** Three recently added episodes of one show answered
+  one `Series` row; the same request with `GroupItems=false` answered the three episodes and no `Season` and no
+  `Series` row, so a show is never a row of this route on its own.
+- **Ordering is the newest addition, not the series' own date.** Adding an episode stamped later than a movie that
+  was already in the row moved the card above that movie, while the card kept reporting the series' own
+  `DateCreated` from the day before. `DateLastMediaAdded` carries that newest date (the reference publishes it when
+  `Fields` asks for it), which is why the card and the field agree.
+- **The reference applies `limit` to the raw rows and then collapses them.** With the two newest rows being episodes
+  of the same show, `limit=2` answered **one** card, and `limit=1` answered an **Episode** rather than a series.
+  This is `DIV-36`: here the row is assembled first and cut afterwards, so `limit` counts cards.
+- **A file's added date is its modification time**, clamped to the moment of the scan when that time is in the
+  future, and a file replaced under the same name is re-dated (measured; see `DIV-30`).
+
 ### Behavior, in prose
 
 For a request scoped to a single TV-shows library (or to the user's whole home view, when no

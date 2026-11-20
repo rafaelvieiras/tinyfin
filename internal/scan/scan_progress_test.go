@@ -3,9 +3,11 @@ package scan
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/rafaelvieiras/tinyfin/internal/storage"
 )
@@ -94,5 +96,35 @@ func TestScanLibraryWithoutProgressCallback(t *testing.T) {
 	}
 	if stats.ItemsScanned != 1 {
 		t.Fatalf("ItemsScanned = %d, want 1", stats.ItemsScanned)
+	}
+}
+
+// TestFileDateAddedClampsFuture: the date an item is added carries the file's
+// own modification time, except when that time is in the future — the
+// reference then uses the moment of the scan (measured).
+func TestFileDateAddedClampsFuture(t *testing.T) {
+	dir := t.TempDir()
+	past := dir + "/past.mp4"
+	future := dir + "/future.mp4"
+	for _, f := range []string{past, future} {
+		if err := os.WriteFile(f, []byte("x"), 0o644); err != nil {
+			t.Fatalf("WriteFile %s: %v", f, err)
+		}
+	}
+	old := time.Now().UTC().Add(-48 * time.Hour).Truncate(time.Second)
+	if err := os.Chtimes(past, old, old); err != nil {
+		t.Fatalf("Chtimes past: %v", err)
+	}
+	ahead := time.Now().UTC().Add(24 * time.Hour)
+	if err := os.Chtimes(future, ahead, ahead); err != nil {
+		t.Fatalf("Chtimes future: %v", err)
+	}
+
+	if got := fileDateAdded(past); !got.Equal(old) {
+		t.Fatalf("fileDateAdded(past) = %v, want the file's own mtime %v", got, old)
+	}
+	got := fileDateAdded(future)
+	if d := time.Since(got); d < 0 || d > time.Minute {
+		t.Fatalf("fileDateAdded(future) = %v, want the moment of the scan", got)
 	}
 }

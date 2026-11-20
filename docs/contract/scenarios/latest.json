@@ -1,0 +1,180 @@
+[
+ {
+  "id": "items.latest.grouping",
+  "endpoint": "GET /Items/Latest",
+  "spec": "items.md",
+  "scope": "modern",
+  "tags": [
+   "items",
+   "latest"
+  ],
+  "covers": [
+   "items.latest.R4",
+   "items.latest.R5",
+   "items.latest.R6"
+  ],
+  "requires": [
+   "library:movies",
+   "library:shows",
+   "item:show",
+   "item:s01e01",
+   "item:s01e02",
+   "item:s02e01"
+  ],
+  "steps": [
+   {
+    "name": "the row without a parent keeps one card per series",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "Limit": "50"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Type",
+       "op": "contains",
+       "value": "Series"
+      },
+      {
+       "path": "$[*].Type",
+       "op": "notcontains",
+       "value": "Season"
+      },
+      {
+       "path": "$[*].Type",
+       "op": "notcontains",
+       "value": "Episode"
+      },
+      {
+       "path": "$[*].Id",
+       "op": "contains",
+       "value": "{{item.show.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "ungrouped lists the episodes themselves and no season",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "Limit": "50",
+      "GroupItems": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Type",
+       "op": "contains",
+       "value": "Episode"
+      },
+      {
+       "path": "$[*].Type",
+       "op": "notcontains",
+       "value": "Season"
+      },
+      {
+       "path": "$[*].Type",
+       "op": "notcontains",
+       "value": "Series"
+      }
+     ]
+    }
+   },
+   {
+    "name": "scoped to the shows library the row is a single card",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "Limit": "50",
+      "ParentId": "{{library.shows.id}}",
+      "Fields": "DateCreated,DateLastMediaAdded"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$",
+       "op": "len",
+       "value": 1
+      },
+      {
+       "path": "$[0].Type",
+       "op": "eq",
+       "value": "Series"
+      },
+      {
+       "path": "$[0].Id",
+       "op": "eq",
+       "value": "{{item.show.id}}"
+      },
+      {
+       "path": "$[0].DateLastMediaAdded",
+       "op": "exists"
+      },
+      {
+       "path": "$[0].DateLastMediaAdded",
+       "op": "ne",
+       "value": "0001-01-01T00:00:00.0000000Z"
+      }
+     ]
+    }
+   },
+   {
+    "name": "scoped and ungrouped lists the episodes themselves",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items/Latest",
+     "query": {
+      "Limit": "50",
+      "ParentId": "{{library.shows.id}}",
+      "GroupItems": "false"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$[*].Type",
+       "op": "contains",
+       "value": "Episode"
+      },
+      {
+       "path": "$[*].Type",
+       "op": "notcontains",
+       "value": "Season"
+      },
+      {
+       "path": "$[*].Type",
+       "op": "notcontains",
+       "value": "Series"
+      },
+      {
+       "path": "$[*].Id",
+       "op": "contains",
+       "value": "{{item.s01e01.id}}"
+      },
+      {
+       "path": "$[*].Id",
+       "op": "contains",
+       "value": "{{item.s02e01.id}}"
+      }
+     ]
+    }
+   }
+  ]
+ }
+]
