@@ -97,6 +97,13 @@ The statement counts say the same thing more plainly. A 100-episode page asked t
 six routes, including the unscoped "recently added" row and `UserViews`, were compared field by field against
 the previous build and are byte-identical.
 
+Measured again from the public host after both changes shipped (`v0.3.7`, `medias.pot2.top`, median of 5, from
+a laptop over the reverse proxy): a TV library's "recently added" row answers in **226.8 ms** where the same
+request took 615-964 ms before them, a 50-season page in 92.5 ms and a 200-episode page in 230 ms (313 KB). The
+unscoped row — every library in one answer, 24 cards — is 723 ms, because it runs the whole home screen's
+query work in a single request; the web client asks per library instead, so that shape is not on the home
+screen's path.
+
 What is left in a grouped row's ~101 ms is mostly **fixed work, not per card**: the ranking query (16 ms), the
 episode tally behind the "fully watched" check (20 ms on this library), the windows, and serialising the
 answer. Roughly 2 ms per card is left. The next measured step, if the row is still worth chasing, is that
