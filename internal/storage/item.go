@@ -481,6 +481,16 @@ type SeriesActivity struct {
 	Latest   time.Time
 }
 
+// SeriesWindow is one series' trailing window for SeriesRecentItems: the
+// series to read and the DateCreated floor its rows must reach. The caller
+// computes Since per series (internal/api's latest_grouping.go asks for each
+// series' own 24-hour lookback from its latest addition), so this type carries
+// no window policy of its own.
+type SeriesWindow struct {
+	SeriesID ItemID
+	Since    time.Time
+}
+
 // ChapterRef is one chapter mark of a media file.
 type ChapterRef struct {
 	// StartTicks is the chapter's start in 100 ns ticks.

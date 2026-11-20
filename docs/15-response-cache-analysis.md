@@ -2,9 +2,10 @@
 
 **Status:** analysis only — nothing in this document is implemented.
 
-**Last re-measured:** 21/nov/2026, on `v0.3.5`, after the query work in #54 and the mount fix in #55. The
-verdict changed with those numbers: the rows this document was written to rescue are 10x cheaper than they
-were, and most of what is left is a second N+1 rather than a reason for a cache. Read
+**Last re-measured:** 21/nov/2026, on `v0.3.5` plus the batched-grouping change, after the query work in #54
+and the mount fix in #55. The verdict changed with those numbers, twice: the rows this document was written to
+rescue went from 8.3 s to 0.9 s with the earlier work, and from 640 ms to 139 ms with the batching described in
+[Where the time went](#where-the-time-went-and-what-was-done-about-it). Read
 [Does a file cache still pay?](#does-a-file-cache-still-pay) before building anything from here.
 
 The document exists for two reasons: the home screen of a large library is the slowest thing the server
@@ -19,7 +20,8 @@ cost, no transport), and against the public host (what a client feels).
 
 One cold load of the web client, per endpoint. "Before" is 19/nov, before the N+1 work and before the
 database was moved off the FUSE mount; "now (public)" is the median of 5 over `https://medias.pot2.top`;
-"now (loopback)" is the same request against the same database file on a local disk.
+"now (loopback)" is the same request against the same database file on a local disk, measured **before** the
+grouping batching described in the next section (that section carries the after numbers for the TV rows).
 
 | endpoint | before | now (public) | now (loopback) | answer |
 |---|---|---|---|---|
@@ -45,40 +47,66 @@ Two facts worth separating from the table:
 The empty `NextUp` row is a defect on this server, tracked in issue #56 and out of scope here. It makes the
 row look fast for the wrong reason.
 
-## Where the remaining time goes
+## Where the time went, and what was done about it
 
-A TV library's row still costs 0.4–0.65 s of server time, and it is not the query the last round optimized:
+A TV library's row cost 0.4-0.65 s of server time, and it was not the query the previous round optimised:
 
 - the ranking query (`QuerySeriesLatestActivity`) takes **16 ms**, and `EXPLAIN QUERY PLAN` shows it using
   `idx_items_library_type` with two temp b-trees for the group and the order;
-- the row costs **592 ms** on `Séries` because `tvShowsLatestGrouped` then walks a pool of **80 series**
-  (`limit × 5`, floor 50, ceiling 300) and runs `QueryItems` plus `itemTypeCount` **per series** — a second
-  N+1, the same shape as the one that was just removed. 80 × ~7 ms is the whole row.
+- the row cost **592 ms** on `Séries` because `tvShowsLatestGrouped` then asked **four store reads per card**:
+  that card's 24-hour window, the season's episode total, the series' season total, and (in the DTO builder)
+  its child counts. A limit of 16 meant ~112 statements, at ~5 ms each. The pool size was **not** the
+  multiplier — the loop stops as soon as it holds `limit` cards, so an 80-series pool and a 12-series pool cost
+  the same row. That is why a cache keyed by anything about the pool would have bought nothing here.
 
-So the honest reading of the current numbers is: the row is slow because it asks 160 small questions, not
-because the catalog is expensive to read. Caching the answer would hide that; batching it removes it and
-keeps the row fresh at the same time.
+Those four per-card reads are now **five reads for the whole row** (the ranking, the candidates' windows, their
+watch states, and the two tallies) plus one fetch of the picked items. Measured on a
+copy of the production database, same machine, median of 7, while both binaries were built from the same tree:
+
+| request | before | after | |
+|---|---|---|---|
+| `Séries` (6,187 items, 86 series), `limit=16` | 640.7 ms | **139.5 ms** | 4.6x |
+| `Séries`, `limit=4` | 256.8 ms | **86.9 ms** | 3.0x |
+| `Documentários`, `limit=16` | 671.2 ms | **101.5 ms** | 6.6x |
+| `Filmes` (movies, ungrouped), `limit=16` | 33.1 ms | 33.2 ms | unchanged, as expected |
+
+What is left in the 139 ms is now mostly the DTO builder, which still answers three questions per card
+(`ChildCount`, `RecursiveItemCount` and `UserData.UnplayedItemCount`, internal/api/dto.go) with one count query
+each. That is ~8.7 ms per card, and it is the next measured step — batching it is a change to shared DTO code,
+not to the grouping path, so it was kept out of this one.
+
+### The test that pins the property
+
+`internal/api/latest_grouping_query_scale_test.go` wraps the store in a counting decorator and asserts, for a
+pool of 12 series and a pool of 60:
+
+- the grouping path answers with a fixed number of reads (each batched query exactly once, `GetItem` never);
+- the whole row's cost is **the same for both pool sizes**;
+- the per-card share stays at the DTO's known three reads, so a future per-card call fails the test instead of
+  sliding under a generous number.
+
+It also pins the batched counts' parity with the per-parent `QueryItems` they replaced: extras are excluded from
+both tallies, the way the catalog-facing queries exclude them.
 
 ## Does a file cache still pay?
 
-**No — not as the next step.** The argument for it in the previous version of this document was that an
-8.3 s row made every other consideration secondary. That row is now 0.6–0.9 s, and its cost is one query
-shape away from being gone. Three concrete reasons to fix the loop instead:
+**No, and the case got weaker.** The argument for it in the first version of this document was that an 8.3 s row
+made every other consideration secondary. That row is now 140 ms on the same database, and the remaining cost is
+one more batched query away from being a fraction of that. Three concrete reasons to keep fixing the path
+instead:
 
-1. **A cache turns 592 ms into 2 ms; batching turns it into tens of milliseconds, for every caller.** The
-   same pooled query helps search, the scan's own reads and any future list that walks series, not just this
-   row.
-2. **A cache would hide the defect.** A stale-but-fast row is harder to notice than a slow one, and the plan
-   above would leave the 160-questions-per-request pattern in place for good.
-3. **Freshness has a cost that this row does not justify.** A scan of a 13,800-episode library is a burst
-   that lands between two requests; an answer that is one minute stale after that burst is exactly the bug
-   users report as "the new episode did not appear". Paying that risk to save 0.6 s is a bad trade while the
-   0.6 s is fixable.
+1. **Batching beats caching for every caller.** The pooled queries help any row that walks series; a cache only
+   helps the one endpoint it wraps, and only the second time it is asked.
+2. **A cache would hide the defect.** A stale-but-fast row is harder to notice than a slow one, and it would
+   leave the per-card query pattern in place for good.
+3. **Freshness has a cost this row does not justify.** A scan of a 13,800-episode library is a burst that lands
+   between two requests; an answer one minute stale after that burst is exactly the bug users report as "the new
+   episode did not appear". Paying that risk to save 140 ms is a bad trade while the 140 ms is fixable.
 
 What would make it pay again, in order of likelihood:
 
-- after batching, a TV row that is **still above ~100 ms** — at that point the remaining time is reading the
-  catalog itself, and an answer from disk beats computing it;
+- after the DTO counts are batched, a row that is **still above ~50 ms** — at that point the remaining time is
+  reading the catalog itself, and an answer from disk beats computing it;
 - a **second instance** behind a load balancer, which needs shared answers rather than per-process ones;
 - a **CDN in front**, for the same reason it already helps `/web/**` and the picture routes.
 
@@ -142,11 +170,13 @@ exactly the bug users report as "the new episode did not appear".
 
 ## Order of work when this is picked up
 
-1. **Batch the per-series work in `tvShowsLatestGrouped`**: one query for the windows of the whole pool, one
-   grouped query for the season episode counts. Removes the remaining 0.4–0.65 s per TV library, needs no
-   invalidation, and helps every caller of the same shape.
-2. **Re-measure the fifteen rows.** If the biggest is under ~100 ms, stop here: the file cache has no case.
-3. Only if it is still slow: catalog generation per library and play-state generation per user (one column
+1. ~~Batch the per-series work in `tvShowsLatestGrouped`.~~ Done: five reads for the row, 640.7 ms to 139.5 ms
+   on the production database copy.
+2. **Batch the DTO builder's per-card counts** (`ChildCount`, `RecursiveItemCount`, `UnplayedItemCount`):
+   three count queries per card, ~8.7 ms per card today, and the same shape for every list route that asks for
+   those fields.
+3. Re-measure the fifteen rows. If the biggest is under ~50 ms, stop here: the file cache has no case.
+4. Only if it is still slow: catalog generation per library and play-state generation per user (one column
    each, bumped in the write paths), then a file cache behind `GET /Items/Latest`.
-4. `GET /Shows/NextUp` and `GET /UserViews` last, keyed by the same generations, and only once step 3 exists.
-5. Only then reach for a CDN, which needs the `Cache-Control`/`Vary` work on `GET /web/**` that #54 landed.
+5. `GET /Shows/NextUp` and `GET /UserViews` last, keyed by the same generations, and only once step 4 exists.
+6. Only then reach for a CDN, which needs the `Cache-Control`/`Vary` work on `GET /web/**` that #54 landed.

@@ -81,6 +81,23 @@ type ItemStore interface {
 	// no-full-catalog enforcement as QueryItems.
 	QuerySeriesLatestActivity(ctx context.Context, libraryID LibraryID, itemTypes []ItemType, limit int) ([]SeriesActivity, error)
 
+	// SeriesRecentItems answers several series' trailing windows in one query:
+	// for every SeriesWindow, the Episode/Season rows created at or after its
+	// Since, newest first, at most perSeriesLimit per series. It replaces the
+	// per-series QueryItems the recently-added grouping used to issue — one per
+	// card, measured at ~30 ms per card on a 6,187-item library
+	// (docs/15-response-cache-analysis.md), which is what made a 16-card row
+	// cost 565 ms. Series absent from the rows (nothing inside the window) are
+	// absent from the map.
+	SeriesRecentItems(ctx context.Context, windows []SeriesWindow, itemTypes []ItemType, perSeriesLimit int) (map[ItemID][]Item, error)
+
+	// ChildItemCounts answers, for several parents at once, how many items of
+	// itemType have each of parentIDs as their direct ParentID. Same motivation
+	// as SeriesRecentItems: it replaces a count query per series in the
+	// grouping path (the season's episode total and the series' season total).
+	// Parents with no child of that type are absent from the map.
+	ChildItemCounts(ctx context.Context, parentIDs []ItemID, itemType ItemType) (map[ItemID]int, error)
+
 	// SeriesWatchStates answers, for several series at once, how many episodes
 	// each holds and how many of them userID has not played. It replaces the
 	// per-episode GetPlaystate walk the recently-added grouping used to do: a

@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   JavaScript, ~1.1 MB gzipped).
 - The bundled web client's files carry `Cache-Control`: a versioned bundle is `immutable` for a year, the
   entry point and the root files are always revalidated, so a new build is still picked up.
+- A grouped "recently added" row for a TV library took 640 ms for 16 cards on a 6,187-item library; it now
+  takes 140 ms. The row asked four store reads per card (that card's 24-hour window plus three counts: the
+  season's episode total, the series' season total, and the season's children); those are now five batched
+  reads for the whole row, whatever the pool holds, and one fetch for the picked items. A test pins the
+  property: the same request over a pool of 12 series and over a pool of 60 costs the same number of reads.
 - `GET /Items/Latest` with a parent TV library took 8.3 to 9.3 seconds on a large library and could leave the
   home screen waiting; it now answers in 0.56 to 0.63 seconds. The "is this series fully watched" check is one
   grouped query instead of one per episode, and the 24-hour window is applied by the database instead of being
