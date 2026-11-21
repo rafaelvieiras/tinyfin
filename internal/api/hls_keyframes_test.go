@@ -3,10 +3,12 @@ package api
 import (
 	"context"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -67,9 +69,11 @@ func TestHLSPlaylistReadsKeyFramesAndRecordsThem(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 
-	// four key frames (0, 4, 11.006 and 19.006 s) with a 6 s grid: the plan cuts
-	// at 11.006 (the first one past 6 s) and at 19.006, so the playlist says
-	// 11.006 + 8 + 0.994 instead of the grid's 6 + 6 + 6 + 2
+	// four key frames (0, 4, ~11 and ~19 s) with a 6 s grid: the plan cuts at
+	// the key frame past 6 s and at the next one, so the playlist says
+	// 11.006 + 8 + 0.994 here and 11 + 8 + 1 on another ffmpeg build, where the
+	// muxer rounds the key frames to the frame boundary; both follow the file
+	// and neither is the grid's 6 + 6 + 6 + 2
 	var durations []string
 	for _, line := range strings.Split(string(body), "\n") {
 		if strings.HasPrefix(line, "#EXTINF:") {
@@ -77,9 +81,20 @@ func TestHLSPlaylistReadsKeyFramesAndRecordsThem(t *testing.T) {
 			durations = append(durations, d)
 		}
 	}
-	want := []string{"11.006000", "8.000000", "0.994000"}
-	if strings.Join(durations, " ") != strings.Join(want, " ") {
-		t.Fatalf("segment durations = %v, want %v (the file's key frames)\n%s", durations, want, body)
+	want := []float64{11, 8, 1}
+	if len(durations) != len(want) {
+		t.Fatalf("the playlist has %d segments, want %d (the file's key frames, not the 6 s grid): %v\n%s",
+			len(durations), len(want), durations, body)
+	}
+	for i, d := range durations {
+		got, err := strconv.ParseFloat(d, 64)
+		if err != nil {
+			t.Fatalf("segment %d duration %q: %v", i, d, err)
+		}
+		if math.Abs(got-want[i]) > 0.05 {
+			t.Fatalf("segment %d lasts %.3f s, want %.0f s: the cut is not on the file's key frame: %v\n%s",
+				i, got, want[i], durations, body)
+		}
 	}
 
 	st2, _ := os.Stat(src)
