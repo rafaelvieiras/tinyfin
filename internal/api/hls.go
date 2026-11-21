@@ -329,7 +329,7 @@ func isMatroska(item storage.Item) bool {
 // SegmentLength seconds (nil when the run time is unknown).
 func (s *Server) segmentPlan(ctx context.Context, h hlsRequest, seg int) (durations []float64, cuts []int64) {
 	if h.decision.VideoCodec == "copy" && h.item.RemoteURL == "" {
-		if kf, err := s.transcode.KeyFrames(ctx, h.req.InputPath); err == nil {
+		if kf, err := s.transcode.KeyFrames(ctx, string(h.item.ID), h.req.InputPath); err == nil {
 			cuts = transcode.SegmentCuts(kf, seg)
 		}
 	}

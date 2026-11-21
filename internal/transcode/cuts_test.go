@@ -36,16 +36,18 @@ func TestKeyFramesAndSeekedCopy(t *testing.T) {
 	}
 
 	m := New(Config{FFmpegPath: ffmpeg, FFprobePath: ffprobe, WorkDir: dir})
-	kf, err := m.KeyFrames(context.Background(), src)
+	kf, err := m.KeyFrames(context.Background(), "", src)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(kf) != 4 || math.Abs(kf[1]-7) > 0.05 || math.Abs(kf[3]-21) > 0.05 {
 		t.Fatalf("key frames: %v", kf)
 	}
-	again, err := New(Config{FFmpegPath: ffmpeg, FFprobePath: "/nonexistent", WorkDir: dir}).KeyFrames(context.Background(), src)
+	// a manager that never saw the file, with no usable ffprobe: the answer
+	// comes from the container's own index, not from the packet scan
+	again, err := New(Config{FFmpegPath: ffmpeg, FFprobePath: "/nonexistent", WorkDir: dir}).KeyFrames(context.Background(), "", src)
 	if err != nil || len(again) != 4 {
-		t.Fatalf("the scan must come back from the disk cache: %v %v", again, err)
+		t.Fatalf("the container's index must answer without the packet scan: %v %v", again, err)
 	}
 
 	cuts := SegmentCuts(kf, 6) // 7, 13, 21 (each is past its grid line)

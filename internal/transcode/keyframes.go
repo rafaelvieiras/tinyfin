@@ -3,9 +3,6 @@ package transcode
 import (
 	"bufio"
 	"context"
-	"crypto/sha1"
-	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"os/exec"
@@ -39,15 +36,34 @@ func SegmentCuts(keyFrames []float64, segSeconds int) []int64 {
 	return cuts
 }
 
-// kfEntry is a cached key frame scan of one file.
+// KeyFrameStore is where a file's key frame times are kept between runs: the
+// catalog database, passed in by the caller. It is optional — without one the
+// times live in memory only — and it is keyed by catalog item, with the file's
+// size and modification time as the guard, so a stale row is never used.
+type KeyFrameStore interface {
+	LoadKeyFrames(ctx context.Context, itemID string) (KeyFrameRecord, bool, error)
+	SaveKeyFrames(ctx context.Context, itemID string, rec KeyFrameRecord) error
+}
+
+// KeyFrameRecord is one file's recorded key frame times: 100 ns ticks of the
+// file's own time, ascending, with the size and modification time they were
+// read at.
+type KeyFrameRecord struct {
+	Size  int64
+	Mtime int64
+	Ticks []int64
+}
+
+// kfEntry is a cached key frame scan of one file, held in memory for the life
+// of the process.
 type kfEntry struct {
 	size  int64
 	mtime int64
 	times []float64
 }
 
-// kfCache holds the key frame scans: in memory, and on disk under the job
-// directory's parent so a restart does not pay for the scan again.
+// kfCache holds the key frame scans in memory, plus one flight per path so two
+// requests for the same file pay for one read.
 type kfCache struct {
 	mu      sync.Mutex
 	entries map[string]*kfEntry
@@ -74,17 +90,24 @@ func (c Config) ffprobePath() string {
 }
 
 // KeyFrames returns the key frame times (seconds) of the first video stream of
-// path, ascending. The scan reads every packet header of the file, so the
-// result is cached by path, size and modification time (a path that is not a
-// local file is not scanned: an error).
-func (m *Manager) KeyFrames(ctx context.Context, path string) ([]float64, error) {
+// path, ascending. itemID is the catalog item the file belongs to and is what
+// the persistent record is keyed by (an empty id keeps the answer in memory
+// only).
+//
+// Four answers, cheapest first: this process's memory, the catalog's record of
+// the file, the container's own index, and only when the container has no
+// usable index the packet sweep, which reads every packet header of the file.
+// The cache is keyed by path, size and modification time, so a file that
+// changed is read again.
+func (m *Manager) KeyFrames(ctx context.Context, itemID, path string) ([]float64, error) {
 	st, err := os.Stat(path)
 	if err != nil || st.IsDir() {
 		return nil, fmt.Errorf("transcode: key frames: not a local file")
 	}
+	size, mtime := st.Size(), st.ModTime().UnixNano()
 	c := &m.kf
 	c.mu.Lock()
-	if e := c.entries[path]; e != nil && e.size == st.Size() && e.mtime == st.ModTime().UnixNano() {
+	if e := c.entries[path]; e != nil && e.size == size && e.mtime == mtime {
 		c.mu.Unlock()
 		return e.times, nil
 	}
@@ -105,11 +128,11 @@ func (m *Manager) KeyFrames(ctx context.Context, path string) ([]float64, error)
 	c.flights[path] = f
 	c.mu.Unlock()
 
-	times, err := m.loadKeyFrames(path, st.Size(), st.ModTime().UnixNano())
+	times, err := m.loadKeyFrames(ctx, itemID, path, size, mtime)
 	c.mu.Lock()
 	delete(c.flights, path)
 	if err == nil {
-		c.entries[path] = &kfEntry{size: st.Size(), mtime: st.ModTime().UnixNano(), times: times}
+		c.entries[path] = &kfEntry{size: size, mtime: mtime, times: times}
 	}
 	c.mu.Unlock()
 	f.times, f.err = times, err
@@ -117,55 +140,71 @@ func (m *Manager) KeyFrames(ctx context.Context, path string) ([]float64, error)
 	return times, err
 }
 
-func (m *Manager) kfFile(path string) string {
-	sum := sha1.Sum([]byte(path))
-	return filepath.Join(m.cfg.baseDir(), "keyframes", hex.EncodeToString(sum[:8])+".kf")
-}
-
-// loadKeyFrames reads the scan from disk, else runs ffprobe (the scan is not
-// tied to the request that asked: it finishes and is cached even if that
-// request goes away).
-func (m *Manager) loadKeyFrames(path string, size, mtime int64) ([]float64, error) {
-	file := m.kfFile(path)
-	if data, err := os.ReadFile(file); err == nil && len(data) >= 16 &&
-		int64(binary.LittleEndian.Uint64(data[0:8])) == size && int64(binary.LittleEndian.Uint64(data[8:16])) == mtime {
-		var out []float64
-		var cur int64
-		rest := data[16:]
-		for len(rest) > 0 {
-			d, n := binary.Uvarint(rest)
-			if n <= 0 {
-				out = nil
-				break
-			}
-			rest = rest[n:]
-			cur += int64(d)
-			out = append(out, float64(cur)/ticksPerSecond)
-		}
-		if len(out) > 0 {
-			return out, nil
+// loadKeyFrames answers a cache miss: the catalog's record of the file, else
+// the container's index, else the packet sweep. A successful read is recorded
+// in the catalog, so the next process does not pay for it again — a container
+// recreate, which is what used to throw the answer away, now costs nothing.
+func (m *Manager) loadKeyFrames(ctx context.Context, itemID, path string, size, mtime int64) ([]float64, error) {
+	if times, ok := m.storedKeyFrames(ctx, itemID, size, mtime); ok {
+		return times, nil
+	}
+	times, err := readKeyFrameIndex(path)
+	if err != nil {
+		times, err = m.scanKeyFrames(path)
+		if err != nil {
+			return nil, err
 		}
 	}
-	times, err := m.scanKeyFrames(path)
+	m.saveKeyFrames(ctx, itemID, size, mtime, times)
+	return times, nil
+}
+
+// storedKeyFrames returns the key frames the catalog recorded for the item, if
+// they are still about this version of the file.
+func (m *Manager) storedKeyFrames(ctx context.Context, itemID string, size, mtime int64) ([]float64, bool) {
+	if m.cfg.KeyFrames == nil || itemID == "" {
+		return nil, false
+	}
+	rec, ok, err := m.cfg.KeyFrames.LoadKeyFrames(ctx, itemID)
+	if err != nil || !ok || rec.Size != size || rec.Mtime != mtime || len(rec.Ticks) == 0 {
+		return nil, false
+	}
+	times := make([]float64, len(rec.Ticks))
+	for i, t := range rec.Ticks {
+		times[i] = float64(t) / ticksPerSecond
+	}
+	return times, true
+}
+
+// saveKeyFrames records the answer in the catalog. A failure here is not a
+// failure of the request: the times are in memory for this process, and the
+// next read simply pays for them again.
+func (m *Manager) saveKeyFrames(ctx context.Context, itemID string, size, mtime int64, times []float64) {
+	if m.cfg.KeyFrames == nil || itemID == "" || len(times) == 0 {
+		return
+	}
+	rec := KeyFrameRecord{Size: size, Mtime: mtime, Ticks: make([]int64, len(times))}
+	for i, t := range times {
+		rec.Ticks[i] = int64(t*ticksPerSecond + 0.5)
+	}
+	_ = m.cfg.KeyFrames.SaveKeyFrames(ctx, itemID, rec)
+}
+
+// readKeyFrameIndex reads the key frame times from the container's own index
+// (Matroska Cues): a few small reads, so the cost follows the number of key
+// frames and not the size of the file. A container without an index is an
+// error, and the caller sweeps the packets instead.
+func readKeyFrameIndex(path string) ([]float64, error) {
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	buf := make([]byte, 16, 16+len(times)*3)
-	binary.LittleEndian.PutUint64(buf[0:8], uint64(size))
-	binary.LittleEndian.PutUint64(buf[8:16], uint64(mtime))
-	var prev int64
-	for _, t := range times {
-		ticks := int64(t*ticksPerSecond + 0.5)
-		buf = binary.AppendUvarint(buf, uint64(ticks-prev))
-		prev = ticks
+	defer f.Close()
+	st, err := f.Stat()
+	if err != nil {
+		return nil, err
 	}
-	if os.MkdirAll(filepath.Dir(file), 0o755) == nil {
-		tmp := file + ".tmp"
-		if os.WriteFile(tmp, buf, 0o644) == nil {
-			_ = os.Rename(tmp, file)
-		}
-	}
-	return times, nil
+	return matroskaKeyFrames(f, st.Size())
 }
 
 func (m *Manager) scanKeyFrames(path string) ([]float64, error) {

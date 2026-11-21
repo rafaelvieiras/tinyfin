@@ -64,6 +64,10 @@ type Config struct {
 	// subdirectory for HLS output (playlist + segments). Empty means
 	// os.TempDir().
 	WorkDir string
+	// KeyFrames is where the key frame positions read from a file are kept
+	// between runs (the catalog database). nil keeps them in memory only,
+	// which is what a standalone use of this package and the tests want.
+	KeyFrames KeyFrameStore
 	// FontsDir is a directory of fonts for burned-in text subtitles
 	// (libass' fontsdir). Empty means fontconfig's system fonts, which is
 	// what a container with fonts installed (e.g. fonts-dejavu) wants.
