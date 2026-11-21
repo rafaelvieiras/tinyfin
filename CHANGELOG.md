@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- A copied picture's playlist no longer waits for a scan of every packet of the file. The key frames are
+  read from the container's own index (Matroska `Cues`) and kept in the catalog, so a 3.3 GB film answers
+  its first media playlist in 112 ms instead of 8.5 s (28 s cold from the array), with the same times to
+  the millisecond, and the answer survives a container recreate — the cache that used to hold it lived in
+  `/tmp` inside the container, which is why a deploy was followed by a 30 s wait to start a film.
 - A credit's photo whose stored source is a path this server cannot read is no longer advertised, so a details
   page stops requesting pictures that can only answer `404`: on a library migrated from a Jellyfin install 14,078 of
   its 20,657 credits carried such a path, and one details page asked for nine pictures and got nine `404`s. That page

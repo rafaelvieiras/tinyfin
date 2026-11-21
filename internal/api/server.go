@@ -262,10 +262,14 @@ func NewServer(store storage.Store, cfg Config) *Server {
 	}
 
 	s := &Server{
-		store:     store,
-		cfg:       cfg,
-		mux:       http.NewServeMux(),
-		transcode: transcode.New(transcode.Config{FFmpegPath: cfg.TranscodeFFmpegPath, FontsDir: cfg.TranscodeFontsDir}),
+		store: store,
+		cfg:   cfg,
+		mux:   http.NewServeMux(),
+		transcode: transcode.New(transcode.Config{
+			FFmpegPath: cfg.TranscodeFFmpegPath,
+			FontsDir:   cfg.TranscodeFontsDir,
+			KeyFrames:  keyFrameStore{store: store},
+		}),
 		scanner: scan.New(store, provider, scan.Config{
 			FFprobePath:      cfg.ScanFFprobePath,
 			ImageDir:         cfg.ScanImageDir,

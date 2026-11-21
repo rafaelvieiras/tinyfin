@@ -31,6 +31,7 @@ type Store interface {
 	LibraryStore
 	LibraryImageStore
 	PersonImageStore
+	KeyFrameStore
 	ActivityLogStore
 	APIKeyStore
 	SettingStore
@@ -355,6 +356,30 @@ type TrickplayStore interface {
 	QueryTrickplay(ctx context.Context, itemID ItemID) ([]TrickplayInfo, error)
 	UpsertTrickplayInfo(ctx context.Context, itemID ItemID, info TrickplayInfo) error
 	DeleteTrickplayInfo(ctx context.Context, itemID ItemID, width int) error
+}
+
+// KeyFrameStore keeps the key frame positions of a media file, the list a
+// copied picture's HLS playlist is laid out from (playback.hls.R3). It is a
+// cache of what the container already says, never a source of truth: a row
+// whose size or modification time no longer matches the file is stale and the
+// caller reads the file again. Kept out of Item because the answer is needed
+// on the playback path only.
+type KeyFrameStore interface {
+	// QueryKeyFrames returns the recorded key frame times (100 ns ticks,
+	// ascending) of an item, with the file's size and modification time as
+	// they were when they were read.
+	QueryKeyFrames(ctx context.Context, itemID ItemID) (KeyFrameData, bool, error)
+	// SaveKeyFrames records them, replacing whatever was there.
+	SaveKeyFrames(ctx context.Context, itemID ItemID, data KeyFrameData) error
+}
+
+// KeyFrameData is one file's recorded key frame positions. Size and Mtime are
+// the guard described on KeyFrameStore; Ticks are 100 ns ticks of the file's
+// own time, ascending.
+type KeyFrameData struct {
+	Size  int64
+	Mtime int64
+	Ticks []int64
 }
 
 // SubtitleStore covers externally-added subtitle files only — uploaded or

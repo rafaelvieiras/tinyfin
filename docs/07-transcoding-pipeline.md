@@ -88,6 +88,19 @@ through fontconfig (the container image must ship a font package), or a director
 keyed by the item and the selection (codecs, tracks, subtitle method), so choosing another track in
 a play session starts a new job and stops the one it replaces.
 
+**Segment plan for a copied picture.** An encoded picture is cut on the `SegmentLength` grid, so its
+playlist is arithmetic and needs nothing from the file. A copied picture in Matroska has to be cut where
+the file already has key frames, so the playlist needs to know where they are — and the cost of finding
+out is the first frame's delay. They are read from the container's own index (the `Cues` element, through
+the `SeekHead` when the index is not in front of the media): the cues name the clusters, each of those
+clusters is opened for the exact time of its video key frame, and nothing else of the file is touched, so
+the cost follows the number of key frames and not the size of the file. The packet sweep with `ffprobe`
+(a header of every packet in the file) stays as the fallback for a file without an index, and the answer
+is kept in the catalog's `keyframe_data` table by item, size and modification time, so it survives a
+restart and a container recreate. Measured on a 3.3 GB film with 988 key frames: 112 ms against 8.5 s
+for the sweep, the same times to the millisecond; on a cold spinning array the scattered reads cost more
+(2.4–14 s on twelve films, still three to six times the sweep on the large ones) and are paid once.
+
 Because this role is stateless per request (`02`, `03`), nothing about scaling it out later
 requires touching the decision logic above it — adding a second transcode worker is a deployment
 change, not a code change, exactly per decision **D6**.
