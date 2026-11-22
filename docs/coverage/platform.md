@@ -4,16 +4,16 @@
 
 Subsystems of the reference that are not HTTP routes of the browse/play path, and the storage/scale options.
 
-[Overview](../COVERAGE.md) · 9 features · ✅ 1 · 🟡 1 · 🗓️ 2 · ⛔ 5
+[Overview](../COVERAGE.md) · 9 features · ✅ 2 · 🟡 1 · 🗓️ 1 · ⛔ 5
 
-✅✅🟡🟡🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔
+✅✅✅✅✅🟡🟡🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔⛔
 
 | Status | Feature | Jellyfin 12.2 | Tinyfin | Evidence | Notes |
 |---|---|---|---|---|---|
 | ⛔ not-planned | **Live TV, DVR, EPG, tuners**<br>`platform.livetv` | Tuner hosts, listing providers, guide, timers, recordings. | Nothing implemented; `/LiveTv/Programs` answers an empty result for the web client. | routes: `GET /LiveTv/Programs`<br>`GET /LiveTv/Channels` | Decision D8. |
 | ⛔ not-planned | **Plugins, repositories and packages**<br>`platform.plugins` | Runtime .NET plugins and a package catalog. | No plugin loader; the metadata provider interface is a fixed Go contract. | routes: `GET /Plugins`<br>`GET /Packages` | Decisions D8, D11. |
 | ⛔ not-planned | **DLNA and SSDP**<br>`platform.dlna` | DLNA server and discovery, device profiles. | No UPnP server, no SSDP discovery. |  | Decision D8. |
-| 🗓️ planned | **UDP autodiscovery (port 7359)**<br>`platform.autodiscovery` | Answers client discovery broadcasts. | Not implemented; clients need the address. |  | Cheap to add; not on ROADMAP.md. (priority: low) |
+| ✅ supported *(unverified)* | **UDP autodiscovery (port 7359)**<br>`platform.autodiscovery` | UDP request/response on port 7359; the reply carries Address, Id, Name and a null EndpointAddress. | Answers the client discovery broadcast on UDP 7359 (`who is JellyfinServer?`) with the server's address, id and name, so a Jellyfin client lists the server instead of asking for a URL; gated by the network section's AutoDiscovery. |  | docs/16 maps the Networking page; rules in docs/contract/specs/platform.md (UDP, covered by Go tests). Unverified: UDP, not HTTP: the conformance runner cannot send a datagram. Covered by internal/api/discovery_test.go. (priority: low) |
 | ⛔ not-planned | **Notifications and webhooks**<br>`platform.notifications` | Notification providers (plugin-based) and webhooks. | No notification subsystem. |  | Plugin territory. |
 | ⛔ not-planned | **Offline sync**<br>`platform.offline-sync` | Download for offline. | No sync jobs. |  | Decision D8. |
 | ✅ supported *(unverified)* | **Embedded SQLite storage**<br>`platform.storage.sqlite` | SQLite plus EF Core migrations. | Single-file store with migrations (`0001` to `0021`). | code: [`internal/storage/sqlite/store.go`](../../internal/storage/sqlite/store.go)<br>[`internal/storage/sqlite/migrations.go`](../../internal/storage/sqlite/migrations.go) | Unverified: Exercised by every scenario indirectly. |

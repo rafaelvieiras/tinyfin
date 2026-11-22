@@ -4,8 +4,8 @@
   "features_by_status": {
    "not-planned": 16,
    "partial": 19,
-   "planned": 13,
-   "supported": 64
+   "planned": 12,
+   "supported": 65
   },
   "operations": 364,
   "registered": 206,
@@ -7260,11 +7260,13 @@
   {
    "id": "platform.autodiscovery",
    "title": "UDP autodiscovery (port 7359)",
-   "status": "planned",
-   "description": "Not implemented; clients need the address.",
-   "reference": "Answers client discovery broadcasts.",
-   "notes": "Cheap to add; not on ROADMAP.md.",
-   "priority": "low"
+   "status": "supported",
+   "description": "Answers the client discovery broadcast on UDP 7359 (`who is JellyfinServer?`) with the server's address, id and name, so a Jellyfin client lists the server instead of asking for a URL; gated by the network section's AutoDiscovery.",
+   "reference": "UDP request/response on port 7359; the reply carries Address, Id, Name and a null EndpointAddress.",
+   "notes": "docs/16 maps the Networking page; rules in docs/contract/specs/platform.md (UDP, covered by Go tests).",
+   "priority": "low",
+   "unverified": true,
+   "unverified_reason": "UDP, not HTTP: the conformance runner cannot send a datagram. Covered by internal/api/discovery_test.go."
   },
   {
    "id": "platform.notifications",

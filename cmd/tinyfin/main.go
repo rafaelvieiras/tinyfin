@@ -9,6 +9,7 @@ import (
 	"flag"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -63,6 +64,14 @@ func splitList(raw string) []string {
 func main() {
 	dataPath := flag.String("data", "tinyfin.db", "path to the SQLite database file")
 	addr := flag.String("addr", ":8096", "address to listen on")
+	// Client discovery: the UDP port a Jellyfin client broadcasts to when it
+	// does not know the server's address yet (docs/16). The reference fixes
+	// this port at 7359 and offers no setting; the flag exists so a second
+	// instance on one host can move it, and an empty value turns the
+	// responder off. The dashboard's AutoDiscovery switch gates the answers.
+	discoveryAddr := flag.String("discovery-addr", envOrDefault("TINYFIN_DISCOVERY_ADDR", ":7359"),
+		"UDP address to answer client discovery broadcasts on (Jellyfin clients broadcast to port 7359); "+
+			"empty disables it. Overridable via TINYFIN_DISCOVERY_ADDR.")
 	webDir := flag.String("web-dir", envOrDefault("TINYFIN_WEB_DIR", "/web"),
 		"directory containing a built jellyfin-web (dist/) to serve at /web/; "+
 			"skipped if the directory doesn't exist. Overridable via TINYFIN_WEB_DIR.")
@@ -154,6 +163,16 @@ func main() {
 		resolvedWebDir = *webDir
 	}
 
+	// The port this process serves on, for the discovery reply: announcing
+	// the dashboard's InternalHttpPort instead would send a client to a port
+	// nothing answers on when the two disagree (DIV-38).
+	listenPort := 0
+	if _, portText, err := net.SplitHostPort(*addr); err == nil {
+		if n, err := strconv.Atoi(portText); err == nil && n > 0 {
+			listenPort = n
+		}
+	}
+
 	server := api.NewServer(store, api.Config{
 		ServerID:               serverID,
 		TranscodeFFmpegPath:    resolvedFFmpegPath,
@@ -172,6 +191,8 @@ func main() {
 		DataDir:                filepath.Dir(*dataPath),
 		WebDir:                 resolvedWebDir,
 		QuickConnectDisabled:   *noQuickConnect,
+		DiscoveryUDPAddr:       *discoveryAddr,
+		ListenPort:             listenPort,
 	})
 
 	handler := server.Handler()

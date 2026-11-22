@@ -78,6 +78,7 @@ reference source open in the same session.
 | `specs/musicvideos.md`, `scenarios/musicvideos.json` | Music videos library: `MusicVideo` scan (single-clip folders, stacked parts), `<musicvideo>` nfo, local pictures, clip artists as `MusicArtist`, filters, latest, counts, playback; lazy library `MusicVideos` |
 | `specs/admin.md`, `scenarios/admin.json` | Administration: scheduled tasks (list, get, triggers, run/stop), log files, snapshot backups, plugin catalog (empty by design) |
 | `specs/startup.md`, `scenarios/startup.json` | First-run wizard (`/Startup/*`); the scenarios are `fresh-server` ones, see *Fresh-server scenarios* |
+| `specs/platform.md` | Subsystems a client uses without HTTP: UDP client discovery on port 7359 (`platform.discovery.*`, untestable by the HTTP runner — covered by Go tests), and the known differences of the responder |
 
 ## Scenario format
 
