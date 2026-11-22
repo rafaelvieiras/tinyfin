@@ -228,4 +228,5 @@ ships (a Tinyfin deployment's own `/web`) — treat it as generating a hypothesi
 | Concrete memory/performance targets and why | [`docs/09-memory-and-performance-goals.md`](docs/09-memory-and-performance-goals.md) |
 | Delivery order | [`docs/10-roadmap.md`](docs/10-roadmap.md) |
 | Where does Tinyfin deliberately differ from the reference, and why? | [`docs/13-divergences.md`](docs/13-divergences.md) |
+| What does each control on the Networking page do, and how does a client find this server without typing its address? | [`docs/16-networking-page.md`](docs/16-networking-page.md) |
 | What's actually done so far | [`ROADMAP.md`](ROADMAP.md) |

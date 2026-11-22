@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- A Jellyfin client finds this server on the local network instead of asking for its address: the server
+  answers the client discovery broadcast on UDP port 7359 (`who is JellyfinServer?`) with its address, id and
+  name, the way a client expects. The reply names an address on the asking client's own subnet, honors the
+  network section's `EnableIPv4`/`EnableIPv6`/`IgnoreVirtualInterfaces`, and is gated by `AutoDiscovery`, which
+  is read per datagram. [The Networking page is mapped member by member in `docs/16`](docs/16-networking-page.md),
+  including the settings that are still stored without effect.
+- `[intentional deviation]` The discovery reply announces the port this process serves on, taken from
+  `-discovery-addr`'s sibling `-addr`, where the reference announces its `InternalHttpPort` setting — the same
+  value there, because there the setting moves the listener. `DIV-38` in
+  [`docs/13-divergences.md`](docs/13-divergences.md).
+
 ### Fixed
 - A copied picture's playlist no longer waits for a scan of every packet of the file. The key frames are
   read from the container's own index (Matroska `Cues`) and kept in the catalog, so a 3.3 GB film answers

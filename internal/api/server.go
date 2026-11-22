@@ -16,6 +16,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -167,6 +168,21 @@ type Config struct {
 	// recently used copies are deleted. cmd/tinyfin/main.go passes the
 	// -image-cache-size flag (megabytes) scaled here.
 	ImageCacheBytes int64
+
+	// ListenPort is the TCP port this process serves HTTP on, when the
+	// caller knows it (cmd/tinyfin splits it out of -addr). The discovery
+	// reply announces it, so a client is never sent to a port nothing
+	// answers on; zero means "not known" and the network section's
+	// InternalHttpPort applies instead (DIV-38, docs/16).
+	ListenPort int
+
+	// DiscoveryUDPAddr is the UDP address the client discovery responder
+	// listens on ("[host]:7359"), the port a Jellyfin client broadcasts to
+	// when it does not know the server's address yet. Empty disables the
+	// responder — production sets it (cmd/tinyfin's -discovery-addr flag),
+	// while tests that build a server leave it empty so they never race for
+	// the one fixed port. See internal/api/discovery.go and docs/16.
+	DiscoveryUDPAddr string
 }
 
 // Server is the API/metadata role's HTTP surface (docs/03). The zero value
@@ -223,6 +239,11 @@ type Server struct {
 	// remoteAccessOff is the network EnableRemoteAccess=false setting: a
 	// caller outside the local network is answered 503.
 	remoteAccessOff atomic.Bool
+	// discoveryConn is the bound client-discovery socket (nil when the
+	// responder is disabled or failed to bind) and discoveryAddr its
+	// address, kept for GET-on-tests and for Shutdown's unbind.
+	discoveryConn atomic.Pointer[net.UDPConn]
+	discoveryAddr atomic.Pointer[string]
 	// serverName is the runtime ServerName setting (startup wizard or
 	// POST /System/Configuration); nil means cfg.ServerName applies.
 	serverName atomic.Pointer[string]
@@ -302,6 +323,9 @@ func NewServer(store storage.Store, cfg Config) *Server {
 	s.background(s.runWSWatchdog)
 	s.background(s.runLibraryMonitor)
 	s.background(s.runTaskScheduler)
+	if cfg.DiscoveryUDPAddr != "" {
+		s.background(s.runDiscovery)
+	}
 	return s
 }
 
@@ -325,6 +349,7 @@ func (s *Server) Shutdown() {
 		return
 	}
 	s.baseCancel()
+	s.closeDiscovery()
 	s.scanState.cancelAll()
 	s.chapterimg.CancelTask()
 	s.trickplay.CancelTask()
