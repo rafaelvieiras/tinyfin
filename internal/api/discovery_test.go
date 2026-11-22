@@ -185,6 +185,24 @@ func TestDiscoveryIsGatedByAutoDiscovery(t *testing.T) {
 	}
 }
 
+// TestDiscoveryIgnoresABaseURLThatIsNotAPath pins what a real install did: the
+// network section held the server's public URL in BaseUrl, and the reply
+// announced "http://<host>:<port>/https://<host>". BaseUrl is a path prefix, so
+// anything else is dropped and the plain address is announced.
+func TestDiscoveryIgnoresABaseURLThatIsNotAPath(t *testing.T) {
+	for _, base := range []string{"https://medias.example", "medias.example", " jf ", "jf"} {
+		cfg := networkConfigurationDto{BaseUrl: base, InternalHttpPort: 8096}
+		got := discoveryAddress(cfg, net.ParseIP("192.0.2.10"), 0)
+		if got != "http://192.0.2.10:8096" {
+			t.Errorf("BaseUrl %q: Address = %q, want the plain address", base, got)
+		}
+	}
+	cfg := networkConfigurationDto{BaseUrl: "/jf/", InternalHttpPort: 8096}
+	if got := discoveryAddress(cfg, net.ParseIP("192.0.2.10"), 0); got != "http://192.0.2.10:8096/jf" {
+		t.Errorf("Address = %q, want the path appended once without trailing slash", got)
+	}
+}
+
 // TestDiscoveryAnnouncesTheListeningPort is DIV-38: the reply carries the port
 // this server actually serves HTTP on, so a deployment whose port was set on
 // the command line (not in the dashboard) is still reachable, where the

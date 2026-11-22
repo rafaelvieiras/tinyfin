@@ -94,6 +94,13 @@ decisions, not accidents:
 - Loopback and link-local addresses are never advertised; `EnableIPv4`,
   `EnableIPv6`, `IgnoreVirtualInterfaces` and `VirtualInterfaceNames` filter
   the candidates.
+- `BaseUrl` is treated as a path prefix. The member accepts anything, so an
+  install can hold its public URL there — the production one did, and the reply
+  the old rule produced was `http://<container ip>:8096/https://<its own host>`.
+  A value that does not start with `/` is now ignored rather than glued on:
+  announcing the proxy URL instead would send a client on the local network out
+  through the proxy for a server that is next to it. Rejecting such a save is
+  item 6 of [#67](https://github.com/rafaelvieiras/tinyfin/issues/67).
 - The port announced is the one this process actually serves HTTP on, taken
   from `-addr`; only when the caller does not know it does the section's
   `InternalHttpPort` apply. The reference announces its `InternalHttpPort`
