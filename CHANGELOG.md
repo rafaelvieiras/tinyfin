@@ -20,6 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `-discovery-addr`'s sibling `-addr`, where the reference announces its `InternalHttpPort` setting — the same
   value there, because there the setting moves the listener. `DIV-38` in
   [`docs/13-divergences.md`](docs/13-divergences.md).
+- `[intentional deviation]` The web client's icon-only pictures — the favicon, the apple-touch and web-app
+  icons, the splash mark, the drawer and server-button marks, and a notification's icon — are answered with the
+  project's mascot instead of the Jellyfin one. The pictures that carry the wordmark (the login page's banner and
+  the drawer's) keep the bytes the bundle ships, because a mascot stands for the mark, not for the name.
+  `DIV-39` in [`docs/13-divergences.md`](docs/13-divergences.md), and
+  [`docs/14`](docs/14-client-branding-and-admin-pages.md) §2.1 explains why the `CustomCss` route that needs no
+  server work does not reach the favicon, the manifest icons or a notification.
 
 ### Fixed
 - The discovery reply no longer glues a `BaseUrl` that is not a path onto the address: an install whose
