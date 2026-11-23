@@ -192,6 +192,7 @@ crossed.
 | `POST /Users/New`, `DELETE /Users/{userId}` | ✅ | Registered; admin-only in the reference server but only token-gated here (documented known simplification in `server.go`, not a silent gap). |
 | `GET/POST /DisplayPreferences/{displayPreferencesId}` | ✅ | Confirmed live, fetched immediately post-login; left unhandled it blocks the post-login redirect entirely (per `server.go`'s own comment, found via real client testing). |
 | `POST /Sessions/Capabilities/Full` | ✅ | Confirmed live, fired right after sign-in by every official client. |
+| `POST /Sessions/Capabilities` | ✅ | The short form: state in the query, body ignored (`misc.capabilities.R1`-`R2`). The Android TV client posts this one after sign-in, and a measured production log had it answering `404` — the only route that session asked for and did not get. |
 | `GET /QuickConnect/Enabled` | ✅ | Confirmed live. Only this one QuickConnect route exists — see gap below. |
 | `POST /Users/{userId}/FavoriteItems/{itemId}` (+ `DELETE`) | ✅ | Implemented (`internal/api/userdata.go`). Confirmed live and re-audited against the reference server byte-for-byte: response shape, `IsFavorite` persistence independent of `Played`/`PlayCount`, and the Favorites tab (`#/home?tab=1`) reflecting the toggle. |
 | `POST /Users/{userId}/PlayedItems/{itemId}` (+ `DELETE`) | ✅ | Implemented (`internal/api/userdata.go`). Confirmed live and re-audited against the reference server: `PlayCount` only advances on the unplayed→played transition and resets to 0 on unmark (both matched already). Re-audit found one real divergence, now fixed: POST didn't reset `PlaybackPositionTicks` to 0 on marking played, unlike the reference server — a stale in-progress position survived a mark-watched call and resurfaced the item in the home screen's "Continuar assistindo" row the moment it was later unmarked watched. Same fix applied to `POST /UserPlayedItems/{itemId}` (`sessions_playback.go`'s `handleUserPlayedItemsMark`), which had the identical gap. |
@@ -231,7 +232,7 @@ crossed.
 | `GET /Plugins`, `/Plugins/{id}`, `.../Configuration`, `.../Manifest`; `GET /Packages`, `/Packages/{name}` | ❌ | Catalog only — deliberately out of scope per `docs/01`'s plugin-loading non-goal; listed for completeness, not expected to ever move to ✅. |
 | `GET /Localization/Countries`, `/Cultures`, `/Options`, `/ParentalRatings` | ✅ | All four served (misc.localization). |
 | `GET /GetUtcTime` | ✅ | Reception and transmission instants (misc.time.R1). |
-| `POST /ClientLog/Document` | ❌ | Catalog only — client crash/log upload endpoint. |
+| `POST /ClientLog/Document` | ✅ | A client uploads its own log, usually a crash report: stored verbatim under `<data>/log` and listed by `GET /System/Logs` (`misc.clientlog.R1`-`R2`). The Android TV client posted it right after crashing and got a `404`, so the stack trace was lost — the reason this route was written next (`DIV-41`). |
 
 ---
 

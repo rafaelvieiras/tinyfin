@@ -8,15 +8,15 @@
    "supported": 65
   },
   "operations": 364,
-  "registered": 206,
+  "registered": 208,
   "routes_by_status": {
    "divergent-by-design": 16,
    "not-planned": 91,
    "partial": 12,
-   "planned": 67,
-   "supported": 178
+   "planned": 65,
+   "supported": 180
   },
-  "verified": 174
+  "verified": 176
  },
  "routes": [
   {
@@ -4187,12 +4187,13 @@
    "tag": "Session",
    "group": "sessions-realtime",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
-   "web": false,
-   "notes": "The Full variant is served; the plain one is the older form of the same report.",
-   "priority": "low"
+   "status": "supported",
+   "registered": true,
+   "verified": true,
+   "web": true,
+   "scenarios": [
+    "misc.sessions.capabilities"
+   ]
   },
   {
    "id": "POST /Sessions/Capabilities/Full",
@@ -5102,12 +5103,13 @@
    "tag": "System",
    "group": "system",
    "policy": "DefaultAuthorization",
-   "status": "planned",
-   "registered": false,
-   "verified": false,
+   "status": "supported",
+   "registered": true,
+   "verified": true,
    "web": true,
-   "notes": "Not implemented.",
-   "priority": "low"
+   "scenarios": [
+    "misc.client-log.upload"
+   ]
   },
   {
    "id": "GET /GetUtcTime",

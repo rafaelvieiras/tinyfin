@@ -1041,6 +1041,13 @@ func (s *Server) routes() {
 	// doc comment) — called unconditionally by every official client right
 	// after sign-in.
 	s.mux.HandleFunc("POST /Sessions/Capabilities/Full", requireAuth(s.handleSessionsCapabilitiesFull))
+	// The short form of the same route, with the state in the query: the
+	// Android TV client posts it after sign-in (system.go's
+	// handleSessionsCapabilities).
+	s.mux.HandleFunc("POST /Sessions/Capabilities", requireAuth(s.handleSessionsCapabilities))
+	// An authenticated client uploading its own log (usually a crash report)
+	// after something went wrong on its side (clientlog.go).
+	s.mux.HandleFunc("POST /ClientLog/Document", requireAuth(s.handleClientLogDocument))
 	// users.token.R7-R8: ends the session of the token the request carries.
 	s.mux.HandleFunc("POST /Sessions/Logout", requireAuth(s.handleSessionsLogout))
 	// requireAdmin, not requireAuth: this lists every tracked session across

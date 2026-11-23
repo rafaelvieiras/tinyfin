@@ -27,6 +27,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `DIV-39` in [`docs/13-divergences.md`](docs/13-divergences.md), and
   [`docs/14`](docs/14-client-branding-and-admin-pages.md) §2.1 explains why the `CustomCss` route that needs no
   server work does not reach the favicon, the manifest icons or a notification.
+- A client that crashes can send its own log: `POST /ClientLog/Document` stores the document verbatim beside the
+  server's logs (the name carries the client and version, `GET /System/Logs` lists it) and
+  `POST /Sessions/Capabilities` — the short form of the capability report, with the state in the query — answers
+  `204` instead of `404`. Both were found in one measured session: the Android TV client posted the short form
+  right after sign-in and the log document minutes later, and got `404` for both, so its crash left no trace
+  anywhere. Uploads are capped at 1,000,000 bytes, the reference's own measured boundary, and pruned to the
+  newest 32 ([`DIV-41`](docs/13-divergences.md)).
 
 ### Fixed
 - The discovery reply no longer glues a `BaseUrl` that is not a path onto the address: an install whose
