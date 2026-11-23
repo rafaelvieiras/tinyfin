@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 931
+    "pass": 933
   },
   "scenarios": {
     "admin.auth.providers": "pass",
@@ -933,7 +933,9 @@
     "wire.path.trailing-slash-writes": "pass",
     "wire.problem.api-key-is-not-a-user": "pass",
     "wire.problem.not-found": "pass",
-    "wire.problem.validation": "pass"
+    "wire.problem.validation": "pass",
+    "misc.client-log.upload": "pass",
+    "misc.sessions.capabilities": "pass"
   },
   "version": 1
 }

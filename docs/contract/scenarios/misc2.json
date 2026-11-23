@@ -107,5 +107,127 @@
       }
     ],
     "cleanup": []
+  },
+  {
+    "id": "misc.client-log.upload",
+    "endpoint": "POST /ClientLog/Document",
+    "spec": "misc.md#client-log",
+    "scope": "modern",
+    "tags": [
+      "misc"
+    ],
+    "covers": [
+      "misc.clientlog.R1",
+      "misc.clientlog.R2"
+    ],
+    "requires": [],
+    "steps": [
+      {
+        "name": "upload a document",
+        "request": {
+          "method": "POST",
+          "path": "/ClientLog/Document",
+          "headers": {
+            "Content-Type": "text/plain"
+          },
+          "bodyRaw": "2026-11-23 03:08:21 [info] probe line one\n2026-11-23 03:08:21 [error] probe line two\n"
+        },
+        "expect": {
+          "status": 200,
+          "json": [
+            {
+              "path": "$.FileName",
+              "op": "matches",
+              "value": "^upload_.+\\.log$"
+            }
+          ]
+        },
+        "as": "admin"
+      },
+      {
+        "name": "anonymous is refused",
+        "request": {
+          "method": "POST",
+          "path": "/ClientLog/Document",
+          "headers": {
+            "Content-Type": "text/plain"
+          },
+          "bodyRaw": "anonymous probe\n"
+        },
+        "expect": {
+          "status": 401
+        },
+        "as": "anonymous"
+      }
+    ]
+  },
+  {
+    "id": "misc.sessions.capabilities",
+    "endpoint": "POST /Sessions/Capabilities",
+    "spec": "misc.md#capabilities",
+    "scope": "modern",
+    "tags": [
+      "misc"
+    ],
+    "covers": [
+      "misc.capabilities.R1",
+      "misc.capabilities.R2"
+    ],
+    "requires": [],
+    "steps": [
+      {
+        "name": "with a body and the query the Android TV client sends",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Capabilities",
+          "query": {
+            "playableMediaTypes": "Video,Audio",
+            "supportedCommands": "DisplayContent,SetSubtitleStreamIndex,SetAudioStreamIndex,VolumeUp,VolumeDown,Mute,Unmute,ToggleMute",
+            "supportsMediaControl": "true",
+            "supportsPersistentIdentifier": "true"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "PlayableMediaTypes": [
+              "Video",
+              "Audio"
+            ],
+            "SupportedCommands": [
+              "VolumeUp"
+            ],
+            "SupportsMediaControl": true,
+            "SupportsPersistentIdentifier": true
+          }
+        },
+        "expect": {
+          "status": 204
+        },
+        "as": "admin"
+      },
+      {
+        "name": "without a body",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Capabilities"
+        },
+        "expect": {
+          "status": 204
+        },
+        "as": "admin"
+      },
+      {
+        "name": "anonymous is refused",
+        "request": {
+          "method": "POST",
+          "path": "/Sessions/Capabilities"
+        },
+        "expect": {
+          "status": 401
+        },
+        "as": "anonymous"
+      }
+    ]
   }
 ]

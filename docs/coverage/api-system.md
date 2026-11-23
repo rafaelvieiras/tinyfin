@@ -4,9 +4,9 @@
 
 Server information and configuration, logs, backup, branding, localization, plugins and packages.
 
-[Overview](../COVERAGE.md) · 47 operations · 30 registered (64%) · 26 verified · ✅ 21 · 🟡 6 · 🗓️ 4 · ⛔ 13 · ↔️ 3
+[Overview](../COVERAGE.md) · 47 operations · 31 registered (66%) · 27 verified · ✅ 22 · 🟡 6 · 🗓️ 3 · ⛔ 13 · ↔️ 3
 
-✅✅✅✅✅✅✅✅✅🟡🟡🟡🗓️🗓️⛔⛔⛔⛔⛔↔️
+✅✅✅✅✅✅✅✅✅🟡🟡🟡🗓️⛔⛔⛔⛔⛔⛔↔️
 
 Columns: **Auth** is the reference's authorization policy; **Web** = mentioned in docs/11 (called by the official web client); **Tests** = scenarios that exercise the route (passing / total).
 
@@ -62,7 +62,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| 🗓️ planned | `POST /ClientLog/Document` | DefaultAuthorization | yes |  | Not implemented. (priority: low) |
+| ✅ supported | `POST /ClientLog/Document` | DefaultAuthorization | yes | 1/1 |  |
 | ✅ supported | `GET /GetUtcTime` | Anonymous | yes | 1/1 |  |
 | ✅ supported | `GET /System/ActivityLog/Entries` | RequiresElevation | yes | 18/18 |  |
 | ✅ supported | `GET /System/Configuration` | DefaultAuthorization | yes | 1/3 |  |

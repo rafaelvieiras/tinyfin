@@ -4,9 +4,9 @@
 
 Sessions, remote control, per-user item data, display preferences and SyncPlay.
 
-[Overview](../COVERAGE.md) · 50 operations · 18 registered (36%) · 16 verified · ✅ 17 · 🟡 1 · 🗓️ 11 · ⛔ 21
+[Overview](../COVERAGE.md) · 50 operations · 19 registered (38%) · 17 verified · ✅ 18 · 🟡 1 · 🗓️ 10 · ⛔ 21
 
-✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔
+✅✅✅✅✅✅✅🗓️🗓️🗓️🗓️⛔⛔⛔⛔⛔⛔⛔⛔⛔
 
 Columns: **Auth** is the reference's authorization policy; **Web** = mentioned in docs/11 (called by the official web client); **Tests** = scenarios that exercise the route (passing / total).
 
@@ -22,7 +22,7 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
 | 🟡 partial | `GET /Sessions` | DefaultAuthorization | yes | 20/20 | In-process registry fed by authentication and playback reports; admin only. |
-| 🗓️ planned | `POST /Sessions/Capabilities` | DefaultAuthorization |  |  | The Full variant is served; the plain one is the older form of the same report. (priority: low) |
+| ✅ supported | `POST /Sessions/Capabilities` | DefaultAuthorization | yes | 1/1 |  |
 | ✅ supported | `POST /Sessions/Capabilities/Full` | DefaultAuthorization | yes | 7/7 |  |
 | ✅ supported | `POST /Sessions/Logout` | DefaultAuthorization | yes | 1/1 |  |
 | ✅ supported | `POST /Sessions/Playing` | DefaultAuthorization | yes | 46/46 |  |

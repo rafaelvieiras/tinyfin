@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"runtime"
+	"strings"
 )
 
 // publicSystemInfo mirrors the OpenAPI schema's PublicSystemInfo, trimmed
@@ -135,6 +136,45 @@ func (s *Server) handleSessionsCapabilitiesFull(w http.ResponseWriter, r *http.R
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// handleSessionsCapabilities is POST /Sessions/Capabilities, the short form of
+// the route above. The Android TV client posts it right after sign-in, and it
+// was the only route a measured session asked for that answered 404.
+//
+// Measured on the reference: the query carries the whole state —
+// playableMediaTypes, supportedCommands, supportsMediaControl,
+// supportsPersistentIdentifier — a JSON body is ignored when the query is there
+// (query "Video" plus body ["Video","Audio"] recorded ["Video"]), and a call
+// with neither leaves the session's lists empty, so the query replaces what was
+// recorded rather than merging into it. GET on the path is 405 there.
+func (s *Server) handleSessionsCapabilities(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	caps := sessionCapabilitiesDto{
+		PlayableMediaTypes:           splitCommaList(q.Get("playableMediaTypes")),
+		SupportedCommands:            splitCommaList(q.Get("supportedCommands")),
+		SupportsMediaControl:         q.Get("supportsMediaControl") == "true",
+		SupportsPersistentIdentifier: q.Get("supportsPersistentIdentifier") == "true",
+	}
+
+	if ac, ok := AuthFromContext(r.Context()); ok && ac != nil && ac.Authenticated {
+		s.sessions.upsertCapabilities(r.Context(), ac.DeviceID, string(ac.User.ID), ac.User.Name, ac.Client, ac.Device, ac.Version, remoteEndPoint(r), caps)
+		s.notifySessions(r.Context(), true)
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// splitCommaList turns a comma-separated query member into the list the client
+// meant, dropping the empty entries an absent member produces.
+func splitCommaList(v string) []string {
+	out := []string{}
+	for _, part := range strings.Split(v, ",") {
+		if p := strings.TrimSpace(part); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 // endpointInfo mirrors the OpenAPI schema's EndpointInfo — confirmed

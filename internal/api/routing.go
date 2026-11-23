@@ -233,10 +233,16 @@ var routePaths = []string{
 	// every other entry in this list keyed off segment count.
 	"/Playback/BitrateTest",
 	"/DisplayPreferences/{displayPreferencesId}",
+	// Two literal segments, and its first segment ("Sessions") differs from
+	// every other 2-segment pattern here — nothing to swallow it, and it
+	// cannot swallow /Sessions/{...} because there is no such pattern.
+	"/Sessions/Capabilities",
 	"/Sessions/Capabilities/Full",
 	// Same segment count as /Sessions/Playing and no wildcard segment:
 	// no collision possible with the entries around it.
 	"/Sessions/Logout",
+	// First segment ("ClientLog") appears nowhere else in this list.
+	"/ClientLog/Document",
 	// 2 segments (including the leading empty split element), unlike every
 	// other "/Sessions/..." entry here (3+) — no collision risk possible at
 	// a different segment count.

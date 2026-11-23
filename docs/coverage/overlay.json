@@ -309,9 +309,7 @@
    "priority": "low"
   },
   "POST /Sessions/Capabilities": {
-   "status": "planned",
-   "notes": "The Full variant is served; the plain one is the older form of the same report.",
-   "priority": "low"
+   "status": "supported"
   },
   "POST /System/Restart": {
    "status": "planned",
@@ -434,6 +432,9 @@
   "GET /Repositories": {
    "status": "divergent-by-design",
    "notes": "No plugin system (D8, D11): always an empty list, where the reference lists its bundled providers and a default repository."
+  },
+  "POST /ClientLog/Document": {
+   "status": "supported"
   }
  }
 }
