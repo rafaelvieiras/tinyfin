@@ -1,8 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/rafaelvieiras/tinyfin/internal/webicons"
 )
 
 // withWebUI wraps api to also serve a built jellyfin-web (dist/) from dir
@@ -37,9 +41,38 @@ func withWebUI(api http.Handler, dir string) http.Handler {
 		case strings.HasPrefix(r.URL.Path, "/web/"):
 			// The cache headers and the compression the plain file server
 			// does not do (webui_cache.go).
-			withWebUICache(fileServer).ServeHTTP(w, r)
+			withWebUICache(webAssets(fileServer)).ServeHTTP(w, r)
 		default:
 			api.ServeHTTP(w, r)
 		}
 	})
+}
+
+// webAssets answers the icon-only pictures of the bundle with the Tinyfin
+// mascot and lets every other request fall through to the files themselves.
+//
+// The set of pictures is small and fixed (internal/webicons owns it), and they
+// sit on paths the bundle fingerprints, so a rebuild of the client does not
+// break the match — see that package for why the wordmark stays upstream.
+func webAssets(files http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if serveWebIcon(w, r) {
+			return
+		}
+		files.ServeHTTP(w, r)
+	})
+}
+
+// serveWebIcon writes the mascot for a path webicons owns. The zero modtime
+// keeps Last-Modified off the answer; the asset's ETag is the validator, which
+// is what turns a revalidating reload into a 304.
+func serveWebIcon(w http.ResponseWriter, r *http.Request) bool {
+	asset, ok := webicons.Lookup(r.URL.Path)
+	if !ok {
+		return false
+	}
+	w.Header().Set("Content-Type", asset.ContentType)
+	w.Header().Set("ETag", asset.ETag)
+	http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(asset.Data))
+	return true
 }

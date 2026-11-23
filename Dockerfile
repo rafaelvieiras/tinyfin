@@ -84,6 +84,6 @@ COPY deploy/fonts.conf /etc/fonts/fonts.conf
 ENV FONTCONFIG_FILE=/etc/fonts/fonts.conf
 ENV TINYFIN_FONTS_DIR=/usr/share/fonts/truetype/dejavu
 VOLUME ["/data"]
-EXPOSE 8096
+EXPOSE 8096 7359/udp
 ENTRYPOINT ["/tinyfin"]
 CMD ["-data", "/data/tinyfin.db", "-addr", ":8096"]

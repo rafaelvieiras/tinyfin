@@ -63,6 +63,29 @@ Three limits, all measured or documented rather than assumed:
 - **The launcher icon, the Android 12 splash and the connect-screen logo are compiled into the
   APK** (`app_logo.xml`, `ic_splash.xml`). Out of reach without forking the app.
 
+### 2.1 What was implemented instead: the server answers the pictures itself
+
+The `CustomCss` rule above needs the administrator's branding to be on and the user's custom-CSS
+preference (also in their display settings) to be left alone, and it reaches only `<img>` elements.
+It cannot touch the favicon, the web-app icons the manifest lists, the splash mark that is a CSS
+background, or the icon a desktop notification carries — none of them is an `<img>` in the
+document. Measured 22/nov/2026 on the bundle Tinyfin ships (2,364 files), the client asks for
+exactly five icon-only pictures, all with no lettering:
+
+| Path the client requests | What draws it |
+|---|---|
+| `favicon.<fingerprint>.ico` | the browser tab |
+| `touchicon.<fingerprint>.png` | `<link rel="apple-touch-icon">`, 180x180 |
+| `touchicon144.<fingerprint>.png`, `favicons/touchicon{72,114,144,512}.png` | `manifest.json`, installed web app |
+| `icon-transparent.<fingerprint>.png` | the splash mark, and the drawer and server-button marks |
+| `notificationicon.<fingerprint>.png` | the icon of a desktop notification |
+
+Those five are answered with the project's mascot by `internal/webicons`
+(`DIV-39` in [`13`](13-divergences.md)); `banner-light` and `banner-dark` — the only two pictures
+that carry the "Jellyfin" wordmark, drawn on the login page and beside the drawer's name — keep the
+bytes the bundle ships. The fingerprints change with every upstream build, so the match is on the
+file stem and the server never needs to know a hash.
+
 Worth doing in the same pass: `SplashscreenEnabled` is served (`false` by default) but
 `GET /Branding/Splashscreen` is a 404 on Tinyfin. Flipping the flag on today asks jellyfin-web to
 draw a backdrop it cannot fetch. The reference exposes the whole family — `GET`, `POST` and
