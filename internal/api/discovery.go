@@ -181,10 +181,13 @@ func discoveryAddress(cfg networkConfigurationDto, host net.IP, listenPort int) 
 		port = 8096
 	}
 	addr := "http://" + net.JoinHostPort(host.String(), strconv.Itoa(port))
-	if base := strings.TrimSpace(cfg.BaseUrl); base != "" {
-		if !strings.HasPrefix(base, "/") {
-			base = "/" + base
-		}
+	// BaseUrl is a path prefix. A value that is not one is a configuration
+	// mistake and is ignored rather than glued onto the address: a production
+	// install that held its public URL in this member answered
+	// "http://<host>:8096/https://<its own host>", which no client can use,
+	// and substituting that URL here would send a client on the local network
+	// out through the proxy for a server that is next to it.
+	if base := strings.TrimSpace(cfg.BaseUrl); strings.HasPrefix(base, "/") {
 		addr += strings.TrimSuffix(base, "/")
 	}
 	return addr

@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [`docs/13-divergences.md`](docs/13-divergences.md).
 
 ### Fixed
+- The discovery reply no longer glues a `BaseUrl` that is not a path onto the address: an install whose
+  network section held its public URL answered `http://<host>:8096/https://<its own host>`, which no client
+  can use. A value that does not start with `/` is dropped and the plain address is announced.
 - A copied picture's playlist no longer waits for a scan of every packet of the file. The key frames are
   read from the container's own index (Matroska `Cues`) and kept in the catalog, so a 3.3 GB film answers
   its first media playlist in 112 ms instead of 8.5 s (28 s cold from the array), with the same times to
