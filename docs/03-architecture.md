@@ -80,3 +80,24 @@ None of the above is visible to a client. A client only ever sees the HTTP/WebSo
 described in `04` — whether a given deployment is single-node with embedded SQLite, or split
 across a handful of API nodes and transcode workers behind a scale-mode storage driver, is
 entirely an operator-side decision that the wire protocol does not expose or depend on.
+
+## The access log
+
+Every request produces one line on the server's standard logger, and it names the client that
+made it:
+
+```
+tinyfin: GET /Items?Recursive=true&Limit=200 200 1.620586s client="Jellyfin Android TV" version="0.19.10" device="TV da sala"
+```
+
+The three client fields come from the `MediaBrowser Client="…", Device="…", Version="…"` header
+that every official client already sends, so naming them costs one header parse and no protocol
+change. They are quoted and length-bounded: the values are the client's own bytes, and a log line
+one request can break in two is a log line one request can forge. A request with no such header —
+an API key, a discovery probe, an anonymous call — logs exactly as it did before, with no suffix.
+
+This was added after a real triage on a production server. The `/Items` sweep above ran every
+fifteen minutes, moved about 130 MB, and the log could not say which of the four clients on that
+network was asking: the path is identical for all of them, and only the header tells them apart.
+The middleware sits outermost on purpose — it has to log the requests the chain below rejects,
+and those never reach the auth context.

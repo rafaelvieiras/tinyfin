@@ -18,10 +18,12 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 
 	"github.com/rafaelvieiras/tinyfin/internal/chapterimg"
 	"github.com/rafaelvieiras/tinyfin/internal/guid"
@@ -704,19 +706,69 @@ func (r *statusRecorder) Unwrap() http.ResponseWriter {
 	return r.ResponseWriter
 }
 
-// withAccessLog logs method, path+query, status, and duration for every
-// request. Added while debugging a real jellyfin-android client's video
-// playback failing with "Source error" / HTTP 404: nothing in this
-// project logged incoming requests at all, so there was no way to see
-// what URL the native ExoPlayer data source actually requested (its own
-// logcat trace doesn't include it) without this.
+// withAccessLog logs method, path+query, status, duration and the client that
+// made the request for every request. Added while debugging a real
+// jellyfin-android client's video playback failing with "Source error" / HTTP
+// 404: nothing in this project logged incoming requests at all, so there was no
+// way to see what URL the native ExoPlayer data source actually requested (its
+// own logcat trace doesn't include it) without this.
+//
+// The client naming came later, from a second real triage: a production server
+// answered a repeated ~130 MB library sweep every fifteen minutes, and the log
+// could not say which of the clients on that network was asking. Nothing in a
+// path distinguishes them — four different apps can request the same
+// /Items?Recursive=true — but the client-identification header every official
+// client already sends does.
 func withAccessLog(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(rec, r)
-		log.Printf("tinyfin: %s %s %d %s", r.Method, r.URL.RequestURI(), rec.status, time.Since(start))
+		log.Printf("tinyfin: %s %s %d %s%s", r.Method, r.URL.RequestURI(), rec.status, time.Since(start), accessLogClient(r))
 	})
+}
+
+// accessLogClientFieldMax bounds each client-identification value in the access
+// log. The values are the client's own bytes and nothing in this server limits
+// their length; a line that one request can make megabytes long is a line that
+// buries the request after it.
+const accessLogClientFieldMax = 64
+
+// accessLogClient renders the client, version and device off the request's
+// MediaBrowser authorization header as a suffix for the access log — empty when
+// the request carries no such header (an API key, a discovery probe, an
+// anonymous request), so those lines stay exactly as short as they were.
+//
+// Parsed here rather than read out of AuthContext because withAccessLog is the
+// outermost middleware, on purpose: it has to log the requests that the handler
+// chain below it rejects, and those never reach withAuthContext.
+func accessLogClient(r *http.Request) string {
+	client, device, _, version, _ := parseEmbyAuth(r.Header.Get("Authorization"))
+	var b strings.Builder
+	for _, f := range []struct{ name, value string }{
+		{"client", client},
+		{"version", version},
+		{"device", device},
+	} {
+		if f.value == "" {
+			continue
+		}
+		b.WriteString(" ")
+		b.WriteString(f.name)
+		b.WriteString("=")
+		b.WriteString(strconv.Quote(accessLogField(f.value)))
+	}
+	return b.String()
+}
+
+// accessLogField truncates and leaves escaping to strconv.Quote: a client name
+// carrying a newline must not be able to start a second, forged log line.
+func accessLogField(v string) string {
+	if utf8.RuneCountInString(v) <= accessLogClientFieldMax {
+		return v
+	}
+	runes := []rune(v)
+	return string(runes[:accessLogClientFieldMax]) + "..."
 }
 
 // withTrailingSlash implements wire.path.R1-R2: a request path that ends in
