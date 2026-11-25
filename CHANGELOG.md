@@ -35,6 +35,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   anywhere. Uploads are capped at 1,000,000 bytes, the reference's own measured boundary, and pruned to the
   newest 32 ([`DIV-41`](docs/13-divergences.md)).
 
+### Changed
+- The access log names the client that made each request: one line now carries
+  `client="…" version="…" device="…"` beside the method, path, status and duration, taken from the
+  `MediaBrowser` header every official client already sends, quoted and length-bounded. A request with
+  no such header logs exactly as before. Added after a production triage where a repeated ~130 MB
+  library sweep could not be traced to any of the four clients on the network
+  ([`docs/03`](docs/03-architecture.md#the-access-log)).
+
 ### Fixed
 - The discovery reply no longer glues a `BaseUrl` that is not a path onto the address: an install whose
   network section held its public URL answered `http://<host>:8096/https://<its own host>`, which no client
