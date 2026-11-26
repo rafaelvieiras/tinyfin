@@ -1061,12 +1061,18 @@ func (s *Server) routes() {
 	// hls.go — HLS segment files (seg_00000.ts) too; handleVideoStream
 	// itself dispatches on the segment shape (see playback.go).
 	s.mux.HandleFunc("GET /Items/{itemId}/Download", requireAuth(s.handleItemDownload))
-	s.mux.HandleFunc("GET /Videos/{itemId}/{file}", requireAuth(s.handleVideoStream))
-	s.mux.HandleFunc("GET /Audio/{itemId}/{file}", requireAuth(s.handleAudioStream))
+	// requireAuthOrStream, not requireAuth: /stream and /stream.{container}
+	// answer without a credential, matching the reference, because the
+	// official clients' players request them with no credential at all. The
+	// segment files the same wildcard reaches stay behind the token
+	// (auth.go has the measurement).
+	s.mux.HandleFunc("GET /Videos/{itemId}/{file}", requireAuthOrStream(s.handleVideoStream))
+	s.mux.HandleFunc("GET /Audio/{itemId}/{file}", requireAuthOrStream(s.handleAudioStream))
 	// Subtitles (subtitles.go). The file segment is "Stream.{format}" or
 	// "subtitles.m3u8": ServeMux wildcards cover whole segments, so the
-	// handler splits it itself. The reference serves the stream routes
-	// anonymously; Tinyfin requires a token (divergence, specs/subtitles.md
+	// handler splits it itself. Unlike /Videos/{itemId}/stream above, the
+	// reference does not serve these anonymously under a plain request, so
+	// Tinyfin keeps the token requirement (divergence, specs/subtitles.md
 	// subtitles.auth.R1) — the delivery URLs carry the ApiKey.
 	s.mux.HandleFunc("GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/{file}", requireAuth(s.handleSubtitleStream))
 	s.mux.HandleFunc("GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/{startTicks}/{file}", requireAuth(s.handleSubtitleStream))

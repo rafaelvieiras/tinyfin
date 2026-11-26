@@ -44,6 +44,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ([`docs/03`](docs/03-architecture.md#the-access-log)).
 
 ### Fixed
+- **Direct play from the official Android TV client.** `GET /Videos/{itemId}/stream` and
+  `GET /Audio/{itemId}/stream` (with or without a container suffix) now answer without a credential, as the
+  reference does — the client's player sends none at all, so every direct-play attempt got `401` and playback
+  stopped within a second while transcode playback kept working. A credential that resolves to nothing is
+  served just the same, and every neighbouring route (`master.m3u8`, `hls1/…` segments, trickplay,
+  `AdditionalParts`, `/Items/{id}/Download`, `/Audio/{id}/universal`) still refuses an anonymous caller with
+  `401` (`playback.stream.auth.R1`, scenario `playback.stream.anonymous`).
 - The discovery reply no longer glues a `BaseUrl` that is not a path onto the address: an install whose
   network section held its public URL answered `http://<host>:8096/https://<its own host>`, which no client
   can use. A value that does not start with `/` is dropped and the plain address is announced.

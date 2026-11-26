@@ -1254,5 +1254,83 @@
     }
    }
   ]
+ },
+ {
+  "id": "playback.stream.anonymous",
+  "endpoint": "GET /Videos/{itemId}/stream",
+  "spec": "playback.md#the-media-stream-answers-anonymously",
+  "scope": "modern",
+  "tags": [
+   "playback"
+  ],
+  "covers": [
+   "playback.stream.auth.R1"
+  ],
+  "requires": [
+   "item:alpha",
+   "item:mfirst"
+  ],
+  "steps": [
+   {
+    "name": "video stream without a credential",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.alpha.id}}/stream",
+     "query": {
+      "static": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "headers": {
+      "Content-Type": "/video\\/mp4/",
+      "Accept-Ranges": "bytes"
+     }
+    }
+   },
+   {
+    "name": "audio stream without a credential",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Audio/{{item.mfirst.id}}/stream",
+     "query": {
+      "static": "true"
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "a credential that resolves to nothing does not refuse the stream",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.alpha.id}}/stream",
+     "query": {
+      "static": "true"
+     },
+     "headers": {
+      "Authorization": "MediaBrowser Token=\"00000000000000000000000000000000\""
+     }
+    },
+    "expect": {
+     "status": 200
+    }
+   },
+   {
+    "name": "the hls playlist still needs a credential",
+    "as": "anonymous",
+    "request": {
+     "method": "GET",
+     "path": "/Videos/{{item.alpha.id}}/master.m3u8"
+    },
+    "expect": {
+     "status": 401
+    }
+   }
+  ]
  }
 ]

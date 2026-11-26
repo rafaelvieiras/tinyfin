@@ -152,7 +152,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [music](contract/specs/music.md) | 82 | 82 | 14 | 14 |
 | [musicvideos](contract/specs/musicvideos.md) | 26 | 26 | 17 | 17 |
 | [platform](contract/specs/platform.md) | 5 | 0 | 0 | 0 |
-| [playback](contract/specs/playback.md) | 60 | 59 | 7 | 7 |
+| [playback](contract/specs/playback.md) | 61 | 60 | 8 | 8 |
 | [playlists](contract/specs/playlists.md) | 33 | 33 | 23 | 23 |
 | [playstate](contract/specs/playstate.md) | 108 | 105 | 107 | 107 |
 | [policy](contract/specs/policy.md) | 19 | 18 | 8 | 8 |
@@ -164,7 +164,7 @@ The contract is what makes "supported" checkable: `go run ./cmd/conformance run`
 | [trickplay](contract/specs/trickplay.md) | 11 | 11 | 10 | 10 |
 | [users](contract/specs/users.md) | 191 | 191 | 195 | 195 |
 | [wire](contract/specs/wire.md) | 15 | 14 | 14 | 14 |
-| **total** | 1146 | 1106 | 748 | 745 |
+| **total** | 1147 | 1107 | 749 | 746 |
 
 ## Biggest gaps (planned or not planned, web-client facing)
 
