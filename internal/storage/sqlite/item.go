@@ -872,14 +872,17 @@ func buildItemParts(filter storage.ItemFilter) (itemParts, bool) {
 	if filter.NameContains != "" {
 		// A name matches when its search key contains the term's, or its
 		// stored sort key contains the term's sort form (which drops
-		// punctuation the search key turns into spaces). A term with no
-		// letter or digit restricts nothing.
+		// punctuation the search key turns into spaces), or its original
+		// title's search key does (the reference searches the original
+		// title too, measured: a movie whose <originaltitle> is "Ultimate
+		// Factories" answers the term "Ultimate"; search.hints.R3). A term
+		// with no letter or digit restricts nothing.
 		searchTerm = storage.SearchKey(filter.NameContains)
 		switch {
 		case searchTerm == "":
 		default:
-			addWhere("(instr(search_key(items.name), ?) > 0 OR instr(items.sort_name, ?) > 0)",
-				searchTerm, storage.SortSearchKey(filter.NameContains))
+			addWhere("(instr(search_key(items.name), ?) > 0 OR instr(items.sort_name, ?) > 0 OR instr(search_key(ifnull(items.original_title, '')), ?) > 0)",
+				searchTerm, storage.SortSearchKey(filter.NameContains), searchTerm)
 		}
 	}
 	if filter.SearchText != "" {

@@ -2012,6 +2012,7 @@
     "scan.push.library-add-and-remove",
     "search.items.matching",
     "search.items.names",
+    "search.items.original-title",
     "trickplay.item.list",
     "wire.id.item-objects",
     "wire.path.trailing-slash-reads"
@@ -4148,7 +4149,8 @@
     "search.hints.parent",
     "search.hints.ranking",
     "search.hints.shape-movie",
-    "search.hints.shape-other"
+    "search.hints.shape-other",
+    "search.items.original-title"
    ]
   },
   {

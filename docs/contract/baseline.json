@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 934
+    "pass": 935
   },
   "scenarios": {
     "admin.auth.providers": "pass",
@@ -667,6 +667,7 @@
     "search.hints.shape-other": "pass",
     "search.items.matching": "pass",
     "search.items.names": "pass",
+    "search.items.original-title": "pass",
     "subtitles.default.modes": "pass",
     "subtitles.delivery.embedded": "pass",
     "subtitles.delivery.external": "pass",

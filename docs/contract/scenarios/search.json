@@ -2907,5 +2907,97 @@
     }
    }
   ]
+ },
+ {
+  "id": "search.items.original-title",
+  "endpoint": "GET /Search/Hints",
+  "spec": "search.md#hints",
+  "scope": "modern",
+  "tags": [
+   "search"
+  ],
+  "covers": [
+   "search.hints.R3"
+  ],
+  "requires": [
+   "library:trim",
+   "item:trim-space"
+  ],
+  "steps": [
+   {
+    "name": "a term only the original title carries",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "Trim Original"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.SearchHints[0].ItemId",
+       "op": "eq",
+       "value": "{{item.trim-space.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the listing route searches it too",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Items",
+     "query": {
+      "searchTerm": "Trim Original",
+      "Recursive": "true"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      },
+      {
+       "path": "$.Items[0].Id",
+       "op": "eq",
+       "value": "{{item.trim-space.id}}"
+      }
+     ]
+    }
+   },
+   {
+    "name": "the name still matches on its own",
+    "as": "admin",
+    "request": {
+     "method": "GET",
+     "path": "/Search/Hints",
+     "query": {
+      "searchTerm": "Trim Lead and Trail"
+     }
+    },
+    "expect": {
+     "status": 200,
+     "json": [
+      {
+       "path": "$.TotalRecordCount",
+       "op": "eq",
+       "value": 1
+      }
+     ]
+    }
+   }
+  ]
  }
 ]
