@@ -28,7 +28,7 @@ func (s *Store) SearchHints(ctx context.Context, q storage.SearchQuery) (storage
 		if !empty {
 			rank, rankArgs := searchRankSQL("search_key(items.name)", "items.type", term)
 			where := parts.whereSQL
-			cond := "(instr(search_key(items.name), ?) > 0 OR instr(items.sort_name, ?) > 0)"
+			cond := "(instr(search_key(items.name), ?) > 0 OR instr(items.sort_name, ?) > 0 OR instr(search_key(ifnull(items.original_title, '')), ?) > 0)"
 			if where == "" {
 				where = "WHERE " + cond
 			} else {
@@ -38,7 +38,7 @@ func (s *Store) SearchHints(ctx context.Context, q storage.SearchQuery) (storage
 				"FROM items "+parts.joinSQL+" "+where)
 			args = append(args, rankArgs...)
 			args = append(args, parts.args...)
-			args = append(args, term, sortTerm)
+			args = append(args, term, sortTerm, term)
 		}
 	}
 

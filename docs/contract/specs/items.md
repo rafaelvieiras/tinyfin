@@ -205,7 +205,7 @@ the 12.2 reference with fixture items whose rating comes from a sidecar `.nfo` (
 
 ### Rules: search
 
-- **items.search.R1** `SearchTerm` matches as a substring of the item's name (exact, prefix and inner matches all qualify) without regard to case, accents or punctuation, and by the rules of search.hints.R3 (search.md owns them); the query is recursive over accessible libraries; no match gives an empty list with status 200. Without a type list it also finds genre, studio and person names (search.items.R1).
+- **items.search.R1** `SearchTerm` matches as a substring of the item's name or of its original title (exact, prefix and inner matches all qualify) without regard to case, accents or punctuation, and by the rules of search.hints.R3 (search.md owns them); the query is recursive over accessible libraries; no match gives an empty list with status 200. Without a type list it also finds genre, studio and person names (search.items.R1).
 - **items.search.R2** When the search finds results, the order is by relevance (search.hints.R5: starts with, ends a word, seasons and episodes, the rest; then sort name ascending) and `SortBy`/`SortOrder` are ignored.
 - **items.search.R3** `SearchTerm` combines with `IncludeItemTypes`, `ParentId` and `Recursive`; a `ParentId` limits matches to that subtree.
 

@@ -44,6 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ([`docs/03`](docs/03-architecture.md#the-access-log)).
 
 ### Fixed
+- **Search now looks at an item's original title.** `GET /Search/Hints` and `GET /Items?SearchTerm=` matched the name
+  only, so a movie whose `.nfo` carries `<originaltitle>Ultimate Factories</originaltitle>` answered nothing for
+  `Ultimate Factories` — which is how a series named by its localised title becomes unfindable. The reference searches
+  the original title too (measured on 10.11.11); the term is folded on both sides here, so an accented original title is
+  also findable by its accented text (`DIV-42`, `search.hints.R3`, `items.search.R1`, scenario
+  `search.items.original-title`).
 - **Direct play from the official Android TV client.** `GET /Videos/{itemId}/stream` and
   `GET /Audio/{itemId}/stream` (with or without a container suffix) now answer without a credential, as the
   reference does — the client's player sends none at all, so every direct-play attempt got `401` and playback

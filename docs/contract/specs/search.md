@@ -78,6 +78,20 @@ The listing rules (parents, types, paging, shaping) are in items.md; these are t
 - **search.items.R3** A season or an episode is matched by its own name only: not by the name of its series.
 - **search.items.R4** The term and the names are compared exactly as for hints (search.hints.R3): case, accents and punctuation do not matter. Unlike hints, a term made only of punctuation (`...`, `&`, `%`) restricts nothing: every item matches. The result is ranked as in search.hints.R5 and `SortBy` / `SortOrder` are ignored (items.search.R2).
 
+## Known differences
+
+Measured on the reference and deliberately not reproduced (not asserted by a scenario that runs against both servers):
+
+* **A forced sort title is not searched there.** The reference compares a term with an item's name and original title; a
+  `<sorttitle>` from the `.nfo` (which becomes `SortName`/`ForcedSortName`) is not part of it — measured: a movie whose
+  `<sorttitle>` is `aaa primeirissimo` answers 0 for `primeirissimo` on the reference. Tinyfin's stored sort key is also
+  searched (`search.hints.R3`), which is what makes the punctuation-joined forms of a name match (`commajoin` finds
+  `Comma,Join`), so a forced sort title is findable here and not there. Finding more, in a list the client shows as
+  "search results".
+* **A hyphen in the term separates words here, not there.** `nome-interno` finds `Nome Interno` on Tinyfin and answers 0 on
+  the reference; `nome_interno` finds it on both (measured). Other separators behave the same on both sides.
+* **An accented original title** is findable here and not there — `DIV-42`.
+
 ## Index of rules to scenarios
 
 | Rule | Scenario |
@@ -87,6 +101,7 @@ The listing rules (parents, types, paging, shaping) are in items.md; these are t
 | `search.hints.R2` | `search.hints.shape-other` |
 | `search.hints.R3` | `search.hints.matching` |
 | `search.hints.R3` | `search.hints.matching-names` |
+| `search.hints.R3` | `search.items.original-title` |
 | `search.hints.R4` | `search.hints.shape-other` |
 | `search.hints.R4` | `search.hints.kinds` |
 | `search.hints.R5` | `search.hints.ranking` |
