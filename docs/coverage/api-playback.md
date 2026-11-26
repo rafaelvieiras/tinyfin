@@ -14,8 +14,8 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 
 | Status | Route | Auth | Web | Tests | What Tinyfin does / notes |
 |---|---|---|---|---|---|
-| ⛔ not-planned | `GET /Audio/{itemId}/stream` | Anonymous |  | 4/4 | Music is not cataloged or streamed (video-first scope, docs/01). (priority: low) |
-| ⛔ not-planned | `HEAD /Audio/{itemId}/stream` | Anonymous |  | 4/4 | Music is not cataloged or streamed (video-first scope, docs/01). (priority: low) |
+| ⛔ not-planned | `GET /Audio/{itemId}/stream` | Anonymous |  | 5/5 | Music is not cataloged or streamed (video-first scope, docs/01). (priority: low) |
+| ⛔ not-planned | `HEAD /Audio/{itemId}/stream` | Anonymous |  | 5/5 | Music is not cataloged or streamed (video-first scope, docs/01). (priority: low) |
 | ⛔ not-planned | `GET /Audio/{itemId}/stream.{container}` | Anonymous |  |  | Music is not cataloged or streamed (video-first scope, docs/01). (priority: low) |
 | ⛔ not-planned | `HEAD /Audio/{itemId}/stream.{container}` | Anonymous |  |  | Music is not cataloged or streamed (video-first scope, docs/01). (priority: low) |
 | ✅ supported | `GET /Audio/{itemId}/universal` | DefaultAuthorization |  | 2/2 |  |
@@ -77,8 +77,8 @@ Columns: **Auth** is the reference's authorization policy; **Web** = mentioned i
 | ⛔ not-planned | `POST /Videos/MergeVersions` | RequiresElevation |  |  | Version merging/splitting is not offered; versions are grouped by file naming at scan time. (priority: low) |
 | ✅ supported | `GET /Videos/{itemId}/AdditionalParts` | DefaultAuthorization |  | 3/3 |  |
 | ⛔ not-planned | `DELETE /Videos/{itemId}/AlternateSources` | RequiresElevation |  |  | Version merging/splitting is not offered; versions are grouped by file naming at scan time. (priority: low) |
-| ✅ supported | `GET /Videos/{itemId}/stream` | Anonymous |  | 7/7 | Served by `GET /Videos/{itemId}/{file}`. Served by the wildcard file route. |
-| ✅ supported | `HEAD /Videos/{itemId}/stream` | Anonymous |  | 7/7 | Served by `GET /Videos/{itemId}/{file}`. Served by the wildcard file route. |
+| ✅ supported | `GET /Videos/{itemId}/stream` | Anonymous |  | 8/8 | Served by `GET /Videos/{itemId}/{file}`. Served by the wildcard file route. |
+| ✅ supported | `HEAD /Videos/{itemId}/stream` | Anonymous |  | 8/8 | Served by `GET /Videos/{itemId}/{file}`. Served by the wildcard file route. |
 | ✅ supported *(no scenario)* | `GET /Videos/{itemId}/stream.{container}` | Anonymous |  |  | Served by `GET /Videos/{itemId}/{file}`. Served by the wildcard file route. |
 | ✅ supported *(no scenario)* | `HEAD /Videos/{itemId}/stream.{container}` | Anonymous |  |  | Served by `GET /Videos/{itemId}/{file}`. Served by the wildcard file route. |
 | ⛔ not-planned | `GET /Videos/{videoId}/{mediaSourceId}/Attachments/{index}` | Anonymous |  |  | Version merging/splitting is not offered; versions are grouped by file naming at scan time. (priority: low) |

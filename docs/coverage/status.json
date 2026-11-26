@@ -76,6 +76,7 @@
     "music.stream.direct",
     "music.stream.unknown",
     "music.transcode.stream",
+    "playback.stream.anonymous",
     "policy.stream.folders-off"
    ],
    "notes": "Music is not cataloged or streamed (video-first scope, docs/01).",
@@ -94,6 +95,7 @@
     "music.stream.direct",
     "music.stream.unknown",
     "music.transcode.stream",
+    "playback.stream.anonymous",
     "policy.stream.folders-off"
    ],
    "notes": "Music is not cataloged or streamed (video-first scope, docs/01).",
@@ -6388,6 +6390,7 @@
    "web": false,
    "scenarios": [
     "musicvideos.playback.direct",
+    "playback.stream.anonymous",
     "policy.folders.blocked-media-folders",
     "policy.playback.media-playback-off",
     "policy.stream.folders-off",
@@ -6408,6 +6411,7 @@
    "web": false,
    "scenarios": [
     "musicvideos.playback.direct",
+    "playback.stream.anonymous",
     "policy.folders.blocked-media-folders",
     "policy.playback.media-playback-off",
     "policy.stream.folders-off",

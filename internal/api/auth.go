@@ -223,6 +223,51 @@ func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// streamFileRequests reports whether the request's {file} segment names the
+// media stream itself — "stream", or "stream.<container>". Shared, because
+// both the video and the audio route reach their segments through the same
+// kind of wildcard.
+func streamFileRequests(r *http.Request) bool {
+	name := r.PathValue("file")
+	if name == "stream" {
+		return true
+	}
+	ext, ok := strings.CutPrefix(name, "stream.")
+	return ok && ext != ""
+}
+
+// requireAuthOrStream guards the two wildcard routes whose last segment is
+// both the media stream and the HLS segment files — GET /Videos/{itemId}/{file}
+// and GET /Audio/{itemId}/{file} (server.go). The stream itself answers
+// without a credential; everything else the wildcard reaches keeps the
+// requireAuth rules.
+//
+// Measured on the reference, because this looked like a hole rather than a
+// decision: /Videos/{itemId}/stream answered 206 with no credential, 206 again
+// with a token that does not exist, and 400 (not 401) for an item that does
+// not exist — so no auth check runs on that path at all. Its neighbours did
+// answer 401: master.m3u8, hls1/main/0.ts, the trickplay sheets,
+// AdditionalParts, /Items/{id}/Download and /Audio/{id}/universal.
+//
+// The reason it cannot be tightened: the official Android TV client direct
+// plays through a media URL carrying no credential. Its player builds the URL
+// from the SDK (getVideoStreamUrl adds no key) and its HTTP client comes from
+// OkHttpFactory.createClient, which installs no auth interceptor either — by
+// the header it sends nothing at all. Requiring a token here answered every
+// direct-play attempt with 401 (a real evening's log: four requests, four
+// 401s, playback stopped in under a second each time), while transcode
+// playback kept working because that URL carries ApiKey.
+func requireAuthOrStream(next http.HandlerFunc) http.HandlerFunc {
+	guarded := requireAuth(next)
+	return func(w http.ResponseWriter, r *http.Request) {
+		if streamFileRequests(r) {
+			next(w, r)
+			return
+		}
+		guarded(w, r)
+	}
+}
+
 // scheduleAllows reports whether the policy's access schedules permit the
 // given local time (users.auth.R18): no schedule means no restriction,
 // otherwise the time must fall in some entry's day and

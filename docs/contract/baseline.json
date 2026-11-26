@@ -1,6 +1,6 @@
 {
   "counts": {
-    "pass": 933
+    "pass": 934
   },
   "scenarios": {
     "admin.auth.providers": "pass",
@@ -324,10 +324,12 @@
     "items.userdata.post-played": "pass",
     "items.userdata.reflected-in-listing": "pass",
     "items.views.alias": "pass",
+    "misc.client-log.upload": "pass",
     "misc.home.recommended-programs": "pass",
     "misc.home.syncplay-list": "pass",
     "misc.localization": "pass",
     "misc.ping": "pass",
+    "misc.sessions.capabilities": "pass",
     "misc.utc-time": "pass",
     "music.album.detail": "pass",
     "music.album.tracks": "pass",
@@ -438,6 +440,7 @@
     "playback.offer.url-flags": "pass",
     "playback.offer.url-params": "pass",
     "playback.offer.video-range": "pass",
+    "playback.stream.anonymous": "pass",
     "playback.subtitle.always-burn": "pass",
     "playback.subtitle.encode": "pass",
     "playback.subtitle.hls": "pass",
@@ -933,9 +936,7 @@
     "wire.path.trailing-slash-writes": "pass",
     "wire.problem.api-key-is-not-a-user": "pass",
     "wire.problem.not-found": "pass",
-    "wire.problem.validation": "pass",
-    "misc.client-log.upload": "pass",
-    "misc.sessions.capabilities": "pass"
+    "wire.problem.validation": "pass"
   },
   "version": 1
 }
